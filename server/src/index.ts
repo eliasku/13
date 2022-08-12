@@ -3,8 +3,8 @@ import {RequestListener} from "http";
 import * as fs from "fs";
 import * as url from 'url';
 
-//const host = "127.0.0.1";
-const port = +process.env.PORT || 8081;
+const defaultPort = 8080;
+const port = +process.env.PORT || defaultPort;
 
 let queue: Message[] = [];
 

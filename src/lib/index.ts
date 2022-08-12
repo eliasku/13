@@ -43,7 +43,8 @@ let musicSource: AudioBufferSourceNode | null = null;
 let glSim: Fluid2dGpu | undefined = undefined;
 let started = false;
 const onStart = async () => {
-    canvas.removeEventListener("click", onStart);
+    canvas.removeEventListener("touchstart", onStart);
+    canvas.removeEventListener("mousedown", onStart);
     if (!muted) {
         if (sndBuffer == null) {
             sndBuffer = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
@@ -67,7 +68,8 @@ const onStart = async () => {
     glSim = new Fluid2dGpu(canvas);
 };
 
-canvas.addEventListener("click", onStart);
+canvas.addEventListener("touchstart", onStart);
+canvas.addEventListener("mousedown", onStart);
 
 let idxResize = 0;
 const doResize = () => {
