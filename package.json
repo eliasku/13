@@ -6,8 +6,8 @@
   "scripts": {
     "prebuild": "npm run server-build",
     "build": "npm run client-build",
-    "postbuild": "roadroller public/index.js -o public/zip.js",
-    "client-watch": "esbuild src/lib/index.ts --watch --bundle --sourcemap --platform=browser --outfile=public/dev.js",
+    "postbuild": "roadroller -D -O1 -- public/index.js -o public/index.js",
+    "client-watch": "esbuild src/lib/index.ts --watch --bundle --sourcemap --platform=browser --outfile=public/index.js",
     "client-build": "esbuild src/lib/index.ts --bundle --minify --mangle-props=_$ --platform=browser --outfile=public/index.js",
     "server-build": "esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js",
     "server-watch": "esbuild server/src/index.ts --bundle --platform=node --target=node16 --format=esm --outfile=public/server.js"
