@@ -23,12 +23,15 @@ initGL(canvas);
 let textTerminal = document.createElement("label");
 textTerminal.style.position = "fixed";
 
+textTerminal.style.font = "24px monospace bold";
 textTerminal.style.top = "0px";
 textTerminal.style.left = "0px";
 textTerminal.style.width = "100%";
 textTerminal.style.height = "100%";
 textTerminal.style.color = "white";
 textTerminal.style.backgroundColor = "transparent";
+textTerminal.style.background = "transparent";
+textTerminal.style.touchAction = "none";
 textTerminal.style.pointerEvents = "none";
 document.body.appendChild(textTerminal);
 
