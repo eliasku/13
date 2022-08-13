@@ -39,6 +39,8 @@ const muted = false;
 let sndBuffer: AudioBuffer | null = null;
 let musicBuffer: AudioBuffer | null = null;
 let musicSource: AudioBufferSourceNode | null = null;
+sndBuffer = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
+musicBuffer = createAudioBufferFromSong(song);
 
 let glSim: Fluid2dGpu | undefined = undefined;
 let started = false;
@@ -46,16 +48,9 @@ const onStart = async () => {
     canvas.removeEventListener("touchstart", onStart);
     canvas.removeEventListener("mousedown", onStart);
     if (!muted) {
-        if (sndBuffer == null) {
-            sndBuffer = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
-        }
         play(sndBuffer);
-
-        if (musicBuffer == null) {
-            musicBuffer = createAudioBufferFromSong(song);
-        }
         if (musicSource == null) {
-            musicSource = play(musicBuffer, true, 0.2);
+            musicSource = play(musicBuffer, true, 0.05);
         }
     }
 

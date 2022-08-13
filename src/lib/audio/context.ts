@@ -6,6 +6,7 @@ export function getAudioContext(): AudioContext {
         if (ctr) {
             ctx_ = new AudioContext();
         }
+        setupUnlock();
     }
     return ctx_;
 }
@@ -24,4 +25,27 @@ export function play(audioBuffer: AudioBuffer, loop?: boolean, vol?: number): Au
     source.start();
     channels.push(source);
     return source;
+}
+
+export function setupUnlock() {
+    // "touchstart", "touchend", "mousedown", "pointerdown"
+    const events = ["touchstart", "touchend", "mousedown", "click", "keydown"];
+    const num = events.length;
+    const doc = document;
+    const handle = () => {
+        if (ctx_.state === "suspended") {
+            ctx_.resume().then(() => {
+                //log(Message.DeviceResumed);
+            }).catch((reason) => {
+                //error(Message.DeviceResumeError, reason);
+            });
+            return;
+        }
+        for (let i = 0; i < num; ++i) {
+            doc.removeEventListener(events[i], handle, true);
+        }
+    };
+    for (let i = 0; i < num; ++i) {
+        doc.addEventListener(events[i], handle, true);
+    }
 }
