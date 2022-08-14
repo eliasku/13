@@ -1,45 +1,5 @@
 import {log, logWarn} from "../debug/log";
-
-type NodeID = string | "_";
-type Receiver = NodeID | "*" | undefined;
-type Body = any;
-
-const enum NetEvent {
-    NodeRemoved = 0,
-    NodeAdded = 1,
-}
-
-const enum ControlCode {
-    Connect = 0,
-    Close = 1,
-}
-
-interface Message {
-    // call id
-    call?: string;
-    from: NodeID;
-    to: Receiver;
-    data: any;
-}
-
-interface Request {
-    from: NodeID;
-    messages?: Message[];
-    control?: ControlCode;
-}
-
-interface Response {
-    to: string;
-    // number of processed request messages
-    in: number;
-    responses?: Message[];
-}
-
-interface NodeState {
-    id: string;
-    // last time client or server communicates with node
-    ts: number;
-}
+import {Response, Request, Message, MessageBody, NetEvent, NodeID, Receiver, ControlCode} from "../../shared/types";
 
 const serverUrl = "/";
 const updateInterval = 1000;
@@ -48,11 +8,11 @@ let nodes: Record<string, string> = {};
 
 let outcomeQueue: Message[] = [];
 let waiters: Record<string, (msg: Message) => void> = {};
-
-function call(to: Receiver, data: Body): Promise<Body> {
+let nextCallId = 1;
+function call(to: Receiver, data: MessageBody): Promise<MessageBody> {
     log(`call to ${to} type ${data.type}`);
     return new Promise((resolve, reject) => {
-        const call = crypto.randomUUID();
+        const call = nextCallId++;
         waiters[call] = (res) => {
             delete waiters[call];
             log(`received result from ${to} : ${JSON.stringify(res.data)}`);
@@ -67,7 +27,7 @@ function call(to: Receiver, data: Body): Promise<Body> {
     });
 }
 
-function sendWithoutResponse(to: Receiver, data: Body): void {
+function sendWithoutResponse(to: Receiver, data: MessageBody): void {
     log(`send to ${to} type ${data.type}`);
     outcomeQueue.push({
         from: nodeId,
@@ -76,11 +36,11 @@ function sendWithoutResponse(to: Receiver, data: Body): void {
     });
 }
 
-type Handler = (req: Message) => Promise<Body> | Body | void;
+type Handler = (req: Message) => Promise<MessageBody> | MessageBody | void;
 
 const handlers: Record<string, Handler> = {};
 
-function respond(req: Message, data: Body) {
+function respond(req: Message, data: MessageBody) {
     const response: Message = {
         call: req.call!,
         from: nodeId,
@@ -92,7 +52,7 @@ function respond(req: Message, data: Body) {
 
 function requestHandler(req: Message) {
     if (req.data.event !== undefined) {
-        log(req.data.event, req.from);
+        log(`${req.data.event} ${req.from}`);
         if (req.data.event === NetEvent.NodeAdded) {
             nodes[req.from] = req.from;
         } else if (req.data.event === NetEvent.NodeRemoved) {
@@ -126,7 +86,7 @@ async function process(): Promise<number> {
 
     try {
         const data: Response = await _post({
-            from: nodeId,
+            from: nodeId!,
             messages: outcomeQueue.length > 0 ? outcomeQueue : undefined
         });
         outcomeQueue = outcomeQueue.slice(data.in);
@@ -212,15 +172,16 @@ export function getRemoteNodes(): NodeID[] {
 const configuration: RTCConfiguration = {
     iceServers: [
         // {urls: 'stun:23.21.150.121'},
-        {
-            urls: [
-                "stun:stun.l.google.com:19302",
-                "stun:stun1.l.google.com:19302",
-                "stun:stun2.l.google.com:19302",
-                "stun:stun3.l.google.com:19302",
-                "stun:stun4.l.google.com:19302",
-            ]
-        },
+        {urls: 'stun:stun.l.google.com:19302'},
+        // {
+            // urls: [
+                // "stun:stun.l.google.com:19302",
+                // "stun:stun1.l.google.com:19302",
+                // "stun:stun2.l.google.com:19302",
+                // "stun:stun3.l.google.com:19302",
+                // "stun:stun4.l.google.com:19302",
+            // ]
+        // },
     ],
 };
 
@@ -249,7 +210,7 @@ function createConnection(remoteId: string) {
     });
 
     pc.addEventListener("negotiationneeded", async (e) => {
-        log(e);
+        log(e.toString());
         try {
             const offer = await pc.createOffer({
                 offerToReceiveAudio: false,
@@ -278,7 +239,7 @@ function createConnection(remoteId: string) {
     });
 
     pc.addEventListener("icecandidateerror", (e) => {
-        log(e);
+        log(e.toString());
     });
 
     return connection;

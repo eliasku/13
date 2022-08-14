@@ -1,59 +1,22 @@
 import * as http from "http";
-import {RequestListener} from "http";
+import {IncomingMessage, RequestListener, ServerResponse} from "http";
 import * as fs from "fs";
 import * as url from 'url';
+import {MessageBody, Response, Request, Message, NodeID, NetEvent, ControlCode, NodeState} from "../../src/shared/types";
 
 const defaultPort = 8080;
 const port = +process.env.PORT || defaultPort;
 
 let queue: Message[] = [];
 
-type NodeID = string | "_";
-type Receiver = NodeID | "*" | "_";
-
 let nextNodeId = 1;
-
-const enum NetEvent {
-    NodeRemoved = 0,
-    NodeAdded = 1,
-}
-
-const enum ControlCode {
-    Connect = 0,
-    Close = 1,
-}
-
-interface NodeState {
-    id: NodeID;
-    ts: number;
-}
 
 const nodes = new Map<NodeID, NodeState>();
 
-interface Message {
-    id: string;
-    from: NodeID;
-    to: Receiver;
-    data: any;
-}
-
-interface Request {
-    from: NodeID;
-    messages?: Message[];
-    control?: ControlCode;
-}
-
-interface Response {
-    to: NodeID;
-    in: number;
-    responses?: Message[];
-}
-
-function broadcast(from: NodeID, data: any) {
+function broadcast(from: NodeID, data: MessageBody) {
     for (const nodeId of nodes.keys()) {
         if (nodeId !== from) {
             queue.push({
-                id: "",
                 from,
                 to: nodeId,
                 data
@@ -67,6 +30,16 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "content-type,accept-type",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
+};
+
+const _404 = (req:IncomingMessage, res:ServerResponse, err?:any) =>{
+        res.writeHead(404);
+        res.end("not found" + (err ? "\n"+JSON.stringify(err) : ""));
+};
+
+const _500: RequestListener = (req, res) =>{
+    res.writeHead(500);
+    res.end("internal error");
 };
 
 const requestListener: RequestListener = async (req, res) => {
@@ -95,7 +68,7 @@ const requestListener: RequestListener = async (req, res) => {
                 to: nodeId,
                 in: 0,
                 responses: [...nodes.keys()].filter(id => id !== nodeId).map((id): Message => {
-                    return {to: nodeId, from: id, id: "", data: {}};
+                    return {to: nodeId, from: id, data: {}};
                 })
             };
             res.end(JSON.stringify(resData));
@@ -157,8 +130,7 @@ const requestListener: RequestListener = async (req, res) => {
         const filePath = publicDir + (req.url === '/' ? '/index.html' : req.url);
         fs.readFile(filePath, (err, data) => {
             if (err) {
-                res.writeHead(404);
-                res.end(JSON.stringify(err));
+                _404(req, res, err);
                 return;
             }
             res.writeHead(200);
@@ -166,8 +138,7 @@ const requestListener: RequestListener = async (req, res) => {
         });
         return;
     }
-    res.writeHead(500);
-    res.end("internal error");
+    _500(req, res);
 };
 
 const server = http.createServer(requestListener);

@@ -4,20 +4,22 @@
   "description": "test for estimate js game size with all compression enabled",
   "type": "module",
   "scripts": {
+    "start": "nodemon ./public/server.js",
     "prebuild": "npm run server-build",
     "build": "npm run client-build",
     "postbuild": "roadroller -D -O1 -- public/index.js -o public/index.js",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --sourcemap --platform=browser --outfile=public/index.js",
-    "client-build": "esbuild src/lib/index.ts --bundle --minify --mangle-props=_$ --platform=browser --outfile=public/index.js",
+    "client-build": "esbuild src/lib/index.ts --bundle --minify --mangle-props=_$ --outfile=public/index.js",
     "server-build": "esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js",
-    "server-watch": "esbuild server/src/index.ts --bundle --platform=node --target=node16 --format=esm --outfile=public/server.js"
+    "server-watch": "esbuild server/src/index.ts --watch --bundle --platform=node --target=node16 --format=esm --outfile=public/server.js"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "esbuild": "^0.15.0",
     "roadroller": "^2.1.0",
-    "@types/node": "^18.7.1"
+    "@types/node": "^18.7.1",
+    "nodemon": "^2.0.19"
   },
   "dependencies": {
    "node-static": "^0.7.11"

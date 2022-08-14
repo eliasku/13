@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "esnext",
     "target": "es6",
-    "moduleResolution": "nodeNext",
+    "moduleResolution": "node",
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,

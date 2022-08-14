@@ -110,7 +110,7 @@ const doFrame = () => {
         return;
     }
     if (glSim) {
-        glSim.update(deltaTime);
+        glSim.update_(deltaTime);
     }
     // const r = (0.1 * Math.random() * 255) | 0;
     // const g = (0.1 * Math.random() * 255) | 0;

@@ -1,54 +1,54 @@
 export class Pointer {
-    id = 0;
-    startX = +0.0;
-    startY = +0.0;
-    prevX = +0.0;
-    prevY = +0.0;
-    x = +0.0;
-    y = +0.0;
-    down = false;
-    active = false;
+    id_ = 0;
+    startX_ = +0.0;
+    startY_ = +0.0;
+    prevX_ = +0.0;
+    prevY_ = +0.0;
+    x_ = +0.0;
+    y_ = +0.0;
+    down_ = false;
+    active_ = false;
 }
 
-const pointers:Pointer[] = [];
+const pointers: Pointer[] = [];
 export const inputPointers = pointers;
 
 function getPointer(id: number): Pointer {
     for (let i = 0; i < pointers.length; ++i) {
-        if (pointers[i].id === id) {
+        if (pointers[i].id_ === id) {
             return pointers[i];
         }
     }
     const pointer = new Pointer();
-    pointer.id = id;
+    pointer.id_ = id;
     pointers.push(pointer);
     return pointer;
 }
 
 function handleDown(pointer: Pointer, x: number, y: number) {
-    pointer.x = x;
-    pointer.y = y;
-    pointer.prevX = x;
-    pointer.prevY = y;
-    pointer.startX = x;
-    pointer.startY = y;
-    pointer.down = true;
-    pointer.active = true;
+    pointer.x_ = x;
+    pointer.y_ = y;
+    pointer.prevX_ = x;
+    pointer.prevY_ = y;
+    pointer.startX_ = x;
+    pointer.startY_ = y;
+    pointer.down_ = true;
+    pointer.active_ = true;
 }
 
 function handleMove(pointer: Pointer, x: number, y: number) {
-    pointer.prevX = pointer.x;
-    pointer.prevY = pointer.y;
-    pointer.x = x;
-    pointer.y = y;
+    pointer.prevX_ = pointer.x_;
+    pointer.prevY_ = pointer.y_;
+    pointer.x_ = x;
+    pointer.y_ = y;
 }
 
 function handleUp(pointer: Pointer) {
-    pointer.down = false;
-    pointer.active = false;
+    pointer.down_ = false;
+    pointer.active_ = false;
 }
 
-export function initInput(canvas:HTMLCanvasElement) {
+export function initInput(canvas: HTMLCanvasElement) {
     canvas.addEventListener("mousedown", (e) => {
         const scale = canvas.width / canvas.clientWidth;
         const bb = canvas.getBoundingClientRect();
@@ -66,7 +66,7 @@ export function initInput(canvas:HTMLCanvasElement) {
     });
 
     canvas.addEventListener("mouseenter", (e) => {
-        if(e.buttons) {
+        if (e.buttons) {
             const scale = canvas.width / canvas.clientWidth;
             const bb = canvas.getBoundingClientRect();
             handleDown(getPointer(-1),

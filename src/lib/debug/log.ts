@@ -1,19 +1,22 @@
-export function logWarn(...args: any[]) {
+export function logWarn(msg: string): string {
     if (process.env.NODE_ENV === "production") {
     } else {
-        console.warn(...args);
+        console.warn(msg);
     }
+    return msg;
 }
 
-export function log(...args: any[]) {
+export function log(msg: string): string {
     if (process.env.NODE_ENV === "production") {
     } else {
-        console.log(...args);
+        console.log(msg);
     }
+    return msg;
 }
 
-export function logDoc(html: string) {
+export function logDoc(html: string): string {
     const p = document.createElement("p");
     p.innerHTML = html;
     document.body.prepend(p);
+    return html;
 }
