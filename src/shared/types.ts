@@ -1,6 +1,5 @@
-export type NodeID = string | "_";
+export type NodeID = number;
 export type CallID = number;
-export type Receiver = NodeID | "*" | undefined;
 export type MessageBody = any;
 
 export const enum NetEvent {
@@ -17,7 +16,7 @@ export interface Message {
     // call id
     call?: CallID;
     from: NodeID;
-    to: Receiver;
+    to: NodeID;
     data: MessageBody;
 }
 

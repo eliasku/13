@@ -113,40 +113,40 @@ export class Fluid2dGpu {
     updateBrush_(dt: number) {
         this.colorTime_ += dt * this.colorSpeed_;
         hue(this.color_, this.colorTime_ - (this.colorTime_ | 0));
-        for (let i = 0; i < inputPointers.length; ++i) {
-            const pointer = inputPointers[i];
-            if (pointer.active_ && pointer.down_) {
-                let mx = pointer.x_ | 0;
-                let my = pointer.y_ | 0;
-                const width = this.canvas_.width;
-                const height = this.canvas_.height;
-                if (pointer.down_ && (mx !== pointer.prevX_ || my !== pointer.prevY_)) {
-                    if (mx > 0 && mx < width - 1 && my > 0 && my < height - 1) {
-                        const fx = mx - pointer.prevX_;
-                        const fy = my - pointer.prevY_;
-                        const len = Math.sqrt(fx * fx + fy * fy);
-                        //const n = (len | 0) + 1;
-                        const n = 1;
-
-                        let x = pointer.prevX_;
-                        let y = pointer.prevY_;
-                        let dx = (mx - pointer.prevX_) / n;
-                        let dy = (my - pointer.prevY_) / n;
-                        for (let i = 0; i < n + 1; ++i) {
-                            //if (this.fluid.blocked[ij] !== 0) continue;
-                            // this.fluid.addSourceDensity(this.spawnAmount / n, x | 0, y | 0);
-                            // this.fluid.addSourceVelocity(this.spawnForce / n, fx, fy, x | 0, y | 0);
-                            this.splat_(x / width,
-                                1.0 - y / height,
-                                fx, -fy, this.color_);
-
-                            x += dx;
-                            y += dy;
-                        }
-                    }
-                }
-            }
-        }
+        // for (let i = 0; i < inputPointers.length; ++i) {
+        //     const pointer = inputPointers[i];
+        //     if (pointer.active_ && pointer.down_) {
+        //         let mx = pointer.x_ | 0;
+        //         let my = pointer.y_ | 0;
+        //         const width = this.canvas_.width;
+        //         const height = this.canvas_.height;
+        //         if (pointer.down_ && (mx !== pointer.prevX_ || my !== pointer.prevY_)) {
+        //             if (mx > 0 && mx < width - 1 && my > 0 && my < height - 1) {
+        //                 const fx = mx - pointer.prevX_;
+        //                 const fy = my - pointer.prevY_;
+        //                 const len = Math.sqrt(fx * fx + fy * fy);
+        //                 //const n = (len | 0) + 1;
+        //                 const n = 1;
+        //
+        //                 let x = pointer.prevX_;
+        //                 let y = pointer.prevY_;
+        //                 let dx = (mx - pointer.prevX_) / n;
+        //                 let dy = (my - pointer.prevY_) / n;
+        //                 for (let i = 0; i < n + 1; ++i) {
+        //                     //if (this.fluid.blocked[ij] !== 0) continue;
+        //                     // this.fluid.addSourceDensity(this.spawnAmount / n, x | 0, y | 0);
+        //                     // this.fluid.addSourceVelocity(this.spawnForce / n, fx, fy, x | 0, y | 0);
+        //                     this.splat_(x / width,
+        //                         1.0 - y / height,
+        //                         fx, -fy, this.color_);
+        //
+        //                     x += dx;
+        //                     y += dy;
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
 
     project_() {

@@ -1,14 +1,14 @@
-// main app entry point
-
 import {play} from "./audio/context";
 import {createAudioBuffer} from "./audio/sfxr";
 import {createAudioBufferFromSong} from "./audio/soundbox";
 import {song} from "./songs/0bit";
-import {connect, disconnect, getLocalNode, getRemoteNodes, peerConnections} from "./net/messaging";
+import {connect, disconnect, getLocalNode, getRemoteNodes} from "./net/messaging";
 import {Fluid2dGpu} from "./fluid/fluid2d-gpu";
-import {initInput} from "./fluid/input";
+import {initInput, inputPointers} from "./fluid/input";
 import {initGL} from "./fluid/gl";
-import {log} from "./debug/log";
+import {debugOverlay, flushOverlayText, log} from "./debug/log";
+import {connectToRemotes, peerConnections, setRTMessageHandler} from "./net/realtime";
+import {NodeID} from "../shared/types";
 
 document.body.style.margin = "0";
 document.body.style.height = "100vh";
@@ -20,22 +20,7 @@ document.body.prepend(canvas);
 initInput(canvas);
 initGL(canvas);
 
-let textTerminal = document.createElement("label");
-textTerminal.style.position = "fixed";
-
-textTerminal.style.font = "24px monospace bold";
-textTerminal.style.top = "0px";
-textTerminal.style.left = "0px";
-textTerminal.style.width = "100%";
-textTerminal.style.height = "100%";
-textTerminal.style.color = "white";
-textTerminal.style.backgroundColor = "transparent";
-textTerminal.style.background = "transparent";
-textTerminal.style.touchAction = "none";
-textTerminal.style.pointerEvents = "none";
-document.body.appendChild(textTerminal);
-
-const muted = false;
+const muted = true;
 let sndBuffer: AudioBuffer | null = null;
 let musicBuffer: AudioBuffer | null = null;
 let musicSource: AudioBufferSourceNode | null = null;
@@ -58,9 +43,12 @@ const onStart = async () => {
         disconnect();
     });
     await connect();
-    log("connected");
+    log("connected to signal server");
+    await connectToRemotes();
+    log("connected to initial remotes");
     started = true;
     glSim = new Fluid2dGpu(canvas);
+    setRTMessageHandler(rtHandler);
 };
 
 canvas.addEventListener("touchstart", onStart);
@@ -96,48 +84,16 @@ const raf = (ts: DOMHighResTimeStamp) => {
     requestAnimationFrame(raf);
 };
 
-const doFrame = () => {
-    // ctx.resetTransform();
-    // ctx.scale(ss, ss);
-
-    if (!started) {
-        // ctx.fillStyle = "#333";
-        // ctx.fillRect(0, 0, sw, sh);
-        //
-        // ctx.font = "bold 24px serif";
-        // ctx.fillStyle = "green";
-        // ctx.fillText("Tap to start!", sw / 2, sh / 2);
-        return;
-    }
-    if (glSim) {
-        glSim.update_(deltaTime);
-    }
-    // const r = (0.1 * Math.random() * 255) | 0;
-    // const g = (0.1 * Math.random() * 255) | 0;
-    // const b = (0.1 * Math.random() * 255) | 0;
-    //
-    // // ctx.fillStyle = `rgb(${r},${g},${b})`;
-    //
-
+function printConnections() {
     const cons = peerConnections;
     let text = "";
     text += "$ " + getLocalNode() + "\n";
-    // ctx.fillStyle = `rgb(${r},${g},${b})`;
-    // ctx.fillRect(0, 0, sw, sh);
-    // //ctx.fillRect(Math.random() * sw * ss, Math.random() * sh * ss, 10, 10);
-    //
-    // let y = 30;
-    // ctx.font = "bold 24px serif";
-    // ctx.fillStyle = "green";
-    // ctx.fillText(getLocalNode(), 10, y);
-    // y += 30;
     const nodes = getRemoteNodes();
-    // ctx.fillStyle = "white";
     for (const node of nodes) {
         text += "> " + node;
         const con = cons[node];
         if (con) {
-            switch(con.pc.connectionState) {
+            switch (con.pc.iceConnectionState) {
                 case "disconnected":
                 case "failed":
                 case "closed":
@@ -150,13 +106,88 @@ const doFrame = () => {
                     text += "🟡";
                     break;
             }
-        }
-        else {
+            text += ` | ${con.pc.connectionState} | ${con.pc.signalingState} | ${con.pc.iceConnectionState}`;
+        } else {
             text += "⭕"
         }
         text += "\n";
     }
-    textTerminal.innerText = text;
+    debugOverlay(text + "\n");
+}
+
+function testLoop() {
+    const points:number[] = [];
+    for (let i = 0; i < inputPointers.length; ++i) {
+        const pointer = inputPointers[i];
+        if (pointer.active_ && pointer.down_) {
+            let mx = pointer.x_ | 0;
+            let my = pointer.y_ | 0;
+            const width = canvas.width;
+            const height = canvas.height;
+            if (pointer.down_ && (mx !== pointer.prevX_ || my !== pointer.prevY_)) {
+                if (mx > 0 && mx < width - 1 && my > 0 && my < height - 1) {
+                    const fx = mx - pointer.prevX_;
+                    const fy = my - pointer.prevY_;
+                    const len = Math.sqrt(fx * fx + fy * fy);
+                    //const n = (len | 0) + 1;
+                    const n = 1;
+
+                    let x = pointer.prevX_;
+                    let y = pointer.prevY_;
+                    let dx = (mx - pointer.prevX_) / n;
+                    let dy = (my - pointer.prevY_) / n;
+                    for (let i = 0; i < n + 1; ++i) {
+                        const u = x / width;
+                        const v = 1.0 - y / height;
+                        points.push(u, v, fx, -fy);
+                        x += dx;
+                        y += dy;
+                    }
+                }
+            }
+        }
+    }
+    if(points.length) {
+        for(let i = 0; i < peerConnections.length; ++i) {
+            const con = peerConnections[i];
+            if(con && con.channel && con.channel.readyState === "open") {
+                con.channel.send(JSON.stringify({points}));
+            }
+        }
+        spawnPoints(points);
+    }
+}
+
+function rtHandler(fromId: NodeID, data:any) {
+    if(data && data.points) {
+        spawnPoints(data.points);
+    }
+}
+
+function spawnPoints(points: number[]) {
+    for(let i = 0; i < points.length; ) {
+        glSim.splat_(
+            points[i++],
+            points[i++],
+            points[i++],
+            points[i++],
+            glSim.color_
+        );
+    }
+}
+
+const doFrame = () => {
+    if (!started) {
+        return;
+    }
+
+    if (glSim) {
+        glSim.update_(deltaTime);
+        testLoop();
+    }
+
+    printConnections();
+    flushOverlayText();
 };
 
 requestAnimationFrame(raf);

@@ -1,20 +1,22 @@
 import {log, logWarn} from "../debug/log";
-import {Response, Request, Message, MessageBody, NetEvent, NodeID, Receiver, ControlCode} from "../../shared/types";
+import {ControlCode, Message, MessageBody, NetEvent, NodeID, Request, Response} from "../../shared/types";
 
 const serverUrl = "/";
-const updateInterval = 1000;
+//const updateInterval = 1000;
+const updateInterval = 250;
 let nodeId: undefined | NodeID = undefined;
-let nodes: Record<string, string> = {};
+let nodes: number[] = [];
 
 let outcomeQueue: Message[] = [];
-let waiters: Record<string, (msg: Message) => void> = {};
+let waiters: ((msg: Message) => void)[] = [];
 let nextCallId = 1;
-function call(to: Receiver, data: MessageBody): Promise<MessageBody> {
+
+export function call(to: NodeID, data: MessageBody): Promise<MessageBody> {
     log(`call to ${to} type ${data.type}`);
     return new Promise((resolve, reject) => {
         const call = nextCallId++;
         waiters[call] = (res) => {
-            delete waiters[call];
+            waiters[call] = undefined;
             log(`received result from ${to} : ${JSON.stringify(res.data)}`);
             resolve(res.data);
         };
@@ -27,7 +29,7 @@ function call(to: Receiver, data: MessageBody): Promise<MessageBody> {
     });
 }
 
-function sendWithoutResponse(to: Receiver, data: MessageBody): void {
+export function sendWithoutResponse(to: NodeID, data: MessageBody): void {
     log(`send to ${to} type ${data.type}`);
     outcomeQueue.push({
         from: nodeId,
@@ -40,6 +42,10 @@ type Handler = (req: Message) => Promise<MessageBody> | MessageBody | void;
 
 const handlers: Record<string, Handler> = {};
 
+export function setHandler(type: string, handler: Handler) {
+    handlers[type] = handler;
+}
+
 function respond(req: Message, data: MessageBody) {
     const response: Message = {
         call: req.call!,
@@ -50,13 +56,20 @@ function respond(req: Message, data: MessageBody) {
     outcomeQueue.push(response);
 }
 
+let onNodeRemoved: (id: NodeID) => void = () => {
+};
+
+export function setOnNodeRemoved(callback: (id: NodeID) => void) {
+    onNodeRemoved = callback;
+}
+
 function requestHandler(req: Message) {
     if (req.data.event !== undefined) {
         log(`${req.data.event} ${req.from}`);
         if (req.data.event === NetEvent.NodeAdded) {
             nodes[req.from] = req.from;
         } else if (req.data.event === NetEvent.NodeRemoved) {
-            closeConnection(req.from);
+            onNodeRemoved(req.from);
             delete nodes[req.from];
         }
         return;
@@ -129,9 +142,6 @@ export async function connect() {
             nodeId = res.to;
             for (const resp of res.responses) {
                 nodes[resp.from] = resp.from;
-
-                // rt
-                connectToRemote(resp.from);
             }
         }
         connecting = false;
@@ -150,8 +160,8 @@ export function disconnect() {
             logWarn("close error");
         }
         outcomeQueue = [];
-        waiters = {};
-        nodes = {};
+        waiters = [];
+        nodes = [];
         nodeId = undefined;
     } else if (connecting) {
         logWarn("currently connecting");
@@ -163,133 +173,5 @@ export function getLocalNode(): NodeID {
 }
 
 export function getRemoteNodes(): NodeID[] {
-    return Object.keys(nodes);
+    return nodes.filter(x => x !== undefined);
 }
-
-
-/// WebRTC
-
-const configuration: RTCConfiguration = {
-    iceServers: [
-        // {urls: 'stun:23.21.150.121'},
-        {urls: 'stun:stun.l.google.com:19302'},
-        // {
-            // urls: [
-                // "stun:stun.l.google.com:19302",
-                // "stun:stun1.l.google.com:19302",
-                // "stun:stun2.l.google.com:19302",
-                // "stun:stun3.l.google.com:19302",
-                // "stun:stun4.l.google.com:19302",
-            // ]
-        // },
-    ],
-};
-
-interface Connection {
-    remoteId: NodeID | null;
-    pc: RTCPeerConnection;
-    channel: RTCDataChannel | null;
-}
-
-const connections: Record<string, Connection> = {};
-export const peerConnections: Record<string, Connection> = connections;
-
-function createConnection(remoteId: string) {
-    const pc = new RTCPeerConnection(configuration);
-    const connection: Connection = {
-        remoteId,
-        pc,
-        channel: null,
-    };
-    connections[remoteId] = connection;
-    pc.addEventListener("icecandidate", (e) => {
-        const candidate = e.candidate;
-        if (candidate) {
-            sendWithoutResponse(remoteId, {type: "rtc_candidate", candidate: candidate.toJSON()});
-        }
-    });
-
-    pc.addEventListener("negotiationneeded", async (e) => {
-        log(e.toString());
-        try {
-            const offer = await pc.createOffer({
-                offerToReceiveAudio: false,
-                offerToReceiveVideo: false
-            });
-            await pc.setLocalDescription(offer);
-            const result = await call(remoteId, {type: "rtc_offer", offer});
-            await pc.setRemoteDescription(result.answer);
-        } catch (e) {
-            console.warn("Couldn't create offer", e);
-        }
-    });
-
-    pc.addEventListener("datachannel", (e) => {
-        log("received data-channel on Slave");
-
-        const channel = e.channel;
-        connections[remoteId].channel = channel;
-        if (channel) {
-            log("dc: " + channel.readyState);
-            channel.send("Slave -> Master");
-            channel.onmessage = (e) => {
-                log("receiver message from Master: " + e.data);
-            };
-        }
-    });
-
-    pc.addEventListener("icecandidateerror", (e) => {
-        log(e.toString());
-    });
-
-    return connection;
-}
-
-function closeConnection(remoteId: string) {
-    const con = connections[remoteId];
-    if (con) {
-        delete connections[remoteId];
-        if (con.channel) {
-            con.channel.close();
-            con.channel = null;
-        }
-        con.pc.close();
-    }
-}
-
-export function connectToRemote(remoteId: string) {
-    const connection = createConnection(remoteId);
-    connection.channel = connection.pc.createDataChannel("Source");
-    log("dc: " + connection.channel.readyState);
-    connection.channel.addEventListener("open", (e) => {
-        log("data channel opened");
-        connection.channel.send(`Hello from ${nodeId} with ${Math.random()}!`);
-    });
-    connection.channel.addEventListener("message", (e) => {
-        log("received message on Master: " + e.data);
-    });
-}
-
-handlers["rtc_offer"] = async (req) => {
-    if (!connections[req.from]) {
-        createConnection(req.from);
-    }
-    const connection = connections[req.from];
-    await connection.pc.setRemoteDescription(req.data.offer);
-    const answer = await connection.pc.createAnswer();
-    await connection.pc.setLocalDescription(answer);
-    return {answer};
-};
-
-handlers["rtc_candidate"] = async (req) => {
-    if (!connections[req.from]) {
-        createConnection(req.from);
-    }
-    const connection = connections[req.from];
-    try {
-        await connection.pc.addIceCandidate(new RTCIceCandidate(req.data.candidate));
-    } catch (e) {
-        log("ice candidate set failed");
-    }
-    return {};
-};

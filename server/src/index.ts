@@ -57,7 +57,7 @@ const requestListener: RequestListener = async (req, res) => {
         const reqData: Request = JSON.parse(data);
 
         if (reqData.control === ControlCode.Connect) {
-            const nodeId = reqData.from || "" + (nextNodeId++);
+            const nodeId = reqData.from ?? nextNodeId++;
             nodes.set(nodeId, {
                 id: nodeId,
                 ts: performance.now()
@@ -112,7 +112,17 @@ const requestListener: RequestListener = async (req, res) => {
                 }
                 responses.push(m);
             } else {
-                newQueue.push(m);
+                if(nodes.has(m.to)) {
+                    newQueue.push(m);
+                }
+                else {
+                    newQueue.push({
+                        to: m.from,
+                        from: m.to,
+                        call: m.call,
+                        data: {error:404}
+                    });
+                }
             }
         }
         queue = newQueue;
