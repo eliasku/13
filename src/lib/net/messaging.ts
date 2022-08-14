@@ -2,8 +2,8 @@ import {log, logWarn} from "../debug/log";
 import {ControlCode, Message, MessageBody, NetEvent, NodeID, Request, Response} from "../../shared/types";
 
 const serverUrl = "/";
-//const updateInterval = 1000;
-const updateInterval = 250;
+const updateInterval = 1000;
+// const updateInterval = 250;
 let nodeId: undefined | NodeID = undefined;
 let nodes: number[] = [];
 
