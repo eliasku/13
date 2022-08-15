@@ -7,7 +7,7 @@
     "start": "nodemon ./public/server.js",
     "prebuild": "npm run server-build",
     "build": "npm run client-build",
-    "postbuild": "roadroller -D -O1 -- public/index.js -o public/index.js",
+    "compress": "roadroller -D -O1 -- public/index.js -o public/index.js",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --sourcemap --outfile=public/index.js",
     "client-build": "esbuild src/lib/index.ts --bundle --minify --target=safari14 --mangle-props=_$ --outfile=public/index.js",
     "server-build": "esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js",
