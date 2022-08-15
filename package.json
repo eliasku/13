@@ -6,7 +6,8 @@
   "scripts": {
     "start": "nodemon ./public/server.js",
     "prebuild": "npm run server-build",
-    "build": "npm run client-build",
+    "build": "esbuild src/lib/index.ts --bundle --target=safari14 --outfile=public/index.js",
+    "rel_build": "npm run client-build",
     "compress": "roadroller -D -O1 -- public/index.js -o public/index.js",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --sourcemap --outfile=public/index.js",
     "client-build": "esbuild src/lib/index.ts --bundle --minify --target=safari14 --mangle-props=_$ --outfile=public/index.js",
