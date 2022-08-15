@@ -218,6 +218,10 @@ export async function connect() {
 export function disconnect() {
     if (running) {
         running = false;
+        const rcs = getRemoteClients();
+        for(let i = 0; i < rcs.length; ++i) {
+            closePeerConnection(rcs[i]);
+        }
         termSSE();
         messagesToPost = [];
         callbacks = [];

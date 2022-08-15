@@ -18,13 +18,12 @@ let sh = 1000;
 let ss = 1.0;
 document.body.prepend(canvas);
 
-termPrint("init.\n");
+termPrint("Initialize.");
 termFlush();
 
 initInput(canvas);
 
-termClear();
-termPrint("init..\n");
+termPrint(".");
 termFlush();
 initGL(canvas);
 
@@ -32,16 +31,13 @@ const muted = false;
 let sndBuffer: AudioBuffer | null = null;
 let musicBuffer: AudioBuffer | null = null;
 let musicSource: AudioBufferSourceNode | null = null;
-termPrint("create sounds\n");
-termFlush();
+termPrint(".");
 sndBuffer = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
-termPrint("create music\n");
-termFlush();
+termPrint(".");
 musicBuffer = createAudioBufferFromSong(song);
 
 termClear();
-termPrint("READY!\n");
-termPrint("TAP TO START!\n");
+termPrint("Ready!\nTap to Start!\n");
 termFlush();
 
 let glSim: Fluid2dGpu | undefined = undefined;
@@ -56,10 +52,7 @@ const onStart = async () => {
         }
     }
 
-    //window.addEventListener("unload", () => {
-    window.addEventListener("beforeunload", () => {
-        disconnect();
-    });
+    window.addEventListener("beforeunload", disconnect);
     setRTMessageHandler(rtHandler);
     await connect();
     started = true;
@@ -143,7 +136,7 @@ function testLoop() {
                     const fx = mx - pointer.prevX_;
                     const fy = my - pointer.prevY_;
                     const len = Math.sqrt(fx * fx + fy * fy);
-                    //const n = (len | 0) + 1;
+                    // const n = (len | 0) + 1;
                     const n = 1;
 
                     let x = pointer.prevX_;
@@ -203,6 +196,7 @@ const doFrame = () => {
         testLoop();
     }
 
+    termPrint("Now touch and drag.\n\n");
     printRemoteClients();
     termFlush();
 };
