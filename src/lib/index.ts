@@ -39,7 +39,8 @@ const onStart = async () => {
         }
     }
 
-    window.addEventListener("unload", () => {
+    //window.addEventListener("unload", () => {
+    window.addEventListener("beforeunload", () => {
         disconnect();
     });
     await connect();
