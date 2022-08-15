@@ -83,10 +83,15 @@ export function initGL(canvas: HTMLCanvasElement) {
     if (!gl) {
         logDoc("💀 <b>WebGL 2</b> is required");
     }
-    const ext = gl.getExtension('EXT_color_buffer_float');
+    const ext = gl.getExtension('EXT_color_buffer_half_float');
     if (!ext) {
-        logDoc("😵 <b>EXT_color_buffer_float</b> is required");
+        logDoc("😵 <b>EXT_color_buffer_half_float</b> is required");
     }
+    // const ext = gl.getExtension('EXT_color_buffer_float');
+    // if (!ext) {
+    //     logDoc("😵 <b>EXT_color_buffer_float</b> is required");
+    // }
+
     // const linearFiltering = gl.getExtension('OES_texture_half_float_linear');
     // if (!linearFiltering) {
     //     logToDocument("😵‍💫 <b>OES_texture_half_float_linear</b> is required");

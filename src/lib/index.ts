@@ -2,17 +2,17 @@ import {play} from "./audio/context";
 import {createAudioBuffer} from "./audio/sfxr";
 import {createAudioBufferFromSong} from "./audio/soundbox";
 import {song} from "./songs/0bit";
-import {connect, disconnect, getLocalNode, getRemoteNodes} from "./net/messaging";
+import {connect, disconnect, getClientId, getRemoteClients, connectToRemotes, setRTMessageHandler} from "./net/messaging";
 import {Fluid2dGpu} from "./fluid/fluid2d-gpu";
 import {initInput, inputPointers} from "./fluid/input";
 import {initGL} from "./fluid/gl";
 import {debugOverlay, flushOverlayText, log} from "./debug/log";
-import {connectToRemotes, peerConnections, setRTMessageHandler} from "./net/realtime";
 import {ClientID} from "../shared/types";
 
 document.body.style.margin = "0";
 document.body.style.height = "100vh";
 const canvas = document.createElement("canvas");
+canvas.style.backgroundColor = "black";
 let sw = 1000;
 let sh = 1000;
 let ss = 1.0;
@@ -20,7 +20,7 @@ document.body.prepend(canvas);
 initInput(canvas);
 initGL(canvas);
 
-const muted = true;
+const muted = false;
 let sndBuffer: AudioBuffer | null = null;
 let musicBuffer: AudioBuffer | null = null;
 let musicSource: AudioBufferSourceNode | null = null;
@@ -43,13 +43,10 @@ const onStart = async () => {
     window.addEventListener("beforeunload", () => {
         disconnect();
     });
+    setRTMessageHandler(rtHandler);
     await connect();
-    log("connected to signal server");
-    await connectToRemotes();
-    log("connected to initial remotes");
     started = true;
     glSim = new Fluid2dGpu(canvas);
-    setRTMessageHandler(rtHandler);
 };
 
 canvas.addEventListener("touchstart", onStart);
@@ -85,16 +82,15 @@ const raf = (ts: DOMHighResTimeStamp) => {
     requestAnimationFrame(raf);
 };
 
-function printConnections() {
-    const cons = peerConnections;
+function printRemoteClients() {
+    const remoteClients = getRemoteClients();
     let text = "";
-    text += "$ " + getLocalNode() + "\n";
-    const nodes = getRemoteNodes();
-    for (const node of nodes) {
-        text += "> " + node;
-        const con = cons[node];
-        if (con) {
-            switch (con.pc.iceConnectionState) {
+    text += "$ " + getClientId() + "\n";
+    for (const remoteClient of remoteClients) {
+        text += "> " + remoteClient.id;
+        const pc = remoteClient.pc;
+        if (pc) {
+            switch (pc.iceConnectionState) {
                 case "disconnected":
                 case "failed":
                 case "closed":
@@ -107,7 +103,7 @@ function printConnections() {
                     text += "🟡";
                     break;
             }
-            text += ` | ${con.pc.connectionState} | ${con.pc.signalingState} | ${con.pc.iceConnectionState}`;
+            text += ` | ${pc.signalingState} | ${pc.iceConnectionState}`;
         } else {
             text += "⭕"
         }
@@ -149,10 +145,11 @@ function testLoop() {
         }
     }
     if(points.length) {
-        for(let i = 0; i < peerConnections.length; ++i) {
-            const con = peerConnections[i];
-            if(con && con.channel && con.channel.readyState === "open") {
-                con.channel.send(JSON.stringify({points}));
+        const remoteClients = getRemoteClients();
+        for(let i = 0; i < remoteClients.length; ++i) {
+            const rc = remoteClients[i];
+            if(rc && rc.dc && rc.dc.readyState === "open") {
+                rc.dc.send(JSON.stringify({points}));
             }
         }
         spawnPoints(points);
@@ -187,7 +184,7 @@ const doFrame = () => {
         testLoop();
     }
 
-    printConnections();
+    printRemoteClients();
     flushOverlayText();
 };
 
