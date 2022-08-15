@@ -8,7 +8,7 @@ import {initInput, inputPointers} from "./fluid/input";
 import {initGL} from "./fluid/gl";
 import {debugOverlay, flushOverlayText, log} from "./debug/log";
 import {connectToRemotes, peerConnections, setRTMessageHandler} from "./net/realtime";
-import {NodeID} from "../shared/types";
+import {ClientID} from "../shared/types";
 
 document.body.style.margin = "0";
 document.body.style.height = "100vh";
@@ -158,7 +158,7 @@ function testLoop() {
     }
 }
 
-function rtHandler(fromId: NodeID, data:any) {
+function rtHandler(fromId: ClientID, data:any) {
     if(data && data.points) {
         spawnPoints(data.points);
     }

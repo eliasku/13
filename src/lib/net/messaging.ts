@@ -1,8 +1,8 @@
 import {log, logAssert, logWarn} from "../debug/log";
-import {Message, MessageBody, NodeID, PostMessagesResponse, Request} from "../../shared/types";
+import {Message, MessageBody, ClientID, PostMessagesResponse, Request, ServerEventName} from "../../shared/types";
 
 const serverUrl = "/_";
-let nodeId: undefined | NodeID = undefined;
+let nodeId: undefined | ClientID = undefined;
 let nodes: number[] = [];
 
 let outcomeQueue: Message[] = [];
@@ -10,7 +10,7 @@ let waiters: ((msg: Message) => void)[] = [];
 let nextCallId = 1;
 let eventSource: EventSource | null = null;
 
-export function call(to: NodeID, data: MessageBody): Promise<MessageBody> {
+export function call(to: ClientID, data: MessageBody): Promise<MessageBody> {
     log(`call to ${to} type ${data.type}`);
     return new Promise((resolve, reject) => {
         const call = nextCallId++;
@@ -28,7 +28,7 @@ export function call(to: NodeID, data: MessageBody): Promise<MessageBody> {
     });
 }
 
-export function sendWithoutResponse(to: NodeID, data: MessageBody): void {
+export function sendWithoutResponse(to: ClientID, data: MessageBody): void {
     log(`send to ${to} type ${data.type}`);
     outcomeQueue.push({
         from: nodeId,
@@ -55,10 +55,10 @@ function respond(req: Message, data: MessageBody) {
     outcomeQueue.push(response);
 }
 
-let onNodeRemoved: (id: NodeID) => void = () => {
+let onNodeRemoved: (id: ClientID) => void = () => {
 };
 
-export function setOnNodeRemoved(callback: (id: NodeID) => void) {
+export function setOnNodeRemoved(callback: (id: ClientID) => void) {
     onNodeRemoved = callback;
 }
 
@@ -163,17 +163,17 @@ function initSSE(): Promise<void> {
         waitForConnectedEvent = resolve;
         eventSource = new EventSource(serverUrl);
         eventSource.addEventListener("error", onSSEError);
-        eventSource.addEventListener("connected", (e: MessageEvent<string>) => {
+        eventSource.addEventListener(ServerEventName.ClientConnected, (e: MessageEvent<string>) => {
             const ids = e.data.split(";").map(x => Number.parseInt(x));
             nodeId = ids[0];
             for (let i = 1; i < ids.length; ++i) {
                 nodes[ids[i]] = ids[i];
             }
             waitForConnectedEvent();
-            eventSource.addEventListener("update", onSSEUpdate);
+            eventSource.addEventListener(ServerEventName.ClientUpdate, onSSEUpdate);
             eventSource.addEventListener("message", onSSEMessage);
-            eventSource.addEventListener("client_add", onSSEClientAdd);
-            eventSource.addEventListener("client_remove", onSSEClientRemove);
+            eventSource.addEventListener(ServerEventName.ClientAdd, onSSEClientAdd);
+            eventSource.addEventListener(ServerEventName.ClientRemove, onSSEClientRemove);
         }, {once: true});
     });
 }
@@ -182,10 +182,10 @@ function termSSE() {
     if (eventSource) {
         log("terminate SSE");
         eventSource.removeEventListener("error", onSSEError);
-        eventSource.removeEventListener("update", onSSEUpdate);
+        eventSource.removeEventListener(ServerEventName.ClientUpdate, onSSEUpdate);
         eventSource.removeEventListener("message", onSSEMessage);
-        eventSource.removeEventListener("client_add", onSSEClientAdd);
-        eventSource.removeEventListener("client_remove", onSSEClientRemove);
+        eventSource.removeEventListener(ServerEventName.ClientAdd, onSSEClientAdd);
+        eventSource.removeEventListener(ServerEventName.ClientRemove, onSSEClientRemove);
         eventSource.close();
         eventSource = null;
         waitForConnectedEvent = null;
@@ -226,10 +226,10 @@ export function disconnect() {
     }
 }
 
-export function getLocalNode(): NodeID {
+export function getLocalNode(): ClientID {
     return nodeId;
 }
 
-export function getRemoteNodes(): NodeID[] {
+export function getRemoteNodes(): ClientID[] {
     return nodes.filter(x => x !== undefined);
 }

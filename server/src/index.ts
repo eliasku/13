@@ -2,13 +2,13 @@ import * as http from "http";
 import {IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
 import * as fs from "fs";
 import * as url from 'url';
-import {NodeID, PostMessagesResponse, Request,} from "../../src/shared/types";
+import {ClientID, PostMessagesResponse, Request, ServerEventName,} from "../../src/shared/types";
 
 const defaultPort = 8080;
 const port = +process.env.PORT || defaultPort;
 
 export interface ClientState {
-    id: NodeID;
+    id: ClientID;
     // last time client or server communicates with node
     ts: number;
     es: ServerResponse;
@@ -17,22 +17,26 @@ export interface ClientState {
 
 let nextNodeId = 1;
 
-const nodes = new Map<NodeID, ClientState>();
+const nodes = new Map<ClientID, ClientState>();
 
-function sendCloseServerEvent(id: NodeID) {
+setInterval(()=>{
+    broadcastServerEvent(0, "ping", "");
+}, 10000);
+
+function sendCloseServerEvent(id: ClientID) {
     const node = nodes.get(id);
     const res = node.es;
     res.write(`id: -1\ndata: \n\n`);
     res.end();
 }
 
-function sendServerEvent(id: NodeID, event: string, data: string) {
+function sendServerEvent(id: ClientID, event: string, data: string) {
     const node = nodes.get(id);
     const res = node.es;
     res.write(`id: ${node.ei++}\nevent: ${event}\ndata: ${data}\n\n`);
 }
 
-function broadcastServerEvent(from: NodeID, event: string, data: string) {
+function broadcastServerEvent(from: ClientID, event: string, data: string) {
     for (const node of nodes.values()) {
         if (node.id !== from) {
             sendServerEvent(node.id, event, data);
@@ -79,14 +83,14 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
             sendCloseServerEvent(id);
             nodes.delete(id);
         }
-        broadcastServerEvent(id, "client_remove", "" + id);
+        broadcastServerEvent(id, ServerEventName.ClientRemove, "" + id);
         console.info("broadcast node " + id + " removed ");
     });
 
     const otherClientIds = [...nodes.keys()];
     nodes.set(id, client);
-    sendServerEvent(id, "connected", id + ";" + otherClientIds.join(";"));
-    broadcastServerEvent(id, "client_add", "" + id);
+    sendServerEvent(id, ServerEventName.ClientConnected, id + ";" + otherClientIds.join(";"));
+    broadcastServerEvent(id, ServerEventName.ClientAdd, "" + id);
 }
 
 async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) {

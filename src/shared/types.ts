@@ -1,4 +1,4 @@
-export type NodeID = number;
+export type ClientID = number;
 export type CallID = number;
 export type MessageBody = any;
 
@@ -6,18 +6,18 @@ export const enum ServerEventName {
     ClientConnected = "connected",
     ClientAdd = "client_add",
     ClientRemove = "client_remove",
+    ClientUpdate = "update",
 }
 
 export interface Message {
-    // call id
     call?: CallID;
-    from: NodeID;
-    to: NodeID;
+    from: ClientID;
+    to: ClientID;
     data: MessageBody;
 }
 
 export interface Request {
-    from?: NodeID;
+    from?: ClientID;
     messages?: Message[];
 }
 

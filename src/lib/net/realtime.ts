@@ -1,5 +1,5 @@
 import {log, logWarn} from "../debug/log";
-import {NodeID} from "../../shared/types";
+import {ClientID} from "../../shared/types";
 import {call, getLocalNode, getRemoteNodes, sendWithoutResponse, setHandler, setOnNodeRemoved} from "./messaging";
 
 setOnNodeRemoved(closeConnection);
@@ -22,22 +22,22 @@ const configuration: RTCConfiguration = {
 };
 
 interface Connection {
-    remoteId: NodeID | null;
+    remoteId: ClientID | null;
     pc: RTCPeerConnection;
     channel: RTCDataChannel | null;
 }
 
-let onRTMessage: (fromId: NodeID, data: any) => void = () => {
+let onRTMessage: (fromId: ClientID, data: any) => void = () => {
 };
 
-export function setRTMessageHandler(handler: (fromId: NodeID, data: any) => void) {
+export function setRTMessageHandler(handler: (fromId: ClientID, data: any) => void) {
     onRTMessage = handler;
 }
 
 const connections: Connection[] = [];
 export const peerConnections: Connection[] = connections;
 
-async function sendOffer(remoteId: NodeID) {
+async function sendOffer(remoteId: ClientID) {
     try {
         const connection = connections[remoteId];
         if (connection) {
@@ -57,7 +57,7 @@ async function sendOffer(remoteId: NodeID) {
     }
 }
 
-function createConnection(remoteId: NodeID) {
+function createConnection(remoteId: ClientID) {
     const pc = new RTCPeerConnection(configuration);
     const connection: Connection = {
         remoteId,
@@ -98,7 +98,7 @@ function createConnection(remoteId: NodeID) {
     return connection;
 }
 
-function closeConnection(remoteId: NodeID) {
+function closeConnection(remoteId: ClientID) {
     const con = connections[remoteId];
     if (con) {
         connections[remoteId] = undefined;
@@ -110,7 +110,7 @@ function closeConnection(remoteId: NodeID) {
     }
 }
 
-export async function connectToRemote(remoteId: NodeID) {
+export async function connectToRemote(remoteId: ClientID) {
     const connection = createConnection(remoteId);
     await sendOffer(remoteId);
 
