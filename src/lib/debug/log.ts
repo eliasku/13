@@ -32,11 +32,11 @@ export function logDoc(html: string): string {
 let textTerminal: HTMLLabelElement | null = null;
 let textTerminalBuffer = "";
 
-export function debugOverlay(text: string) {
+export function termPrint(text: string) {
     textTerminalBuffer += text;
 }
 
-export function flushOverlayText() {
+export function termFlush() {
     if (textTerminal === null) {
         textTerminal = document.createElement("label");
         const sx = textTerminal.style;
@@ -54,5 +54,8 @@ export function flushOverlayText() {
         document.body.appendChild(textTerminal);
     }
     textTerminal.innerText = textTerminalBuffer;
+}
+
+export function termClear() {
     textTerminalBuffer = "";
 }

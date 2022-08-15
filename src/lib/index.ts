@@ -2,11 +2,11 @@ import {play} from "./audio/context";
 import {createAudioBuffer} from "./audio/sfxr";
 import {createAudioBufferFromSong} from "./audio/soundbox";
 import {song} from "./songs/0bit";
-import {connect, disconnect, getClientId, getRemoteClients, connectToRemotes, setRTMessageHandler} from "./net/messaging";
+import {connect, disconnect, getClientId, getRemoteClients, setRTMessageHandler} from "./net/messaging";
 import {Fluid2dGpu} from "./fluid/fluid2d-gpu";
 import {initInput, inputPointers} from "./fluid/input";
 import {initGL} from "./fluid/gl";
-import {debugOverlay, flushOverlayText, log} from "./debug/log";
+import {termClear, termFlush, termPrint} from "./debug/log";
 import {ClientID} from "../shared/types";
 
 document.body.style.margin = "0";
@@ -17,15 +17,32 @@ let sw = 1000;
 let sh = 1000;
 let ss = 1.0;
 document.body.prepend(canvas);
+
+termPrint("init.\n");
+termFlush();
+
 initInput(canvas);
+
+termClear();
+termPrint("init..\n");
+termFlush();
 initGL(canvas);
 
 const muted = false;
 let sndBuffer: AudioBuffer | null = null;
 let musicBuffer: AudioBuffer | null = null;
 let musicSource: AudioBufferSourceNode | null = null;
+termPrint("create sounds\n");
+termFlush();
 sndBuffer = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
+termPrint("create music\n");
+termFlush();
 musicBuffer = createAudioBufferFromSong(song);
+
+termClear();
+termPrint("READY!\n");
+termPrint("TAP TO START!\n");
+termFlush();
 
 let glSim: Fluid2dGpu | undefined = undefined;
 let started = false;
@@ -109,11 +126,11 @@ function printRemoteClients() {
         }
         text += "\n";
     }
-    debugOverlay(text + "\n");
+    termPrint(text + "\n");
 }
 
 function testLoop() {
-    const points:number[] = [];
+    const points: number[] = [];
     for (let i = 0; i < inputPointers.length; ++i) {
         const pointer = inputPointers[i];
         if (pointer.active_ && pointer.down_) {
@@ -144,11 +161,11 @@ function testLoop() {
             }
         }
     }
-    if(points.length) {
+    if (points.length) {
         const remoteClients = getRemoteClients();
-        for(let i = 0; i < remoteClients.length; ++i) {
+        for (let i = 0; i < remoteClients.length; ++i) {
             const rc = remoteClients[i];
-            if(rc && rc.dc && rc.dc.readyState === "open") {
+            if (rc && rc.dc && rc.dc.readyState === "open") {
                 rc.dc.send(JSON.stringify({points}));
             }
         }
@@ -156,14 +173,14 @@ function testLoop() {
     }
 }
 
-function rtHandler(fromId: ClientID, data:any) {
-    if(data && data.points) {
+function rtHandler(fromId: ClientID, data: any) {
+    if (data && data.points) {
         spawnPoints(data.points);
     }
 }
 
 function spawnPoints(points: number[]) {
-    for(let i = 0; i < points.length; ) {
+    for (let i = 0; i < points.length;) {
         glSim.splat_(
             points[i++],
             points[i++],
@@ -179,13 +196,15 @@ const doFrame = () => {
         return;
     }
 
+    termClear();
+
     if (glSim) {
         glSim.update_(deltaTime);
         testLoop();
     }
 
     printRemoteClients();
-    flushOverlayText();
+    termFlush();
 };
 
 requestAnimationFrame(raf);
