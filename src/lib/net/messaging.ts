@@ -84,10 +84,18 @@ let connecting = false;
 let running = false;
 
 let messageUploading = false;
+let lastPostTime = 0;
 
 const processLoop = () => {
-    if (running && outcomeQueue.length > 0 && !messageUploading) {
-        process();
+    if (running && !messageUploading) {
+        if(outcomeQueue.length > 0) {
+            process();
+        }
+        else if(performance.now() - lastPostTime >= 10000) {
+            // ping
+            lastPostTime = performance.now();
+            _post({from: nodeId!});
+        }
     }
 };
 
@@ -119,10 +127,6 @@ async function _post(req: Request): Promise<PostMessagesResponse> {
     });
     return await response.json() as PostMessagesResponse;
 }
-
-// function _sendBeacon(req: Request): boolean {
-//     return navigator.sendBeacon(serverUrl, JSON.stringify(req));
-// }
 
 let waitForConnectedEvent: () => void | null = null;
 
@@ -212,12 +216,6 @@ export async function connect() {
 export function disconnect() {
     if (running) {
         running = false;
-        // if (!_sendBeacon({
-        //     from: nodeId,
-        //     control: ControlCode.Close,
-        // })) {
-        //     logWarn("close error");
-        // }
         termSSE();
         outcomeQueue = [];
         waiters = [];
