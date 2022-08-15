@@ -158,5 +158,5 @@ setHandler("rtc_candidate", async (req) => {
             log("ice candidate set failed: " + e.message);
         }
     }
-    return {};
+    return undefined;
 });

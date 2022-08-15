@@ -14,6 +14,14 @@ export function log(msg: string): string {
     return msg;
 }
 
+export function logAssert(expr: boolean):boolean {
+    if (process.env.NODE_ENV === "production") {
+    } else {
+        console.assert(expr);
+    }
+    return expr;
+}
+
 export function logDoc(html: string): string {
     const p = document.createElement("p");
     p.innerHTML = html;

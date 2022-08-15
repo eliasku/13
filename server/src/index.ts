@@ -1,26 +1,41 @@
 import * as http from "http";
-import {IncomingMessage, RequestListener, ServerResponse} from "http";
+import {IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
 import * as fs from "fs";
 import * as url from 'url';
-import {MessageBody, Response, Request, Message, NodeID, NetEvent, ControlCode, NodeState} from "../../src/shared/types";
+import {NodeID, PostMessagesResponse, Request,} from "../../src/shared/types";
 
 const defaultPort = 8080;
 const port = +process.env.PORT || defaultPort;
 
-let queue: Message[] = [];
+export interface ClientState {
+    id: NodeID;
+    // last time client or server communicates with node
+    ts: number;
+    es: ServerResponse;
+    ei: number;
+}
 
 let nextNodeId = 1;
 
-const nodes = new Map<NodeID, NodeState>();
+const nodes = new Map<NodeID, ClientState>();
 
-function broadcast(from: NodeID, data: MessageBody) {
-    for (const nodeId of nodes.keys()) {
-        if (nodeId !== from) {
-            queue.push({
-                from,
-                to: nodeId,
-                data
-            });
+function sendCloseServerEvent(id: NodeID) {
+    const node = nodes.get(id);
+    const res = node.es;
+    res.write(`id: -1\ndata: \n\n`);
+    res.end();
+}
+
+function sendServerEvent(id: NodeID, event: string, data: string) {
+    const node = nodes.get(id);
+    const res = node.es;
+    res.write(`id: ${node.ei++}\nevent: ${event}\ndata: ${data}\n\n`);
+}
+
+function broadcastServerEvent(from: NodeID, event: string, data: string) {
+    for (const node of nodes.values()) {
+        if (node.id !== from) {
+            sendServerEvent(node.id, event, data);
         }
     }
 }
@@ -32,15 +47,80 @@ const corsHeaders = {
     "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
 };
 
-const _404 = (req:IncomingMessage, res:ServerResponse, err?:any) =>{
-        res.writeHead(404);
-        res.end("not found" + (err ? "\n"+JSON.stringify(err) : ""));
+const _404 = (req: IncomingMessage, res: ServerResponse, err?: any) => {
+    res.writeHead(404);
+    res.end("not found" + (err ? "\n" + JSON.stringify(err) : ""));
 };
 
-const _500: RequestListener = (req, res) =>{
+const _500: RequestListener = (req, res) => {
     res.writeHead(500);
     res.end("internal error");
 };
+
+function processServerEvents(req: IncomingMessage, res: ServerResponse) {
+    res.writeHead(200, {
+        "Connection": "keep-alive",
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+    });
+
+    // create new client connection
+    const id = nextNodeId++;
+    const client: ClientState = {
+        id,
+        ts: performance.now(),
+        es: res,
+        ei: 0
+    };
+
+    req.on("close", () => {
+        const node = nodes.get(id);
+        if (node) {
+            sendCloseServerEvent(id);
+            nodes.delete(id);
+        }
+        broadcastServerEvent(id, "client_remove", "" + id);
+        console.info("broadcast node " + id + " removed ");
+    });
+
+    const otherClientIds = [...nodes.keys()];
+    nodes.set(id, client);
+    sendServerEvent(id, "connected", id + ";" + otherClientIds.join(";"));
+    broadcastServerEvent(id, "client_add", "" + id);
+}
+
+async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) {
+    const buffers = [];
+    for await (const chunk of req) {
+        buffers.push(chunk);
+    }
+    const data = Buffer.concat(buffers).toString();
+    const reqData: Request = JSON.parse(data);
+
+    // process new nodes
+    const nodeState = nodes.get(reqData.from);
+    if (nodeState) {
+        nodeState.ts = performance.now();
+    } else {
+        console.warn("node is not active: ", reqData.from);
+    }
+
+    let numProcessedMessages = 0;
+    if (reqData.messages) {
+        for (const msg of reqData.messages) {
+            if (msg.to) {
+                const toClient = nodes.get(msg.to);
+                if (toClient) {
+                    sendServerEvent(msg.to, "update", JSON.stringify(msg));
+                }
+            }
+            ++numProcessedMessages;
+        }
+    }
+    res.writeHead(200, Object.assign({"Content-Type": "application/json"}, corsHeaders));
+    const responseData: PostMessagesResponse = {in: numProcessedMessages};
+    res.end(JSON.stringify(responseData));
+}
 
 const requestListener: RequestListener = async (req, res) => {
     if (req.method === "OPTIONS") {
@@ -48,102 +128,32 @@ const requestListener: RequestListener = async (req, res) => {
         res.end();
         return;
     }
-    if (req.method === "POST") {
-        const buffers = [];
-        for await (const chunk of req) {
-            buffers.push(chunk);
-        }
-        const data = Buffer.concat(buffers).toString();
-        const reqData: Request = JSON.parse(data);
-
-        if (reqData.control === ControlCode.Connect) {
-            const nodeId = reqData.from ?? nextNodeId++;
-            nodes.set(nodeId, {
-                id: nodeId,
-                ts: performance.now()
-            });
-            broadcast(nodeId, {event: NetEvent.NodeAdded});
-            res.writeHead(200, Object.assign({"Content-Type": "application/json"}, corsHeaders));
-            const resData: Response = {
-                to: nodeId,
-                in: 0,
-                responses: [...nodes.keys()].filter(id => id !== nodeId).map((id): Message => {
-                    return {to: nodeId, from: id, data: {}};
-                })
-            };
-            res.end(JSON.stringify(resData));
-            return;
-        }
-        if (reqData.control === ControlCode.Close) {
-            nodes.delete(reqData.from);
-            broadcast(reqData.from, {event: NetEvent.NodeRemoved});
-            res.writeHead(200, corsHeaders);
-            res.end();
-            return;
-        }
-
-        // process new nodes
-        const nodeState = nodes.get(reqData.from);
-        if (nodeState) {
-            nodeState.ts = performance.now();
+    if (req.url === "/_") {
+        if (req.method === "GET") {
+            processServerEvents(req, res);
+        } else if (req.method === "POST") {
+            await processIncomeMessages(req, res);
         } else {
-            console.warn("node is not active: ", reqData.from);
+            _500(req, res);
         }
-
-        // else {
-        //     nodes[reqData.from] = {
-        //         id: reqData.from,
-        //         ts: performance.now()
-        //     };
-        //     broadcast(reqData.from, {event: "node_added"});
-        // }
-
-        let inMessagesCount = 0;
-        if (reqData.messages) {
-            inMessagesCount = reqData.messages.length;
-            queue.push(...reqData.messages);
-        }
-        const newQueue = [];
-        let responses: Message[] | undefined = undefined;
-        for (const m of queue) {
-            if (m.to === reqData.from) {
-                if (!responses) {
-                    responses = [];
-                }
-                responses.push(m);
-            } else {
-                if(nodes.has(m.to)) {
-                    newQueue.push(m);
-                }
-                else {
-                    newQueue.push({
-                        to: m.from,
-                        from: m.to,
-                        call: m.call,
-                        data: {error:404}
-                    });
-                }
-            }
-        }
-        queue = newQueue;
-        const resData: Response = {
-            to: reqData.from,
-            in: inMessagesCount,
-            responses
-        };
-        res.writeHead(200, Object.assign({"Content-Type": "application/json"}, corsHeaders));
-        res.end(JSON.stringify(resData));
         return;
     }
+
     if (req.method === "GET") {
         const publicDir = url.fileURLToPath(new URL('.', import.meta.url));
         const filePath = publicDir + (req.url === '/' ? '/index.html' : req.url);
+        let headers: OutgoingHttpHeaders | undefined = undefined;
+        if (filePath.endsWith(".html")) {
+            headers = {"content-type": "text/html; charset=utf-8"};
+        } else if (filePath.endsWith(".js")) {
+            headers = {"content-type": "application/javascript"};
+        }
         fs.readFile(filePath, (err, data) => {
             if (err) {
                 _404(req, res, err);
                 return;
             }
-            res.writeHead(200);
+            res.writeHead(200, headers);
             res.end(data);
         });
         return;

@@ -2,14 +2,10 @@ export type NodeID = number;
 export type CallID = number;
 export type MessageBody = any;
 
-export const enum NetEvent {
-    NodeRemoved = 0,
-    NodeAdded = 1,
-}
-
-export const enum ControlCode {
-    Connect = 0,
-    Close = 1,
+export const enum ServerEventName {
+    ClientConnected = "connected",
+    ClientAdd = "client_add",
+    ClientRemove = "client_remove",
 }
 
 export interface Message {
@@ -21,20 +17,10 @@ export interface Message {
 }
 
 export interface Request {
-    from: NodeID;
+    from?: NodeID;
     messages?: Message[];
-    control?: ControlCode;
 }
 
-export interface Response {
-    to: NodeID;
-    // number of processed request messages
+export interface PostMessagesResponse {
     in: number;
-    responses?: Message[];
-}
-
-export interface NodeState {
-    id: NodeID;
-    // last time client or server communicates with node
-    ts: number;
 }
