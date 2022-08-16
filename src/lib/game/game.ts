@@ -153,7 +153,7 @@ function drawGame() {
 function tryRunTicks() {
     calcNetTick();
     let netTicksToGo = netTick - gameTicks;
-    let framesPassed = ((performance.now() / 1000.0 - prevTime) * Const.NetFq)|0;
+    let framesPassed = ((performance.now() / 1000.0 - prevTime) * Const.NetFq) | 0;
     let frameN = framesPassed;
     while (netTicksToGo >= 0 && frameN > 0) {
         const f1 = localEvents.filter(v => v.t === gameTicks + 1);
@@ -166,7 +166,6 @@ function tryRunTicks() {
             //console.info("play remote points: " + ff[0].points.join(","));
             spawnPoints(ff[i].points);
         }
-        receivedEvents = receivedEvents.filter(v => v.t > gameTicks);
 
         updateParticles();
         // glSim.update_(1.0 / Const.NetFq);
@@ -175,6 +174,8 @@ function tryRunTicks() {
         --frameN;
     }
     prevTime += framesPassed * Const.NetDt;
+
+    receivedEvents = receivedEvents.filter(v => v.t > gameTicks - 1);
 }
 
 function trySendTicks() {
@@ -194,7 +195,7 @@ function trySendTicks() {
                     }
                 }
             }
-            client.dc.send(JSON.stringify(packet));
+            client.dc.send(JSON.stringify(packet) + "\n\n");
 //            console.info("send " + gameTicks);
         }
     }
@@ -264,6 +265,10 @@ function printRemoteClients() {
         const cl = clients[remoteClient.id];
         if (cl) {
             text += ` | l: ${((gameTicks - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
+            // text += ` | l: ${((gameTicks - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
+            const dc = remoteClient.dc;
+            text += "|dc: " + dc.ordered + " " + dc.maxRetransmits + " " + dc.bufferedAmountLowThreshold + " " + dc.bufferedAmount;
+            text += "|-f: " + (((performance.now() / 1000.0 - prevTime) * Const.NetFq) | 0);
         }
         text += "\n";
     }
