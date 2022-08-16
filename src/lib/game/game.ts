@@ -93,8 +93,8 @@ function spawnPoints(points: number[]) {
 }
 
 const enum Const {
-    // NetFq = 60.0
-    NetFq = 20.0,
+    NetFq = 60.0,
+    // NetFq = 20.0,
     NetDt = 1.0 / NetFq,
 }
 
@@ -130,7 +130,7 @@ function calcNetTick() {
     }
     if (tmin !== 0xFFFFFFFF) {
         netTick = tmin;
-        localEvents = localEvents.filter(v => v.t > netTick);
+        localEvents = localEvents.filter(v => v.t >= netTick);
     }
 }
 
@@ -156,7 +156,7 @@ function tryRunTicks() {
     let framesPassed = ((performance.now() / 1000.0 - prevTime) * Const.NetFq)|0;
     let frameN = framesPassed;
     while (netTicksToGo >= 0 && frameN > 0) {
-        const f1 = localEvents.filter(v => v.t === gameTicks);
+        const f1 = localEvents.filter(v => v.t === gameTicks + 1);
         for (let i = 0; i < f1.length; ++i) {
             spawnPoints(f1[i].points);
         }
@@ -300,7 +300,7 @@ function checkInput() {
         }
     }
     if (points.length) {
-        localEvents.push({t: gameTicks + 1, points});
+        localEvents.push({t: gameTicks + 2, points});
     }
 }
 
