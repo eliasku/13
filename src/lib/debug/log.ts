@@ -41,7 +41,8 @@ export function termFlush() {
         textTerminal = document.createElement("label");
         const sx = textTerminal.style;
         sx.position = "fixed";
-        sx.font = "24px monospace bold";
+        sx.fontFamily = "monospace";
+        sx.fontSize = "20px";
         sx.top = "0px";
         sx.left = "0px";
         sx.width = "100%";

@@ -1,5 +1,5 @@
 import {log, logAssert, logWarn} from "../debug/log";
-import {Message, MessageBody, ClientID, PostMessagesResponse, Request, ServerEventName} from "../../shared/types";
+import {ClientID, Message, MessageBody, PostMessagesResponse, Request, ServerEventName} from "../../shared/types";
 
 const serverUrl = "/_";
 
@@ -23,7 +23,7 @@ export function remoteCall(to: ClientID, data: MessageBody): Promise<MessageBody
         const call = nextCallId++;
         callbacks[call] = (res) => {
             callbacks[call] = undefined;
-            log(`received result from ${to} : ${JSON.stringify(res.data)}`);
+            //log(`received result from ${to} : ${JSON.stringify(res.data)}`);
             resolve(res.data);
         };
         messagesToPost.push({
@@ -141,7 +141,7 @@ function onSSEClientRemove(e: MessageEvent<string>) {
     const id = Number.parseInt(e.data);
     logAssert(!Number.isNaN(id));
     const remoteClient = remoteClients[id];
-    if(remoteClient) {
+    if (remoteClient) {
         closePeerConnection(remoteClient);
     }
     remoteClients[id] = undefined;
@@ -219,7 +219,7 @@ export function disconnect() {
     if (running) {
         running = false;
         const rcs = getRemoteClients();
-        for(let i = 0; i < rcs.length; ++i) {
+        for (let i = 0; i < rcs.length; ++i) {
             closePeerConnection(rcs[i]);
         }
         termSSE();
@@ -306,7 +306,7 @@ function initPeerConnection(remoteClient: RemoteClient) {
         if (channel) {
             log("dc: " + channel.readyState);
             channel.onmessage = (e) => {
-                log("receiver message from Slave: " + e.data);
+                //log("receiver message from Slave: " + e.data);
                 onRTMessage(id, JSON.parse(e.data));
             };
         }
@@ -332,22 +332,22 @@ export async function connectToRemote(rc: RemoteClient) {
     initPeerConnection(rc);
     await sendOffer(rc);
 
-    rc.dc = rc.pc.createDataChannel("Source");
+    rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
     log("dc: " + rc.dc.readyState);
     rc.dc.addEventListener("open", () => {
         log("data channel opened");
     });
     rc.dc.addEventListener("message", (e) => {
-        log("received message on Master: " + e.data);
+        //log("received message on Master: " + e.data);
         onRTMessage(rc.id, JSON.parse(e.data));
     });
 }
 
-export function connectToRemotes():Promise<any> {
+export function connectToRemotes(): Promise<any> {
     return Promise.all(remoteClients.map(connectToRemote));
 }
 
-function requireRemoteClient(id:ClientID):RemoteClient {
+function requireRemoteClient(id: ClientID): RemoteClient {
     let rc = remoteClients[id];
     if (!rc) {
         logWarn(`WARNING: required remote client ${id} not found and created`);

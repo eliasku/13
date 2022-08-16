@@ -1,6 +1,5 @@
 import {hue, Vec4} from "./vec4";
-import {inputPointers} from "./input";
-import {createTextureDefer, DoubleFbo, Fbo, GL, gl, Program, TextureObject} from "./gl";
+import {createTextureDefer, DoubleFbo, Fbo, GL, gl, Program, TextureObject} from "../graphics/gl";
 import {
     advectionShaderCode,
     baseVertexShaderCode,
@@ -73,10 +72,11 @@ export class Fluid2dGpu {
     colorSpeed_ = 0.2;
 
     constructor(readonly canvas_: HTMLCanvasElement) {
-        const mapWidth = 1024;
-        const mapHeight = 1024;
-        const simulationWidth = 128;
-        const simulationHeight = 128;
+        const scaleFactor = 0.25;
+        const mapWidth = 1024 * scaleFactor;
+        const mapHeight = 1024 * scaleFactor;
+        const simulationWidth = 128 * scaleFactor;
+        const simulationHeight = 128 * scaleFactor;
 
         this.vbo_ = gl.createBuffer()!;
         this.ibo_ = gl.createBuffer()!;
@@ -265,8 +265,6 @@ export class Fluid2dGpu {
             this.updateBrush_(dt);
             this.step_(dt);
         }
-
-        this.render_(null);
     }
 
     render_(target: Fbo | null) {
@@ -285,11 +283,16 @@ export class Fluid2dGpu {
 
     splat_(u: number, v: number, dx: number, dy: number, color: Vec4) {
         this.splatProgram_.bind_();
+        const scaleFactor = 0.25;
+        const mapWidth = 1024 * scaleFactor;
+        const mapHeight = 1024 * scaleFactor;
+        const simulationWidth = 128 * scaleFactor;
+        const simulationHeight = 128 * scaleFactor;
         gl.uniform1i(this.splatProgram_.uniforms_.uTarget, this.velocity_.read_.attach_(0));
-        gl.uniform1f(this.splatProgram_.uniforms_.aspectRatio, this.canvas_.width / this.canvas_.height);
+        gl.uniform1f(this.splatProgram_.uniforms_.aspectRatio, mapWidth / mapHeight);
         gl.uniform2f(this.splatProgram_.uniforms_.point, u, v);
         gl.uniform3f(this.splatProgram_.uniforms_.color, dx, dy, 0.0);
-        gl.uniform1f(this.splatProgram_.uniforms_.radius, 1 / this.canvas_.width);
+        gl.uniform1f(this.splatProgram_.uniforms_.radius, 1 / mapWidth);
         this.blit_(this.velocity_.write_);
         this.velocity_.swap_();
 
@@ -302,10 +305,17 @@ export class Fluid2dGpu {
     splatObstacle_(u: number, v: number) {
         this.splatProgram_.bind_();
         gl.uniform1i(this.splatProgram_.uniforms_.uTarget, this.obstacleC_.read_.attach_(0));
-        gl.uniform1f(this.splatProgram_.uniforms_.aspectRatio, this.canvas_.width / this.canvas_.height);
+
+        const scaleFactor = 0.25;
+        const mapWidth = 1024 * scaleFactor;
+        const mapHeight = 1024 * scaleFactor;
+        const simulationWidth = 128 * scaleFactor;
+        const simulationHeight = 128 * scaleFactor;
+
+        gl.uniform1f(this.splatProgram_.uniforms_.aspectRatio, mapWidth / mapHeight);
         gl.uniform2f(this.splatProgram_.uniforms_.point, u, v);
         gl.uniform3f(this.splatProgram_.uniforms_.color, 1.0, 1.0, 1.0);
-        gl.uniform1f(this.splatProgram_.uniforms_.radius, 1.0 / this.canvas_.width);
+        gl.uniform1f(this.splatProgram_.uniforms_.radius, 1.0 / mapWidth);
         this.blit_(this.obstacleC_.write_);
         this.obstacleC_.swap_();
     }
