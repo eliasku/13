@@ -71,7 +71,7 @@ function drawParticles() {
     if (!imgSkull) return;
     for (let i = 0; i < particles.length; ++i) {
         const p = particles[i];
-        const s = p.t * p.t;
+        const s = 0.1 * p.t * p.t;
         draw(imgSkull, p.x, p.y, 0.0, s, s, 0xFFFFFFFF, 0.0);
     }
 }
@@ -130,7 +130,7 @@ function calcNetTick() {
     }
     if (tmin !== 0xFFFFFFFF) {
         netTick = tmin;
-        localEvents = localEvents.filter(v => v.t >= netTick);
+        localEvents = localEvents.filter(v => v.t > netTick);
     }
 }
 
@@ -281,7 +281,7 @@ function checkInput() {
             if (pointer.down_ && (mx !== pointer.prevX_ || my !== pointer.prevY_)) {
                 const fx = mx - pointer.prevX_;
                 const fy = my - pointer.prevY_;
-                const len = Math.sqrt(fx * fx + fy * fy);
+                // const len = Math.sqrt(fx * fx + fy * fy);
                 // const n = (len | 0) + 1;
                 const n = 1;
 
@@ -300,7 +300,7 @@ function checkInput() {
         }
     }
     if (points.length) {
-        localEvents.push({t: gameTicks + 1, points});
+        localEvents.push({t: gameTicks + 2, points});
     }
 }
 
@@ -336,7 +336,7 @@ function rtHandler(from: ClientID, data: any) {
 
                 if (data.e) {
                     for (const e of data.e) {
-                        if (e.t >= gameTicks && e.points) {
+                        if (e.points) {
                             //console.info("got points");
                             receivedEvents.push({t: e.t, points: e.points});
                         }
