@@ -300,7 +300,7 @@ function checkInput() {
         }
     }
     if (points.length) {
-        localEvents.push({t: gameTicks + 2, points});
+        localEvents.push({t: gameTicks + 1, points});
     }
 }
 
