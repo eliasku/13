@@ -155,12 +155,13 @@ function clear(r: number, g: number, b: number, a: number) {
     gl.clearColor(r, g, b, a);
 }
 
-let camera = {
+export let camera = {
     atX: 0,
     atY: 0,
     toX: 0,
     toY: 0,
     angle: 0,
+    scale: 1,
 };
 
 export interface Texture {
@@ -230,13 +231,13 @@ export function beginRender(viewportWidth: number, viewportHeight: number) {
     width = viewportWidth;
     height = viewportHeight;
 
-    const {atX, atY, toX, toY, angle} = camera;
+    const {atX, atY, toX, toY, angle, scale} = camera;
 
     const x = atX - width * toX;
     const y = atY - height * toY;
 
-    const c = Math.cos(angle);
-    const s = Math.sin(angle);
+    const c = scale * Math.cos(angle);
+    const s = scale * Math.sin(angle);
 
     const w = 2 / width;
     const h = -2 / height;

@@ -7,7 +7,8 @@ import {termClear, termFlush, termPrint} from "../debug/log";
 import {createAudioBufferFromSong} from "../audio/soundbox";
 import {song} from "../songs/0bit";
 import {inputPointers} from "../fluid/input";
-import {beginRender, beginRenderGroup, createTexture, draw, flush, Texture} from "../graphics/draw2d";
+import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
+import {getSeed, random, seed} from "./rnd";
 
 const muted = true;
 let sndBuffer: AudioBuffer | null = null;
@@ -53,9 +54,6 @@ export function initTestGame() {
     });
 }
 
-let localEvents: { t: number, points: number[] }[] = [];
-let receivedEvents: { t: number, points: number[] }[] = [];
-
 function updateParticles() {
     for (let i = 0; i < particles.length; ++i) {
         const p = particles[i];
@@ -82,123 +80,30 @@ function spawnPoints(points: number[]) {
             t: 1.0, x: points[i++], y: points[i++],
         });
         i += 2;
-        // glSim.splat_(
-        //     points[i++],
-        //     points[i++],
-        //     points[i++],
-        //     points[i++],
-        //     glSim.color_
-        // );
-    }
-}
-
-const enum Const {
-    NetFq = 60.0,
-    // NetFq = 20.0,
-    NetDt = 1.0 / NetFq,
-}
-
-interface Packet {
-    // active or not
-    a: number;
-    // last game-tick
-    t: number;
-    // shared start-time
-    t0: number;
-    // events are not confirmed
-    e: any[];
-}
-
-// ticks received from all peers (min value), we could simulate to it
-let netTick = 0;
-let startTick = -1;
-let gameTicks = 0;
-let timeAcc = 0.0;
-let prevTime = 0;
-let ts1 = 0;
-let syncTs = 1;
-
-function calcNetTick() {
-    let tmin = 0xFFFFFFFF;
-    for (const client of getRemoteClients()) {
-        const cl = clients[client.id];
-        if (cl) {
-            if (tmin > cl.t) {
-                tmin = cl.t;
-            }
-        }
-    }
-    if (tmin !== 0xFFFFFFFF) {
-        netTick = tmin;
-        localEvents = localEvents.filter(v => v.t >= netTick);
     }
 }
 
 function drawGame() {
+    const w = gl.drawingBufferWidth;
+    const h = gl.drawingBufferHeight;
+    camera.scale = Math.min(w, h) / 800.0;
     gl.clearColor(0.2, 0.2, 0.2, 1.0);
-    beginRender(gl.canvas.width, gl.canvas.height);
+    beginRender(gl.drawingBufferWidth, gl.drawingBufferHeight);
+    camera.toX = 0.5;
+    camera.toY = 0.5;
+    camera.atX = 400;
+    camera.atY = 400;
+
     beginRenderGroup(true);
 
     if (imgSkull) {
         const toRad = 2 * Math.PI / 180.0;
-        draw(imgSkull, 300, 300, gameTicks * Const.NetDt * toRad, 1, 1, (Math.random() * 0xFFFFFFFF) >>> 0, 0.0);
+        draw(imgSkull, 400, 400, gameTic * Const.NetDt * toRad, 1, 1, (Math.random() * 0xFFFFFFFF) >>> 0, 0.0);
     }
 
     drawParticles();
+    drawPlayers();
     flush();
-
-    // glSim.render_(null);
-}
-
-function tryRunTicks() {
-    calcNetTick();
-    let netTicksToGo = netTick - gameTicks;
-    let framesPassed = ((performance.now() / 1000.0 - prevTime) * Const.NetFq) | 0;
-    let frameN = framesPassed;
-    while (netTicksToGo >= 0 && frameN > 0) {
-        const f1 = localEvents.filter(v => v.t === gameTicks + 1);
-        for (let i = 0; i < f1.length; ++i) {
-            spawnPoints(f1[i].points);
-        }
-
-        const ff = receivedEvents.filter(v => v.t === gameTicks);
-        for (let i = 0; i < ff.length; ++i) {
-            //console.info("play remote points: " + ff[0].points.join(","));
-            spawnPoints(ff[i].points);
-        }
-
-        updateParticles();
-        // glSim.update_(1.0 / Const.NetFq);
-        ++gameTicks;
-        --netTicksToGo;
-        --frameN;
-    }
-    prevTime += framesPassed * Const.NetDt;
-
-    receivedEvents = receivedEvents.filter(v => v.t > gameTicks - 1);
-}
-
-function trySendTicks() {
-    for (const client of getRemoteClients()) {
-        if (client.dc && client.dc.readyState === "open") {
-            const packet: Packet = {
-                a: +clientActive,
-                t: gameTicks,
-                t0: startTick,
-                e: []
-            };
-            const cl = clients[client.id];
-            if (cl) {
-                for (const e of localEvents) {
-                    if (e.t > cl.t) {
-                        packet.e.push({t: e.t, points: e.points});
-                    }
-                }
-            }
-            client.dc.send(JSON.stringify(packet) + "\n\n");
-//            console.info("send " + gameTicks);
-        }
-    }
 }
 
 export function updateTestGame(dt: number) {
@@ -207,18 +112,19 @@ export function updateTestGame(dt: number) {
     if (startTick < 0 && getRemoteClients().length === 0) {
         startTick = 0;
         timeAcc = 0.0;
-        gameTicks = 0;
+        gameTic = 0;
         netTick = 0;
         prevTime = performance.now();
+        players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, s: 1, vx: 0, vy: 0};
+        // create game state
     }
 
     if (startTick >= 0 && clientActive) {
         tryRunTicks();
         checkInput();
         drawGame();
-        trySendTicks();
+        trySendInput();
     }
-
 
     termPrint("Now touch and drag.\n\n");
     printRemoteClients();
@@ -228,7 +134,7 @@ export function updateTestGame(dt: number) {
 function printRemoteClients() {
     const remoteClients = getRemoteClients();
     let text = "";
-    text += `┌ ${getClientId()} | ${netTick}->${gameTicks}\n`;
+    text += `┌ ${getClientId()} | game: ${gameTic}, net: ${netTick}\n`;
     for (const remoteClient of remoteClients) {
         text += "├ " + remoteClient.id;
         const pc = remoteClient.pc;
@@ -264,7 +170,7 @@ function printRemoteClients() {
         }
         const cl = clients[remoteClient.id];
         if (cl) {
-            text += ` | l: ${((gameTicks - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
+            text += ` | l: ${((gameTic - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
             // text += ` | l: ${((gameTicks - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
             const dc = remoteClient.dc;
             text += "|dc: " + dc.ordered + " " + dc.maxRetransmits + " " + dc.bufferedAmountLowThreshold + " " + dc.bufferedAmount;
@@ -275,7 +181,46 @@ function printRemoteClients() {
     termPrint(text + "\n");
 }
 
+function getMyPlayer(): Player | undefined {
+    const c = getClientId();
+    for (const p of players) {
+        if (p.c === c) {
+            return p;
+        }
+    }
+}
+
+function getPlayerByClient(c: ClientID): Player | undefined {
+    for (const p of players) {
+        if (p.c === c) {
+            return p;
+        }
+    }
+}
+
+function checkPlayerInput() {
+    const player = getMyPlayer();
+    if (player) {
+        const p = inputPointers.filter(x => x.active_ && x.down_);
+        let dir = 0;
+        if (p.length) {
+            let x = p[0].x_;
+            let y = p[0].y_;
+            x = (x - gl.drawingBufferWidth * camera.toX) / camera.scale + camera.atX;
+            y = (y - gl.drawingBufferHeight * camera.toY) / camera.scale + camera.atY;
+            if (x < player.x) {
+                dir = -1;
+            } else if (x > player.x) {
+                dir = 1;
+            }
+        }
+        localEvents.push({t: gameTic + inputDelayN, dir})
+    }
+}
+
 function checkInput() {
+    checkPlayerInput();
+
     const points: number[] = [];
     for (let i = 0; i < inputPointers.length; ++i) {
         const pointer = inputPointers[i];
@@ -295,9 +240,16 @@ function checkInput() {
                 let dx = (mx - pointer.prevX_) / n;
                 let dy = (my - pointer.prevY_) / n;
                 for (let i = 0; i < n + 1; ++i) {
-                    const u = x;
-                    const v = y;
-                    points.push(u, v, fx, -fy);
+                    let u = x;
+                    let v = y;
+                    const _x = camera.atX - gl.drawingBufferWidth * camera.toX;
+                    const _y = camera.atY - gl.drawingBufferHeight * camera.toY;
+                    const _c = camera.scale * Math.cos(camera.angle);
+                    const _s = camera.scale * Math.sin(camera.angle);
+                    u = (u - gl.drawingBufferWidth * camera.toX) / camera.scale + camera.atX;
+                    v = (v - gl.drawingBufferHeight * camera.toY) / camera.scale + camera.atY;
+
+                    points.push(u, v);
                     x += dx;
                     y += dy;
                 }
@@ -305,7 +257,11 @@ function checkInput() {
         }
     }
     if (points.length) {
-        localEvents.push({t: gameTicks + 2, points});
+        // game tic after execution set to next processing tic
+        // lasttic = gametic - 1, nexttic = lasttic + 1
+        const nextTic = gameTic;
+        // collect all events in period of frames processed for tic, will be send on lastTic + 1
+        localEvents.push({t: nextTic + inputDelayN, p: points});
     }
 }
 
@@ -324,35 +280,278 @@ function requireClient(id: ClientID) {
     return clients[id];
 }
 
+interface ClientEvent {
+    t: number;
+    p?: number[];
+    spawn?: { x: number, y: number };
+    dir?: number;
+    // will be populated from packet info
+    c?: ClientID;
+}
+
+let localEvents: ClientEvent[] = [];
+let receivedEvents: ClientEvent[] = [];
+
+const enum Const {
+    NetFq = 60.0,
+    // NetFq = 20.0,
+    NetDt = 1.0 / NetFq,
+}
+
+interface Packet {
+    c: ClientID;
+    // seed for current tic
+    _: number;
+    // active or not
+    a: number;
+    // last game-tick
+    t: number;
+    // shared start-time
+    t0: number;
+    // events are not confirmed
+    e: ClientEvent[];
+
+    // init state
+    s?: Player[];
+}
+
+// ticks received from all peers (min value), we could simulate to it
+let netTick = 0;
+const inputDelayN = 3;
+let startTick = -1;
+let gameTic = 0;
+let timeAcc = 0.0;
+let prevTime = 0;
+
+function calcNetTick() {
+    let tmin = 0xFFFFFFFF;
+    for (const client of getRemoteClients()) {
+        const cl = clients[client.id];
+        if (cl) {
+            if (cl.t < tmin) {
+                tmin = cl.t;
+            }
+        }
+    }
+    if (tmin === 0xFFFFFFFF) {
+        netTick = gameTic;
+    } else {
+        netTick = tmin;
+    }
+    // if (tmin !== 0xFFFFFFFF) {
+    //     netTick = tmin;
+    // TODO:
+    //localEvents = localEvents.filter(v => v.t >= netTick);
+    // }
+}
+
+function tryRunTicks() {
+    calcNetTick();
+    let framesPassed = ((performance.now() / 1000.0 - prevTime) * Const.NetFq) | 0;
+    let frameN = framesPassed;
+    while (gameTic <= netTick && frameN > 0) {
+        const cmds = localEvents.filter(v => v.t === gameTic).map(v => {
+            v.c = getClientId();
+            return v;
+        })
+            .concat(receivedEvents.filter(v => v.t === gameTic));
+        processTicCommands(cmds);
+        simulateTic();
+        ++gameTic;
+        --frameN;
+    }
+    prevTime += framesPassed * Const.NetDt;
+
+    const lastTic = gameTic - 1;
+    receivedEvents = receivedEvents.filter(v => v.t > lastTic);
+    localEvents = localEvents.filter(v => v.t > lastTic);
+}
+
+function trySendInput() {
+    const lastTic = gameTic - 1;
+    for (const client of getRemoteClients()) {
+        if (client.dc && client.dc.readyState === "open") {
+            const packet: Packet = {
+                c: getClientId(),
+                _: getSeed(),
+                t0: startTick,
+                t: lastTic + inputDelayN,
+                a: +clientActive,
+                e: []
+            };
+            const cl = clients[client.id];
+            if (cl) {
+                for (const e of localEvents) {
+                    if (e.t >= cl.t - inputDelayN && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
+                        packet.e.push(e);
+                        // console.info("add input  " + e.t);
+                    }
+                }
+                client.dc.send(JSON.stringify(packet) + "\n\n");
+            } else {
+                const init: Packet = {
+                    c: getClientId(),
+                    _: getSeed(),
+                    t0: startTick,
+                    t: lastTic,
+                    a: +clientActive,
+                    e: [],
+                    s: players
+                };
+                client.dc.send(JSON.stringify(init) + "\n\n");
+            }
+        }
+    }
+}
+
 function rtHandler(from: ClientID, data: any) {
     if (data) {
         if (data.t) {
-            if (startTick < 0) {
+            if (startTick < 0 && data.s) {
                 startTick = data.t0;
                 prevTime = performance.now();
-                gameTicks = data.t;
+                gameTic = data.t - inputDelayN;
+                seed(data._);
                 timeAcc = 0.0;
                 netTick = 0;
+                players = data.s as Player[];
+                // collect all events in period of frames processed for tic, will be send on lastTic + 1
+                localEvents.push({
+                    t: gameTic + 4 + inputDelayN,
+                    spawn: {x: Math.random() * 800.0, y: 200 + 400 * Math.random()}
+                });
             }
             const cl = requireClient(from);
             if (cl.t < data.t) {
+                const alreadyReceivedTic = cl.t;
                 cl.a = data.a;
                 cl.t = data.t;
-
                 if (data.e) {
                     for (const e of data.e) {
-                        if (e.points) {
-                            //console.info("got points");
-                            receivedEvents.push({t: e.t, points: e.points});
+                        if (e.t > alreadyReceivedTic) {
+                            // populate each event with producer id
+                            e.c = data.c;
+                            receivedEvents.push(e);
                         }
                     }
                 }
             }
             tryRunTicks();
             if (!clientActive) {
-                trySendTicks();
+                trySendInput();
             }
         }
     }
 }
 
+
+/// Game logic
+
+function createGameState() {
+
+}
+
+function processTicCommands(commands: ClientEvent[]) {
+    for (const cmd of commands) {
+        if (cmd.p) {
+            spawnPoints(cmd.p);
+        }
+        if (cmd.spawn) {
+            const player = {x: cmd.spawn.x, y: cmd.spawn.y, c: cmd.c, vx: 0, vy: 0, s: 1};
+            players = players.filter(p => p.c !== player.c);
+            players.push(player);
+        }
+        if (cmd.dir !== undefined) {
+            const player = getPlayerByClient(cmd.c);
+            if (player) {
+                if (!player.dir && cmd.dir) {
+                    player.jump = 1;
+                }
+                player.dir = cmd.dir;
+            }
+        }
+    }
+}
+
+function simulateTic() {
+    for (let i = 0; i < 10; ++i) {
+        particles.push({
+            t: 0.5, x: 800 * random(), y: 800 * random(),
+        });
+    }
+    updateParticles();
+    updatePlayers();
+}
+
+interface Player {
+    c: ClientID;
+    s: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    dir?: number;
+    jump?: number;
+}
+
+let players: Player[] = [];
+
+function updatePlayers() {
+    const dt = Const.NetDt;
+    for (const player of players) {
+        if (player.s) {
+            player.x += player.vx * dt;
+            player.y += player.vy * dt;
+            player.vy += 800 * dt;
+
+            if (player.dir !== undefined) {
+                //if (player.dir !== 0) {
+                    player.vx = 400 * player.dir;
+                //}
+            }
+
+            if (player.y >= 800.0) {
+                player.y = 800.0;
+                player.vy = 0.0;
+            }
+
+            if (player.y <= 0) {
+                player.y = 0;
+                if(player.vy < 0) {
+                    player.vy = -player.vy;
+                }
+            }
+            if (player.x < 0) {
+                player.x = 0;
+                if (player.vx < 0) {
+                    player.vx = -player.vx;
+                }
+            }
+            if (player.x > 800) {
+                player.x = 800;
+                if (player.vx > 0) {
+                    player.vx = -player.vx;
+                }
+            }
+
+            if (player.jump) {
+                if(player.y >= 800.0) {
+                    player.vy = -800.0;
+                }
+                player.jump = 0;
+            }
+        }
+    }
+}
+
+const playercolors = [0xFF0000FF, 0x00FF00FF, 0x0000FFFF, 0xFFFF00FF, 0xFF00FFFF, 0x00FFFFFF, 0xFFFFFFFF];
+
+function drawPlayers() {
+    let i = 0;
+    for (const player of players) {
+        if (player.s) {
+            draw(imgSkull, player.x, player.y, 0, 0.3, 0.3, playercolors[i], 0.0);
+        }
+        ++i;
+    }
+}

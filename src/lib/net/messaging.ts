@@ -304,9 +304,8 @@ function initPeerConnection(remoteClient: RemoteClient) {
         const channel = e.channel;
         remoteClient.dc = channel;
         if (channel) {
-            log("dc: " + channel.readyState);
+            channel.binaryType = "arraybuffer";
             channel.onmessage = (e) => {
-                //log("receiver message from Slave: " + e.data);
                 onRTMessage(id, JSON.parse(e.data));
             };
         }
@@ -333,12 +332,11 @@ export async function connectToRemote(rc: RemoteClient) {
     await sendOffer(rc);
 
     rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
-    log("dc: " + rc.dc.readyState);
+    rc.dc.binaryType = "arraybuffer";
     rc.dc.addEventListener("open", () => {
         log("data channel opened");
     });
     rc.dc.addEventListener("message", (e) => {
-        //log("received message on Master: " + e.data);
         onRTMessage(rc.id, JSON.parse(e.data));
     });
 }
