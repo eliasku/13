@@ -290,14 +290,12 @@ export function beginRenderGroup(alphaTest: boolean) {
 export function flush() {
     if (!count) return;
 
-    /*
     if (alphaTestMode) {
-      gl.disable(GL_BLEND);
+      gl.disable(GL.BLEND);
     } else {
-      gl.enable(GL_BLEND);
-      gl.blendFunc(blend, GL_ONE_MINUS_SRC_ALPHA);
+      gl.enable(GL.BLEND);
+      gl.blendFunc(blend, GL.ONE_MINUS_SRC_ALPHA);
     }
-    */
 
     gl.blendFunc(alphaTestMode ? GL.ONE : blend, alphaTestMode ? GL.ZERO : GL.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc(alphaTestMode ? GL.LESS : GL.LEQUAL);

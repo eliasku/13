@@ -8,15 +8,16 @@ import {createAudioBufferFromSong} from "../audio/soundbox";
 import {song} from "../songs/0bit";
 import {inputPointers} from "../fluid/input";
 import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
-import {getSeed, random, seed} from "./rnd";
+import {getSeed, seed} from "./rnd";
 
 const muted = true;
 let sndBuffer: AudioBuffer | null = null;
 let musicBuffer: AudioBuffer | null = null;
 let musicSource: AudioBufferSourceNode | null = null;
-// let glSim: Fluid2dGpu | undefined = undefined;
 let imgSkull: Texture = null;
-
+let imgBox: Texture = null;
+let imgMap: Texture = null;
+let imgMapSeed: number;
 let particles: { t: number, x: number, y: number }[] = [];
 
 export function loadTestGame() {
@@ -27,9 +28,13 @@ export function loadTestGame() {
     image.onload = () => {
         imgSkull = createTexture(image, 0.5, false, false);
         imgSkull.x = 0.5;
-        imgSkull.y = 0.5;
+        imgSkull.y = 0.95;
     };
     image.src = "./skull.png";
+
+    const boxImage = new ImageData(1, 1);
+    boxImage.data.fill(0xFF);
+    imgBox = createTexture(boxImage, 0.5, false, false);
 }
 
 let clientActive = true;
@@ -87,36 +92,56 @@ function drawGame() {
     const w = gl.drawingBufferWidth;
     const h = gl.drawingBufferHeight;
     camera.scale = Math.min(w, h) / 800.0;
-    gl.clearColor(0.2, 0.2, 0.2, 1.0);
-    beginRender(gl.drawingBufferWidth, gl.drawingBufferHeight);
     camera.toX = 0.5;
     camera.toY = 0.5;
-    camera.atX = 400;
-    camera.atY = 400;
-
-    beginRenderGroup(true);
-
-    if (imgSkull) {
-        const toRad = 2 * Math.PI / 180.0;
-        draw(imgSkull, 400, 400, gameTic * Const.NetDt * toRad, 1, 1, (Math.random() * 0xFFFFFFFF) >>> 0, 0.0);
+    const p0 = getMyPlayer();
+    if (p0) {
+        camera.atX = p0.x;
+        // camera.atY = p0.y;
+        camera.atY = 400;
+    } else {
+        camera.atX = 400;
+        camera.atY = 400;
     }
 
+    gl.clearColor(0.2, 0.2, 0.2, 1.0);
+    beginRender(w, h);
+
+    beginRenderGroup(false);
+    // if (imgMap) {
+    //     imgMap.x = 0.5;
+    //     imgMap.y = 0.5;
+    //     draw(imgMap, 0, 0, Math.PI / 4, 16, 16 / 2, 0xFFFFFFFF, 0);
+    // }
     drawParticles();
     drawPlayers();
     flush();
+}
+
+function recreateMap(seed1: number) {
+    const seed0 = getSeed();
+    seed(seed1);
+    // generate map
+    imgMapSeed = seed1;
+    // imgMap = createTexture(generateMap(), 0.5, false, false);
+    seed(seed0);
+}
+
+function createSeedGameState() {
+    startTick = 0;
+    timeAcc = 0.0;
+    gameTic = 0;
+    netTick = 0;
+    prevTime = performance.now();
+    players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, s: 1, vx: 0, vy: 0};
+    recreateMap(1);
 }
 
 export function updateTestGame(dt: number) {
     termClear();
 
     if (startTick < 0 && getRemoteClients().length === 0) {
-        startTick = 0;
-        timeAcc = 0.0;
-        gameTic = 0;
-        netTick = 0;
-        prevTime = performance.now();
-        players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, s: 1, vx: 0, vy: 0};
-        // create game state
+        createSeedGameState();
     }
 
     if (startTick >= 0 && clientActive) {
@@ -202,24 +227,21 @@ function checkPlayerInput() {
     const player = getMyPlayer();
     if (player) {
         const p = inputPointers.filter(x => x.active_ && x.down_);
-        let dir = 0;
+        let btn = 0;
         if (p.length) {
             let x = p[0].x_;
-            let y = p[0].y_;
             x = (x - gl.drawingBufferWidth * camera.toX) / camera.scale + camera.atX;
-            y = (y - gl.drawingBufferHeight * camera.toY) / camera.scale + camera.atY;
             if (x < player.x) {
-                dir = -1;
+                btn = -1;
             } else if (x > player.x) {
-                dir = 1;
+                btn = 1;
             }
         }
-        localEvents.push({t: gameTic + inputDelayN, dir})
+        localEvents.push({t: gameTic + inputDelayN, btn})
     }
 }
 
-function checkInput() {
-    checkPlayerInput();
+function checkInputForDrawing() {
 
     const points: number[] = [];
     for (let i = 0; i < inputPointers.length; ++i) {
@@ -265,6 +287,11 @@ function checkInput() {
     }
 }
 
+function checkInput() {
+    checkPlayerInput();
+    //checkInputForDrawing();
+}
+
 interface Client {
     t: number;
     // flags, for example active or not
@@ -284,7 +311,7 @@ interface ClientEvent {
     t: number;
     p?: number[];
     spawn?: { x: number, y: number };
-    dir?: number;
+    btn?: number;
     // will be populated from packet info
     c?: ClientID;
 }
@@ -296,6 +323,11 @@ const enum Const {
     NetFq = 60.0,
     // NetFq = 20.0,
     NetDt = 1.0 / NetFq,
+}
+
+interface InitData {
+    mapSeed: number;
+    players: Player[];
 }
 
 interface Packet {
@@ -312,7 +344,7 @@ interface Packet {
     e: ClientEvent[];
 
     // init state
-    s?: Player[];
+    s?: InitData;
 }
 
 // ticks received from all peers (min value), we could simulate to it
@@ -396,7 +428,10 @@ function trySendInput() {
                     t: lastTic,
                     a: +clientActive,
                     e: [],
-                    s: players
+                    s: {
+                        mapSeed: imgMapSeed,
+                        players: players
+                    }
                 };
                 client.dc.send(JSON.stringify(init) + "\n\n");
             }
@@ -404,7 +439,7 @@ function trySendInput() {
     }
 }
 
-function rtHandler(from: ClientID, data: any) {
+function rtHandler(from: ClientID, data: Packet) {
     if (data) {
         if (data.t) {
             if (startTick < 0 && data.s) {
@@ -414,7 +449,8 @@ function rtHandler(from: ClientID, data: any) {
                 seed(data._);
                 timeAcc = 0.0;
                 netTick = 0;
-                players = data.s as Player[];
+                players = data.s.players;
+                recreateMap(data.s.mapSeed);
                 // collect all events in period of frames processed for tic, will be send on lastTic + 1
                 localEvents.push({
                     t: gameTic + 4 + inputDelayN,
@@ -447,6 +483,31 @@ function rtHandler(from: ClientID, data: any) {
 
 /// Game logic
 
+
+interface Player {
+    c: ClientID;
+    s: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    btn?: number;
+}
+
+let players: Player[] = [];
+const boundsX0 = 0;
+const boundsY0 = 0;
+const boundsX1 = 800;
+const boundsY1 = 800;
+const jumpVel = [0, -600, -800];
+const player_colors = [0xFF0000FF, 0x00FF00FF, 0x0000FFFF, 0xFFFF00FF, 0xFF00FFFF, 0x00FFFFFF, 0xFFFFFFFF];
+
+const player_x0 = -30;
+const player_x1 = 30;
+const player_y0 = -100;
+const player_y1 = 0;
+
+
 function createGameState() {
 
 }
@@ -457,44 +518,40 @@ function processTicCommands(commands: ClientEvent[]) {
             spawnPoints(cmd.p);
         }
         if (cmd.spawn) {
-            const player = {x: cmd.spawn.x, y: cmd.spawn.y, c: cmd.c, vx: 0, vy: 0, s: 1};
+            const player: Player = {x: cmd.spawn.x, y: cmd.spawn.y, c: cmd.c, vx: 0, vy: 0, s: 1};
             players = players.filter(p => p.c !== player.c);
             players.push(player);
         }
-        if (cmd.dir !== undefined) {
+        if (cmd.btn !== undefined) {
             const player = getPlayerByClient(cmd.c);
             if (player) {
-                if (!player.dir && cmd.dir) {
-                    player.jump = 1;
-                }
-                player.dir = cmd.dir;
+                player.btn = cmd.btn;
+            }
+            if (cmd.btn) {
+                player.btn = cmd.btn;
             }
         }
     }
 }
 
 function simulateTic() {
-    for (let i = 0; i < 10; ++i) {
-        particles.push({
-            t: 0.5, x: 800 * random(), y: 800 * random(),
-        });
-    }
-    updateParticles();
+    // for (let i = 0; i < 10; ++i) {
+    //     particles.push({
+    //         t: 0.5, x: 800 * random(), y: 800 * random(),
+    //     });
+    // }
+    // updateParticles();
     updatePlayers();
 }
 
-interface Player {
-    c: ClientID;
-    s: number;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    dir?: number;
-    jump?: number;
+function reach(t0: number, t1: number, v: number): number {
+    if (t0 < t1) {
+        return Math.min(t0 + v, t1);
+    } else if (t0 > t1) {
+        return Math.max(t0 - v, t1);
+    }
+    return t0;
 }
-
-let players: Player[] = [];
 
 function updatePlayers() {
     const dt = Const.NetDt;
@@ -504,53 +561,70 @@ function updatePlayers() {
             player.y += player.vy * dt;
             player.vy += 800 * dt;
 
-            if (player.dir !== undefined) {
-                //if (player.dir !== 0) {
-                    player.vx = 400 * player.dir;
-                //}
-            }
+            // if (player.dir !== undefined) {
+            //     //if (player.dir !== 0) {
+            //     const targetVel = 400 * player.dir;
+            //     let speed = !player.dir ? 8 : 4;
+            //     player.vx = reach(player.vx, targetVel, 400 * speed * dt);
+            //     //}
+            // }
 
-            if (player.y >= 800.0) {
-                player.y = 800.0;
+            let grounded = false;
+            if (player.y + player_y1 >= boundsY1) {
+                player.y = boundsY1 - player_y1;
                 player.vy = 0.0;
+                grounded = true;
+                player.vx = reach(player.vx, 0, 400 * dt);
+                //player.jc = 2;
             }
 
-            if (player.y <= 0) {
-                player.y = 0;
-                if(player.vy < 0) {
-                    player.vy = -player.vy;
+            if (player.y + player_y0 <= boundsY0) {
+                player.y = boundsY0 - player_y0;
+                if (player.vy < 0) {
+                    player.vy = -player.vy / 2;
                 }
             }
-            if (player.x < 0) {
-                player.x = 0;
+            if (player.x + player_x0 <= boundsX0) {
+                player.x = boundsX0 - player_x0;
                 if (player.vx < 0) {
-                    player.vx = -player.vx;
+                    player.vx = -player.vx / 2;
                 }
             }
-            if (player.x > 800) {
-                player.x = 800;
+            if (player.x + player_x1 >= boundsX1) {
+                player.x = boundsX1 - player_x1;
                 if (player.vx > 0) {
-                    player.vx = -player.vx;
+                    player.vx = -player.vx / 2;
                 }
             }
 
-            if (player.jump) {
-                if(player.y >= 800.0) {
-                    player.vy = -800.0;
+            if (player.btn) {
+                // if (+player.jc > 0) {
+                //     player.vy = jumpVel[+player.jc];
+                //     player.jc = +player.jc - 1;
+                // }
+
+                // player.jump = 0;
+                if (grounded) {
+                    player.vy = jumpVel[2];
+                    player.vx = -player.btn * jumpVel[1];
+                    //player.jc = +player.jc - 1;
                 }
-                player.jump = 0;
             }
         }
     }
 }
 
-const playercolors = [0xFF0000FF, 0x00FF00FF, 0x0000FFFF, 0xFFFF00FF, 0xFF00FFFF, 0x00FFFFFF, 0xFFFFFFFF];
 
 function drawPlayers() {
+    draw(imgBox, boundsX0, boundsY0, 0, boundsX1 - boundsX0, boundsY1 - boundsY0, 0x33669977, 0.1);
     let i = 0;
     for (const player of players) {
         if (player.s) {
-            draw(imgSkull, player.x, player.y, 0, 0.3, 0.3, playercolors[i], 0.0);
+            //const d = Math.sqrt(player.vy * player.vy + player.vx * player.vx);
+            const s = player.vy * 0.00005;
+            const a = 0.0005 * player.vx;
+            draw(imgSkull, player.x, player.y, a, 0.3 - s, 0.3 + s, player_colors[i], 0.0);
+            draw(imgBox, player.x + player_x0, player.y + player_y0, 0, player_x1 - player_x0, player_y1 - player_y0, 0x00000077, 0.1);
         }
         ++i;
     }
