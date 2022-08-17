@@ -8,9 +8,9 @@ import {createAudioBufferFromSong} from "../audio/soundbox";
 import {song} from "../songs/0bit";
 import {inputPointers} from "../fluid/input";
 import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
-import {getSeed, seed} from "./rnd";
+import {getSeed, random, seed} from "./rnd";
 
-const muted = true;
+const muted = false;
 let sndBuffer: AudioBuffer | null = null;
 let musicBuffer: AudioBuffer | null = null;
 let musicSource: AudioBufferSourceNode | null = null;
@@ -129,10 +129,9 @@ function recreateMap(seed1: number) {
 
 function createSeedGameState() {
     startTick = 0;
-    timeAcc = 0.0;
     gameTic = 0;
     netTick = 0;
-    prevTime = performance.now();
+    startTime = prevTime = now();
     players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, s: 1, vx: 0, vy: 0};
     recreateMap(1);
 }
@@ -195,11 +194,12 @@ function printRemoteClients() {
         }
         const cl = clients[remoteClient.id];
         if (cl) {
-            text += ` | l: ${((gameTic - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
+            text += `|+t: ${cl.t - gameTic}`;
             // text += ` | l: ${((gameTicks - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
             const dc = remoteClient.dc;
-            text += "|dc: " + dc.ordered + " " + dc.maxRetransmits + " " + dc.bufferedAmountLowThreshold + " " + dc.bufferedAmount;
-            text += "|-f: " + (((performance.now() / 1000.0 - prevTime) * Const.NetFq) | 0);
+            text += "|p:x" + dc.bufferedAmount.toString(16);
+            text += "|l: " + (((now() - prevTime) * Const.NetFq) | 0) + "\n";
+            text += " --:-- " + ((prevTime * 1000) | 0) + " ms";
         }
         text += "\n";
     }
@@ -349,11 +349,11 @@ interface Packet {
 
 // ticks received from all peers (min value), we could simulate to it
 let netTick = 0;
-const inputDelayN = 3;
+const inputDelayN = 8;
 let startTick = -1;
 let gameTic = 0;
-let timeAcc = 0.0;
 let prevTime = 0;
+let startTime = 0;
 
 function calcNetTick() {
     let tmin = 0xFFFFFFFF;
@@ -377,9 +377,14 @@ function calcNetTick() {
     // }
 }
 
-function tryRunTicks() {
+function now(): number {
+    return performance.now() / 1000.0;
+    // return Date.now() / 1000.0;
+}
+
+function tryRunTicks(): number {
     calcNetTick();
-    let framesPassed = ((performance.now() / 1000.0 - prevTime) * Const.NetFq) | 0;
+    let framesPassed = ((now() - prevTime) * Const.NetFq) | 0;
     let frameN = framesPassed;
     while (gameTic <= netTick && frameN > 0) {
         const cmds = localEvents.filter(v => v.t === gameTic).map(v => {
@@ -397,6 +402,7 @@ function tryRunTicks() {
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.t > lastTic);
     localEvents = localEvents.filter(v => v.t > lastTic);
+    return framesPassed;
 }
 
 function trySendInput() {
@@ -413,13 +419,15 @@ function trySendInput() {
             };
             const cl = clients[client.id];
             if (cl) {
-                for (const e of localEvents) {
-                    if (e.t >= cl.t - inputDelayN && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
-                        packet.e.push(e);
-                        // console.info("add input  " + e.t);
+                if (packet.t >= cl.t) {
+                    for (const e of localEvents) {
+                        if (e.t >= cl.t - inputDelayN && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
+                            packet.e.push(e);
+                            //console.info("add input  " + e.t);
+                        }
                     }
+                    client.dc.send(JSON.stringify(packet) + "\n\n");
                 }
-                client.dc.send(JSON.stringify(packet) + "\n\n");
             } else {
                 const init: Packet = {
                     c: getClientId(),
@@ -444,10 +452,10 @@ function rtHandler(from: ClientID, data: Packet) {
         if (data.t) {
             if (startTick < 0 && data.s) {
                 startTick = data.t0;
-                prevTime = performance.now();
+                startTime = prevTime = now() - (inputDelayN * Const.NetDt);
+                // prevTime = now() + ((inputDelayN - 1) * Const.NetDt);
                 gameTic = data.t - inputDelayN;
                 seed(data._);
-                timeAcc = 0.0;
                 netTick = 0;
                 players = data.s.players;
                 recreateMap(data.s.mapSeed);
@@ -472,8 +480,7 @@ function rtHandler(from: ClientID, data: Packet) {
                     }
                 }
             }
-            tryRunTicks();
-            if (!clientActive) {
+            if (tryRunTicks() && !clientActive) {
                 trySendInput();
             }
         }
@@ -605,9 +612,11 @@ function updatePlayers() {
 
                 // player.jump = 0;
                 if (grounded) {
+                    player.y -= 1;
                     player.vy = jumpVel[2];
                     player.vx = -player.btn * jumpVel[1];
                     //player.jc = +player.jc - 1;
+                    play(sndBuffer, false, 0.2 + 0.8 * random());
                 }
             }
         }
@@ -624,6 +633,7 @@ function drawPlayers() {
             const s = player.vy * 0.00005;
             const a = 0.0005 * player.vx;
             draw(imgSkull, player.x, player.y, a, 0.3 - s, 0.3 + s, player_colors[i], 0.0);
+            //draw(imgBox, player.x, player.y, a, 0.3 - s, 0.3 + s, player_colors[i], 0.0);
             draw(imgBox, player.x + player_x0, player.y + player_y0, 0, player_x1 - player_x0, player_y1 - player_y0, 0x00000077, 0.1);
         }
         ++i;
