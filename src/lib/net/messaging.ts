@@ -324,6 +324,11 @@ function closePeerConnection(toRemoteClient: RemoteClient) {
 
 export async function connectToRemote(rc: RemoteClient) {
     initPeerConnection(rc);
+    rc.pc.oniceconnectionstatechange = (e)=>{
+        if(rc && rc.pc && rc.pc.iceConnectionState === "disconnected") {
+            sendOffer(rc);
+        }
+    }
     await sendOffer(rc);
 
     rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
