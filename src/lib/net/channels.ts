@@ -1,7 +1,7 @@
 import {ClientID} from "../../shared/types";
 
 // round-trip
-const debug = true;
+const debug = false;
 const lagMin = 20 / 2;
 const lagMax = 300 / 2;
 const packetLoss = 0.05;
