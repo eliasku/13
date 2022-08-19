@@ -2,7 +2,7 @@ import * as http from "http";
 import {IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
 import * as fs from "fs";
 import * as url from 'url';
-import {ClientID, PostMessagesResponse, Request, ServerEventName,} from "../../src/shared/types";
+import {ClientID, EventSourceUrl, PostMessagesResponse, Request, ServerEventName,} from "../../src/shared/types";
 
 const defaultPort = 8080;
 const port = +process.env.PORT || defaultPort;
@@ -20,7 +20,7 @@ let nextNodeId = 1;
 const nodes = new Map<ClientID, ClientState>();
 
 setInterval(()=>{
-    broadcastServerEvent(0, "ping", "");
+    broadcastServerEvent(0, ServerEventName.Ping, "");
 }, 10000);
 
 function sendCloseServerEvent(id: ClientID) {
@@ -102,27 +102,27 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
     const reqData: Request = JSON.parse(data);
 
     // process new nodes
-    const nodeState = nodes.get(reqData.from);
+    const nodeState = nodes.get(reqData.s);
     if (nodeState) {
         nodeState.ts = performance.now();
     } else {
-        console.warn("node is not active: ", reqData.from);
+        console.warn("node is not active: ", reqData.s);
     }
 
     let numProcessedMessages = 0;
-    if (reqData.messages) {
-        for (const msg of reqData.messages) {
-            if (msg.to) {
-                const toClient = nodes.get(msg.to);
+    if (reqData.a) {
+        for (const msg of reqData.a) {
+            if (msg.d) {
+                const toClient = nodes.get(msg.d);
                 if (toClient) {
-                    sendServerEvent(msg.to, "update", JSON.stringify(msg));
+                    sendServerEvent(msg.d, ServerEventName.ClientUpdate, JSON.stringify(msg));
                 }
             }
             ++numProcessedMessages;
         }
     }
     res.writeHead(200, Object.assign({"Content-Type": "application/json"}, corsHeaders));
-    const responseData: PostMessagesResponse = {in: numProcessedMessages};
+    const responseData: PostMessagesResponse = {a: numProcessedMessages};
     res.end(JSON.stringify(responseData));
 }
 
@@ -132,7 +132,7 @@ const requestListener: RequestListener = async (req, res) => {
         res.end();
         return;
     }
-    if (req.url === "/_") {
+    if (req.url === EventSourceUrl) {
         if (req.method === "GET") {
             processServerEvents(req, res);
         } else if (req.method === "POST") {

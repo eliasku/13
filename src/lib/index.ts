@@ -1,9 +1,13 @@
 import {connect, disconnect} from "./net/messaging";
-import {initInput} from "./fluid/input";
+import {initInput, resetInput} from "./fluid/input";
 import {initGL} from "./graphics/gl";
 import {termClear, termFlush, termPrint} from "./debug/log";
-import {initTestGame, loadTestGame, updateTestGame} from "./game/game";
+import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
+import {loadResources, snd_blip, snd_music} from "./game/res";
+import {play} from "./audio/context";
+import {Const} from "./game/config";
+import {fps, updateFpsMeter} from "./game/fpsMeter";
 
 document.body.style.margin = "0";
 document.body.style.height = "100vh";
@@ -15,17 +19,12 @@ let sh = 1000;
 let ss = 1.0;
 document.body.prepend(canvas);
 
-// termPrint("Initialize.");
-// termFlush();
+termPrint("Loading...");
+termFlush();
 
 initInput(canvas);
 initGL(canvas);
 initDraw2d();
-loadTestGame();
-
-termClear();
-termPrint("Ready!\nTap to Start!\n");
-termFlush();
 
 let started = false;
 const onStart = async () => {
@@ -35,12 +34,23 @@ const onStart = async () => {
     window.addEventListener("beforeunload", disconnect);
     await connect();
 
+    if (!Const.MuteAll) {
+        play(snd_blip);
+        play(snd_music, true, 0.05);
+    }
+
     initTestGame();
     started = true;
 };
 
-canvas.addEventListener("touchstart", onStart);
-canvas.addEventListener("mousedown", onStart);
+loadResources().then(() => {
+    termClear();
+    termPrint("Tap to Start!\n");
+    termFlush();
+
+    canvas.addEventListener("touchstart", onStart);
+    canvas.addEventListener("mousedown", onStart);
+});
 
 let idxResize = 0;
 const doResize = () => {
@@ -66,18 +76,22 @@ const raf = (ts: DOMHighResTimeStamp) => {
     deltaTime = Math.min(0.1, rawDeltaTime);
 
     doResize();
-    doFrame();
-
+    doFrame(ts / 1000.0);
+    resetInput();
+    
     tsPrev = ts;
     requestAnimationFrame(raf);
 };
 
-const doFrame = () => {
-    if (!started) {
-        return;
-    }
+function doFrame(ts: number) {
+    updateFpsMeter(ts);
+    if (started) {
+        termClear();
+        termPrint(`FPS: ${fps}\n`);
+        updateTestGame(ts);
 
-    updateTestGame(deltaTime);
-};
+        termFlush();
+    }
+}
 
 requestAnimationFrame(raf);

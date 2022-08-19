@@ -2,54 +2,22 @@ import {ClientID} from "../../shared/types";
 import {getClientId, getRemoteClient, getRemoteClients} from "../net/messaging";
 import {gl} from "../graphics/gl";
 import {play} from "../audio/context";
-import {createAudioBuffer} from "../audio/sfxr";
-import {termClear, termFlush, termPrint} from "../debug/log";
-import {createAudioBufferFromSong} from "../audio/soundbox";
-import {song} from "../songs/0bit";
-import {inputPointers} from "../fluid/input";
+import {log, termPrint} from "../debug/log";
+import {inputPointers, keyboardDown, keyboardState} from "../fluid/input";
 import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
 import {getSeed, random, seed} from "./rnd";
 import {channels_sendObjectData, setRTMessageHandler} from "../net/channels";
+import {img_box, img_cirle, img_players, snd_blip} from "./res";
+import {Const} from "./config";
+import {generateMapBackground} from "./maze";
 
-const muted = false;
-let sndBuffer: AudioBuffer | null = null;
-let musicBuffer: AudioBuffer | null = null;
-let musicSource: AudioBufferSourceNode | null = null;
-let imgSkull: Texture = null;
-let imgBox: Texture = null;
 let imgMap: Texture = null;
 let imgMapSeed: number;
-let particles: { t: number, x: number, y: number }[] = [];
-
-export function loadTestGame() {
-    sndBuffer = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
-    musicBuffer = createAudioBufferFromSong(song);
-
-    let image = new Image();
-    image.onload = () => {
-        imgSkull = createTexture(image, 0.5, false, false);
-        imgSkull.x = 0.5;
-        imgSkull.y = 0.95;
-    };
-    image.src = "./skull.png";
-
-    const boxImage = new ImageData(1, 1);
-    boxImage.data.fill(0xFF);
-    imgBox = createTexture(boxImage, 0.5, false, false);
-}
-
 let clientActive = true;
 
 export function initTestGame() {
-    if (!muted) {
-        play(sndBuffer);
-        if (musicSource == null) {
-            musicSource = play(musicBuffer, true, 0.05);
-        }
-    }
-
-    // glSim = new Fluid2dGpu(gl.canvas);
-
+    const mapbg = generateMapBackground();
+    imgMap = createTexture(mapbg, 0.5, false, false);
     setRTMessageHandler(rtHandler);
 
     document.addEventListener("visibilitychange", () => {
@@ -58,35 +26,6 @@ export function initTestGame() {
             clientActive = active;
         }
     });
-}
-
-function updateParticles() {
-    for (let i = 0; i < particles.length; ++i) {
-        const p = particles[i];
-        p.t -= 0.05 * Const.NetDt;
-        if (p.t <= 0.0) {
-            particles.splice(i, 1);
-            --i;
-        }
-    }
-}
-
-function drawParticles() {
-    if (!imgSkull) return;
-    for (let i = 0; i < particles.length; ++i) {
-        const p = particles[i];
-        const s = 0.1 * p.t * p.t;
-        draw(imgSkull, p.x, p.y, 0.0, s, s, 0xFFFFFFFF, 0.0);
-    }
-}
-
-function spawnPoints(points: number[]) {
-    for (let i = 0; i < points.length;) {
-        particles.push({
-            t: 1.0, x: points[i++], y: points[i++],
-        });
-        i += 2;
-    }
 }
 
 function drawGame() {
@@ -99,8 +38,7 @@ function drawGame() {
     const p0 = getMyPlayer();
     if (p0) {
         camera.atX = p0.x;
-        // camera.atY = p0.y;
-        camera.atY = 400;
+        camera.atY = p0.y;
     } else {
         camera.atX = 400;
         camera.atY = 400;
@@ -108,6 +46,8 @@ function drawGame() {
     gl.clearColor(0.1 * Math.random(), 0.0, 0.1, 1.0);
     beginRender(w, h);
     beginRenderGroup(false);
+    draw(imgMap, 0, 0, 0, 4, 4, 0xFFFFFFFF, 0);
+    drawShadows();
     drawPlayers();
     flush();
     endPrediction();
@@ -126,42 +66,48 @@ function createSeedGameState() {
     startTick = 0;
     gameTic = 0;
     netTick = 0;
-    startTime = prevTime = frameTime;
-    players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, s: 1, vx: 0, vy: 0};
+    startTime = prevTime = lastFrameTs;
+    players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, z: 100, s: 1, vx: 0, vy: 0, vz: 0};
     recreateMap(1);
 }
 
-let frameTime = 0;
-let frameDeltaTime = 0;
+let lastFrameTs = 0;
 
-export function updateTestGame(dt: number) {
-    const n = now();
-    frameDeltaTime = n - frameTime;
-    frameTime = n;
-
-    termClear();
+export function updateTestGame(ts: number) {
+    lastFrameTs = ts;
 
     if (startTick < 0 && getRemoteClients().length === 0) {
         createSeedGameState();
     }
 
-    if (startTick >= 0 && clientActive) {
-        tryRunTicks(frameTime);
-        checkInput();
+    if (startTick >= 0 && !document.hidden) {
+        tryRunTicks(lastFrameTs);
         drawGame();
+        checkInput();
         trySendInput();
         cleaningUpClients();
     }
 
-    termPrint("Now touch and drag.\n\n");
     printRemoteClients();
-    termFlush();
 }
 
+let prevRenderTic = 0;
+
 function printRemoteClients() {
-    const remoteClients = getRemoteClients();
     let text = "";
+    let c = "🌐";
+    if (prevRenderTic === gameTic) c = "🥶";
+    const fr = simulatedFrames - (simulatedFrames | 0);
+    if (fr > 0) c = "✨";
+    if ((simulatedFrames | 0) > 0) c = "🔮";
+    prevRenderTic = gameTic;
+    text += c + ` b:${(((lastFrameTs - prevTime) / Const.NetDt) | 0)}`;
+    text += " r:" + (simulatedFrames | 0) + (fr > 0 ? "." : "") + "\n";
+    text += "d " + (lastFrameTs - prevTime).toFixed(2) + "\n";
+    text += "~ " + (gameTic * Const.NetDt).toFixed(2) + "\n";
+
     text += `┌ ${getClientId()} | game: ${gameTic}, net: ${netTick}\n`;
+    const remoteClients = getRemoteClients();
     for (const remoteClient of remoteClients) {
         text += "├ " + remoteClient.id;
         const pc = remoteClient.pc;
@@ -197,15 +143,8 @@ function printRemoteClients() {
         }
         const cl = clients[remoteClient.id];
         if (cl) {
-            text += `|+t: ${cl.t - (gameTic - 1)}`;
-            // text += ` | l: ${((gameTicks - cl.t) * 1000.0 / Const.NetFq) | 0}ms`;
-            const dc = remoteClient.dc;
-            text += "|p:x" + dc.bufferedAmount.toString(16);
-            text += "-> " + simFullFrames + "." + simPartFrames + "\n";
-            text += "F: " + frameTime + "\n";
-            text += "P: " + prevTime + "\n";
-            text += "~ " + (gameTic * Const.NetDt) + "\n";
-            text += (((prevTime - startTime) * 1000) | 0) + " ms";
+            text += `+${cl.t - (gameTic - 1)}`;
+            text += " | 0x" + remoteClient.dc.bufferedAmount.toString(16);
         }
         text += "\n";
     }
@@ -234,68 +173,41 @@ function checkPlayerInput() {
     if (player) {
         const p = inputPointers.filter(x => x.active_ && x.down_);
         let btn = 0;
-        if (p.length) {
-            let x = p[0].x_;
-            x = (x - gl.drawingBufferWidth * camera.toX) / camera.scale + camera.atX;
-            if (x < player.x) {
-                btn = -1;
-            } else if (x > player.x) {
-                btn = 1;
+        let dx = 0;
+        let dy = 0;
+
+        if (keyboardState["KeyW"] || keyboardState["ArrowUp"]) --dy;
+        if (keyboardState["KeyS"] || keyboardState["ArrowDown"]) ++dy;
+        if (keyboardState["KeyD"] || keyboardState["ArrowRight"]) ++dx;
+        if (keyboardState["KeyA"] || keyboardState["ArrowLeft"]) --dx;
+
+        if (!dx && !dy) {
+            if (p.length) {
+                let x = p[0].x_;
+                let y = p[0].y_;
+                x = (x - gl.drawingBufferWidth * camera.toX) / camera.scale + camera.atX;
+                y = (y - gl.drawingBufferHeight * camera.toY) / camera.scale + camera.atY;
+                dx = x - player.x;
+                dy = y - player.y;
             }
         }
-        localEvents.push({t: gameTic + inputDelayN, btn})
-    }
-}
 
-function checkInputForDrawing() {
-
-    const points: number[] = [];
-    for (let i = 0; i < inputPointers.length; ++i) {
-        const pointer = inputPointers[i];
-        if (pointer.active_ && pointer.down_) {
-            let mx = pointer.x_ | 0;
-            let my = pointer.y_ | 0;
-            // TODO: convert to world
-            if (pointer.down_ && (mx !== pointer.prevX_ || my !== pointer.prevY_)) {
-                const fx = mx - pointer.prevX_;
-                const fy = my - pointer.prevY_;
-                // const len = Math.sqrt(fx * fx + fy * fy);
-                // const n = (len | 0) + 1;
-                const n = 1;
-
-                let x = pointer.prevX_;
-                let y = pointer.prevY_;
-                let dx = (mx - pointer.prevX_) / n;
-                let dy = (my - pointer.prevY_) / n;
-                for (let i = 0; i < n + 1; ++i) {
-                    let u = x;
-                    let v = y;
-                    const _x = camera.atX - gl.drawingBufferWidth * camera.toX;
-                    const _y = camera.atY - gl.drawingBufferHeight * camera.toY;
-                    const _c = camera.scale * Math.cos(camera.angle);
-                    const _s = camera.scale * Math.sin(camera.angle);
-                    u = (u - gl.drawingBufferWidth * camera.toX) / camera.scale + camera.atX;
-                    v = (v - gl.drawingBufferHeight * camera.toY) / camera.scale + camera.atY;
-
-                    points.push(u, v);
-                    x += dx;
-                    y += dy;
-                }
-            }
+        if (dx || dy) {
+            btn = (0xFF * (Math.PI + Math.atan2(dy, dx)) / (2 * Math.PI)) | 0;
+            btn |= 0x1 << 8;
         }
-    }
-    if (points.length) {
-        // game tic after execution set to next processing tic
-        // lasttic = gametic - 1, nexttic = lasttic + 1
-        const nextTic = gameTic;
-        // collect all events in period of frames processed for tic, will be send on lastTic + 1
-        localEvents.push({t: nextTic + inputDelayN, p: points});
+
+        if (keyboardState["Space"]) {
+            btn |= 0x2 << 8;
+        }
+
+        const simTic = ((lastFrameTs - prevTime) / Const.NetDt) | 0;
+        localEvents.push({t: gameTic + inputDelayN + simTic, btn});
     }
 }
 
 function checkInput() {
     checkPlayerInput();
-    //checkInputForDrawing();
 }
 
 interface Client {
@@ -318,7 +230,7 @@ function requireClient(id: ClientID) {
 interface ClientEvent {
     t: number;
     p?: number[];
-    spawn?: { x: number, y: number };
+    spawn?: { x: number, y: number, z: number };
     btn?: number;
     // will be populated from packet info
     c?: ClientID;
@@ -326,12 +238,6 @@ interface ClientEvent {
 
 let localEvents: ClientEvent[] = [];
 let receivedEvents: ClientEvent[] = [];
-
-const enum Const {
-    NetFq = 30.0,
-    // NetFq = 20.0,
-    NetDt = 1.0 / NetFq,
-}
 
 interface InitData {
     mapSeed: number;
@@ -356,7 +262,8 @@ interface Packet {
 
 // ticks received from all peers (min value), we could simulate to it
 let netTick = 0;
-const inputDelayN = 8;
+let inputDelayN = 4;
+// let inputDelayN = 8;
 // const inputDelayN = 25;
 let startTick = -1;
 let gameTic = 0;
@@ -384,16 +291,9 @@ function calcNetTick() {
         netTick = gameTic;
         ackMin = gameTic;
     } else {
-        // netTick = Math.min(amin, tmin);
         netTick = tmin;
         ackMin = amin;
-        // netTick = Math.min(tmin, amin);
     }
-}
-
-function now(): number {
-    return performance.now() / 1000.0;
-    // return Date.now() / 1000.0;
 }
 
 function tryRunTicks(ts: number): number {
@@ -401,9 +301,6 @@ function tryRunTicks(ts: number): number {
     const framesPassed = ((ts - prevTime) * Const.NetFq) | 0;
     let frameN = framesPassed;
     let framesProcessed = 0;
-    // compensate
-    // we must try to keep netTic >= gameTic + inputDelayN
-    // if (frameN === 0 && (netTick - gameTic) < inputDelayN) frameN = 1;
     while (gameTic <= netTick && frameN > 0) {
         processTicCommands(getCommandsForTic(gameTic));
         simulateTic(Const.NetDt);
@@ -412,13 +309,13 @@ function tryRunTicks(ts: number): number {
         ++framesProcessed;
     }
     let scale = 1.0;
+    // compensate
+    // we must try to keep netTic >= gameTic + inputDelayN
     if ((netTick - gameTic) < inputDelayN * 0.5) scale = 1.25;
-    // prevTime += framesPassed * Const.NetDt;
     prevTime += scale * framesProcessed * Const.NetDt;
-    // prevTime = now();
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.t > lastTic);
-    localEvents = localEvents.filter(v => v.t > Math.min(ackMin,  lastTic));
+    localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
     return framesProcessed;
 }
 
@@ -434,30 +331,17 @@ function checkJoinSync(lastTic: number) {
             if (rc.dc && rc.dc.readyState === "open") {
                 const cl = clients[rc.id];
                 if (!cl || cl.t <= lastTic + 2) {
-                    console.info("syncing...");
+                    log("syncing...");
                     return;
                 }
             }
         }
         joined = true;
-        console.info("All in sync");
-        console.info("Plan player spawn on " + ticToSpawn);
-        for (const rc of getRemoteClients()) {
-            if (rc.dc && rc.dc.readyState === "open") {
-                const cl = clients[rc.id];
-                console.info("======");
-                console.info(cl.c);
-                console.info("t:" + cl.t);
-                console.info("ack:" + cl.acknowledgedTic);
-                console.info("======");
-            }
-        }
-
+        log("All in sync");
         localEvents.push({
             t: ticToSpawn,
-            spawn: {x: Math.random() * 800.0, y: 200 + 400 * Math.random()}
+            spawn: {x: Math.random() * 800.0, y: 200 + 400 * Math.random(), z: 100 * Math.random()}
         });
-        // }
     }
 }
 
@@ -540,16 +424,14 @@ function rtHandler(from: ClientID, data: Packet) {
         if (data.t) {
             if (startTick < 0 && data.s) {
                 startTick = data.t;
-                startTime = prevTime = frameTime;// - (inputDelayN * Const.NetDt);
-                // prevTime = now() + ((inputDelayN - 1) * Const.NetDt);
-                gameTic = data.t;//- inputDelayN;
+                startTime = prevTime = lastFrameTs;
+                gameTic = data.t;
                 seed(data._);
                 netTick = 0;
                 players = data.s.players;
                 recreateMap(data.s.mapSeed);
 
                 const cl = requireClient(from);
-                //cl.i = data.i;
                 cl.t = data.t;
                 if (data.e) {
                     for (const e of data.e) {
@@ -561,26 +443,8 @@ function rtHandler(from: ClientID, data: Packet) {
                         receivedEvents.push(e);
                     }
                 }
-
-                // localEvents.push({
-                //     t: data.t + inputDelayN + 1,
-                //     spawn: {x: Math.random() * 800.0, y: 200 + 400 * Math.random()}
-                // });
             } else {
                 const cl = requireClient(from);
-
-                if (data.e) {
-                    const spawnEvents = data.e.filter(x => !!x.spawn);
-                    if (spawnEvents.length) {
-                        console.log("detected spawn event to " + spawnEvents[0].t + " tic");
-                        console.log("received tic: " + cl.t);
-                        console.log("received on sender: " + data.receivedOnSender);
-                        console.log("received ack: " + cl.acknowledgedTic);
-                        console.log("new tic: " + data.t);
-                        console.log(cl.t < data.t);
-                        console.log("my last tic: " + lastTic);
-                    }
-                }
                 if (data.t > lastTic) {
                     if (cl.t < data.t) {
                         if (data.e) {
@@ -606,8 +470,8 @@ function rtHandler(from: ClientID, data: Packet) {
                 }
             }
             if (!clientActive) {
-                frameTime = now();
-                tryRunTicks(frameTime);
+                lastFrameTs = performance.now();
+                tryRunTicks(lastFrameTs);
                 trySendInput();
                 cleaningUpClients();
             }
@@ -615,32 +479,32 @@ function rtHandler(from: ClientID, data: Packet) {
     }
 }
 
-
 /// Game logic
-
 
 interface Player {
     c: ClientID;
     s: number;
     x: number;
     y: number;
+    z: number;
     vx: number;
     vy: number;
+    vz: number;
     btn?: number;
 }
 
 let players: Player[] = [];
 const boundsX0 = 0;
 const boundsY0 = 0;
-const boundsX1 = 800;
-const boundsY1 = 800;
-const jumpVel = [0, -600, -800];
-const player_colors = [0xFF0000FF, 0x00FF00FF, 0x0000FFFF, 0xFFFF00FF, 0xFF00FFFF, 0x00FFFFFF, 0xFFFFFFFF];
+const boundsX1 = 512 * 4;
+const boundsY1 = 512 * 4;
+const jumpVel = 400;
+const gravity = -1000;
 
-const player_x0 = -30;
-const player_x1 = 30;
-const player_y0 = -100;
-const player_y1 = 0;
+const player_x0 = -24;
+const player_x1 = 24;
+const player_y0 = -24;
+const player_y1 = 24;
 
 function createGameState() {
 
@@ -648,11 +512,17 @@ function createGameState() {
 
 function processTicCommands(commands: ClientEvent[]) {
     for (const cmd of commands) {
-        if (cmd.p) {
-            spawnPoints(cmd.p);
-        }
         if (cmd.spawn) {
-            const player: Player = {x: cmd.spawn.x, y: cmd.spawn.y, c: cmd.c, vx: 0, vy: 0, s: 1};
+            const player: Player = {
+                x: cmd.spawn.x,
+                y: cmd.spawn.y,
+                z: cmd.spawn.z,
+                c: cmd.c,
+                vx: 0,
+                vy: 0,
+                vz: 0,
+                s: 1
+            };
             players = players.filter(p => p.c !== player.c);
             players.push(player);
         }
@@ -683,15 +553,23 @@ function updatePlayers(dt: number) {
         if (player.s) {
             player.x += player.vx * dt;
             player.y += player.vy * dt;
-            player.vy += 800 * dt;
+            player.z += player.vz * dt;
+            player.vz += gravity * dt;
 
             let grounded = false;
+            if (player.z <= 0) {
+                player.z = 0;
+                if (player.vz < 0.0) {
+                    player.vz = 0.0;
+                }
+                grounded = true;
+            }
+
             if (player.y + player_y1 >= boundsY1) {
                 player.y = boundsY1 - player_y1;
-                player.vy = 0.0;
-                grounded = true;
-                player.vx = reach(player.vx, 0, 400 * dt);
-                //player.jc = 2;
+                if (player.vy > 0) {
+                    player.vy = -player.vy / 2;
+                }
             }
 
             if (player.y + player_y0 <= boundsY0) {
@@ -713,26 +591,42 @@ function updatePlayers(dt: number) {
                 }
             }
 
+            if (player.btn & (2 << 8)) {
+                console.info("JUMPooo");
+            }
             if (player.btn) {
+                const dir = 2 * Math.PI * (player.btn & 0xFF) / 0xFF - Math.PI;
                 if (grounded) {
-                    player.y -= 1;
-                    player.vy = jumpVel[2];
-                    player.vx = -player.btn * jumpVel[1];
-                    if (!muted) {
-                        play(sndBuffer, false, 0.2 + 0.8 * random());
+                    if (player.btn & (2 << 8)) {
+                        console.info("jumped");
+                        player.z = 1;
+                        player.vz = jumpVel;
+                        grounded = false;
+                        // player.vx = 500 * Math.cos(dir);
+                        // player.vy = 500 * Math.sin(dir);
+                        if (!Const.MuteAll) {
+                            play(snd_blip, false, 0.2 + 0.8 * random());
+                        }
                     }
                 }
+                if (player.btn & (1 << 8)) {
+                    player.vx = reach(player.vx, 500 * Math.cos(dir), 500 * dt * 16);
+                    player.vy = reach(player.vy, 500 * Math.sin(dir), 500 * dt * 16);
+                }
+            }
+            else {
+                let c = grounded ? 16 : 8;
+                player.vx = reach(player.vx, 0, 400 * dt * c);
+                player.vy = reach(player.vy, 0, 400 * dt * c);
             }
         }
     }
 }
 
-let renderedTic = 0;
 let lastState: Player[];
-let simFullFrames = 0;
-let simPartFrames = 0;
+let simulatedFrames = 0;
 
-function getCommandsForTic(tic: number):ClientEvent[] {
+function getCommandsForTic(tic: number): ClientEvent[] {
     return localEvents.filter(v => v.t === tic).map(v => {
         v.c = getClientId();
         return v;
@@ -742,22 +636,16 @@ function getCommandsForTic(tic: number):ClientEvent[] {
 
 function beginPrediction() {
     lastState = players;
-    simFullFrames = 0;
-    simPartFrames = 0;
+    simulatedFrames = 0;
     players = JSON.parse(JSON.stringify(players));
-    let time = frameTime - prevTime;
+    let time = lastFrameTs - prevTime;
     let tic = gameTic;
-    while (time >= Const.NetDt) {
+    while (time > 0) {
+        const dt = Math.min(time, Const.NetDt);
         processTicCommands(getCommandsForTic(tic));
-        simulateTic(Const.NetDt);
-        time -= Const.NetDt;
-        ++simFullFrames;
-        ++tic;
-    }
-    if(time > 0) {
-        processTicCommands(getCommandsForTic(tic));
-        simulateTic(time);
-        ++simPartFrames;
+        simulateTic(dt);
+        time -= dt;
+        simulatedFrames += dt / Const.NetDt;
         ++tic;
     }
 }
@@ -766,28 +654,54 @@ function endPrediction() {
     players = lastState;
 }
 
-function drawPlayers() {
-    let bgColor = 0x33669977;
-    draw(imgBox, boundsX0, boundsY0, 0, boundsX1 - boundsX0, boundsY1 - boundsY0, bgColor, 0.1);
-    let concolor = 0x00000077;
-    if (renderedTic === gameTic) {
-        concolor = 0xFF000044;
-    }
-    if (simPartFrames > 0) {
-        concolor = 0x00FF0044;
-    }
-    if (simFullFrames > 0) {
-        concolor = 0xFFFF0044;
-    }
-    renderedTic = gameTic;
+function drawShadows() {
     let i = 0;
     for (const player of players) {
         if (player.s) {
-            const s = player.vy * 0.00005;
-            const a = 0.0005 * player.vx;
-            draw(imgSkull, player.x, player.y, a, 0.3 - s, 0.3 + s, player_colors[i], 0.0);
-            draw(imgBox, player.x + player_x0, player.y + player_y0, 0, player_x1 - player_x0, player_y1 - player_y0, concolor, 0.1);
+            const shadowScale = (16 - player.z / 8.0) / 8.0;
+            draw(img_cirle, player.x, player.y, 0, 4 * shadowScale, shadowScale, 0x00000077, 0.0);
         }
         ++i;
+    }
+}
+
+function drawBody(p: Player) {
+    const x = p.x;
+    const y = p.y - p.z;
+
+    const speed = Math.hypot(p.vx, p.vy, p.vz);
+    const walk = Math.min(1, speed / 400.0);
+    let base = -2 * walk * 0.5 * (1.0 + Math.sin(40 * lastFrameTs));
+    const idle_base = (1 - walk) * 2 * (Math.pow(1 + Math.sin(15 * lastFrameTs), 2)  / 4);
+    base += idle_base;
+    const leg1 = 20 - 15 * walk * 0.5 * (1.0 + Math.sin(40 * lastFrameTs));
+    const leg2 = 20 - 15 * walk * 0.5 * (1.0 + Math.sin(40 * lastFrameTs + Math.PI));
+    const sw1 = walk * Math.sin(20 * lastFrameTs);
+    const sw2 = walk * Math.cos(20 * lastFrameTs);
+    img_box.x = 0.5;
+    img_box.y = 0;
+    draw(img_box, x + 16, y - 16 - 20 - 4 + base, -Math.PI / 4 + sw1, 8, 20, 0x888888FF, 0);
+    draw(img_box, x - 16, y - 16 - 20 - 4 + base, Math.PI / 4 + sw2, 8, 20, 0x888888FF, 0);
+    draw(img_box, x - 10, y + 16 - 32 - 4, 0, 10, leg1, 0x888888FF, 0);
+    draw(img_box, x + 10, y + 16 - 32 - 4, 0, 10, leg2, 0x888888FF, 0);
+    img_box.x = 0.5;
+    img_box.y = 0.5;
+    draw(img_box, x, y - 24 - 4 + base, 0, 32, 24, 0x444444FF, 0);
+
+    {
+        const s = p.vz * 0.0005;
+        const a = 0.0005 * p.vx;
+        draw(img_players[p.c % img_players.length], x, y - 56 + base * 2, a, 4 * (1 - s), 4 * (1 + s), 0xFFFFFFFF, 0.0);
+    }
+}
+
+function drawPlayers() {
+    let i = 0;
+    const pl = players.concat();
+    pl.sort((a, b) => a.y - b.y);
+    for (const player of pl) {
+        if (player.s) {
+            drawBody(player);
+        }
     }
 }

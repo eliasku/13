@@ -1,8 +1,17 @@
 import {log, logAssert, logWarn} from "../debug/log";
-import {ClientID, Message, MessageBody, PostMessagesResponse, Request, ServerEventName} from "../../shared/types";
+import {
+    ClientID,
+    EventSourceUrl,
+    Message,
+    MessageData,
+    MessageType,
+    PostMessagesResponse,
+    Request,
+    ServerEventName
+} from "../../shared/types";
 import {channels_processMessage} from "./channels";
 
-const serverUrl = "/_";
+const serverUrl = EventSourceUrl;
 
 interface RemoteClient {
     id: ClientID;
@@ -18,57 +27,54 @@ let callbacks: ((msg: Message) => void)[] = [];
 let nextCallId = 1;
 let eventSource: EventSource | null = null;
 
-export function remoteCall(to: ClientID, data: MessageBody): Promise<MessageBody> {
-    log(`call to ${to} type ${data.type}`);
+export function remoteCall(to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> {
+    log(`call to ${to} type ${type}`);
     return new Promise((resolve, reject) => {
         const call = nextCallId++;
         callbacks[call] = (res) => {
             callbacks[call] = undefined;
-            //log(`received result from ${to} : ${JSON.stringify(res.data)}`);
-            resolve(res.data);
+            resolve(res.a);
         };
         messagesToPost.push({
-            call,
-            from: clientId,
-            to,
-            data
+            c: call,
+            s: clientId,
+            d: to,
+            a: data,
+            t: type,
         });
     });
 }
 
-export function remoteSend(to: ClientID, data: MessageBody): void {
-    log(`send to ${to} type ${data.type}`);
+export function remoteSend(to: ClientID, type: MessageType, data: MessageData): void {
+    log(`send to ${to} type ${type}`);
     messagesToPost.push({
-        from: clientId,
-        to,
-        data
+        s: clientId,
+        d: to,
+        a: data,
+        t: type,
     });
 }
 
-type Handler = (req: Message) => Promise<MessageBody | undefined> | MessageBody | undefined;
+type Handler = (req: Message) => Promise<MessageData | undefined> | MessageData | undefined;
 
-const handlers: Record<string, Handler> = {};
+const handlers: Record<number, Handler> = [];
 
-export function setHandler(type: string, handler: Handler) {
-    handlers[type] = handler;
-}
-
-function respond(req: Message, data: MessageBody) {
-    const response: Message = {
-        call: req.call!,
-        from: clientId,
-        to: req.from,
-        data
-    };
-    messagesToPost.push(response);
+function respond(req: Message, data: MessageData) {
+    messagesToPost.push({
+        s: clientId,
+        d: req.s,
+        t: req.t,
+        c: req.c!,
+        a: data
+    });
 }
 
 function requestHandler(req: Message) {
-    if (req.data.type !== undefined) {
-        const handler = handlers[req.data.type];
+    if (req.t) {
+        const handler = handlers[req.t];
         if (handler) {
             const result = handler(req);
-            if (req.call) {
+            if (req.c) {
                 if (typeof result !== undefined) {
                     if (result instanceof Promise) {
                         result.then((resultMessage) => respond(req, resultMessage));
@@ -94,7 +100,7 @@ const processLoop = () => {
         } else if (performance.now() - lastPostTime >= 10000) {
             // ping
             lastPostTime = performance.now();
-            _post({from: clientId!});
+            _post({s: clientId!});
         }
     }
 };
@@ -109,10 +115,10 @@ async function process(): Promise<void> {
     messageUploading = true;
     try {
         const data: PostMessagesResponse = await _post({
-            from: clientId!,
-            messages: messagesToPost.length > 0 ? messagesToPost : undefined
+            s: clientId!,
+            a: messagesToPost.length > 0 ? messagesToPost : undefined
         });
-        messagesToPost = messagesToPost.slice(data.in);
+        messagesToPost = messagesToPost.slice(data.a);
     } catch (e) {
         console.warn("http-messaging error", e);
     }
@@ -151,7 +157,7 @@ function onSSEClientRemove(e: MessageEvent<string>) {
 
 function onSSEUpdate(e: MessageEvent<string>) {
     const message = JSON.parse(e.data) as Message;
-    const waiter = message.call ? callbacks[message.call] : undefined;
+    const waiter = message.c ? callbacks[message.c] : undefined;
     if (waiter) {
         waiter(message);
     } else {
@@ -195,7 +201,6 @@ function termSSE() {
 }
 
 function onSSEMessage(e: MessageEvent<string>) {
-    console.info("message: " + e.type);
     if (e.lastEventId === "-1") {
         termSSE();
     }
@@ -241,7 +246,7 @@ export function getRemoteClients(): RemoteClient[] {
     return remoteClients.filter(x => x !== undefined);
 }
 
-export function getRemoteClient(id: ClientID): RemoteClient|undefined {
+export function getRemoteClient(id: ClientID): RemoteClient | undefined {
     return remoteClients[id];
 }
 
@@ -272,8 +277,8 @@ async function sendOffer(remoteClient: RemoteClient) {
             offerToReceiveVideo: false
         });
         await pc.setLocalDescription(offer);
-        const result = await remoteCall(remoteClient.id, {type: "rtc_offer", offer});
-        await pc.setRemoteDescription(new RTCSessionDescription(result.answer));
+        const result = await remoteCall(remoteClient.id, MessageType.RtcOffer, offer);
+        await pc.setRemoteDescription(new RTCSessionDescription(result));
     } catch (e) {
         console.warn("Couldn't create offer", e);
     }
@@ -286,7 +291,7 @@ function initPeerConnection(remoteClient: RemoteClient) {
     pc.addEventListener("icecandidate", (e) => {
         const candidate = e.candidate;
         if (candidate) {
-            remoteSend(id, {type: "rtc_candidate", candidate: candidate.toJSON()});
+            remoteSend(id, MessageType.RtcCandidate, candidate.toJSON());
         }
     });
 
@@ -324,11 +329,6 @@ function closePeerConnection(toRemoteClient: RemoteClient) {
 
 export async function connectToRemote(rc: RemoteClient) {
     initPeerConnection(rc);
-    rc.pc.oniceconnectionstatechange = (e)=>{
-        if(rc && rc.pc && rc.pc.iceConnectionState === "disconnected") {
-            sendOffer(rc);
-        }
-    }
     await sendOffer(rc);
 
     rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
@@ -350,27 +350,27 @@ function requireRemoteClient(id: ClientID): RemoteClient {
     return rc;
 }
 
-handlers["rtc_offer"] = async (req) => {
-    const remoteClient = requireRemoteClient(req.from);
+handlers[MessageType.RtcOffer] = async (req) => {
+    const remoteClient = requireRemoteClient(req.s);
     if (!remoteClient.pc) {
         initPeerConnection(remoteClient);
     }
-    await remoteClient.pc.setRemoteDescription(req.data.offer);
+    await remoteClient.pc.setRemoteDescription(req.a);
     const answer = await remoteClient.pc.createAnswer();
     await remoteClient.pc.setLocalDescription(answer);
-    return {answer};
+    return answer;
 };
 
-handlers["rtc_candidate"] = async (req) => {
-    if (req.data.candidate) {
+handlers[MessageType.RtcCandidate] = async (req) => {
+    if (req.a.candidate) {
         try {
-            const rc = requireRemoteClient(req.from);
+            const rc = requireRemoteClient(req.s);
             if (!rc.pc) {
                 initPeerConnection(rc);
             }
-            await rc.pc.addIceCandidate(new RTCIceCandidate(req.data.candidate));
-        } catch (e: any) {
-            log("ice candidate set failed: " + e.message);
+            await rc.pc.addIceCandidate(new RTCIceCandidate(req.a));
+        } catch (error: any) {
+            log("ice candidate set failed: " + error.message);
         }
     }
     return undefined;

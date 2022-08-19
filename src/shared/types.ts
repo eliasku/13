@@ -1,26 +1,45 @@
 export type ClientID = number;
 export type CallID = number;
-export type MessageBody = any;
+export type MessageData = any;
+export type MessageTypeID = number;
+
+export const EventSourceUrl = "/0";
+export const VersionsId = 1;
 
 export const enum ServerEventName {
-    ClientConnected = "connected",
-    ClientAdd = "client_add",
-    ClientRemove = "client_remove",
-    ClientUpdate = "update",
+    Ping = "0",
+    ClientConnected = "c",
+    ClientAdd = "a",
+    ClientRemove = "r",
+    ClientUpdate = "u",
+}
+
+export const enum MessageType {
+    RtcOffer = 1,
+    RtcCandidate = 2,
 }
 
 export interface Message {
-    call?: CallID;
-    from: ClientID;
-    to: ClientID;
-    data: MessageBody;
+    // source - from
+    s: ClientID;
+    // destination - to
+    d: ClientID;
+    // type
+    t: MessageTypeID;
+    // payload
+    a: MessageData;
+    // call identifier
+    c?: CallID;
 }
 
 export interface Request {
-    from?: ClientID;
-    messages?: Message[];
+    // source - from
+    s?: ClientID;
+    // messages array
+    a?: Message[];
 }
 
 export interface PostMessagesResponse {
-    in: number;
+    // number of processed messages
+    a: number;
 }

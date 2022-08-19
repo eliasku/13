@@ -12,6 +12,9 @@ export class Pointer {
 
 const pointers: Pointer[] = [];
 export const inputPointers = pointers;
+export const keyboardState :Record<string, number> = {};
+export let keyboardDown :Record<string, number> = {};
+export let keyboardUp :Record<string, number> = {};
 
 function getPointer(id: number): Pointer {
     for (let i = 0; i < pointers.length; ++i) {
@@ -117,4 +120,27 @@ export function initInput(canvas: HTMLCanvasElement) {
             handleUp(getPointer(touch.identifier));
         }
     });
+
+    const onKey = (e:KeyboardEvent)=>{
+        switch(e.type) {
+            case "keydown":
+                keyboardDown[e.code] = +(!keyboardState[e.code]);
+                keyboardState[e.code] = 1;
+                break;
+            case "keyup":
+                keyboardUp[e.code] = +(!!keyboardState[e.code]);
+                keyboardState[e.code] = 0;
+                break;
+        }
+        // e.preventDefault();
+    };
+    const wnd = document;
+    wnd.addEventListener("keypress", onKey, true);
+    wnd.addEventListener("keydown", onKey, true);
+    wnd.addEventListener("keyup", onKey, true);
+}
+
+export function resetInput() {
+    keyboardDown = {};
+    keyboardUp = {};
 }
