@@ -1,5 +1,6 @@
 import {log, logAssert, logWarn} from "../debug/log";
 import {ClientID, Message, MessageBody, PostMessagesResponse, Request, ServerEventName} from "../../shared/types";
+import {channels_processMessage} from "./channels";
 
 const serverUrl = "/_";
 
@@ -240,6 +241,10 @@ export function getRemoteClients(): RemoteClient[] {
     return remoteClients.filter(x => x !== undefined);
 }
 
+export function getRemoteClient(id: ClientID): RemoteClient|undefined {
+    return remoteClients[id];
+}
+
 // RTC
 
 const rtcConfiguration: RTCConfiguration = {
@@ -258,14 +263,6 @@ const rtcConfiguration: RTCConfiguration = {
         // },
     ],
 };
-
-type RTMessageHandler = (from: ClientID, data: any) => void;
-let onRTMessage: RTMessageHandler = () => {
-};
-
-export function setRTMessageHandler(handler: RTMessageHandler) {
-    onRTMessage = handler;
-}
 
 async function sendOffer(remoteClient: RemoteClient) {
     try {
@@ -305,9 +302,7 @@ function initPeerConnection(remoteClient: RemoteClient) {
         remoteClient.dc = channel;
         if (channel) {
             channel.binaryType = "arraybuffer";
-            channel.onmessage = (e) => {
-                onRTMessage(id, JSON.parse(e.data));
-            };
+            channel.onmessage = (msg) => channels_processMessage(id, msg);
         }
     });
 
@@ -333,12 +328,8 @@ export async function connectToRemote(rc: RemoteClient) {
 
     rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
     rc.dc.binaryType = "arraybuffer";
-    rc.dc.addEventListener("open", () => {
-        log("data channel opened");
-    });
-    rc.dc.addEventListener("message", (e) => {
-        onRTMessage(rc.id, JSON.parse(e.data));
-    });
+    rc.dc.addEventListener("open", () => log("data channel opened"));
+    rc.dc.addEventListener("message", (msg) => channels_processMessage(rc.id, msg));
 }
 
 export function connectToRemotes(): Promise<any> {

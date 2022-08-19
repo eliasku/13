@@ -43,6 +43,7 @@ export function termFlush() {
         sx.position = "fixed";
         sx.fontFamily = "monospace";
         sx.fontSize = "20px";
+        sx.textShadow = "2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000";
         sx.top = "0px";
         sx.left = "0px";
         sx.width = "100%";

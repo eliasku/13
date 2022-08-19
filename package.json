@@ -1,10 +1,11 @@
 {
-  "name": "@eliasku/js13k-test",
+  "name": "@eliasku/js13k-2022",
   "version": "1.0.0",
-  "description": "test for estimate js game size with all compression enabled",
+  "description": "js13k test game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
-    "start": "nodemon ./public/server.js",
+    "start": "node ./public/server.js",
+    "start-watch": "nodemon ./public/server.js",
     "prebuild": "npm run server-build",
     "build": "npm run client-build",
     "postbuild": "roadroller -D -O1 -- public/index.js -o public/index.js",
