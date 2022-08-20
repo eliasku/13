@@ -282,7 +282,9 @@ async function sendOffer(remoteClient: RemoteClient) {
         });
         await pc.setLocalDescription(offer);
         const result = await remoteCall(remoteClient.id, MessageType.RtcOffer, offer);
-        await pc.setRemoteDescription(new RTCSessionDescription(result));
+        if(result) {
+            await pc.setRemoteDescription(new RTCSessionDescription(result));
+        }
     } catch (e) {
         console.warn("Couldn't create offer", e);
     }
@@ -359,7 +361,13 @@ handlers[MessageType.RtcOffer] = async (req) => {
     if (!remoteClient.pc) {
         initPeerConnection(remoteClient);
     }
-    await remoteClient.pc.setRemoteDescription(req.a);
+    try {
+        await remoteClient.pc.setRemoteDescription(req.a);
+    }
+    catch(err) {
+        console.error(err);
+        return null;
+    }
     const answer = await remoteClient.pc.createAnswer();
     await remoteClient.pc.setLocalDescription(answer);
     return answer;

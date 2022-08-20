@@ -16,6 +16,7 @@ let imgMapSeed: number;
 let clientActive = true;
 
 export function initTestGame() {
+    log("init game");
     const mapbg = generateMapBackground();
     imgMap = createTexture(mapbg, 0.5, false, false);
     setRTMessageHandler(rtHandler);
