@@ -1,5 +1,6 @@
 import {ClientID} from "../../shared/types";
 import {DEBUG_LAG_ENABLED, DebugLag} from "../game/config";
+import {RemoteClient} from "./messaging";
 
 // round-trip
 const lagMin = DebugLag.LagMin / 2;
@@ -28,7 +29,9 @@ export function setRTMessageHandler(handler: RTMessageHandler) {
     onRTMessage = handler;
 }
 
-export function channels_sendObjectData(dc: RTCDataChannel, data: ArrayBuffer) {
+export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer) {
+    const dc = client.dc;
+    client.B = data.byteLength;
     if (DEBUG_LAG_ENABLED) {
         if (data.byteLength >= 1200 / 2) {
             throw new Error("HUGE packet could not be delivered");

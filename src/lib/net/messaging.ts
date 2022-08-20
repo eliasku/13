@@ -13,10 +13,11 @@ import {channels_processMessage} from "./channels";
 
 const serverUrl = EventSourceUrl;
 
-interface RemoteClient {
+export interface RemoteClient {
     id: ClientID;
     pc?: RTCPeerConnection;
     dc?: RTCDataChannel;
+    B?: number;
 }
 
 let clientId: undefined | ClientID = undefined;

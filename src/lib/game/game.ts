@@ -143,8 +143,8 @@ function printRemoteClients() {
             text += "🧿"
         }
         const dc = remoteClient.dc;
-        if(dc) {
-            switch(dc.readyState) {
+        if (dc) {
+            switch (dc.readyState) {
                 case "connecting":
                     text += "🟡";
                     break;
@@ -158,14 +158,13 @@ function printRemoteClients() {
                     text += "❌";
                     break;
             }
-        }
-        else {
+        } else {
             text += "🧿"
         }
         const cl = clients[remoteClient.id];
         if (cl) {
             text += `+${cl.t - (gameTic - 1)}`;
-            text += " | 0x" + remoteClient.dc.bufferedAmount.toString(16);
+            text += "| x" + (+remoteClient.B).toString(16) + " | x" + remoteClient.dc.bufferedAmount.toString(16);
         }
         text += "\n";
     }
@@ -189,14 +188,25 @@ function getPlayerByClient(c: ClientID): Player | undefined {
     }
 }
 
-function checkPlayerInput() {
-    const simTic = 0;//((lastFrameTs - prevTime) / Const.NetDt) | 0;
-    localEvents = localEvents.filter((x) => x.btn === undefined || x.t < gameTic + Const.InputDelay + simTic);
+function getLocalEvent(tic: number): ClientEvent {
+    for (const e of localEvents) {
+        if (e.t === tic) {
+            return e;
+        }
+    }
+    const e: ClientEvent = {t: tic};
+    localEvents.push(e);
+    return e;
+}
 
+function checkPlayerInput() {
+    const simTic = simulatedFrames | 0;
+    //localEvents = localEvents.filter((x) => x.btn === undefined || x.t < gameTic + Const.InputDelay + simTic);
+
+    let btn = +getLocalEvent(gameTic + Const.InputDelay + simTic).btn;
     const player = getMyPlayer();
     if (player) {
         const p = inputPointers.filter(x => x.active_ && x.down_);
-        let btn = 0;
         let dx = 0;
         let dy = 0;
 
@@ -217,17 +227,16 @@ function checkPlayerInput() {
         }
 
         if (dx || dy) {
-            btn = (0xFF * (Math.PI + Math.atan2(dy, dx)) / (2 * Math.PI)) | 0;
+            btn &= 0xFF00;
+            btn |= (Const.AnglesRes * (Math.PI + Math.atan2(dy, dx)) / (2 * Math.PI)) | 0;
             btn |= 0x1 << 8;
         }
 
-        if (keyboardState["Space"]) {
+        if (keyboardState["Space"] || p.length > 1) {
             btn |= 0x2 << 8;
         }
-        localEvents.push({t: gameTic + Const.InputDelay + simTic, btn});
-    } else if (!joined) {
-        localEvents.push({t: gameTic + Const.InputDelay + simTic, btn: 0});
     }
+    getLocalEvent(gameTic + Const.InputDelay + simTic).btn = btn;
 }
 
 function checkInput() {
@@ -264,6 +273,7 @@ let receivedEvents: ClientEvent[] = [];
 
 interface InitData {
     mapSeed: number;
+    startSeed: number;
     players: Player[];
 }
 
@@ -271,7 +281,7 @@ interface InitData {
 interface Packet {
     c: ClientID;
     // seed for current tic
-    _: number;
+    //_: number;
     // confirm the last tic we received from Sender
     receivedOnSender: number;
     // packet contains info tic and before
@@ -330,36 +340,30 @@ function tryRunTicks(ts: number): number {
     }
     // compensate
     // we must try to keep netTic >= gameTic + Const.InputDelay
-    // let scale = 1.0;
-    // if (gameTic >= netTick) scale = 1.25;
-    // prevTime += scale * framesProcessed * Const.NetDt;
     prevTime += framesProcessed * Const.NetDt;
-    // if(ts - prevTime >= Const.NetDt && gameTic > netTick) {
 
-    // we play all available net-events
-    const dropRate = 1;
-    if(gameTic > netTick) {
+    // we played all available net-events
+    //const dropRate = 1;
+    if (gameTic > netTick) {
         // slow down a bit in case if we predict a lot
-        if(ts - prevTime > Const.InputDelay * Const.NetDt) {
+        const allowFramesToPredict = Const.InputDelay;
+        if (ts - prevTime > allowFramesToPredict * Const.NetDt) {
             //console.info("slow down");
 
             // prevTime += Const.NetDt * dropRate;
             // prevTime += 0.1 * (ts - prevTime);
-            prevTime = ts - Const.InputDelay * Const.NetDt;
+            // prevTime = ts - allowFramesToPredict * Const.NetDt;
+            prevTime = 0.9 * prevTime + 0.1 * (ts - allowFramesToPredict * Const.NetDt);
         }
-    }
-    else {
+    } else {
         // we got packets to go
-        if(gameTic + Const.InputDelay < netTick) {
+        if (gameTic + Const.InputDelay < netTick) {
             // speed up
             //console.info("speed up");
             prevTime = ts - Const.InputDelay * Const.NetDt;
             // prevTime -= Const.NetDt * dropRate;
         }
     }
-    // if(ts - prevTime >= Const.NetDt && gameTic >= netTick) {
-    //     prevTime += 0.1 * (ts - prevTime);
-    // }
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.t > lastTic);
@@ -400,10 +404,11 @@ function checkJoinSync(lastTic: number) {
         }
         joined = true;
         log("All in sync");
-        localEvents.push({
-            t: ticToSpawn,
-            spawn: {x: Math.random() * 800.0, y: 200 + 400 * Math.random(), z: 100 * Math.random()}
-        });
+        getLocalEvent(ticToSpawn).spawn = {
+            x: Math.random() * 800.0,
+            y: 200 + 400 * Math.random(),
+            z: 100 * Math.random()
+        };
     }
 }
 
@@ -414,7 +419,6 @@ function trySendInput() {
         if (client.dc && client.dc.readyState === "open") {
             const packet: Packet = {
                 c: getClientId(),
-                _: getSeed(),
                 t: lastTic + Const.InputDelay,
                 receivedOnSender: 0,
                 e: []
@@ -432,31 +436,33 @@ function trySendInput() {
                         //console.info("add input  " + e.t);
                     }
                 }
-                channels_sendObjectData(client.dc, pack(packet));
+                channels_sendObjectData(client, pack(packet));
                 // }
             } else {
                 const init: Packet = {
                     c: getClientId(),
-                    _: getSeed(),
                     t: lastTic + Const.InputDelay,
                     // important to wait for ack on who is initializing
                     receivedOnSender: 0,
                     e: [],
                     s: {
                         mapSeed: imgMapSeed,
+                        startSeed: getSeed(),
                         players: players
                     }
                 };
                 for (const e of localEvents) {
                     // buffer all inbetween frames current tic events
-                    if (e.t <= packet.t) {
+                    if (e.t > lastTic) {
                         packet.e.push(e);
                     }
                 }
                 for (const e of receivedEvents) {
-                    packet.e.push(e);
+                    if (e.t > lastTic) {
+                        packet.e.push(e);
+                    }
                 }
-                channels_sendObjectData(client.dc, pack(init));
+                channels_sendObjectData(client, pack(init));
             }
         }
     }
@@ -489,22 +495,20 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
             startTick = data.t;
             startTime = prevTime = lastFrameTs;
             gameTic = data.t;
-            seed(data._);
+            seed(data.s.startSeed);
             netTick = 0;
             players = data.s.players;
             recreateMap(data.s.mapSeed);
 
             const cl = requireClient(from);
             cl.t = data.t;
-            if (data.e) {
-                for (const e of data.e) {
-                    const cl = requireClient(e.c);
-                    if (cl.t < e.t) {
-                        cl.t = e.t;
-                    }
-                    //cl.i = data.t;
-                    receivedEvents.push(e);
+            for (const e of data.e) {
+                const cl = requireClient(e.c);
+                if (cl.t < e.t) {
+                    cl.t = e.t;
                 }
+                //cl.i = data.t;
+                receivedEvents.push(e);
             }
         } else {
             const cl = requireClient(from);
@@ -517,18 +521,9 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
             // ignore old packets
             if (cl.t < data.t) {
                 if (data.t > lastTic) {
-                    if (data.e) {
-                        for (const e of data.e) {
-                            if (e.t > cl.t /*alreadyReceivedTic*/) {
-                                // populate each event with producer id
-                                // if (!e.c) {
-                                //     e.c = data.c;
-                                // }
-                                if (e.spawn) {
-                                    console.warn("RECEIVED");
-                                }
-                                receivedEvents.push(e);
-                            }
+                    for (const e of data.e) {
+                        if (e.t > cl.t /*alreadyReceivedTic*/) {
+                            receivedEvents.push(e);
                         }
                     }
                 }
@@ -542,12 +537,13 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
                 }
             }
         }
-        if (!clientActive) {
-            lastFrameTs = performance.now();
-            tryRunTicks(lastFrameTs);
+        // if (!clientActive) {
+        lastFrameTs = performance.now() * 0.001;
+        if (tryRunTicks(lastFrameTs)) {
             trySendInput();
             cleaningUpClients();
         }
+        // }
     }
 }
 
@@ -599,11 +595,9 @@ function processTicCommands(commands: ClientEvent[]) {
             players = players.filter(p => p.c !== player.c);
             players.push(player);
         }
-        if (cmd.btn !== undefined) {
-            const player = getPlayerByClient(source);
-            if (player) {
-                player.btn = cmd.btn;
-            }
+        const player = getPlayerByClient(source);
+        if (player) {
+            player.btn = cmd.btn;
         }
     }
 }
@@ -665,7 +659,7 @@ function updatePlayers(dt: number) {
             }
 
             if (player.btn) {
-                const dir = 2 * Math.PI * (player.btn & 0xFF) / 0xFF - Math.PI;
+                const dir = 2 * Math.PI * (player.btn & 0xFF) / Const.AnglesRes - Math.PI;
                 if (grounded) {
                     if (player.btn & (2 << 8)) {
                         player.z = 1;
@@ -773,38 +767,38 @@ function drawPlayers() {
 function unpack(data: ArrayBuffer): Packet {
     const u32 = new Uint32Array(data);
     const f32 = new Float32Array(data);
+    let ptr = 0;
     const packet: Packet = {
-        c: u32[0],
-        _: u32[1],
-        receivedOnSender: u32[2],
-        t: u32[3],
+        c: u32[ptr++],
+        receivedOnSender: u32[ptr++],
+        t: u32[ptr++],
         e: []
     };
-    const eventsCount = u32[4];
-    const hasInit = u32[5];
-    let ptr = 6;
+    const eventsCount = u32[ptr++];
+    const hasInit = u32[ptr++];
     for (let i = 0; i < eventsCount; ++i) {
-        const flags = u32[ptr++];
-        const type = flags & 0xFF;
-        const hasSourceClientID = flags & 0x100;
         const e: ClientEvent = {
             t: u32[ptr++],
-            c: hasSourceClientID ? u32[ptr++] : packet.c,
         };
-        if (type === 0) {
-            e.btn = u32[ptr++];
-        } else if (type === 1) {
+        const flags = u32[ptr++];
+        const hasBtn = flags & 1;
+        const hasSpawn = flags & 2;
+        const hasClientID = flags & 4;
+        e.btn = hasBtn ? u32[ptr++] : 0;
+        if (hasSpawn) {
             e.spawn = {
                 x: f32[ptr++],
                 y: f32[ptr++],
                 z: f32[ptr++],
-            };
+            }
         }
+        e.c = hasClientID ? u32[ptr++] : packet.c;
         packet.e.push(e);
     }
     if (hasInit) {
         const init: InitData = {
             mapSeed: u32[ptr++],
+            startSeed: u32[ptr++],
             players: [],
         };
         const playersCount = u32[ptr++];
@@ -829,41 +823,49 @@ function unpack(data: ArrayBuffer): Packet {
     return packet;
 }
 
+const packBufferU32 = new Uint32Array(256);
+const packBufferF32 = new Float32Array(packBufferU32.buffer);
+
 function pack(packet: Packet): ArrayBuffer {
-    const u32 = new Uint32Array(600 / 4);
-    const f32 = new Float32Array(u32.buffer);
-    u32[0] = packet.c;
-    u32[1] = packet._;
-    u32[2] = packet.receivedOnSender;
-    u32[3] = packet.t;
-    const eventsCount = packet.e?.length | 0;
-    u32[4] = eventsCount;
+    const u32 = packBufferU32;
+    const f32 = packBufferF32;
+    let ptr = 0;
+    u32[ptr++] = packet.c;
+    u32[ptr++] = packet.receivedOnSender;
+    u32[ptr++] = packet.t;
+    const eventsCount = packet.e.length | 0;
+    u32[ptr++] = eventsCount;
     // has init
     const hasInit = !!packet.s;
-    u32[5] = hasInit ? 1 : 0;
-    let ptr = 6;
+    u32[ptr++] = hasInit ? 1 : 0;
     for (let i = 0; i < eventsCount; ++i) {
         const e = packet.e[i];
-        const type = !!e.spawn ? 1 : 0;
-        let flags = type;
-        if (!!e.c) {
-            flags |= 0x100;
-        }
-        u32[ptr++] = flags;
         u32[ptr++] = e.t;
-        if (!!e.c) {
-            u32[ptr++] = e.c;
-        }
-        if (type === 0) {
+
+        let flags = 0;
+        if (e.btn) flags |= 1;
+        if (e.spawn) flags |= 2;
+        if (!!e.c) flags |= 4;
+        u32[ptr++] = flags;
+
+        if (e.btn) {
             u32[ptr++] = e.btn;
-        } else if (type === 1) {
+        }
+        if (e.spawn) {
             f32[ptr++] = e.spawn.x;
             f32[ptr++] = e.spawn.y;
             f32[ptr++] = e.spawn.z;
         }
+        if (!!e.c) {
+            u32[ptr++] = e.c;
+        }
     }
+    //if(eventsCount > 16) {
+    //console.info(JSON.stringify(packet));
+    //}
     if (hasInit) {
         u32[ptr++] = packet.s.mapSeed;
+        u32[ptr++] = packet.s.startSeed;
         u32[ptr++] = packet.s.players.length;
         for (let i = 0; i < packet.s.players.length; ++i) {
             const p = packet.s.players[i];
