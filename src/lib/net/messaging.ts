@@ -273,7 +273,7 @@ const rtcConfiguration: RTCConfiguration = {
     ],
 };
 
-async function sendOffer(remoteClient: RemoteClient, iceRestart?:boolean) {
+async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean) {
     try {
         const pc = remoteClient.pc;
         const offer = await pc.createOffer({
@@ -283,7 +283,7 @@ async function sendOffer(remoteClient: RemoteClient, iceRestart?:boolean) {
         });
         await pc.setLocalDescription(offer);
         const result = await remoteCall(remoteClient.id, MessageType.RtcOffer, offer);
-        if(result) {
+        if (result) {
             await pc.setRemoteDescription(new RTCSessionDescription(result));
         }
     } catch (e) {
@@ -323,7 +323,7 @@ function initPeerConnection(remoteClient: RemoteClient) {
     });
 
     pc.addEventListener("iceconnectionstatechange", (e: Event) => {
-        if(pc.iceConnectionState === "failed") {
+        if (pc.iceConnectionState === "failed") {
             sendOffer(remoteClient, true);
         }
     });
@@ -351,7 +351,7 @@ export async function connectToRemote(rc: RemoteClient) {
 }
 
 export function connectToRemotes(): Promise<any> {
-    return Promise.all(remoteClients.map(connectToRemote));
+    return Promise.all(remoteClients.filter(x => !!x).map(connectToRemote));
 }
 
 function requireRemoteClient(id: ClientID): RemoteClient {
@@ -370,8 +370,7 @@ handlers[MessageType.RtcOffer] = async (req) => {
     }
     try {
         await remoteClient.pc.setRemoteDescription(req.a);
-    }
-    catch(err) {
+    } catch (err) {
         console.error(err);
         return null;
     }
