@@ -346,7 +346,7 @@ export async function connectToRemote(rc: RemoteClient) {
             if (rc.pc.iceConnectionState === "failed") {
                 sendOffer(rc, true);
             } else if (rc.pc.iceConnectionState === "disconnected") {
-                disconnect();
+                //disconnect();
             }
         }
     });
