@@ -29,6 +29,7 @@ function createEmoji(emoji: string) {
     canvas.width = canvas.height = 0;
     return img;
 }
+
 function createCircle() {
     const canvas = document.createElement("canvas");
     const w = 8;
@@ -49,14 +50,14 @@ function createCircle() {
 }
 
 
-export async function loadResources():Promise<any> {
+export async function loadResources(): Promise<any> {
     {
-        img_players[0] = createEmoji("💀");
-        img_players[1] = createEmoji("👻");
-        img_players[2] = createEmoji("😱");
-        img_players[3] = createEmoji("👹");
-        img_players[4] = createEmoji("😵");
-        img_players[5] = createEmoji("🌚");
+        img_players.push(
+            createEmoji("💀"),
+            createEmoji("👹"),
+            createEmoji("😵"),
+            createEmoji("🌚"),
+        );
     }
     snd_blip = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
     snd_music = createAudioBufferFromSong(song);

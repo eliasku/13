@@ -8,7 +8,7 @@ import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Textu
 import {getSeed, random, seed} from "./rnd";
 import {channels_sendObjectData, setRTMessageHandler} from "../net/channels";
 import {img_box, img_cirle, img_players, snd_blip} from "./res";
-import {Const} from "./config";
+import {Const, MUTE_ALL} from "./config";
 import {generateMapBackground} from "./maze";
 
 let imgMap: Texture = null;
@@ -169,6 +169,9 @@ function getPlayerByClient(c: ClientID): Player | undefined {
 }
 
 function checkPlayerInput() {
+    const simTic = 0;//((lastFrameTs - prevTime) / Const.NetDt) | 0;
+    localEvents = localEvents.filter((x) => x.btn === undefined || x.t < gameTic + Const.InputDelay + simTic);
+
     const player = getMyPlayer();
     if (player) {
         const p = inputPointers.filter(x => x.active_ && x.down_);
@@ -200,10 +203,9 @@ function checkPlayerInput() {
         if (keyboardState["Space"]) {
             btn |= 0x2 << 8;
         }
-
-        const simTic = ((lastFrameTs - prevTime) / Const.NetDt) | 0;
-        localEvents = localEvents.filter((x) => x.t < gameTic + inputDelayN + simTic);
-        localEvents.push({t: gameTic + inputDelayN + simTic, btn});
+        localEvents.push({t: gameTic + Const.InputDelay + simTic, btn});
+    } else if (!joined) {
+        localEvents.push({t: gameTic + Const.InputDelay + simTic, btn: 0});
     }
 }
 
@@ -262,9 +264,6 @@ interface Packet {
 
 // ticks received from all peers (min value), we could simulate to it
 let netTick = 0;
-let inputDelayN = 4;
-// let inputDelayN = 8;
-// const inputDelayN = 25;
 let startTick = -1;
 let gameTic = 0;
 let prevTime = 0;
@@ -308,13 +307,39 @@ function tryRunTicks(ts: number): number {
         --frameN;
         ++framesProcessed;
     }
-    let scale = 1.0;
     // compensate
-    // we must try to keep netTic >= gameTic + inputDelayN
-    if ((netTick - gameTic) < inputDelayN * 0.5) scale = 1.25;
-    //const frameLag = (((lastFrameTs - prevTime) * Const.NetFq)|0);
-    // if (frameLag > inputDelayN * 0.5) scale = 1.25;
-    prevTime += scale * framesProcessed * Const.NetDt;
+    // we must try to keep netTic >= gameTic + Const.InputDelay
+    // let scale = 1.0;
+    // if (gameTic >= netTick) scale = 1.25;
+    // prevTime += scale * framesProcessed * Const.NetDt;
+    prevTime += framesProcessed * Const.NetDt;
+    // if(ts - prevTime >= Const.NetDt && gameTic > netTick) {
+
+    // we play all available net-events
+    const dropRate = 1;
+    if(gameTic > netTick) {
+        // slow down a bit in case if we predict a lot
+        if(ts - prevTime > Const.InputDelay * Const.NetDt) {
+            //console.info("slow down");
+
+            // prevTime += Const.NetDt * dropRate;
+            // prevTime += 0.1 * (ts - prevTime);
+            prevTime = ts - Const.InputDelay * Const.NetDt;
+        }
+    }
+    else {
+        // we got packets to go
+        if(gameTic + Const.InputDelay < netTick) {
+            // speed up
+            //console.info("speed up");
+            prevTime = ts - Const.InputDelay * Const.NetDt;
+            // prevTime -= Const.NetDt * dropRate;
+        }
+    }
+    // if(ts - prevTime >= Const.NetDt && gameTic >= netTick) {
+    //     prevTime += 0.1 * (ts - prevTime);
+    // }
+
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.t > lastTic);
     localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
@@ -325,14 +350,24 @@ let joined = false;
 
 function checkJoinSync(lastTic: number) {
     if (!joined && startTick >= 0) {
-        const ticToSpawn = lastTic + inputDelayN + 1;
+        const ticToSpawn = lastTic + Const.InputDelay;
         if (netTick < lastTic) {
             return;
         }
         for (const rc of getRemoteClients()) {
             if (rc.dc && rc.dc.readyState === "open") {
                 const cl = clients[rc.id];
-                if (!cl || cl.t <= lastTic + 2) {
+                //  && cl.acknowledgedTic < ticToSpawn && lastTic >= cl.t
+                if (cl && cl.acknowledgedTic > 0) {
+                    console.info(cl.acknowledgedTic, lastTic, ticToSpawn, cl.t);
+                    // 43 43 39 48 48
+
+                    // NO
+                    // 34 39 43 39
+
+                    // YES
+                    // 31 35 39 35
+                } else {
                     log("syncing...");
                     return;
                 }
@@ -355,7 +390,7 @@ function trySendInput() {
             const packet: Packet = {
                 c: getClientId(),
                 _: getSeed(),
-                t: lastTic + inputDelayN,
+                t: lastTic + Const.InputDelay,
                 receivedOnSender: 0,
                 e: []
             };
@@ -366,7 +401,7 @@ function trySendInput() {
                 packet.receivedOnSender = cl.t;
                 // if (packet.t > cl.acknowledgedTic) {
                 for (const e of localEvents) {
-                    // if (e.t >= cl.t - inputDelayN && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
+                    // if (e.t >= cl.t - Const.InputDelay && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
                     if (e.t > cl.acknowledgedTic && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
                         packet.e.push(e);
                         //console.info("add input  " + e.t);
@@ -378,8 +413,9 @@ function trySendInput() {
                 const init: Packet = {
                     c: getClientId(),
                     _: getSeed(),
-                    t: lastTic,
-                    receivedOnSender: lastTic,
+                    t: lastTic + Const.InputDelay,
+                    // important to wait for ack on who is initializing
+                    receivedOnSender: 0,
                     e: [],
                     s: {
                         mapSeed: imgMapSeed,
@@ -447,28 +483,38 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
             }
         } else {
             const cl = requireClient(from);
-            if (data.t > lastTic) {
-                if (cl.t < data.t) {
+            for (const e of data.e) {
+                if (e.spawn) {
+                    console.warn(e.t, data.t, data.receivedOnSender, cl.t, lastTic);
+                }
+            }
+
+            // ignore old packets
+            if (cl.t < data.t) {
+                if (data.t > lastTic) {
                     if (data.e) {
                         for (const e of data.e) {
                             if (e.t > cl.t /*alreadyReceivedTic*/) {
                                 // populate each event with producer id
-                                if (!e.c) {
-                                    e.c = data.c;
+                                // if (!e.c) {
+                                //     e.c = data.c;
+                                // }
+                                if (e.spawn) {
+                                    console.warn("RECEIVED");
                                 }
                                 receivedEvents.push(e);
                             }
                         }
                     }
-                    cl.t = data.t;
                 }
-            }
-
-            // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
-            // then we will send only events from [acknowledgedTic + 1] index
-            if (cl.acknowledgedTic < data.receivedOnSender) {
-                // update ack
-                cl.acknowledgedTic = data.receivedOnSender;
+                cl.t = data.t;
+                // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
+                // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
+                // then we will send only events from [acknowledgedTic + 1] index
+                if (cl.acknowledgedTic < data.receivedOnSender) {
+                    // update ack
+                    cl.acknowledgedTic = data.receivedOnSender;
+                }
             }
         }
         if (!clientActive) {
@@ -600,7 +646,7 @@ function updatePlayers(dt: number) {
                         player.z = 1;
                         player.vz = jumpVel;
                         grounded = false;
-                        if (!Const.MuteAll) {
+                        if (!MUTE_ALL) {
                             play(snd_blip, false, 0.2 + 0.8 * random());
                         }
                     }
@@ -629,6 +675,7 @@ function getCommandsForTic(tic: number): ClientEvent[] {
 function beginPrediction() {
     lastState = players;
     simulatedFrames = 0;
+    if (!Const.Prediction) return;
     players = JSON.parse(JSON.stringify(players));
     let time = lastFrameTs - prevTime;
     let tic = gameTic;
@@ -808,6 +855,5 @@ function pack(packet: Packet): ArrayBuffer {
         }
     }
     const buffer = u32.slice(0, ptr).buffer;
-    console.info(buffer.byteLength);
     return buffer;
 }

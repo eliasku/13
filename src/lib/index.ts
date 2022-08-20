@@ -1,4 +1,4 @@
-import {connect, disconnect} from "./net/messaging";
+import {connect, disconnect, getClientId, getRemoteClients} from "./net/messaging";
 import {initInput, resetInput} from "./fluid/input";
 import {initGL} from "./graphics/gl";
 import {termClear, termFlush, termPrint} from "./debug/log";
@@ -6,7 +6,7 @@ import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
 import {loadResources, snd_blip, snd_music} from "./game/res";
 import {play} from "./audio/context";
-import {Const} from "./game/config";
+import {MUTE_ALL} from "./game/config";
 import {fps, updateFpsMeter} from "./game/fpsMeter";
 
 document.body.style.margin = "0";
@@ -26,15 +26,17 @@ initInput(canvas);
 initGL(canvas);
 initDraw2d();
 
+let starting = false;
 let started = false;
 const onStart = async () => {
+    starting = true;
     canvas.removeEventListener("touchstart", onStart);
     canvas.removeEventListener("mousedown", onStart);
 
     window.addEventListener("beforeunload", disconnect);
     await connect();
 
-    if (!Const.MuteAll) {
+    if (!MUTE_ALL) {
         play(snd_blip);
         play(snd_music, true, 0.05);
     }
@@ -44,10 +46,6 @@ const onStart = async () => {
 };
 
 loadResources().then(() => {
-    termClear();
-    termPrint("Tap to Start!\n");
-    termFlush();
-
     canvas.addEventListener("touchstart", onStart);
     canvas.addEventListener("mousedown", onStart);
 });
@@ -78,20 +76,30 @@ const raf = (ts: DOMHighResTimeStamp) => {
     doResize();
     doFrame(ts / 1000.0);
     resetInput();
-    
+
     tsPrev = ts;
     requestAnimationFrame(raf);
 };
 
 function doFrame(ts: number) {
     updateFpsMeter(ts);
+    termClear();
+    termPrint(`FPS: ${fps}\n`);
     if (started) {
-        termClear();
-        termPrint(`FPS: ${fps}\n`);
         updateTestGame(ts);
-
-        termFlush();
+    } else {
+        if(!starting) {
+            termPrint("\nTap to connect!\n");
+        }
+        else {
+            termPrint("Connecting...\n");
+            termPrint("┌ " + getClientId() + "\n");
+            for (const rc of getRemoteClients()) {
+                termPrint("├ " + rc.id + " " + (rc.pc ? rc.pc.iceConnectionState : "x") + "\n");
+            }
+        }
     }
+    termFlush();
 }
 
 requestAnimationFrame(raf);

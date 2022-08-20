@@ -1,4 +1,4 @@
-import {log, logAssert, logWarn} from "../debug/log";
+import {debugSleep, log, logAssert, logWarn} from "../debug/log";
 import {
     ClientID,
     EventSourceUrl,
@@ -214,10 +214,14 @@ function onSSEError(e: Event) {
 export async function connect() {
     if (!running && !connecting) {
         connecting = true;
+        await debugSleep(500);
         await initSSE();
+        await debugSleep(500);
         connecting = false;
         running = true;
+        await debugSleep(500);
         await connectToRemotes();
+        await debugSleep(500);
     }
 }
 

@@ -1,10 +1,10 @@
 import {ClientID} from "../../shared/types";
+import {DEBUG_LAG_ENABLED, DebugLag} from "../game/config";
 
 // round-trip
-const debug = false;
-const lagMin = 50 / 2;
-const lagMax = 1000 / 2;
-const packetLoss = 0.05;
+const lagMin = DebugLag.LagMin / 2;
+const lagMax = DebugLag.LagMax / 2;
+const packetLoss = DebugLag.PacketLoss;
 const sendLagMin = lagMin / 2;
 const sendLagMax = lagMax / 2;
 const sendPacketLoss = packetLoss * packetLoss;
@@ -29,7 +29,7 @@ export function setRTMessageHandler(handler: RTMessageHandler) {
 }
 
 export function channels_sendObjectData(dc: RTCDataChannel, data: ArrayBuffer) {
-    if (debug) {
+    if (DEBUG_LAG_ENABLED) {
         if (data.byteLength >= 1200 / 2) {
             throw new Error("HUGE packet could not be delivered");
         }
@@ -52,7 +52,7 @@ export function channels_sendObjectData(dc: RTCDataChannel, data: ArrayBuffer) {
 
 export function channels_processMessage(from: ClientID, msg: MessageEvent<ArrayBuffer>) {
     const data = msg.data;
-    if (debug) {
+    if (DEBUG_LAG_ENABLED) {
         if (!chance(receivePacketLoss)) {
             if (document.hidden) {
                 // can't simulate lag when tab in background because of setTimeout stall

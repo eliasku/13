@@ -14,7 +14,7 @@ export function log(msg: string): string {
     return msg;
 }
 
-export function logAssert(expr: boolean):boolean {
+export function logAssert(expr: boolean): boolean {
     if (process.env.NODE_ENV === "production") {
     } else {
         console.assert(expr);
@@ -60,4 +60,10 @@ export function termFlush() {
 
 export function termClear() {
     textTerminalBuffer = "";
+}
+
+export function debugSleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(() => resolve(), ms);
+    });
 }
