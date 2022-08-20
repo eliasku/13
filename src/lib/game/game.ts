@@ -142,6 +142,26 @@ function printRemoteClients() {
         } else {
             text += "🧿"
         }
+        const dc = remoteClient.dc;
+        if(dc) {
+            switch(dc.readyState) {
+                case "connecting":
+                    text += "🟡";
+                    break;
+                case "open":
+                    text += "🟢";
+                    break;
+                case "closed":
+                    text += "🔴";
+                    break;
+                case "closing":
+                    text += "❌";
+                    break;
+            }
+        }
+        else {
+            text += "🧿"
+        }
         const cl = clients[remoteClient.id];
         if (cl) {
             text += `+${cl.t - (gameTic - 1)}`;

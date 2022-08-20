@@ -273,10 +273,11 @@ const rtcConfiguration: RTCConfiguration = {
     ],
 };
 
-async function sendOffer(remoteClient: RemoteClient) {
+async function sendOffer(remoteClient: RemoteClient, iceRestart?:boolean) {
     try {
         const pc = remoteClient.pc;
         const offer = await pc.createOffer({
+            iceRestart,
             offerToReceiveAudio: false,
             offerToReceiveVideo: false
         });
@@ -319,6 +320,12 @@ function initPeerConnection(remoteClient: RemoteClient) {
 
     pc.addEventListener("icecandidateerror", (e: RTCPeerConnectionIceErrorEvent) => {
         log("ice candidate error: " + e.errorText);
+    });
+
+    pc.addEventListener("iceconnectionstatechange", (e: Event) => {
+        if(pc.iceConnectionState === "failed") {
+            sendOffer(remoteClient, true);
+        }
     });
 }
 
