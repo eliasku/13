@@ -385,7 +385,7 @@ function checkJoinSync(lastTic: number) {
                 const cl = clients[rc.id];
                 //  && cl.acknowledgedTic < ticToSpawn && lastTic >= cl.t
                 if (cl && cl.acknowledgedTic > 0) {
-                    console.info(cl.acknowledgedTic, lastTic, ticToSpawn, cl.t);
+                    //console.info(cl.acknowledgedTic, lastTic, ticToSpawn, cl.t);
                     // 43 43 39 48 48
 
                     // NO
@@ -397,7 +397,7 @@ function checkJoinSync(lastTic: number) {
                     // YES
                     // 31 35 39 35
                 } else {
-                    log("syncing...");
+                    //log("syncing...");
                     return;
                 }
             }
@@ -514,7 +514,7 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
             const cl = requireClient(from);
             for (const e of data.e) {
                 if (e.spawn) {
-                    console.warn(e.t, data.t, data.receivedOnSender, cl.t, lastTic);
+                    //console.warn(e.t, data.t, data.receivedOnSender, cl.t, lastTic);
                 }
             }
 

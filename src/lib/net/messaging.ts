@@ -274,15 +274,17 @@ const rtcConfiguration: RTCConfiguration = {
     ],
 };
 
-async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean) {
+async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negotiation?: boolean) {
     try {
         const pc = remoteClient.pc;
         const offer = await pc.createOffer({
             iceRestart,
             offerToReceiveAudio: false,
-            offerToReceiveVideo: false
+            offerToReceiveVideo: false,
         });
         await pc.setLocalDescription(offer);
+        console.info("send offer to " + remoteClient.id);
+        console.info(offer);
         const result = await remoteCall(remoteClient.id, MessageType.RtcOffer, offer);
         if (result) {
             await pc.setRemoteDescription(new RTCSessionDescription(result));
@@ -305,7 +307,7 @@ function initPeerConnection(remoteClient: RemoteClient) {
 
     pc.addEventListener("negotiationneeded", async () => {
         log("negotiation needed");
-        await sendOffer(remoteClient);
+        await sendOffer(remoteClient, false);
     });
 
     pc.addEventListener("datachannel", (e) => {
@@ -372,6 +374,7 @@ handlers[MessageType.RtcOffer] = async (req) => {
     try {
         await remoteClient.pc.setRemoteDescription(req.a);
     } catch (err) {
+        console.info(req.a);
         console.error(err);
         return null;
     }

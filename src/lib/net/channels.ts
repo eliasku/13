@@ -41,11 +41,12 @@ export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer)
                 // can't simulate lag when tab in background because of setTimeout stall
                 dc.send(data);
             } else {
+                const delay = range(sendLagMin, sendLagMax);
                 setTimeout(() => {
                     if (dc.readyState === "open") {
                         dc.send(data);
                     }
-                }, range(sendLagMin, sendLagMax));
+                }, delay);
             }
         }
         return;
@@ -61,7 +62,8 @@ export function channels_processMessage(from: ClientID, msg: MessageEvent<ArrayB
                 // can't simulate lag when tab in background because of setTimeout stall
                 onRTMessage(from, data);
             } else {
-                setTimeout(() => onRTMessage(from, data), range(receiveLagMin, receiveLagMax));
+                const delay = range(receiveLagMin, receiveLagMax)
+                setTimeout(() => onRTMessage(from, data), delay);
             }
         }
         return;
