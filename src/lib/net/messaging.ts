@@ -141,7 +141,9 @@ function onSSEClientAdd(e: MessageEvent<string>) {
     const id = Number.parseInt(e.data);
     logAssert(!Number.isNaN(id));
     logAssert(!remoteClients[id]);
-    remoteClients[id] = {id};
+    const rc:RemoteClient = {id};
+    remoteClients[id] = rc;
+    connectToRemote(rc);
     log(`remote client ${id} added`);
 }
 
@@ -221,8 +223,8 @@ export async function connect() {
         connecting = false;
         running = true;
         await debugSleep(500);
-        await connectToRemotes();
-        await debugSleep(500);
+        //await connectToRemotes();
+        // await debugSleep(500);
     }
 }
 
@@ -328,6 +330,9 @@ function initPeerConnection(remoteClient: RemoteClient) {
     pc.addEventListener("iceconnectionstatechange", (e: Event) => {
         if (pc.iceConnectionState === "failed") {
             sendOffer(remoteClient, true);
+        }
+        else if(pc.iceConnectionState === "disconnected") {
+            disconnect();
         }
     });
 }
