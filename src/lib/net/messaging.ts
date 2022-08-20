@@ -141,7 +141,7 @@ function onSSEClientAdd(e: MessageEvent<string>) {
     const id = Number.parseInt(e.data);
     logAssert(!Number.isNaN(id));
     logAssert(!remoteClients[id]);
-    const rc:RemoteClient = {id};
+    const rc: RemoteClient = {id};
     remoteClients[id] = rc;
     connectToRemote(rc);
     log(`remote client ${id} added`);
@@ -326,15 +326,6 @@ function initPeerConnection(remoteClient: RemoteClient) {
     pc.addEventListener("icecandidateerror", (e: RTCPeerConnectionIceErrorEvent) => {
         log("ice candidate error: " + e.errorText);
     });
-
-    pc.addEventListener("iceconnectionstatechange", (e: Event) => {
-        if (pc.iceConnectionState === "failed") {
-            sendOffer(remoteClient, true);
-        }
-        else if(pc.iceConnectionState === "disconnected") {
-            disconnect();
-        }
-    });
 }
 
 function closePeerConnection(toRemoteClient: RemoteClient) {
@@ -350,6 +341,15 @@ function closePeerConnection(toRemoteClient: RemoteClient) {
 
 export async function connectToRemote(rc: RemoteClient) {
     initPeerConnection(rc);
+    rc.pc.addEventListener("iceconnectionstatechange", (e: Event) => {
+        if (rc.pc) {
+            if (rc.pc.iceConnectionState === "failed") {
+                sendOffer(rc, true);
+            } else if (rc.pc.iceConnectionState === "disconnected") {
+                disconnect();
+            }
+        }
+    });
     await sendOffer(rc);
 
     rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
@@ -358,9 +358,9 @@ export async function connectToRemote(rc: RemoteClient) {
     rc.dc.addEventListener("message", (msg) => channels_processMessage(rc.id, msg));
 }
 
-export function connectToRemotes(): Promise<any> {
-    return Promise.all(remoteClients.filter(x => !!x).map(connectToRemote));
-}
+// export function connectToRemotes(): Promise<any> {
+//     return Promise.all(remoteClients.filter(x => !!x).map(connectToRemote));
+// }
 
 function requireRemoteClient(id: ClientID): RemoteClient {
     let rc = remoteClients[id];
