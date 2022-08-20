@@ -11,7 +11,7 @@ export const enum Const {
 
 export const DEBUG_LAG_ENABLED = DEV_MODE;
 export const enum DebugLag {
-    LagMin = 40,
-    LagMax = 500,
+    LagMin = 200,
+    LagMax = 1000,
     PacketLoss = 0.05
 }

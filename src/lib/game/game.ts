@@ -371,7 +371,8 @@ let joined = false;
 
 function checkJoinSync(lastTic: number) {
     if (!joined && startTick >= 0) {
-        const ticToSpawn = lastTic + Const.InputDelay;
+        // IMPORTANT TO +1!!
+        const ticToSpawn = lastTic + Const.InputDelay + 1;
         if (netTick < lastTic) {
             return;
         }
@@ -385,6 +386,9 @@ function checkJoinSync(lastTic: number) {
 
                     // NO
                     // 34 39 43 39
+
+                    // remot: 141 142 138 141 141
+                    // check: 125 137 141 138
 
                     // YES
                     // 31 35 39 35
