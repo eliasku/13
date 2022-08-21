@@ -65,8 +65,8 @@ function recreateMap(seed1: number) {
 
 function createSeedGameState() {
     startTick = 0;
-    gameTic = 0;
-    netTick = 0;
+    gameTic = 1;
+    netTick = Const.InputDelay + 2;
     startTime = prevTime = lastFrameTs;
     players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, z: 100, s: 1, vx: 0, vy: 0, vz: 0};
     recreateMap(1);
@@ -203,7 +203,7 @@ function checkPlayerInput() {
     const simTic = simulatedFrames | 0;
     //localEvents = localEvents.filter((x) => x.btn === undefined || x.t < gameTic + Const.InputDelay + simTic);
 
-    let btn = +getLocalEvent(gameTic + Const.InputDelay + simTic).btn;
+    let btn = getLocalEvent(gameTic + Const.InputDelay + simTic).btn | 0;
     const player = getMyPlayer();
     if (player) {
         const p = inputPointers.filter(x => x.active_ && x.down_);
@@ -318,8 +318,8 @@ function calcNetTick() {
         }
     }
     if (tmin === 0xFFFFFFFF) {
-        netTick = gameTic;
-        ackMin = gameTic;
+        netTick = gameTic + Const.InputDelay;
+        ackMin = gameTic + Const.InputDelay;
     } else {
         netTick = tmin;
         ackMin = amin;
@@ -331,7 +331,8 @@ function tryRunTicks(ts: number): number {
     const framesPassed = ((ts - prevTime) * Const.NetFq) | 0;
     let frameN = framesPassed;
     let framesProcessed = 0;
-    while (gameTic <= netTick && frameN > 0) {
+    let upTO = netTick;// - Const.InputDelay + 1;
+    while (gameTic <= upTO && frameN > 0) {
         processTicCommands(getCommandsForTic(gameTic));
         simulateTic(Const.NetDt);
         ++gameTic;
@@ -343,8 +344,8 @@ function tryRunTicks(ts: number): number {
     prevTime += framesProcessed * Const.NetDt;
 
     // we played all available net-events
-    //const dropRate = 1;
-    if (gameTic > netTick) {
+    const dropRate = 1;
+    if (gameTic > upTO) {
         // slow down a bit in case if we predict a lot
         const allowFramesToPredict = Const.InputDelay;
         if (ts - prevTime > allowFramesToPredict * Const.NetDt) {
@@ -352,12 +353,12 @@ function tryRunTicks(ts: number): number {
 
             // prevTime += Const.NetDt * dropRate;
             // prevTime += 0.1 * (ts - prevTime);
-            // prevTime = ts - allowFramesToPredict * Const.NetDt;
-            prevTime = 0.9 * prevTime + 0.1 * (ts - allowFramesToPredict * Const.NetDt);
+            prevTime = ts - allowFramesToPredict * Const.NetDt;
+            // prevTime = 0.9 * prevTime + 0.1 * (ts - allowFramesToPredict * Const.NetDt);
         }
     } else {
         // we got packets to go
-        if (gameTic + Const.InputDelay < netTick) {
+        if (gameTic + Const.InputDelay < upTO) {
             // speed up
             //console.info("speed up");
             prevTime = ts - Const.InputDelay * Const.NetDt;
@@ -376,7 +377,7 @@ let joined = false;
 function checkJoinSync(lastTic: number) {
     if (!joined && startTick >= 0) {
         // IMPORTANT TO +1!!
-        const ticToSpawn = lastTic + Const.InputDelay + 1;
+        const ticToSpawn = lastTic + Const.InputDelay + 1 + Const.NetFq + (simulatedFrames | 0);
         if (netTick < lastTic) {
             return;
         }
@@ -384,8 +385,9 @@ function checkJoinSync(lastTic: number) {
             if (rc.dc && rc.dc.readyState === "open") {
                 const cl = clients[rc.id];
                 //  && cl.acknowledgedTic < ticToSpawn && lastTic >= cl.t
-                if (cl && cl.acknowledgedTic > 0) {
-                    //console.info(cl.acknowledgedTic, lastTic, ticToSpawn, cl.t);
+                // if (cl && cl.acknowledgedTic > 0 && ticToSpawn > cl.t) {
+                if (cl && cl.acknowledgedTic > 0) {//} && ticToSpawn > cl.t) {
+                    console.info(cl.acknowledgedTic, lastTic, ticToSpawn, cl.t);
                     // 43 43 39 48 48
 
                     // NO
@@ -397,13 +399,14 @@ function checkJoinSync(lastTic: number) {
                     // YES
                     // 31 35 39 35
                 } else {
-                    //log("syncing...");
+                    log("syncing...");
                     return;
                 }
             }
         }
         joined = true;
         log("All in sync");
+        console.info("spawn to " + ticToSpawn);
         getLocalEvent(ticToSpawn).spawn = {
             x: Math.random() * 800.0,
             y: 200 + 400 * Math.random(),
@@ -512,17 +515,19 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
             }
         } else {
             const cl = requireClient(from);
-            for (const e of data.e) {
-                if (e.spawn) {
-                    //console.warn(e.t, data.t, data.receivedOnSender, cl.t, lastTic);
-                }
-            }
-
             // ignore old packets
-            if (cl.t < data.t) {
+            //if (cl.t < data.t) {
+                for (const e of data.e) {
+                    if (e.spawn) {
+                        console.warn(e.t, data.t, data.receivedOnSender, cl.t, lastTic);
+                    }
+                }
                 if (data.t > lastTic) {
                     for (const e of data.e) {
                         if (e.t > cl.t /*alreadyReceivedTic*/) {
+                            if(e.spawn) {
+                                console.info("WRITE SPAWN RECEIVED EVENT");
+                            }
                             receivedEvents.push(e);
                         }
                     }
@@ -535,7 +540,7 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
                     // update ack
                     cl.acknowledgedTic = data.receivedOnSender;
                 }
-            }
+            //}
         }
         // if (!clientActive) {
         lastFrameTs = performance.now() * 0.001;
@@ -775,10 +780,11 @@ function unpack(data: ArrayBuffer): Packet {
         e: []
     };
     const eventsCount = u32[ptr++];
+    let event_t = u32[ptr++];
     const hasInit = u32[ptr++];
     for (let i = 0; i < eventsCount; ++i) {
         const e: ClientEvent = {
-            t: u32[ptr++],
+            t: event_t++,
         };
         const flags = u32[ptr++];
         const hasBtn = flags & 1;
@@ -833,15 +839,27 @@ function pack(packet: Packet): ArrayBuffer {
     u32[ptr++] = packet.c;
     u32[ptr++] = packet.receivedOnSender;
     u32[ptr++] = packet.t;
-    const eventsCount = packet.e.length | 0;
+
+    packet.e.sort((a, b) => a.t - b.t);
+    let event_t = packet.e.length > 0 ? packet.e[0].t : 0;
+    const event_end = packet.e.length > 0 ? packet.e[packet.e.length - 1].t : -1;
+    const eventsCount = event_end - event_t + 1;
     u32[ptr++] = eventsCount;
+    u32[ptr++] = event_t;
+
     // has init
     const hasInit = !!packet.s;
     u32[ptr++] = hasInit ? 1 : 0;
-    for (let i = 0; i < eventsCount; ++i) {
-        const e = packet.e[i];
-        u32[ptr++] = e.t;
 
+    let i = 0;
+    while (event_t < event_end) {
+        const e = packet.e[i];
+        const t = event_t++;
+        if (t < e.t) {
+            u32[ptr++] = 0;
+            continue;
+        }
+        ++i;
         let flags = 0;
         if (e.btn) flags |= 1;
         if (e.spawn) flags |= 2;
@@ -860,9 +878,6 @@ function pack(packet: Packet): ArrayBuffer {
             u32[ptr++] = e.c;
         }
     }
-    //if(eventsCount > 16) {
-    //console.info(JSON.stringify(packet));
-    //}
     if (hasInit) {
         u32[ptr++] = packet.s.mapSeed;
         u32[ptr++] = packet.s.startSeed;
@@ -882,5 +897,6 @@ function pack(packet: Packet): ArrayBuffer {
         }
     }
     const buffer = u32.slice(0, ptr).buffer;
+
     return buffer;
 }

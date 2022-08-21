@@ -34,7 +34,7 @@ export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer)
     client.B = data.byteLength;
     if (DEBUG_LAG_ENABLED) {
         if (data.byteLength >= 1200 / 2) {
-            throw new Error("HUGE packet could not be delivered");
+            throw new Error("HUGE packet could not be delivered: " + data.byteLength);
         }
         if (!chance(sendPacketLoss)) {
             if (document.hidden) {
