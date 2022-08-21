@@ -9,37 +9,41 @@ const port = +process.env.PORT || defaultPort;
 
 export interface ClientState {
     id: ClientID;
-    // last time client or server communicates with node
+    // last time client or server communicates with client
     ts: number;
     es: ServerResponse;
     ei: number;
 }
 
-let nextNodeId = 1;
+let nextClientId = 1;
 
-const nodes = new Map<ClientID, ClientState>();
+const clients = new Map<ClientID, ClientState>();
 
-setInterval(()=>{
-    broadcastServerEvent(0, ServerEventName.Ping, "");
-}, 10000);
+setInterval(() => {
+    for (const client of clients.values()) {
+        if(!sendServerEvent(client.id, ServerEventName.Ping, "")) {
+            removeClient(client.id);
+        }
+    }
+}, 5000);
 
 function sendCloseServerEvent(id: ClientID) {
-    const node = nodes.get(id);
-    const res = node.es;
+    const client = clients.get(id);
+    const res = client.es;
     res.write(`id: -1\ndata: \n\n`);
     res.end();
 }
 
 function sendServerEvent(id: ClientID, event: string, data: string) {
-    const node = nodes.get(id);
-    const res = node.es;
-    res.write(`id: ${node.ei++}\nevent: ${event}\ndata: ${data}\n\n`);
+    const client = clients.get(id);
+    const res = client.es;
+    return res.write(`id: ${client.ei++}\nevent: ${event}\ndata: ${data}\n\n`);
 }
 
 function broadcastServerEvent(from: ClientID, event: string, data: string) {
-    for (const node of nodes.values()) {
-        if (node.id !== from) {
-            sendServerEvent(node.id, event, data);
+    for (const client of clients.values()) {
+        if (client.id !== from) {
+            sendServerEvent(client.id, event, data);
         }
     }
 }
@@ -61,6 +65,16 @@ const _500: RequestListener = (req, res) => {
     res.end("internal error");
 };
 
+function removeClient(id: number) {
+    const client = clients.get(id);
+    if (client) {
+        sendCloseServerEvent(id);
+        clients.delete(id);
+    }
+    broadcastServerEvent(id, ServerEventName.ClientRemove, "" + id);
+    console.info("broadcast client " + id + " removed ");
+}
+
 function processServerEvents(req: IncomingMessage, res: ServerResponse) {
     res.writeHead(200, {
         "Connection": "keep-alive",
@@ -69,7 +83,7 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
     });
 
     // create new client connection
-    const id = nextNodeId++;
+    const id = nextClientId++;
     const client: ClientState = {
         id,
         ts: performance.now(),
@@ -77,18 +91,10 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
         ei: 0
     };
 
-    req.on("close", () => {
-        const node = nodes.get(id);
-        if (node) {
-            sendCloseServerEvent(id);
-            nodes.delete(id);
-        }
-        broadcastServerEvent(id, ServerEventName.ClientRemove, "" + id);
-        console.info("broadcast node " + id + " removed ");
-    });
+    req.on("close", () => removeClient(id));
 
-    const otherClientIds = [...nodes.keys()];
-    nodes.set(id, client);
+    const otherClientIds = [...clients.keys()];
+    clients.set(id, client);
     sendServerEvent(id, ServerEventName.ClientConnected, id + ";" + otherClientIds.join(";"));
     broadcastServerEvent(id, ServerEventName.ClientAdd, "" + id);
 }
@@ -101,19 +107,23 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
     const data = Buffer.concat(buffers).toString();
     const reqData: Request = JSON.parse(data);
 
-    // process new nodes
-    const nodeState = nodes.get(reqData.s);
-    if (nodeState) {
-        nodeState.ts = performance.now();
+    // process new clients
+    const client = clients.get(reqData.s);
+    if (client) {
+        client.ts = performance.now();
     } else {
-        console.warn("node is not active: ", reqData.s);
+        // handle on client bad connection state (need to connect again and get new ID)
+        console.warn("client is not active: ", reqData.s);
+        res.writeHead(404);
+        res.end();
+        return;
     }
 
     let numProcessedMessages = 0;
     if (reqData.a) {
         for (const msg of reqData.a) {
             if (msg.d) {
-                const toClient = nodes.get(msg.d);
+                const toClient = clients.get(msg.d);
                 if (toClient) {
                     sendServerEvent(msg.d, ServerEventName.ClientUpdate, JSON.stringify(msg));
                 }

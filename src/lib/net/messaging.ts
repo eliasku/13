@@ -132,6 +132,9 @@ async function _post(req: Request): Promise<PostMessagesResponse> {
         method: "POST",
         body
     });
+    if (response.status === 404) {
+        disconnect();
+    }
     return await response.json() as PostMessagesResponse;
 }
 
