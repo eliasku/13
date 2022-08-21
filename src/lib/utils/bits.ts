@@ -5,4 +5,3 @@ export function u2f(u:number):number {
     U32[0] = u;
     return F32[0];
 }
-

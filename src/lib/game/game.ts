@@ -5,15 +5,56 @@ import {play} from "../audio/context";
 import {log, termPrint} from "../debug/log";
 import {inputPointers, keyboardState} from "../fluid/input";
 import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
-import {getSeed, random, seed} from "./rnd";
+import {getSeed, random, seed} from "../utils/rnd";
 import {channels_sendObjectData, setRTMessageHandler} from "../net/channels";
 import {img_box, img_cirle, img_players, snd_blip} from "./res";
 import {Const, MUTE_ALL} from "./config";
 import {generateMapBackground} from "./maze";
+import {Client, ClientEvent, Packet, Player} from "./types";
+import {pack, unpack} from "./packets";
 
 let imgMap: Texture = null;
 let imgMapSeed: number;
+
 let clientActive = true;
+
+let clients: Client[] = [];
+let localEvents: ClientEvent[] = [];
+let receivedEvents: ClientEvent[] = [];
+
+// ticks received from all peers (min value), we could simulate to it
+let netTick = 0;
+let startTick = -1;
+let gameTic = 0;
+let prevTime = 0;
+let startTime = 0;
+let ackMin = 0;
+
+let lastFrameTs = 0;
+let lastInputTic = 0;
+let lastInputCmd = 0;
+let lastState: Player[];
+let simulatedFrames = 0;
+
+let players: Player[] = [];
+const boundsX0 = 0;
+const boundsY0 = 0;
+const boundsX1 = 512 * 4;
+const boundsY1 = 512 * 4;
+const jumpVel = 400;
+const gravity = -1000;
+
+const player_x0 = -24;
+const player_x1 = 24;
+const player_y0 = -24;
+const player_y1 = 24;
+
+function requireClient(id: ClientID) {
+    if (!clients[id]) {
+        clients[id] = {c: id, t: 0, acknowledgedTic: 0};
+    }
+    return clients[id];
+}
 
 export function initTestGame() {
     log("init game");
@@ -71,8 +112,6 @@ function createSeedGameState() {
     recreateMap(1);
 }
 
-let lastFrameTs = 0;
-
 export function updateTestGame(ts: number) {
     if (ts > lastFrameTs) {
         lastFrameTs = ts;
@@ -97,17 +136,33 @@ export function updateTestGame(ts: number) {
     printRemoteClients();
 }
 
+
 let prevRenderTic = 0;
 
+const icons_iceState = {
+    "disconnected": "⭕",
+    "closed": "🔴",
+   "failed": "❌",
+   "connected":"🟢",
+   "completed": "✅",
+   "new": "🆕",
+   "checking": "🟡",
+};
+const icons_channelState = {
+   "connecting":  "🟡",
+   "open": "🟢",
+   "closed": "🔴",
+   "closing": "❌",
+};
+
 function printRemoteClients() {
-    let text = "";
-    let c = "🌐";
-    if (prevRenderTic === gameTic) c = "🥶";
+    let text = "🌐";
+    if (prevRenderTic === gameTic) text = "🥶";
     const fr = simulatedFrames - (simulatedFrames | 0);
-    if (fr > 0) c = "✨";
-    if ((simulatedFrames | 0) > 0) c = "🔮";
+    if (fr > 0) text = "✨";
+    if ((simulatedFrames | 0) > 0) text = "🔮";
     prevRenderTic = gameTic;
-    text += c + ` b:${(((lastFrameTs - prevTime) / Const.NetDt) | 0)}`;
+    text += ` b:${(((lastFrameTs - prevTime) / Const.NetDt) | 0)}`;
     text += " r:" + (simulatedFrames | 0) + (fr > 0 ? "." : "") + "\n";
     text += "d " + (lastFrameTs - prevTime).toFixed(2) + "\n";
     text += "~ " + (gameTic * Const.NetDt).toFixed(2) + "\n";
@@ -115,61 +170,15 @@ function printRemoteClients() {
     text += `┌ ${getClientId()} | game: ${gameTic}, net: ${netTick}\n`;
     const remoteClients = getRemoteClients();
     for (const remoteClient of remoteClients) {
-        text += "├ " + remoteClient.id;
         const pc = remoteClient.pc;
-        if (pc) {
-            switch (pc.iceConnectionState) {
-                case "disconnected":
-                    text += "⭕";
-                    break;
-                case "closed":
-                    text += "🔴";
-                    break;
-                case "failed":
-                    text += "❌";
-                    break;
-                case "connected":
-                    text += "🟢";
-                    break;
-                case "completed":
-                    text += "✅";
-                    break;
-                case "new":
-                    text += "🆕";
-                    break;
-                case "checking":
-                    text += "🟡";
-                    break;
-                default:
-                    text += "❓";
-                    break;
-            }
-        } else {
-            text += "🧿"
-        }
         const dc = remoteClient.dc;
-        if (dc) {
-            switch (dc.readyState) {
-                case "connecting":
-                    text += "🟡";
-                    break;
-                case "open":
-                    text += "🟢";
-                    break;
-                case "closed":
-                    text += "🔴";
-                    break;
-                case "closing":
-                    text += "❌";
-                    break;
-            }
-        } else {
-            text += "🧿"
-        }
         const cl = clients[remoteClient.id];
+        text += "├ " + remoteClient.id;
+        text += pc ? (icons_iceState[pc.iceConnectionState] ?? "❓") : "🧿";
+        text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
             text += `+${cl.t - (gameTic - 1)}`;
-            text += "| x" + (+remoteClient.B).toString(16) + " | x" + remoteClient.dc.bufferedAmount.toString(16);
+            text += "| x" + (+remoteClient.B).toString(16) + " | x" + dc.bufferedAmount.toString(16);
         }
         text += "\n";
     }
@@ -203,9 +212,6 @@ function getLocalEvent(tic: number): ClientEvent {
     localEvents.push(e);
     return e;
 }
-
-let lastInputTic = 0;
-let lastInputCmd = 0;
 
 function checkPlayerInput() {
     const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
@@ -287,72 +293,6 @@ function checkInput() {
     checkJoinSync(gameTic - 1);
 }
 
-interface Client {
-    c: ClientID;
-    // how many MY inputs are acknowledged by remote [remote-ack + 1 .. local tic]
-    acknowledgedTic: number;
-    // completed inputs received from remote
-    t: number;
-
-    // client starts play my events
-    ready?: boolean;
-
-    // I playing client's events
-    isPlaying?: boolean;
-}
-
-let clients: Client[] = [];
-
-function requireClient(id: ClientID) {
-    if (!clients[id]) {
-        clients[id] = {c: id, t: 0, acknowledgedTic: 0};
-    }
-    return clients[id];
-}
-
-interface ClientEvent {
-    t: number;
-    spawn?: { x: number, y: number, z: number };
-    btn?: number;
-    // will be populated from packet info
-    c?: ClientID;
-}
-
-let localEvents: ClientEvent[] = [];
-let receivedEvents: ClientEvent[] = [];
-
-interface InitData {
-    mapSeed: number;
-    startSeed: number;
-    players: Player[];
-}
-
-// packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
-interface Packet {
-    sync: boolean;
-
-    c: ClientID;
-    // seed for current tic
-    //_: number;
-    // confirm the last tic we received from Sender
-    receivedOnSender: number;
-    // packet contains info tic and before
-    t: number;
-    // events are not confirmed
-    e: ClientEvent[];
-
-    // init state
-    s?: InitData;
-}
-
-// ticks received from all peers (min value), we could simulate to it
-let netTick = 0;
-let startTick = -1;
-let gameTic = 0;
-let prevTime = 0;
-let startTime = 0;
-let ackMin = 0;
-
 function calcNetTick() {
     let tmin = 0xFFFFFFFF;
     let amin = 0xFFFFFFFF;
@@ -405,7 +345,7 @@ function tryRunTicks(ts: number): number {
 
             // prevTime += Const.NetDt * dropRate;
             // prevTime += 0.1 * (ts - prevTime);
-            prevTime = (1-k) * prevTime + k * (ts - allowFramesToPredict * Const.NetDt);
+            prevTime = (1 - k) * prevTime + k * (ts - allowFramesToPredict * Const.NetDt);
 
             // prevTime = ts - allowFramesToPredict * Const.NetDt;
         }
@@ -415,7 +355,7 @@ function tryRunTicks(ts: number): number {
             // speed up
             // console.info("speed up");
             // prevTime -= Const.NetDt * dropRate;
-            prevTime = (1-k) * prevTime + k * (ts - Const.InputDelay * Const.NetDt);
+            prevTime = (1 - k) * prevTime + k * (ts - Const.InputDelay * Const.NetDt);
 
             // prevTime = ts - Const.InputDelay * Const.NetDt;
         }
@@ -483,60 +423,56 @@ function trySendInput() {
     }
 }
 
-
 function rtHandler(from: ClientID, buffer: ArrayBuffer) {
     const data = unpack(buffer);
-    const lastTic = gameTic - 1;
-    if (data.t) {
-        if (startTick < 0 && data.s) {
-            startTick = data.t + 1;
-            startTime = prevTime = lastFrameTs;
-            gameTic = data.t + 1;
-            seed(data.s.startSeed);
-            netTick = 0;
-            players = data.s.players;
-            recreateMap(data.s.mapSeed);
+    if (startTick < 0 && data.s) {
+        startTick = data.t + 1;
+        startTime = prevTime = lastFrameTs;
+        gameTic = data.t + 1;
+        seed(data.s.startSeed);
+        netTick = 0;
+        players = data.s.players;
+        recreateMap(data.s.mapSeed);
 
-            const cl = requireClient(from);
-            cl.t = data.t;
-            cl.acknowledgedTic = data.receivedOnSender;
+        const cl = requireClient(from);
+        cl.t = data.t;
+        cl.acknowledgedTic = data.receivedOnSender;
+        for (const e of data.e) {
+            const cld = requireClient(e.c);
+            if (cld.t < e.t) {
+                cld.t = e.t;
+            }
+            cld.acknowledgedTic = data.receivedOnSender;
+            receivedEvents.push(e);
+        }
+    } else {
+        const cl = requireClient(from);
+        cl.ready = data.sync;
+        // ignore old packets
+        if (data.t > cl.t) {
+            cl.isPlaying = true;
             for (const e of data.e) {
-                const cld = requireClient(e.c);
-                if (cld.t < e.t) {
-                    cld.t = e.t;
+                if (e.t > cl.t /*alreadyReceivedTic*/) {
+                    receivedEvents.push(e);
                 }
-                cld.acknowledgedTic = data.receivedOnSender;
-                receivedEvents.push(e);
             }
-        } else {
-            const cl = requireClient(from);
-            cl.ready = data.sync;
-            // ignore old packets
-            if (data.t > cl.t) {
-                cl.isPlaying = true;
-                for (const e of data.e) {
-                    if (e.t > cl.t /*alreadyReceivedTic*/) {
-                        receivedEvents.push(e);
-                    }
-                }
-                cl.t = data.t;
-            }
-            // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
-            // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
-            // then we will send only events from [acknowledgedTic + 1] index
-            if (cl.acknowledgedTic < data.receivedOnSender) {
-                // update ack
-                cl.acknowledgedTic = data.receivedOnSender;
-            }
+            cl.t = data.t;
         }
-        // if (!clientActive) {
-        lastFrameTs = performance.now() * 0.001;
-        if (tryRunTicks(lastFrameTs)) {
-            trySendInput();
-            cleaningUpClients();
+        // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
+        // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
+        // then we will send only events from [acknowledgedTic + 1] index
+        if (cl.acknowledgedTic < data.receivedOnSender) {
+            // update ack
+            cl.acknowledgedTic = data.receivedOnSender;
         }
-        // }
     }
+    // if (!clientActive) {
+    lastFrameTs = performance.now() * 0.001;
+    if (tryRunTicks(lastFrameTs)) {
+        trySendInput();
+        cleaningUpClients();
+    }
+    // }
 }
 
 function cleaningUpClients() {
@@ -559,31 +495,6 @@ function cleaningUpClients() {
 }
 
 /// Game logic
-
-interface Player {
-    c: ClientID;
-    s: number;
-    x: number;
-    y: number;
-    z: number;
-    vx: number;
-    vy: number;
-    vz: number;
-    btn?: number;
-}
-
-let players: Player[] = [];
-const boundsX0 = 0;
-const boundsY0 = 0;
-const boundsX1 = 512 * 4;
-const boundsY1 = 512 * 4;
-const jumpVel = 400;
-const gravity = -1000;
-
-const player_x0 = -24;
-const player_x1 = 24;
-const player_y0 = -24;
-const player_y1 = 24;
 
 function createGameState() {
 
@@ -700,9 +611,6 @@ function updatePlayers(dt: number) {
     }
 }
 
-let lastState: Player[];
-let simulatedFrames = 0;
-
 function getCommandsForTic(tic: number): ClientEvent[] {
     return localEvents.filter(v => v.t === tic)
         .concat(receivedEvents.filter(v => v.t === tic));
@@ -779,140 +687,4 @@ function drawPlayers() {
             drawBody(player);
         }
     }
-}
-
-function unpack(data: ArrayBuffer): Packet {
-    const u32 = new Uint32Array(data);
-    const f32 = new Float32Array(data);
-    let ptr = 0;
-    const packet: Packet = {
-        sync: u32[ptr++] !== 0,
-        c: u32[ptr++],
-        receivedOnSender: u32[ptr++],
-        t: u32[ptr++],
-        e: []
-    };
-    const eventsCount = u32[ptr++];
-    let event_t = u32[ptr++];
-    const hasInit = u32[ptr++];
-    for (let i = 0; i < eventsCount; ++i) {
-        const e: ClientEvent = {
-            t: event_t++,
-        };
-        const flags = u32[ptr++];
-        const hasBtn = flags & 1;
-        const hasSpawn = flags & 2;
-        const hasClientID = flags & 4;
-        if (hasBtn) {
-            e.btn = u32[ptr++];
-        }
-        if (hasSpawn) {
-            e.spawn = {
-                x: f32[ptr++],
-                y: f32[ptr++],
-                z: f32[ptr++],
-            };
-        }
-        e.c = hasClientID ? u32[ptr++] : packet.c;
-        packet.e.push(e);
-    }
-    if (hasInit) {
-        const init: InitData = {
-            mapSeed: u32[ptr++],
-            startSeed: u32[ptr++],
-            players: [],
-        };
-        const playersCount = u32[ptr++];
-        for (let i = 0; i < playersCount; ++i) {
-            const p: Player = {
-                c: u32[ptr++],
-                btn: u32[ptr++],
-                s: u32[ptr++],
-
-                x: f32[ptr++],
-                y: f32[ptr++],
-                z: f32[ptr++],
-
-                vx: f32[ptr++],
-                vy: f32[ptr++],
-                vz: f32[ptr++],
-            };
-            init.players.push(p);
-        }
-        packet.s = init;
-    }
-    return packet;
-}
-
-const packBufferU32 = new Uint32Array(256);
-const packBufferF32 = new Float32Array(packBufferU32.buffer);
-
-function pack(packet: Packet): ArrayBuffer {
-    const u32 = packBufferU32;
-    const f32 = packBufferF32;
-    let ptr = 0;
-    u32[ptr++] = packet.sync ? 1 : 0;
-    u32[ptr++] = packet.c;
-    u32[ptr++] = packet.receivedOnSender;
-    u32[ptr++] = packet.t;
-
-    packet.e.sort((a, b) => a.t - b.t);
-    let event_t = packet.e.length > 0 ? packet.e[0].t : 0;
-    const event_end = packet.e.length > 0 ? packet.e[packet.e.length - 1].t : -1;
-    const eventsCount = event_end - event_t + 1;
-    u32[ptr++] = eventsCount;
-    u32[ptr++] = event_t;
-
-    // has init
-    const hasInit = !!packet.s;
-    u32[ptr++] = hasInit ? 1 : 0;
-
-    let i = 0;
-    while (event_t <= event_end) {
-        const e = packet.e[i];
-        const t = event_t++;
-        if (t < e.t) {
-            u32[ptr++] = 0;
-            continue;
-        }
-        ++i;
-        let flags = 0;
-        if (e.btn !== undefined) flags |= 1;
-        if (e.spawn) flags |= 2;
-        if (!!e.c) flags |= 4;
-        u32[ptr++] = flags;
-
-        if (e.btn !== undefined) {
-            u32[ptr++] = e.btn;
-        }
-        if (e.spawn) {
-            f32[ptr++] = e.spawn.x;
-            f32[ptr++] = e.spawn.y;
-            f32[ptr++] = e.spawn.z;
-        }
-        if (!!e.c) {
-            u32[ptr++] = e.c;
-        }
-    }
-    if (hasInit) {
-        u32[ptr++] = packet.s.mapSeed;
-        u32[ptr++] = packet.s.startSeed;
-        u32[ptr++] = packet.s.players.length;
-        for (let i = 0; i < packet.s.players.length; ++i) {
-            const p = packet.s.players[i];
-
-            u32[ptr++] = p.c;
-            u32[ptr++] = p.btn;
-            u32[ptr++] = p.s;
-            f32[ptr++] = p.x;
-            f32[ptr++] = p.y;
-            f32[ptr++] = p.z;
-            f32[ptr++] = p.vx;
-            f32[ptr++] = p.vy;
-            f32[ptr++] = p.vz;
-        }
-    }
-    const buffer = u32.slice(0, ptr).buffer;
-
-    return buffer;
 }

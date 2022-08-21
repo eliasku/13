@@ -1,4 +1,4 @@
-import {rand} from "./rnd";
+import {rand} from "../utils/rnd";
 
 export function generateMapBackground(): HTMLCanvasElement {
     const w = 512;

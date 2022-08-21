@@ -7,14 +7,15 @@ export const enum Const {
     NetDt = 1.0 / NetFq,
     InputDelay = 8,
     Prediction = 1,
+    RLE = 1,
 
     AnglesRes = 16,
 }
 
 export const DEBUG_LAG_ENABLED = DEV_MODE;
 export const enum DebugLag {
-    LagMin = 1000,
-    LagMax = 2000,
-    PacketLoss = 0.5,
+    LagMin = 20,
+    LagMax = 200,
+    PacketLoss = 0.05,
     // PacketLoss = 0.5,
 }

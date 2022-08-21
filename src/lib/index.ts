@@ -7,7 +7,7 @@ import {initDraw2d} from "./graphics/draw2d";
 import {loadResources, snd_blip, snd_music} from "./game/res";
 import {play} from "./audio/context";
 import {MUTE_ALL} from "./game/config";
-import {fps, updateFpsMeter} from "./game/fpsMeter";
+import {fps, updateFpsMeter} from "./utils/fpsMeter";
 
 document.body.style.margin = "0";
 document.body.style.height = "100vh";
