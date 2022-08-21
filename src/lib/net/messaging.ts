@@ -1,4 +1,4 @@
-import {debugSleep, log, logAssert, logWarn} from "../debug/log";
+import {log, logAssert, logWarn} from "../debug/log";
 import {
     ClientID,
     EventSourceUrl,
@@ -220,14 +220,11 @@ function onSSEError(e: Event) {
 export async function connect() {
     if (!running && !connecting) {
         connecting = true;
-        await debugSleep(500);
+        //await debugSleep(100);
         await initSSE();
-        await debugSleep(500);
+        //await debugSleep(100);
         connecting = false;
         running = true;
-        await debugSleep(500);
-        //await connectToRemotes();
-        // await debugSleep(500);
     }
 }
 
@@ -288,14 +285,12 @@ async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negot
             offerToReceiveVideo: false,
         });
         await pc.setLocalDescription(offer);
-        console.info("send offer to " + remoteClient.id);
-        console.info(offer);
         const result = await remoteCall(remoteClient.id, MessageType.RtcOffer, offer);
         if (result) {
             await pc.setRemoteDescription(new RTCSessionDescription(result));
         }
     } catch (e) {
-        console.warn("Couldn't create offer", e);
+        logWarn("Couldn't create offer");
     }
 }
 
@@ -322,7 +317,8 @@ function initPeerConnection(remoteClient: RemoteClient) {
         remoteClient.dc = channel;
         if (channel) {
             channel.binaryType = "arraybuffer";
-            channel.onmessage = (msg) => channels_processMessage(id, msg);
+            channel.addEventListener("message", (msg) => channels_processMessage(id, msg));
+            channel.addEventListener("error", (e) => console.error("data channel error", e));
         }
     });
 
@@ -358,6 +354,7 @@ export async function connectToRemote(rc: RemoteClient) {
     rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
     rc.dc.binaryType = "arraybuffer";
     rc.dc.addEventListener("open", () => log("data channel opened"));
+    rc.dc.addEventListener("error", (e) => console.error("data channel error", e));
     rc.dc.addEventListener("message", (msg) => channels_processMessage(rc.id, msg));
 }
 
