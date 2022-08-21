@@ -21,7 +21,7 @@ const clients = new Map<ClientID, ClientState>();
 
 setInterval(() => {
     for (const client of clients.values()) {
-        if(!sendServerEvent(client.id, ServerEventName.Ping, "")) {
+        if (!sendServerEvent(client.id, ServerEventName.Ping, "")) {
             removeClient(client.id);
         }
     }
@@ -158,9 +158,9 @@ const requestListener: RequestListener = async (req, res) => {
         const filePath = publicDir + (req.url === '/' ? '/index.html' : req.url);
         let headers: OutgoingHttpHeaders | undefined = undefined;
         if (filePath.endsWith(".html")) {
-            headers = {"content-type": "text/html; charset=utf-8"};
+            headers = {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache",};
         } else if (filePath.endsWith(".js")) {
-            headers = {"content-type": "application/javascript"};
+            headers = {"Content-Type": "application/javascript", "Cache-Control": "no-cache",};
         }
         fs.readFile(filePath, (err, data) => {
             if (err) {
