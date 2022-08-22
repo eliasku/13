@@ -51,7 +51,11 @@ function handleUp(pointer: Pointer) {
     pointer.active_ = false;
 }
 
+// function getCoordinates(x: number, y:number):{x:number, y:number} {
+// }
+
 export function initInput(canvas: HTMLCanvasElement) {
+    oncontextmenu = e => e.preventDefault();
     const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
         const scale = canvas.width / canvas.clientWidth;
         const bb = canvas.getBoundingClientRect();
@@ -65,6 +69,7 @@ export function initInput(canvas: HTMLCanvasElement) {
 
     canvas.addEventListener("mouseup", (e) => {
         handleUp(getPointer(-1));
+        e.preventDefault();
     });
 
     canvas.addEventListener("mouseleave", (e) => {
@@ -103,20 +108,22 @@ export function initInput(canvas: HTMLCanvasElement) {
             const touch = e.changedTouches.item(i)!;
             handleUp(getPointer(touch.identifier));
         }
+        e.preventDefault();
     };
-    canvas.addEventListener("touchend", onTouchEnd);
-    canvas.addEventListener("touchcancel", onTouchEnd);
+    canvas.addEventListener("touchend", onTouchEnd, false);
 
     const wnd = document;
     //wnd.addEventListener("keypress", onKey, true);
     wnd.addEventListener("keydown", (e) => {
         keyboardDown[e.code] = +(!keyboardState[e.code]);
         keyboardState[e.code] = 1;
-    });
+        e.preventDefault();
+    }, false);
     wnd.addEventListener("keyup", (e) => {
         keyboardUp[e.code] = +(!!keyboardState[e.code]);
         keyboardState[e.code] = 0;
-    });
+        e.preventDefault();
+    }, false);
 }
 
 export function resetInput() {
