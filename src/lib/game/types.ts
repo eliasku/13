@@ -2,6 +2,8 @@ import {ClientID} from "../../shared/types";
 
 export const enum ActorType {
     Player = 1,
+    Barrel = 2,
+    Tree = 3,
 }
 
 export interface Actor {

@@ -9,7 +9,7 @@
     "prebuild": "npm run server-build",
     "build": "npm run client-build",
     "_postbuild": "roadroller -D -O1 -- public/index.js -o public/index.js",
-    "client-watch": "esbuild src/lib/index.ts --watch --bundle --sourcemap --define:process.env.NODE_ENV='\"development\"' --minify --target=safari14 --mangle-props=_$ --outfile=public/index.js",
+    "client-watch": "esbuild src/lib/index.ts --watch --bundle --format=esm --sourcemap --outfile=public/index.js",
     "_client-build": "esbuild src/lib/index.ts --bundle --minify --target=safari14 --mangle-props=_$ --outfile=public/index.js",
     "client-build": "esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"production\"' --outfile=public/index.js",
     "postclient-build": "terser public/index.js --toplevel --module --ecma=2020 -c booleans_as_integers=true,unsafe_arrows=true,unsafe=true,passes=8 --mangle-props regex=/_$/ -m -o public/index.js",

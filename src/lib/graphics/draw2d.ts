@@ -187,8 +187,8 @@ export function getSubTexture(src: Texture, x: number, y: number, w: number, h: 
         y: anchorY || src.y,
         u: x / src.w,
         v: y / src.h,
-        u2: width / src.w,
-        v2: height / src.h,
+        u2: w / src.w,
+        v2: h / src.h,
         pa: src.pa,
         t: src.t
     };

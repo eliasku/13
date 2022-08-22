@@ -34,7 +34,8 @@ export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer)
     if (DEBUG_LAG_ENABLED) {
         client.B = data.byteLength;
         if (data.byteLength >= 1200 / 2) {
-            throw new Error("HUGE packet could not be delivered: " + data.byteLength);
+            console.warn("HUGE packet could not be delivered: " + data.byteLength);
+            //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
         }
         if (!chance(sendPacketLoss)) {
             if (document.hidden) {
@@ -69,5 +70,9 @@ export function channels_processMessage(from: ClientID, msg: MessageEvent<ArrayB
         return;
     }
     onRTMessage(from, data)
+}
+
+export function getChannelPacketSize(client: RemoteClient) {
+    return DEBUG_LAG_ENABLED ? client.dc.bufferedAmount : (client.B | 0);
 }
 

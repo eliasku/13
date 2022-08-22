@@ -94,10 +94,10 @@ export function initInput(canvas: HTMLCanvasElement) {
     };
     canvas.addEventListener("touchstart", (e) => {
         handleTouchEvent(e, handleDown);
-    });
+    }, {passive: true});
     canvas.addEventListener("touchmove", (e) => {
         handleTouchEvent(e, handleMove);
-    }, false);
+    }, {passive: true});
     const onTouchEnd = (e: TouchEvent) => {
         for (let i = 0; i < e.changedTouches.length; ++i) {
             const touch = e.changedTouches.item(i)!;
@@ -112,11 +112,11 @@ export function initInput(canvas: HTMLCanvasElement) {
     wnd.addEventListener("keydown", (e) => {
         keyboardDown[e.code] = +(!keyboardState[e.code]);
         keyboardState[e.code] = 1;
-    }, true);
+    });
     wnd.addEventListener("keyup", (e) => {
         keyboardUp[e.code] = +(!!keyboardState[e.code]);
         keyboardState[e.code] = 0;
-    }, true);
+    });
 }
 
 export function resetInput() {

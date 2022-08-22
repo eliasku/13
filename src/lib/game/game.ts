@@ -5,9 +5,9 @@ import {play} from "../audio/context";
 import {log, termPrint} from "../debug/log";
 import {inputPointers, keyboardState} from "../fluid/input";
 import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
-import {getSeed, random, seed} from "../utils/rnd";
-import {channels_sendObjectData, setRTMessageHandler} from "../net/channels";
-import {img_box, img_cirle, img_players, snd_blip} from "./res";
+import {getSeed, rand, random, seed} from "../utils/rnd";
+import {channels_sendObjectData, getChannelPacketSize, setRTMessageHandler} from "../net/channels";
+import {img_atlas, img_barrels, img_box, img_cirle, img_players, img_trees, img_weapons, snd_blip} from "./res";
 import {Const, MUTE_ALL} from "./config";
 import {generateMapBackground} from "./maze";
 import {Actor, ActorType, Client, ClientEvent, Packet} from "./types";
@@ -35,7 +35,10 @@ let joined = false;
 let lastFrameTs = 0;
 let lastInputTic = 0;
 let lastInputCmd = 0;
+
 let lastState: Actor[];
+let lastSeed: number;
+
 let simulatedFrames = 0;
 
 let actors: Actor[] = [];
@@ -45,12 +48,11 @@ const boundsY0 = 0;
 const boundsX1 = 512 * 4;
 const boundsY1 = 512 * 4;
 const jumpVel = 400;
-const gravity = -1000;
+const gravity = 1000;
 
-const player_x0 = -24;
-const player_x1 = 24;
-const player_y0 = -24;
-const player_y1 = 24;
+let cameraShake = 0;
+
+const objectRadiusUnit = 28;
 
 function requireClient(id: ClientID) {
     if (!clients[id]) {
@@ -85,6 +87,9 @@ function drawGame() {
         camera.atX = 400;
         camera.atY = 400;
     }
+
+    camera.atX += ((((Math.random() - 0.5) * cameraShake * 8 * 4) | 0) / 4) | 0;
+    camera.atY += ((((Math.random() - 0.5) * cameraShake * 8 * 4) | 0) / 4) | 0;
     gl.clearColor(0.1 * Math.random(), 0.0, 0.1, 1.0);
     beginRender(w, h);
     beginRenderGroup(false);
@@ -95,6 +100,8 @@ function drawGame() {
     drawShadows();
     drawActors();
     flush();
+
+    draw(img_atlas, 0, 0, 0, 1, 1, 0xFFFFFFFF, 0);
 }
 
 function recreateMap(seed1: number) {
@@ -114,6 +121,44 @@ function createSeedGameState() {
     startTime = prevTime = lastFrameTs;
     //players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, z: 100, s: 1, vx: 0, vy: 0, vz: 0};
     recreateMap(1);
+
+    actors.push({type_: ActorType.Barrel, x: 0, y: objectRadiusUnit, z: 0, vx: 0, vy: 0, vz: 0, c: 0});
+    actors.push({type_: ActorType.Barrel, x: 0, y: objectRadiusUnit * 3, z: 0, vx: 0, vy: 0, vz: 0, c: 1});
+
+    for (let i = 0; i < 32; ++i) {
+        actors.push({
+            type_: ActorType.Tree,
+            x: rand() % (512 * 4),
+            y: rand() % (512 * 4),
+            z: 0,
+            vx: 0,
+            vy: 0,
+            vz: 0,
+            c: rand() & 1
+        });
+    }
+
+    for (let i = 0; i < 32; ++i) {
+        actors.push({
+            type_: ActorType.Barrel,
+            x: rand() % (512 * 4),
+            y: rand() % (512 * 4),
+            z: 100,
+            vx: 0,
+            vy: 0,
+            vz: 0,
+            c: rand() & 1
+        });
+    }
+    // if (!(rand() & 0xFF)) {
+    //     const x = rand() % 1024;
+    //     const y = rand() % 1024;
+    //     actors.push({
+    //         type_: ActorType.Barrel,
+    //         c: rand() & 1,
+    //         x, y, z: 200, vx: 0, vy: 0, vz: 0,
+    //     })
+    // }
 }
 
 export function updateTestGame(ts: number) {
@@ -183,7 +228,7 @@ function printRemoteClients() {
         text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
             text += `+${cl.t - (gameTic - 1)}`;
-            text += "| x" + (+remoteClient.B).toString(16) + " | x" + dc.bufferedAmount.toString(16);
+            text += "| x" + getChannelPacketSize(remoteClient).toString(16);
         }
         text += "\n";
     }
@@ -425,7 +470,7 @@ function trySendInput() {
 function rtHandler(from: ClientID, buffer: ArrayBuffer) {
     const data = unpack(buffer);
     if (startTick < 0 && data.s) {
-        startTick = data.t + 1;
+        startTick = data.t;
         startTime = prevTime = lastFrameTs;
         gameTic = data.t + 1;
         seed(data.s.startSeed_);
@@ -526,57 +571,93 @@ function processTicCommands(commands: ClientEvent[]) {
 }
 
 function simulateTic(dt: number) {
+    actors.sort((a, b) => (a.y * 512 * 4 + a.x - b.y * 512 * 4 - b.x));
+    updateBodyCollisions();
     for (const actor of actors) {
-        if (actor.type_ === ActorType.Player) {
+        const type = actor.type_;
+        updateBody(actor, dt);
+        if (type === ActorType.Player) {
             updatePlayer(actor, dt);
+        }
+    }
+    cameraShake = reach(cameraShake, 0, dt);
+}
+
+function updateBodyCollisions() {
+    const max = actors.length;
+    for (let i = 0; i < max; ++i) {
+        const a = actors[i];
+        for (let j = i + 1; j < max; ++j) {
+            const b = actors[j];
+            let nx = a.x - b.x;
+            let ny = (a.y - b.y) * 2;
+            let nz = a.z - b.z;
+            const dist = Math.sqrt(nx * nx + ny * ny + nz * nz);
+            if (dist < (24 + 24) && dist > 0) {
+                const pen = (24 + 24 - dist) / 2;
+                nx *= pen / dist;
+                ny *= pen / dist;
+                nz *= pen / dist;
+                if (a.type_ !== ActorType.Tree) {
+                    a.x += nx;
+                    a.y += ny;
+                    a.z += nz;
+                }
+                if (b.type_ !== ActorType.Tree) {
+                    b.x -= nx;
+                    b.y -= ny;
+                    b.z -= nz;
+                }
+            }
+        }
+    }
+}
+
+function updateBody(body: Actor, dt: number) {
+    body.x += body.vx * dt;
+    body.y += body.vy * dt;
+    body.z += body.vz * dt;
+    body.vz -= gravity * dt;
+
+    if (body.z <= 0) {
+        body.z = 0;
+        if (body.vz < 0.0) {
+            body.vz = 0.0;
+        }
+    }
+
+    if (body.y >= boundsY1 - objectRadiusUnit / 2) {
+        body.y = boundsY1 - objectRadiusUnit / 2;
+        if (body.vy > 0) {
+            body.vy = -body.vy / 2;
+        }
+    }
+    if (body.y <= boundsY0 + objectRadiusUnit / 2) {
+        body.y = boundsY0 + objectRadiusUnit / 2;
+        if (body.vy < 0) {
+            body.vy = -body.vy / 2;
+        }
+    }
+    if (body.x >= boundsX1 - objectRadiusUnit) {
+        body.x = boundsX1 - objectRadiusUnit;
+        if (body.vx > 0) {
+            body.vx = -body.vx / 2;
+        }
+    }
+    if (body.x <= boundsX0 + objectRadiusUnit) {
+        body.x = boundsX0 + objectRadiusUnit;
+        if (body.vx < 0) {
+            body.vx = -body.vx / 2;
         }
     }
 }
 
 function updatePlayer(player: Actor, dt: number) {
-    player.x += player.vx * dt;
-    player.y += player.vy * dt;
-    player.z += player.vz * dt;
-    player.vz += gravity * dt;
-
-    let grounded = false;
-    if (player.z <= 0) {
-        player.z = 0;
-        if (player.vz < 0.0) {
-            player.vz = 0.0;
-        }
-        grounded = true;
-    }
-
-    if (player.y + player_y1 >= boundsY1) {
-        player.y = boundsY1 - player_y1;
-        if (player.vy > 0) {
-            player.vy = -player.vy / 2;
-        }
-    }
-
-    if (player.y + player_y0 <= boundsY0) {
-        player.y = boundsY0 - player_y0;
-        if (player.vy < 0) {
-            player.vy = -player.vy / 2;
-        }
-    }
-    if (player.x + player_x0 <= boundsX0) {
-        player.x = boundsX0 - player_x0;
-        if (player.vx < 0) {
-            player.vx = -player.vx / 2;
-        }
-    }
-    if (player.x + player_x1 >= boundsX1) {
-        player.x = boundsX1 - player_x1;
-        if (player.vx > 0) {
-            player.vx = -player.vx / 2;
-        }
-    }
-
     if (player.btn_ === undefined) {
         player.btn_ = 0;
     }
+
+    let grounded = player.z === 0 && player.vz === 0;
 
     if (player.btn_ & 0x300) {
         const dir = 2 * Math.PI * (player.btn_ & 0xFF) / Const.AnglesRes - Math.PI;
@@ -585,6 +666,7 @@ function updatePlayer(player: Actor, dt: number) {
                 player.z = 1;
                 player.vz = jumpVel;
                 grounded = false;
+                cameraShake += 1;
                 if (!MUTE_ALL) {
                     play(snd_blip, false, 0.2 + 0.8 * random());
                 }
@@ -608,6 +690,7 @@ function getCommandsForTic(tic: number): ClientEvent[] {
 
 function beginPrediction() {
     lastState = actors;
+    lastSeed = getSeed();
     simulatedFrames = 0;
     if (!Const.Prediction) return;
     actors = JSON.parse(JSON.stringify(actors));
@@ -626,6 +709,7 @@ function beginPrediction() {
 
 function endPrediction() {
     actors = lastState;
+    seed(lastSeed);
 }
 
 function sortActorsView() {
@@ -642,8 +726,13 @@ function drawShadows() {
 
 function drawActors() {
     for (const actor of actorsSorted) {
-        if (actor.type_ === ActorType.Player) {
+        const type = actor.type_;
+        if (type === ActorType.Player) {
             drawPlayer(actor);
+        } else if (type === ActorType.Barrel) {
+            drawBarrel(actor);
+        } else if (type === ActorType.Tree) {
+            drawTree(actor);
         }
     }
 }
@@ -670,11 +759,44 @@ function drawPlayer(p: Actor) {
     img_box.x = 0.5;
     img_box.y = 0.5;
     draw(img_box, x, y - 24 - 4 + base, 0, 32, 24, 0x444444FF, 0);
-
     {
         const s = p.vz * 0.0005;
         const a = 0.0005 * p.vx;
         draw(img_players[p.c % img_players.length], x, y - 56 + base * 2, a, 4 * (1 - s), 4 * (1 + s), 0xFFFFFFFF, 0.0);
     }
+
+    const lArmRot = Math.PI / 4 + sw2 + Math.PI / 2;
+    const dx = Math.cos(lArmRot) * 20;
+    const dy = Math.sin(lArmRot) * 20;
+
+    const wi = p.c % 3;
+    if(wi === 0) {
+        img_weapons[0].x = 0.7;
+        img_weapons[0].y = 0.3;
+        draw(img_weapons[0], dx + x - 16, dy + y - 16 - 20 - 4 + base, +sw2 - Math.PI /1.5, 4, 4, 0xFFFFFFFF, 0);
+    }
+    else if(wi === 1) {
+        img_weapons[1].x = 0.3;
+        img_weapons[1].y = 0.3;
+        draw(img_weapons[1], dx + x - 16, dy + y - 16 - 20 - 4 + base, +sw2, 2, 2, 0xFFFFFFFF, 0);
+    }
+    else if(wi === 2) {
+        img_weapons[2].x = 0.5;
+        img_weapons[2].y = 0.5;
+        draw(img_weapons[2], dx + x - 16, dy + y - 16 - 20 - 4 + base, 0.5 * sw2 - 0.9, 2, 2, 0xFFFFFFFF, 0);
+    }
 }
 
+function drawBarrel(p: Actor) {
+    const x = p.x;
+    const y = p.y - p.z;
+
+    draw(img_barrels[p.c], x, y - 29, 0, 3.7, 3.7, 0xFFFFFFFF, 0.0);
+}
+
+function drawTree(p: Actor) {
+    const x = p.x;
+    const y = p.y - p.z;
+
+    draw(img_trees[p.c], x, y - 48, 0, 4, 4, 0xFFFFFFFF, 0.0);
+}

@@ -11,8 +11,6 @@ import {
 } from "../../shared/types";
 import {channels_processMessage} from "./channels";
 
-const serverUrl = EventSourceUrl;
-
 export interface RemoteClient {
     id: ClientID;
     pc?: RTCPeerConnection;
@@ -128,11 +126,11 @@ async function process(): Promise<void> {
 
 async function _post(req: Request): Promise<PostMessagesResponse> {
     const body = JSON.stringify(req);
-    const response = await fetch(serverUrl, {
+    const response = await fetch(EventSourceUrl, {
         method: "POST",
         body
     });
-    if (response.status === 404) {
+    if (!response.ok) {
         disconnect();
     }
     return await response.json() as PostMessagesResponse;
@@ -175,7 +173,7 @@ function initSSE(): Promise<void> {
     log("initialize SSE");
     return new Promise((resolve, _) => {
         waitForConnectedEvent = resolve;
-        eventSource = new EventSource(serverUrl);
+        eventSource = new EventSource(EventSourceUrl);
         eventSource.onerror = onSSEError;
         eventSource.addEventListener(ServerEventName.ClientConnected, (e: MessageEvent<string>) => {
             const ids = e.data.split(";").map(x => Number.parseInt(x));
@@ -218,14 +216,13 @@ function onSSEError(e: Event) {
 }
 
 export async function connect() {
-    if (!running && !connecting) {
-        connecting = true;
-        //await debugSleep(100);
-        await initSSE();
-        //await debugSleep(100);
-        connecting = false;
-        running = true;
-    }
+    if (running || connecting) return;
+    connecting = true;
+    //await debugSleep(100);
+    await initSSE();
+    //await debugSleep(100);
+    connecting = false;
+    running = true;
 }
 
 export function disconnect() {

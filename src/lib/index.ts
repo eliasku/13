@@ -14,9 +14,6 @@ let sw = 1000;
 let sh = 1000;
 let ss = 1.0;
 
-termPrint("Loading...");
-termFlush();
-
 initInput(canvas);
 initGL(canvas);
 initDraw2d();
@@ -24,6 +21,8 @@ initDraw2d();
 let starting = false;
 let started = false;
 const onStart = async () => {
+    if(starting || started) return;
+
     starting = true;
     canvas.removeEventListener("touchstart", onStart);
     canvas.removeEventListener("mousedown", onStart);
@@ -40,10 +39,9 @@ const onStart = async () => {
     started = true;
 };
 
-loadResources().then(() => {
-    canvas.addEventListener("touchstart", onStart, true);
-    canvas.addEventListener("mousedown", onStart, true);
-});
+loadResources();
+canvas.addEventListener("touchstart", onStart, {passive: true});
+canvas.addEventListener("mousedown", onStart);
 
 let idxResize = 0;
 function doResize() {

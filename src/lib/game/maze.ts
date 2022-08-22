@@ -13,10 +13,10 @@ export function generateMapBackground(): HTMLCanvasElement {
 
     ctx.fillStyle = "green";
     ctx.save();
-    ctx.scale(1, 0.5);
+    ctx.scale(1, 0.25);
     for (let i = 0; i < 32; ++i) {
         ctx.beginPath()
-        ctx.arc(rand() % w, rand() % (h * 2), 4 + rand() % 16, 0, 2 * Math.PI);
+        ctx.arc(rand() % w, rand() % (h * 4), 4 + rand() % 16, 0, 2 * Math.PI);
         ctx.closePath();
         ctx.fill();
     }
@@ -25,15 +25,30 @@ export function generateMapBackground(): HTMLCanvasElement {
     ctx.fillStyle = "darkgrey";
     for (let i = 0; i < 32; ++i) {
         ctx.beginPath()
-        ctx.arc(rand() %  w, rand() % h, 2, 0, Math.PI, true);
+        ctx.arc(rand() % w, rand() % h, 2, 0, Math.PI, true);
         ctx.closePath();
         ctx.fill();
     }
 
     ctx.fillStyle = "darkolivegreen";
     for (let i = 0; i < 2048; ++i) {
-        ctx.fillRect(rand() % w, rand() %  h, 1, 2 + rand() % 4);
+        ctx.fillRect(rand() % w, rand() % h, 1, 2 + rand() % 4);
     }
+
+    ctx.font = "5px serif";
+    ctx.fillStyle = "white";
+    ctx.save();
+    ctx.scale(1, 0.5);
+    for (let i = 0; i < 128; ++i) {
+        ctx.fillText(["🌼", "🌸","🌺", "🍀"][rand() % 4], rand() % w, rand() % (h * 2));
+    }
+    ctx.restore();
 
     return canvas;
 }
+
+// let mapHeights: number[][];
+//
+// export function getMapHeight(x:number, y:number):number {
+//
+// }

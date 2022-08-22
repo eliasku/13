@@ -2,7 +2,13 @@ import * as http from "http";
 import {IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
 import * as fs from "fs";
 import * as url from 'url';
-import {ClientID, EventSourceUrl, PostMessagesResponse, Request, ServerEventName,} from "../../src/shared/types";
+import {
+    ClientID,
+    EventSourceUrl,
+    PostMessagesResponse,
+    Request,
+    ServerEventName,
+} from "../../src/shared/types";
 
 const defaultPort = 8080;
 const port = +process.env.PORT || defaultPort;
@@ -48,21 +54,14 @@ function broadcastServerEvent(from: ClientID, event: string, data: string) {
     }
 }
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "content-type,accept-type",
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
-};
-
 const _404 = (req: IncomingMessage, res: ServerResponse, err?: any) => {
     res.writeHead(404);
-    res.end("not found" + (err ? "\n" + JSON.stringify(err) : ""));
+    res.end();//"not found" + (err ? "\n" + JSON.stringify(err) : ""));
 };
 
 const _500: RequestListener = (req, res) => {
     res.writeHead(500);
-    res.end("internal error");
+    res.end();//"internal error");
 };
 
 function removeClient(id: number) {
@@ -99,14 +98,26 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
     broadcastServerEvent(id, ServerEventName.ClientAdd, "" + id);
 }
 
-async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) {
-    const buffers = [];
-    for await (const chunk of req) {
-        buffers.push(chunk);
+async function readJSON(req: IncomingMessage):Promise<Request|undefined> {
+    try {
+        const buffers = [];
+        for await (const chunk of req) {
+            buffers.push(chunk);
+        }
+        const data = Buffer.concat(buffers).toString();
+        return JSON.parse(data) as Request;
     }
-    const data = Buffer.concat(buffers).toString();
-    const reqData: Request = JSON.parse(data);
+    catch {
+        console.warn("error decode JSON from /1");
+    }
+}
 
+async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) {
+    const reqData = await readJSON(req);
+    if(!reqData) {
+        res.write(500);
+        res.end();
+    }
     // process new clients
     const client = clients.get(reqData.s);
     if (client) {
@@ -131,17 +142,12 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
             ++numProcessedMessages;
         }
     }
-    res.writeHead(200, Object.assign({"Content-Type": "application/json"}, corsHeaders));
+    res.writeHead(200, {"Content-Type": "application/json"});
     const responseData: PostMessagesResponse = {a: numProcessedMessages};
     res.end(JSON.stringify(responseData));
 }
 
 const requestListener: RequestListener = async (req, res) => {
-    if (req.method === "OPTIONS") {
-        res.writeHead(204, corsHeaders);
-        res.end();
-        return;
-    }
     if (req.url === EventSourceUrl) {
         if (req.method === "GET") {
             processServerEvents(req, res);
@@ -156,11 +162,11 @@ const requestListener: RequestListener = async (req, res) => {
     if (req.method === "GET") {
         const publicDir = url.fileURLToPath(new URL('.', import.meta.url));
         const filePath = publicDir + (req.url === '/' ? '/index.html' : req.url);
-        let headers: OutgoingHttpHeaders | undefined = undefined;
+        let headers: OutgoingHttpHeaders = {"Cache-Control": "no-cache"};
         if (filePath.endsWith(".html")) {
-            headers = {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache",};
+            headers["Content-Type"] = "text/html; charset=utf-8";
         } else if (filePath.endsWith(".js")) {
-            headers = {"Content-Type": "application/javascript", "Cache-Control": "no-cache",};
+            headers["Content-Type"] = "application/javascript";
         }
         fs.readFile(filePath, (err, data) => {
             if (err) {
