@@ -64,10 +64,7 @@ function createAtlas(): Texture[] {
     ctx.closePath();
     ctx.fill();
 
-    // emojies
-    "💀,👹,😵,🌚".split(",").map(createEmoji);
-    "🛢️,📦".split(",").map(createEmoji);
-    "🗡,🔪,🔫".split(",").map(createEmoji);
+    `💀,👹,😵,🌚,🛢️,📦,🗡,🔪,🔫`.split(",").map(createEmoji);
     emojiSize = 28;
     "🌳,🌲".split(",").map(createEmoji);
 
@@ -76,11 +73,12 @@ function createAtlas(): Texture[] {
     for (let i = 0; i < coords.length;) {
         sprites.push(getSubTexture(img_atlas, coords[i++], coords[i++], coords[i++], coords[i++], coords[i++], coords[i++]));
     }
-    // canvas.width = canvas.height = 0;
-    document.body.appendChild(canvas);
-    canvas.style.position = "fixed";
-    canvas.style.top = "0";
-    canvas.style.left = "0";
+
+    canvas.width = canvas.height = 0;
+    // document.body.appendChild(canvas);
+    // canvas.style.position = "fixed";
+    // canvas.style.top = "0";
+    // canvas.style.left = "0";
     return sprites;
 }
 
