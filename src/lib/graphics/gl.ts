@@ -1,5 +1,3 @@
-import {logDoc} from "../debug/log";
-
 export const enum GL {
     NONE = 0,
 
@@ -109,13 +107,13 @@ export function initGL(canvas: HTMLCanvasElement) {
     };
     gl = canvas.getContext("webgl2", params);
     if (!gl) {
-        logDoc("💀 <b>WebGL 2</b> is required");
+        alert("WebGL 2 is required");
     }
-    const fp16 = gl.getExtension('EXT_color_buffer_half_float');
-    const fp32 = gl.getExtension('EXT_color_buffer_float');
-    if (!fp16 && !fp32) {
-        logDoc("😵 <b>EXT_color_buffer_half_float</b> or <b>EXT_color_buffer_float</b> is required");
-    }
+    // const fp16 = gl.getExtension('EXT_color_buffer_half_float');
+    // const fp32 = gl.getExtension('EXT_color_buffer_float');
+    // if (!fp16 && !fp32) {
+    //     logDoc("😵 <b>EXT_color_buffer_half_float</b> or <b>EXT_color_buffer_float</b> is required");
+    // }
 
     // const linearFiltering = gl.getExtension('OES_texture_half_float_linear');
     // if (!linearFiltering) {

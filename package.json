@@ -5,24 +5,24 @@
   "type": "module",
   "scripts": {
     "start": "node ./public/server.js",
-    "start-watch": "nodemon ./public/server.js",
+    "start-watch": "npx nodemon ./public/server.js",
     "prebuild": "npm run server-build",
     "build": "npm run client-build",
     "_postbuild": "roadroller -D -O1 -- public/index.js -o public/index.js",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --sourcemap --define:process.env.NODE_ENV='\"development\"' --minify --target=safari14 --mangle-props=_$ --outfile=public/index.js",
-    "client-build": "esbuild src/lib/index.ts --bundle --minify --target=safari14 --mangle-props=_$ --outfile=public/index.js",
+    "_client-build": "esbuild src/lib/index.ts --bundle --minify --target=safari14 --mangle-props=_$ --outfile=public/index.js",
+    "client-build": "esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"production\"' --outfile=public/index.js",
+    "postclient-build": "terser public/index.js --toplevel --module --ecma=2020 -c booleans_as_integers=true,unsafe_arrows=true,unsafe=true,passes=8 --mangle-props regex=/_$/ -m -o public/index.js",
     "server-build": "esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js",
     "server-watch": "esbuild server/src/index.ts --watch --bundle --platform=node --target=node16 --format=esm --outfile=public/server.js"
   },
-  "author": "",
+  "author": "eliasku",
   "license": "ISC",
   "devDependencies": {
     "esbuild": "^0.15.0",
+    "terser": "^5.14.2",
     "roadroller": "^2.1.0",
-    "@types/node": "^18.7.1",
-    "nodemon": "^2.0.19"
+    "@types/node": "^18.7.1"
   },
-  "dependencies": {
-   "node-static": "^0.7.11"
-  }
+  "dependencies": {}
 }

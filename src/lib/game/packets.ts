@@ -1,4 +1,4 @@
-import {ClientEvent, InitData, Packet, Player} from "./types";
+import {ClientEvent, InitData, Packet, Actor} from "./types";
 import {Const} from "./config";
 import {decodeRLE, encodeRLE} from "../utils/rle";
 
@@ -16,9 +16,9 @@ export function unpack(data: ArrayBuffer): Packet {
 
     let ptr = 0;
     const packet: Packet = {
-        sync: u32[ptr++] !== 0,
+        sync_: u32[ptr++] !== 0,
         c: u32[ptr++],
-        receivedOnSender: u32[ptr++],
+        receivedOnSender_: u32[ptr++],
         t: u32[ptr++],
         e: []
     };
@@ -34,10 +34,10 @@ export function unpack(data: ArrayBuffer): Packet {
         const hasSpawn = flags & 2;
         const hasClientID = flags & 4;
         if (hasBtn) {
-            e.btn = u32[ptr++];
+            e.btn_ = u32[ptr++];
         }
         if (hasSpawn) {
-            e.spawn = {
+            e.spawn_ = {
                 x: f32[ptr++],
                 y: f32[ptr++],
                 z: f32[ptr++],
@@ -48,16 +48,16 @@ export function unpack(data: ArrayBuffer): Packet {
     }
     if (hasInit) {
         const init: InitData = {
-            mapSeed: u32[ptr++],
-            startSeed: u32[ptr++],
-            players: [],
+            mapSeed_: u32[ptr++],
+            startSeed_: u32[ptr++],
+            actors_: [],
         };
         const playersCount = u32[ptr++];
         for (let i = 0; i < playersCount; ++i) {
-            const p: Player = {
+            const p: Actor = {
+                type_: u32[ptr++],
                 c: u32[ptr++],
-                btn: u32[ptr++],
-                s: u32[ptr++],
+                btn_: u32[ptr++],
 
                 x: f32[ptr++],
                 y: f32[ptr++],
@@ -67,7 +67,7 @@ export function unpack(data: ArrayBuffer): Packet {
                 vy: f32[ptr++],
                 vz: f32[ptr++],
             };
-            init.players.push(p);
+            init.actors_.push(p);
         }
         packet.s = init;
     }
@@ -78,9 +78,9 @@ export function pack(packet: Packet): ArrayBuffer {
     const u32 = _packU32;
     const f32 = _packF32;
     let ptr = 0;
-    u32[ptr++] = packet.sync ? 1 : 0;
+    u32[ptr++] = packet.sync_ ? 1 : 0;
     u32[ptr++] = packet.c;
-    u32[ptr++] = packet.receivedOnSender;
+    u32[ptr++] = packet.receivedOnSender_;
     u32[ptr++] = packet.t;
 
     packet.e.sort((a, b) => a.t - b.t);
@@ -104,33 +104,33 @@ export function pack(packet: Packet): ArrayBuffer {
         }
         ++i;
         let flags = 0;
-        if (e.btn !== undefined) flags |= 1;
-        if (e.spawn) flags |= 2;
+        if (e.btn_ !== undefined) flags |= 1;
+        if (e.spawn_) flags |= 2;
         if (!!e.c) flags |= 4;
         u32[ptr++] = flags;
 
-        if (e.btn !== undefined) {
-            u32[ptr++] = e.btn;
+        if (e.btn_ !== undefined) {
+            u32[ptr++] = e.btn_;
         }
-        if (e.spawn) {
-            f32[ptr++] = e.spawn.x;
-            f32[ptr++] = e.spawn.y;
-            f32[ptr++] = e.spawn.z;
+        if (e.spawn_) {
+            f32[ptr++] = e.spawn_.x;
+            f32[ptr++] = e.spawn_.y;
+            f32[ptr++] = e.spawn_.z;
         }
         if (!!e.c) {
             u32[ptr++] = e.c;
         }
     }
     if (hasInit) {
-        u32[ptr++] = packet.s.mapSeed;
-        u32[ptr++] = packet.s.startSeed;
-        u32[ptr++] = packet.s.players.length;
-        for (let i = 0; i < packet.s.players.length; ++i) {
-            const p = packet.s.players[i];
+        u32[ptr++] = packet.s.mapSeed_;
+        u32[ptr++] = packet.s.startSeed_;
+        u32[ptr++] = packet.s.actors_.length;
+        for (let i = 0; i < packet.s.actors_.length; ++i) {
+            const p = packet.s.actors_[i];
 
+            u32[ptr++] = p.type_;
             u32[ptr++] = p.c;
-            u32[ptr++] = p.btn;
-            u32[ptr++] = p.s;
+            u32[ptr++] = p.btn_;
             f32[ptr++] = p.x;
             f32[ptr++] = p.y;
             f32[ptr++] = p.z;

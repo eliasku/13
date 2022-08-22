@@ -12,9 +12,9 @@ export class Pointer {
 
 const pointers: Pointer[] = [];
 export const inputPointers = pointers;
-export const keyboardState :Record<string, number> = {};
-export let keyboardDown :Record<string, number> = {};
-export let keyboardUp :Record<string, number> = {};
+export const keyboardState: Record<string, number> = {};
+export let keyboardDown: Record<string, number> = {};
+export let keyboardUp: Record<string, number> = {};
 
 function getPointer(id: number): Pointer {
     for (let i = 0; i < pointers.length; ++i) {
@@ -52,12 +52,15 @@ function handleUp(pointer: Pointer) {
 }
 
 export function initInput(canvas: HTMLCanvasElement) {
-    canvas.addEventListener("mousedown", (e) => {
+    const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
         const scale = canvas.width / canvas.clientWidth;
         const bb = canvas.getBoundingClientRect();
-        handleDown(getPointer(-1),
+        fn(getPointer(-1),
             ((e.clientX - bb.x) * scale) | 0,
             ((e.clientY - bb.y) * scale) | 0)
+    };
+    canvas.addEventListener("mousedown", (e) => {
+        handleMouse(e, handleDown);
     });
 
     canvas.addEventListener("mouseup", (e) => {
@@ -70,74 +73,50 @@ export function initInput(canvas: HTMLCanvasElement) {
 
     canvas.addEventListener("mouseenter", (e) => {
         if (e.buttons) {
-            const scale = canvas.width / canvas.clientWidth;
-            const bb = canvas.getBoundingClientRect();
-            handleDown(getPointer(-1),
-                ((e.clientX - bb.x) * scale) | 0,
-                ((e.clientY - bb.y) * scale) | 0)
+            handleMouse(e, handleDown);
         }
     });
 
     canvas.addEventListener("mousemove", (e) => {
-        const scale = canvas.width / canvas.clientWidth;
-        const bb = canvas.getBoundingClientRect();
-        handleMove(getPointer(-1),
-            ((e.clientX - bb.x) * scale) | 0,
-            ((e.clientY - bb.y) * scale) | 0)
+        handleMouse(e, handleMove);
     });
 
-    canvas.addEventListener("touchstart", (e) => {
+    const handleTouchEvent = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
         e.preventDefault();
         const scale = canvas.width / canvas.clientWidth;
         const bb = canvas.getBoundingClientRect();
         for (let i = 0; i < e.changedTouches.length; ++i) {
             const touch = e.changedTouches.item(i)!;
-            handleDown(getPointer(touch.identifier),
+            fn(getPointer(touch.identifier),
                 ((touch.clientX - bb.x) * scale) | 0,
                 ((touch.clientY - bb.y) * scale) | 0);
         }
+    };
+    canvas.addEventListener("touchstart", (e) => {
+        handleTouchEvent(e, handleDown);
     });
     canvas.addEventListener("touchmove", (e) => {
-        e.preventDefault();
-        const scale = canvas.width / canvas.clientWidth;
-        const bb = canvas.getBoundingClientRect();
-        for (let i = 0; i < e.changedTouches.length; ++i) {
-            const touch = e.changedTouches.item(i)!;
-            handleMove(getPointer(touch.identifier),
-                ((touch.clientX - bb.x) * scale) | 0,
-                ((touch.clientY - bb.y) * scale) | 0);
-        }
+        handleTouchEvent(e, handleMove);
     }, false);
-    canvas.addEventListener("touchend", (e) => {
+    const onTouchEnd = (e: TouchEvent) => {
         for (let i = 0; i < e.changedTouches.length; ++i) {
             const touch = e.changedTouches.item(i)!;
             handleUp(getPointer(touch.identifier));
         }
-    });
-    canvas.addEventListener("touchcancel", (e) => {
-        for (let i = 0; i < e.changedTouches.length; ++i) {
-            const touch = e.changedTouches.item(i)!;
-            handleUp(getPointer(touch.identifier));
-        }
-    });
-
-    const onKey = (e:KeyboardEvent)=>{
-        switch(e.type) {
-            case "keydown":
-                keyboardDown[e.code] = +(!keyboardState[e.code]);
-                keyboardState[e.code] = 1;
-                break;
-            case "keyup":
-                keyboardUp[e.code] = +(!!keyboardState[e.code]);
-                keyboardState[e.code] = 0;
-                break;
-        }
-        // e.preventDefault();
     };
+    canvas.addEventListener("touchend", onTouchEnd);
+    canvas.addEventListener("touchcancel", onTouchEnd);
+
     const wnd = document;
-    wnd.addEventListener("keypress", onKey, true);
-    wnd.addEventListener("keydown", onKey, true);
-    wnd.addEventListener("keyup", onKey, true);
+    //wnd.addEventListener("keypress", onKey, true);
+    wnd.addEventListener("keydown", (e) => {
+        keyboardDown[e.code] = +(!keyboardState[e.code]);
+        keyboardState[e.code] = 1;
+    }, true);
+    wnd.addEventListener("keyup", (e) => {
+        keyboardUp[e.code] = +(!!keyboardState[e.code]);
+        keyboardState[e.code] = 0;
+    }, true);
 }
 
 export function resetInput() {

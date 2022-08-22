@@ -10,8 +10,9 @@ import {channels_sendObjectData, setRTMessageHandler} from "../net/channels";
 import {img_box, img_cirle, img_players, snd_blip} from "./res";
 import {Const, MUTE_ALL} from "./config";
 import {generateMapBackground} from "./maze";
-import {Client, ClientEvent, Packet, Player} from "./types";
+import {Actor, ActorType, Client, ClientEvent, Packet} from "./types";
 import {pack, unpack} from "./packets";
+import {reach} from "../utils/math";
 
 let imgMap: Texture = null;
 let imgMapSeed: number;
@@ -29,14 +30,16 @@ let gameTic = 0;
 let prevTime = 0;
 let startTime = 0;
 let ackMin = 0;
+let joined = false;
 
 let lastFrameTs = 0;
 let lastInputTic = 0;
 let lastInputCmd = 0;
-let lastState: Player[];
+let lastState: Actor[];
 let simulatedFrames = 0;
 
-let players: Player[] = [];
+let actors: Actor[] = [];
+let actorsSorted: Actor[] = [];
 const boundsX0 = 0;
 const boundsY0 = 0;
 const boundsX1 = 512 * 4;
@@ -51,7 +54,7 @@ const player_y1 = 24;
 
 function requireClient(id: ClientID) {
     if (!clients[id]) {
-        clients[id] = {c: id, t: 0, acknowledgedTic: 0};
+        clients[id] = {c: id, t: 0, acknowledgedTic_: 0};
     }
     return clients[id];
 }
@@ -88,8 +91,9 @@ function drawGame() {
     if (imgMap) {
         draw(imgMap, 0, 0, 0, 4, 4, 0xFFFFFFFF, 0);
     }
+    sortActorsView();
     drawShadows();
-    drawPlayers();
+    drawActors();
     flush();
 }
 
@@ -126,7 +130,8 @@ export function updateTestGame(ts: number) {
         beginPrediction();
         {
             drawGame();
-            checkInput();
+            checkPlayerInput();
+            checkJoinSync(gameTic - 1);
         }
         endPrediction();
         trySendInput();
@@ -142,17 +147,17 @@ let prevRenderTic = 0;
 const icons_iceState = {
     "disconnected": "⭕",
     "closed": "🔴",
-   "failed": "❌",
-   "connected":"🟢",
-   "completed": "✅",
-   "new": "🆕",
-   "checking": "🟡",
+    "failed": "❌",
+    "connected": "🟢",
+    "completed": "✅",
+    "new": "🆕",
+    "checking": "🟡",
 };
 const icons_channelState = {
-   "connecting":  "🟡",
-   "open": "🟢",
-   "closed": "🔴",
-   "closing": "❌",
+    "connecting": "🟡",
+    "open": "🟢",
+    "closed": "🔴",
+    "closing": "❌",
 };
 
 function printRemoteClients() {
@@ -185,17 +190,17 @@ function printRemoteClients() {
     termPrint(text + "\n");
 }
 
-function getMyPlayer(): Player | undefined {
+function getMyPlayer(): Actor | undefined {
     const c = getClientId();
-    for (const p of players) {
+    for (const p of actors) {
         if (p.c === c) {
             return p;
         }
     }
 }
 
-function getPlayerByClient(c: ClientID): Player | undefined {
-    for (const p of players) {
+function getPlayerByClient(c: ClientID): Actor | undefined {
+    for (const p of actors) {
         if (p.c === c) {
             return p;
         }
@@ -213,9 +218,13 @@ function getLocalEvent(tic: number): ClientEvent {
     return e;
 }
 
-function checkPlayerInput() {
+function getNextInputTic() {
     const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
-    const inputTic = gameTic + Math.max(Const.InputDelay, simTic);
+    return gameTic + Math.max(Const.InputDelay, simTic);
+}
+
+function checkPlayerInput() {
+    const inputTic = getNextInputTic();
     if (lastInputTic >= inputTic) {
         return;
     }
@@ -256,23 +265,18 @@ function checkPlayerInput() {
         }
     }
     if (lastInputCmd !== btn) {
-        getLocalEvent(inputTic).btn = btn;
+        getLocalEvent(inputTic).btn_ = btn;
         lastInputCmd = btn;
     }
 }
 
-
-let joined = false;
-
 function checkJoinSync(lastTic: number) {
     if (!joined && startTick >= 0) {
-        const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
-        // IMPORTANT TO +1!!
-        const ticToSpawn = lastTic + Math.max(Const.InputDelay, simTic) + 1;
+        const ticToSpawn = getNextInputTic();
         for (const rc of getRemoteClients()) {
             if (rc.dc && rc.dc.readyState === "open") {
                 const cl = clients[rc.id];
-                if (!cl || !cl.ready) {
+                if (!cl || !cl.ready_) {
                     log("syncing...");
                     return;
                 }
@@ -280,17 +284,12 @@ function checkJoinSync(lastTic: number) {
         }
         joined = true;
         log("All in sync");
-        getLocalEvent(ticToSpawn).spawn = {
+        getLocalEvent(ticToSpawn).spawn_ = {
             x: Math.random() * 800.0,
             y: 200 + 400 * Math.random(),
             z: 100 * Math.random()
         };
     }
-}
-
-function checkInput() {
-    checkPlayerInput();
-    checkJoinSync(gameTic - 1);
 }
 
 function calcNetTick() {
@@ -302,10 +301,10 @@ function calcNetTick() {
             if (cl.t < tmin) {
                 tmin = cl.t;
             }
-            if (!cl.acknowledgedTic) {
+            if (!cl.acknowledgedTic_) {
                 amin = 0;
-            } else if (cl.acknowledgedTic < amin) {
-                amin = cl.acknowledgedTic;
+            } else if (cl.acknowledgedTic_ < amin) {
+                amin = cl.acknowledgedTic_;
             }
         }
     }
@@ -380,13 +379,13 @@ function trySendInput() {
                     // t: lastTic + simTic + Const.InputDelay,
                     t: lastTic + Math.max(Const.InputDelay, simTic),
                     // send to Client info that we know already
-                    receivedOnSender: cl.t,
+                    receivedOnSender_: cl.t,
                     e: [],
-                    sync: cl.isPlaying,
+                    sync_: cl.isPlaying_,
                 };
-                if (packet.t > cl.acknowledgedTic) {
+                if (packet.t > cl.acknowledgedTic_) {
                     for (const e of localEvents) {
-                        if (e.t > cl.acknowledgedTic && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
+                        if (e.t > cl.acknowledgedTic_ && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
                             packet.e.push(e);
                         }
                     }
@@ -394,16 +393,16 @@ function trySendInput() {
                 }
             } else {
                 const init: Packet = {
-                    sync: false,
+                    sync_: false,
                     c: getClientId(),
                     t: lastTic,
                     // important to wait for ack on who is initializing
-                    receivedOnSender: lastTic,
+                    receivedOnSender_: lastTic,
                     e: [],
                     s: {
-                        mapSeed: imgMapSeed,
-                        startSeed: getSeed(),
-                        players: players
+                        mapSeed_: imgMapSeed,
+                        startSeed_: getSeed(),
+                        actors_: actors
                     },
                 };
                 for (const e of localEvents) {
@@ -429,28 +428,28 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
         startTick = data.t + 1;
         startTime = prevTime = lastFrameTs;
         gameTic = data.t + 1;
-        seed(data.s.startSeed);
+        seed(data.s.startSeed_);
         netTick = 0;
-        players = data.s.players;
-        recreateMap(data.s.mapSeed);
+        actors = data.s.actors_;
+        recreateMap(data.s.mapSeed_);
 
         const cl = requireClient(from);
         cl.t = data.t;
-        cl.acknowledgedTic = data.receivedOnSender;
+        cl.acknowledgedTic_ = data.receivedOnSender_;
         for (const e of data.e) {
             const cld = requireClient(e.c);
             if (cld.t < e.t) {
                 cld.t = e.t;
             }
-            cld.acknowledgedTic = data.receivedOnSender;
+            cld.acknowledgedTic_ = data.receivedOnSender_;
             receivedEvents.push(e);
         }
     } else {
         const cl = requireClient(from);
-        cl.ready = data.sync;
+        cl.ready_ = data.sync_;
         // ignore old packets
         if (data.t > cl.t) {
-            cl.isPlaying = true;
+            cl.isPlaying_ = true;
             for (const e of data.e) {
                 if (e.t > cl.t /*alreadyReceivedTic*/) {
                     receivedEvents.push(e);
@@ -461,9 +460,9 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
         // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
         // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
         // then we will send only events from [acknowledgedTic + 1] index
-        if (cl.acknowledgedTic < data.receivedOnSender) {
+        if (cl.acknowledgedTic_ < data.receivedOnSender_) {
             // update ack
-            cl.acknowledgedTic = data.receivedOnSender;
+            cl.acknowledgedTic_ = data.receivedOnSender_;
         }
     }
     // if (!clientActive) {
@@ -488,7 +487,7 @@ function cleaningUpClients() {
             clients[cl.c] = undefined;
             const p = getPlayerByClient(cl.c);
             if (p) {
-                players = players.filter(x => x.c !== cl.c);
+                actors = actors.filter(x => x.c !== cl.c);
             }
         }
     }
@@ -503,111 +502,102 @@ function createGameState() {
 function processTicCommands(commands: ClientEvent[]) {
     for (const cmd of commands) {
         const source = cmd.c ?? getClientId();
-        if (cmd.spawn) {
-            const player: Player = {
-                x: cmd.spawn.x,
-                y: cmd.spawn.y,
-                z: cmd.spawn.z,
+        if (cmd.spawn_) {
+            const player: Actor = {
+                type_: ActorType.Player,
                 c: source,
+                x: cmd.spawn_.x,
+                y: cmd.spawn_.y,
+                z: cmd.spawn_.z,
                 vx: 0,
                 vy: 0,
                 vz: 0,
-                s: 1
             };
-            players = players.filter(p => p.c !== player.c);
-            players.push(player);
+            actors = actors.filter(p => p.c !== player.c);
+            actors.push(player);
         }
-        if (cmd.btn !== undefined) {
+        if (cmd.btn_ !== undefined) {
             const player = getPlayerByClient(source);
             if (player) {
-                player.btn = cmd.btn;
+                player.btn_ = cmd.btn_;
             }
         }
     }
 }
 
 function simulateTic(dt: number) {
-    updatePlayers(dt);
-}
-
-function reach(t0: number, t1: number, v: number): number {
-    if (t0 < t1) {
-        return Math.min(t0 + v, t1);
-    } else if (t0 > t1) {
-        return Math.max(t0 - v, t1);
+    for (const actor of actors) {
+        if (actor.type_ === ActorType.Player) {
+            updatePlayer(actor, dt);
+        }
     }
-    return t0;
 }
 
-function updatePlayers(dt: number) {
-    for (const player of players) {
-        if (player.s) {
-            player.x += player.vx * dt;
-            player.y += player.vy * dt;
-            player.z += player.vz * dt;
-            player.vz += gravity * dt;
+function updatePlayer(player: Actor, dt: number) {
+    player.x += player.vx * dt;
+    player.y += player.vy * dt;
+    player.z += player.vz * dt;
+    player.vz += gravity * dt;
 
-            let grounded = false;
-            if (player.z <= 0) {
-                player.z = 0;
-                if (player.vz < 0.0) {
-                    player.vz = 0.0;
-                }
-                grounded = true;
-            }
+    let grounded = false;
+    if (player.z <= 0) {
+        player.z = 0;
+        if (player.vz < 0.0) {
+            player.vz = 0.0;
+        }
+        grounded = true;
+    }
 
-            if (player.y + player_y1 >= boundsY1) {
-                player.y = boundsY1 - player_y1;
-                if (player.vy > 0) {
-                    player.vy = -player.vy / 2;
-                }
-            }
+    if (player.y + player_y1 >= boundsY1) {
+        player.y = boundsY1 - player_y1;
+        if (player.vy > 0) {
+            player.vy = -player.vy / 2;
+        }
+    }
 
-            if (player.y + player_y0 <= boundsY0) {
-                player.y = boundsY0 - player_y0;
-                if (player.vy < 0) {
-                    player.vy = -player.vy / 2;
-                }
-            }
-            if (player.x + player_x0 <= boundsX0) {
-                player.x = boundsX0 - player_x0;
-                if (player.vx < 0) {
-                    player.vx = -player.vx / 2;
-                }
-            }
-            if (player.x + player_x1 >= boundsX1) {
-                player.x = boundsX1 - player_x1;
-                if (player.vx > 0) {
-                    player.vx = -player.vx / 2;
-                }
-            }
+    if (player.y + player_y0 <= boundsY0) {
+        player.y = boundsY0 - player_y0;
+        if (player.vy < 0) {
+            player.vy = -player.vy / 2;
+        }
+    }
+    if (player.x + player_x0 <= boundsX0) {
+        player.x = boundsX0 - player_x0;
+        if (player.vx < 0) {
+            player.vx = -player.vx / 2;
+        }
+    }
+    if (player.x + player_x1 >= boundsX1) {
+        player.x = boundsX1 - player_x1;
+        if (player.vx > 0) {
+            player.vx = -player.vx / 2;
+        }
+    }
 
-            if (player.btn === undefined) {
-                player.btn = 0;
-            }
+    if (player.btn_ === undefined) {
+        player.btn_ = 0;
+    }
 
-            if (player.btn & 0x300) {
-                const dir = 2 * Math.PI * (player.btn & 0xFF) / Const.AnglesRes - Math.PI;
-                if (grounded) {
-                    if (player.btn & 0x200) {
-                        player.z = 1;
-                        player.vz = jumpVel;
-                        grounded = false;
-                        if (!MUTE_ALL) {
-                            play(snd_blip, false, 0.2 + 0.8 * random());
-                        }
-                    }
+    if (player.btn_ & 0x300) {
+        const dir = 2 * Math.PI * (player.btn_ & 0xFF) / Const.AnglesRes - Math.PI;
+        if (grounded) {
+            if (player.btn_ & 0x200) {
+                player.z = 1;
+                player.vz = jumpVel;
+                grounded = false;
+                if (!MUTE_ALL) {
+                    play(snd_blip, false, 0.2 + 0.8 * random());
                 }
-                if (player.btn & 0x100) {
-                    player.vx = reach(player.vx, 500 * Math.cos(dir), 500 * dt * 16);
-                    player.vy = reach(player.vy, 500 * Math.sin(dir), 500 * dt * 16);
-                }
-            } else {
-                let c = grounded ? 16 : 8;
-                player.vx = reach(player.vx, 0, 400 * dt * c);
-                player.vy = reach(player.vy, 0, 400 * dt * c);
             }
         }
+        if (player.btn_ & 0x100) {
+            player.vx = reach(player.vx, 500 * Math.cos(dir), 500 * dt * 16);
+            player.vy = reach(player.vy, 500 * Math.sin(dir), 500 * dt * 16);
+        }
+    } else {
+        let c = grounded ? 16 : 8;
+        player.vx = reach(player.vx, 0, 400 * dt * c);
+        player.vy = reach(player.vy, 0, 400 * dt * c);
     }
 }
 
@@ -617,10 +607,10 @@ function getCommandsForTic(tic: number): ClientEvent[] {
 }
 
 function beginPrediction() {
-    lastState = players;
+    lastState = actors;
     simulatedFrames = 0;
     if (!Const.Prediction) return;
-    players = JSON.parse(JSON.stringify(players));
+    actors = JSON.parse(JSON.stringify(actors));
     let time = lastFrameTs - prevTime;
     // let time = lastFrameTs - prevTime;
     let tic = gameTic;
@@ -635,21 +625,30 @@ function beginPrediction() {
 }
 
 function endPrediction() {
-    players = lastState;
+    actors = lastState;
+}
+
+function sortActorsView() {
+    actorsSorted = actors.concat();
+    actorsSorted.sort((a, b) => a.y - b.y);
 }
 
 function drawShadows() {
-    let i = 0;
-    for (const player of players) {
-        if (player.s) {
-            const shadowScale = (16 - player.z / 8.0) / 8.0;
-            draw(img_cirle, player.x, player.y, 0, 4 * shadowScale, shadowScale, 0x00000077, 0.0);
-        }
-        ++i;
+    for (const actor of actors) {
+        const shadowScale = (16 - actor.z / 8.0) / 8.0;
+        draw(img_cirle, actor.x, actor.y, 0, 4 * shadowScale, shadowScale, 0x00000077, 0.0);
     }
 }
 
-function drawBody(p: Player) {
+function drawActors() {
+    for (const actor of actorsSorted) {
+        if (actor.type_ === ActorType.Player) {
+            drawPlayer(actor);
+        }
+    }
+}
+
+function drawPlayer(p: Actor) {
     const x = p.x;
     const y = p.y - p.z;
 
@@ -679,12 +678,3 @@ function drawBody(p: Player) {
     }
 }
 
-function drawPlayers() {
-    const pl = players.concat();
-    pl.sort((a, b) => a.y - b.y);
-    for (const player of pl) {
-        if (player.s) {
-            drawBody(player);
-        }
-    }
-}

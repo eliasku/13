@@ -31,8 +31,8 @@ export function setRTMessageHandler(handler: RTMessageHandler) {
 
 export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer) {
     const dc = client.dc;
-    client.B = data.byteLength;
     if (DEBUG_LAG_ENABLED) {
+        client.B = data.byteLength;
         if (data.byteLength >= 1200 / 2) {
             throw new Error("HUGE packet could not be delivered: " + data.byteLength);
         }

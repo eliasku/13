@@ -1,65 +1,50 @@
-export function logWarn(msg: string): string {
-    if (process.env.NODE_ENV === "production") {
-    } else {
+import {DEBUG_TERM, DEV_MODE} from "../game/config";
+
+export function logWarn(msg: string): void {
+    if (DEV_MODE) {
         console.warn(msg);
     }
-    return msg;
 }
 
-export function log(msg: string): string {
-    if (process.env.NODE_ENV === "production") {
-    } else {
+export function log(msg: string): void {
+    if (DEV_MODE) {
         console.log(msg);
     }
-    return msg;
 }
 
-export function logAssert(expr: boolean): boolean {
-    if (process.env.NODE_ENV === "production") {
-    } else {
+export function logAssert(expr: boolean): void {
+    if (DEV_MODE) {
         console.assert(expr);
     }
-    return expr;
 }
 
-export function logDoc(html: string): string {
-    const p = document.createElement("p");
-    p.innerHTML = html;
-    document.body.prepend(p);
-    return html;
+export function logDoc(html: string): void {
+    if (DEBUG_TERM) {
+        const p = document.createElement("p");
+        p.innerHTML = html;
+        document.body.prepend(p);
+    }
 }
 
-let textTerminal: HTMLLabelElement | null = null;
+let textTerminal: HTMLLabelElement | null = DEBUG_TERM && document.getElementById("l") as HTMLLabelElement;
 let textTerminalBuffer = "";
 
 export function termPrint(text: string) {
-    textTerminalBuffer += text;
+    if (DEBUG_TERM) {
+        textTerminalBuffer += text;
+    }
 }
 
 export function termFlush() {
-    if (textTerminal === null) {
-        textTerminal = document.createElement("label");
-        const sx = textTerminal.style;
-        sx.position = "fixed";
-        sx.fontFamily = "monospace";
-        sx.fontSize = "20px";
-        sx.textShadow = "2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000";
-        sx.top = "0px";
-        sx.left = "0px";
-        sx.width = "100%";
-        sx.height = "100%";
-        sx.color = "white";
-        sx.backgroundColor = "transparent";
-        sx.background = "transparent";
-        sx.touchAction = "none";
-        sx.pointerEvents = "none";
-        document.body.appendChild(textTerminal);
+    if (DEBUG_TERM) {
+        textTerminal.innerText = textTerminalBuffer;
     }
-    textTerminal.innerText = textTerminalBuffer;
 }
 
 export function termClear() {
-    textTerminalBuffer = "";
+    if (DEBUG_TERM) {
+        textTerminalBuffer = "";
+    }
 }
 
 export function debugSleep(ms: number): Promise<void> {

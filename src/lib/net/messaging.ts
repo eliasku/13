@@ -96,7 +96,7 @@ let lastPostTime = 0;
 
 const processLoop = () => {
     if (running && !messageUploading) {
-        if (messagesToPost.length > 0) {
+        if (messagesToPost.length) {
             process();
         } else if (performance.now() - lastPostTime >= 10000) {
             // ping
@@ -176,16 +176,16 @@ function initSSE(): Promise<void> {
     return new Promise((resolve, _) => {
         waitForConnectedEvent = resolve;
         eventSource = new EventSource(serverUrl);
-        eventSource.addEventListener("error", onSSEError);
+        eventSource.onerror = onSSEError;
         eventSource.addEventListener(ServerEventName.ClientConnected, (e: MessageEvent<string>) => {
             const ids = e.data.split(";").map(x => Number.parseInt(x));
-            clientId = ids[0];
-            for (let i = 1; i < ids.length; ++i) {
-                remoteClients[ids[i]] = {id: ids[i]};
+            clientId = ids.shift();
+            for (const id of ids) {
+                remoteClients[id] = {id};
             }
             waitForConnectedEvent();
+            eventSource.onmessage = onSSEMessage;
             eventSource.addEventListener(ServerEventName.ClientUpdate, onSSEUpdate);
-            eventSource.addEventListener("message", onSSEMessage);
             eventSource.addEventListener(ServerEventName.ClientAdd, onSSEClientAdd);
             eventSource.addEventListener(ServerEventName.ClientRemove, onSSEClientRemove);
         }, {once: true});
@@ -195,9 +195,9 @@ function initSSE(): Promise<void> {
 function termSSE() {
     if (eventSource) {
         log("terminate SSE");
-        eventSource.removeEventListener("error", onSSEError);
+        eventSource.onerror = null;
+        eventSource.onmessage = null;
         eventSource.removeEventListener(ServerEventName.ClientUpdate, onSSEUpdate);
-        eventSource.removeEventListener("message", onSSEMessage);
         eventSource.removeEventListener(ServerEventName.ClientAdd, onSSEClientAdd);
         eventSource.removeEventListener(ServerEventName.ClientRemove, onSSEClientRemove);
         eventSource.close();
@@ -213,7 +213,7 @@ function onSSEMessage(e: MessageEvent<string>) {
 }
 
 function onSSEError(e: Event) {
-    log("server-event error: " + e.toString());
+    log("server-event error");
     termSSE();
 }
 
@@ -279,11 +279,7 @@ const rtcConfiguration: RTCConfiguration = {
 async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negotiation?: boolean) {
     try {
         const pc = remoteClient.pc;
-        const offer = await pc.createOffer({
-            iceRestart,
-            offerToReceiveAudio: false,
-            offerToReceiveVideo: false,
-        });
+        const offer = await pc.createOffer({iceRestart});
         await pc.setLocalDescription(offer);
         const result = await remoteCall(remoteClient.id, MessageType.RtcOffer, offer);
         if (result) {
@@ -298,33 +294,33 @@ function initPeerConnection(remoteClient: RemoteClient) {
     const id = remoteClient.id;
     const pc = new RTCPeerConnection(rtcConfiguration);
     remoteClient.pc = pc;
-    pc.addEventListener("icecandidate", (e) => {
+    pc.onicecandidate = (e) => {
         const candidate = e.candidate;
         if (candidate) {
             remoteSend(id, MessageType.RtcCandidate, candidate.toJSON());
         }
-    });
+    };
 
-    pc.addEventListener("negotiationneeded", async () => {
+    pc.onnegotiationneeded = async () => {
         log("negotiation needed");
         await sendOffer(remoteClient, false);
-    });
+    };
 
-    pc.addEventListener("datachannel", (e) => {
+    pc.ondatachannel = (e) => {
         log("received data-channel on Slave");
 
         const channel = e.channel;
         remoteClient.dc = channel;
         if (channel) {
             channel.binaryType = "arraybuffer";
-            channel.addEventListener("message", (msg) => channels_processMessage(id, msg));
-            channel.addEventListener("error", (e) => console.error("data channel error", e));
+            channel.onmessage = (msg) => channels_processMessage(id, msg);
+            channel.onerror = () => logWarn("data channel error");
         }
-    });
+    };
 
-    pc.addEventListener("icecandidateerror", (e: RTCPeerConnectionIceErrorEvent) => {
+    pc.onicecandidateerror = (e: RTCPeerConnectionIceErrorEvent) => {
         log("ice candidate error: " + e.errorText);
-    });
+    };
 }
 
 function closePeerConnection(toRemoteClient: RemoteClient) {
@@ -340,7 +336,7 @@ function closePeerConnection(toRemoteClient: RemoteClient) {
 
 export async function connectToRemote(rc: RemoteClient) {
     initPeerConnection(rc);
-    rc.pc.addEventListener("iceconnectionstatechange", (e: Event) => {
+    rc.pc.oniceconnectionstatechange = (e) => {
         if (rc.pc) {
             if (rc.pc.iceConnectionState === "failed") {
                 sendOffer(rc, true);
@@ -348,14 +344,14 @@ export async function connectToRemote(rc: RemoteClient) {
                 //disconnect();
             }
         }
-    });
+    };
     await sendOffer(rc);
 
     rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
     rc.dc.binaryType = "arraybuffer";
-    rc.dc.addEventListener("open", () => log("data channel opened"));
-    rc.dc.addEventListener("error", (e) => console.error("data channel error", e));
-    rc.dc.addEventListener("message", (msg) => channels_processMessage(rc.id, msg));
+    rc.dc.onopen = () => log("data channel opened");
+    rc.dc.onerror = (e) => console.error("data channel error", e);
+    rc.dc.onmessage = (msg) => channels_processMessage(rc.id, msg);
 }
 
 // export function connectToRemotes(): Promise<any> {
@@ -379,8 +375,8 @@ handlers[MessageType.RtcOffer] = async (req) => {
     try {
         await remoteClient.pc.setRemoteDescription(req.a);
     } catch (err) {
-        console.info(req.a);
-        console.error(err);
+        logWarn("setRemoteDescription error");
+        //console.error(err);
         return null;
     }
     const answer = await remoteClient.pc.createAnswer();

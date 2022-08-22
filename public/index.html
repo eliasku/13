@@ -4,9 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Game</title>
-    <link rel="icon" href="https://fav.farm/💀" />
+    <link rel="icon" href="https://fav.farm/💀"/>
 </head>
-<body>
-<script type="application/javascript" src="./index.js"></script>
+<body style="margin:0;height:100vh;overflow:hidden;background:#000">
+<canvas id="g"></canvas>
+<label id="l" style="position:fixed;
+font-family:monospace;
+font-size:20px;
+text-shadow:2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+top:0;
+left:0;
+width:100%;
+height:100%;
+color:white;
+background:transparent;
+touch-action:none;
+pointer-events:none">...</label>
+<script type="module" src="./index.js"></script>
 </body>
 </html>

@@ -18,7 +18,7 @@ function createEmoji(emoji: string) {
     const ctx = canvas.getContext("2d", {alpha: true});
     // ctx.strokeStyle = "black";
     // ctx.strokeRect(0, 0, w, h);
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "#FFF";
     ctx.font = "14px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
@@ -37,7 +37,7 @@ function createCircle() {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d", {alpha: true});
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "#FFF";
     ctx.beginPath();
     ctx.arc(4, 4, 3.7, 0, Math.PI * 2);
     ctx.closePath();
@@ -50,15 +50,8 @@ function createCircle() {
 }
 
 
-export async function loadResources(): Promise<any> {
-    {
-        img_players.push(
-            createEmoji("💀"),
-            createEmoji("👹"),
-            createEmoji("😵"),
-            createEmoji("🌚"),
-        );
-    }
+export function loadResources() {
+    img_players = "💀 👹 😵 🌚".split(" ").map(createEmoji)
     snd_blip = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
     snd_music = createAudioBufferFromSong(song);
 
@@ -69,6 +62,4 @@ export async function loadResources(): Promise<any> {
     img_box.y = 0.5;
 
     img_cirle = createCircle();
-
-    //return Promise.all(tasks);
 }

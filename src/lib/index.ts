@@ -9,15 +9,10 @@ import {play} from "./audio/context";
 import {MUTE_ALL} from "./game/config";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
 
-document.body.style.margin = "0";
-document.body.style.height = "100vh";
-document.body.style.overflow = "hidden";
-const canvas = document.createElement("canvas");
-canvas.style.backgroundColor = "black";
+const canvas = document.getElementById("g") as HTMLCanvasElement;
 let sw = 1000;
 let sh = 1000;
 let ss = 1.0;
-document.body.prepend(canvas);
 
 termPrint("Loading...");
 termFlush();
@@ -46,18 +41,19 @@ const onStart = async () => {
 };
 
 loadResources().then(() => {
-    canvas.addEventListener("touchstart", onStart);
-    canvas.addEventListener("mousedown", onStart);
+    canvas.addEventListener("touchstart", onStart, true);
+    canvas.addEventListener("mousedown", onStart, true);
 });
 
 let idxResize = 0;
-const doResize = () => {
+function doResize() {
     if (0 >= --idxResize) {
         idxResize = 30;
-        if (ss !== devicePixelRatio || sw !== document.body.clientWidth || sh !== document.body.clientHeight) {
+        const b = document.body;
+        if (ss !== devicePixelRatio || sw !== b.clientWidth || sh !== b.clientHeight) {
             ss = devicePixelRatio;
-            sw = document.body.clientWidth;
-            sh = document.body.clientHeight;
+            sw = b.clientWidth;
+            sh = b.clientHeight;
             canvas.style.width = sw + "px";
             canvas.style.height = sh + "px";
             canvas.width = (sw * ss) | 0;
