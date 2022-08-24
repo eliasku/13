@@ -20,13 +20,14 @@ import {
     snd_pick,
     snd_shoot
 } from "./res";
-import {Const} from "./config";
+import {Const, DEV_MODE} from "./config";
 import {generateMapBackground} from "./maze";
 import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet} from "./types";
 import {pack, unpack} from "./packets";
 import {reach, toRad} from "../utils/math";
 import {
-    ControlsFlag, drawVirtualPad,
+    ControlsFlag,
+    drawVirtualPad,
     dropButton,
     jumpButtonDown,
     lookAtX,
@@ -39,7 +40,7 @@ import {
     viewX,
     viewY
 } from "./controls";
-import {keyboardDown, keyboardState} from "../utils/input";
+import {keyboardDown} from "../utils/input";
 
 let clientActive = true;
 
@@ -358,13 +359,12 @@ const icons_channelState = {
 };
 
 function printStatus() {
-    if(joined) {
+    if (joined) {
         const p0 = getMyPlayer();
-        if(!p0) {
+        if (!p0) {
             termPrint("Tap to spawn!\n");
         }
-    }
-    else {
+    } else {
         termPrint("Joining room...\n");
     }
 }
@@ -468,7 +468,7 @@ function checkPlayerInput() {
             btn |= ControlsFlag.Drop;
         }
 
-        if(keyboardDown["Digit1"]) {
+        if (keyboardDown["Digit1"]) {
             ++debugCheckAvatar;
         }
     }
@@ -490,8 +490,7 @@ function checkJoinSync(lastTic: number) {
                     log("syncing...");
                     return;
                 }
-            }
-            else {
+            } else {
                 log("still connecting...");
                 return;
             }
@@ -499,9 +498,9 @@ function checkJoinSync(lastTic: number) {
         joined = true;
         log("All in sync");
         getLocalEvent(ticToSpawn).spawn_ = {
-            x: (Math.random() * 800)|0,
-            y: 200 + (400 * Math.random())|8,
-            z: (100 * Math.random())|0
+            x: (Math.random() * 800) | 0,
+            y: 200 + (400 * Math.random()) | 8,
+            z: (100 * Math.random()) | 0
         };
     }
 }
@@ -588,6 +587,8 @@ function trySendInput() {
 
             if (cl) {
                 const packet: Packet = {
+                    check_seed_: getSeed(),
+                    check_tic_: lastTic,
                     c: getClientId(),
                     // t: lastTic + simTic + Const.InputDelay,
                     t: lastTic + Math.max(Const.InputDelay, simTic),
@@ -607,6 +608,9 @@ function trySendInput() {
             } else {
                 state.seed_ = getSeed();
                 const init: Packet = {
+                    check_seed_: getSeed(),
+                    check_tic_: lastTic,
+
                     sync_: false,
                     c: getClientId(),
                     t: lastTic,
@@ -653,6 +657,15 @@ function processPacket(sender: Client, data: Packet) {
             receivedEvents.push(e);
         }
     } else {
+        if (DEV_MODE) {
+            if (data.check_tic_ === (gameTic - 1)) {
+                if (data.check_seed_ !== getSeed()) {
+                    console.warn("seed mismatch from client " + data.c + " at tic " + data.check_tic_);
+                    console.warn(data.check_seed_ + " != " + getSeed());
+                }
+            }
+        }
+
         sender.ready_ = data.sync_;
         // ignore old packets
         if (data.t > sender.t) {
@@ -1098,8 +1111,10 @@ function updatePlayer(player: Actor, dt: number) {
 }
 
 function getCommandsForTic(tic: number): ClientEvent[] {
-    return localEvents.filter(v => v.t === tic)
+    const events = localEvents.filter(v => v.t === tic)
         .concat(receivedEvents.filter(v => v.t === tic));
+    events.sort((a, b) => (a.c ?? getClientId()) - (b.c ?? getClientId()));
+    return events;
 }
 
 function beginPrediction() {
@@ -1314,7 +1329,7 @@ function drawPlayer(p: Actor) {
     {
         const s = p.vz * 0.002;
         const a = 0.002 * p.vx;
-        draw(img_players[(p.c +debugCheckAvatar)% img_players.length], x, y - 16 + base * 2, a, 1 - s, 1 + s, 0xFFFFFFFF);
+        draw(img_players[(p.c + debugCheckAvatar) % img_players.length], x, y - 16 + base * 2, a, 1 - s, 1 + s, 0xFFFFFFFF);
     }
 
 

@@ -71,6 +71,11 @@ export interface InitData {
 export interface Packet {
     sync_: boolean;
 
+    // DEBUG: check current tic seed
+    check_seed_: number;
+    check_tic_: number;
+    /////
+
     c: ClientID;
     // seed for current tic
     //_: number;
