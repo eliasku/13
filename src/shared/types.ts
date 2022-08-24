@@ -7,11 +7,11 @@ export const EventSourceUrl = "/0";
 export const VersionsId = 1;
 
 export const enum ServerEventName {
-    Ping = "0",
-    ClientConnected = "c",
-    ClientAdd = "a",
-    ClientRemove = "r",
-    ClientUpdate = "u",
+    Ping = 0,
+    ClientConnected = 1,
+    ClientAdd = 2,
+    ClientRemove = 3,
+    ClientUpdate = 4,
 }
 
 export const enum MessageType {

@@ -16,31 +16,31 @@ attribute float r;
 attribute vec2 s;
 attribute vec4 u;
 attribute vec4 c;
-attribute float z;
+attribute vec4 o;
 uniform mat4 m;
 varying vec2 v;
 varying vec4 i;
+varying vec3 j;
 void main(){
 v=u.xy+g*u.zw;
-i=c.abgr;
+i=vec4(c.bgr*c.a,(1.0-o.a)*c.a);
+j=o.xyz;
 vec2 p=(g-a)*s;
 float q=cos(r);
 float w=sin(r);
 p=vec2(p.x*q-p.y*w,p.x*w+p.y*q);
 p+=a+t;
-gl_Position=m*vec4(p,z,1);}`;
+gl_Position=m*vec4(p,0,1);}`;
 
 const fragmentShader = `precision mediump float;
 uniform sampler2D x;
-uniform float j;
 varying vec2 v;
 varying vec4 i;
+varying vec3 j;
 void main(){
-vec4 c=texture2D(x,v);
-gl_FragColor=c*i;
-if(j>0.0){
-if(c.a<j)discard;
-gl_FragColor.a=1.0;};}`;
+vec4 c=i*texture2D(x,v);
+gl_FragColor=c+vec4(j*c.a,0.0);
+}`;
 
 const maxBatch = 65535;
 const depth = 1e5;
@@ -77,22 +77,19 @@ function bindAttrib(name: string, size: number, stride: number, divisor: number,
     }
 }
 
-const floatSize = 2 + 2 + 1 + 2 + 4 + 1 + 1;
+const floatSize = 2 + 2 + 1 + 2 + 4 + 1 + 1 + 1;
 const byteSize = floatSize * 4;
 const arrayBuffer = new ArrayBuffer(maxBatch * byteSize);
 const floatView = new Float32Array(arrayBuffer);
 const uintView = new Uint32Array(arrayBuffer);
-const blend = GL.SRC_ALPHA; // back-buffer has alpha -> GL.ONE
 // let ext: ANGLE_instanced_arrays | null = null;
 let program: WebGLProgram | null = null;
 let matrixLocation: WebGLUniformLocation = null;
 let textureLocation: WebGLUniformLocation = null;
-let alphaTestLocation: WebGLUniformLocation = null;
 
 let scale = 1.0;
 let width: number = 1;
 let height: number = 1;
-let alphaTestMode: boolean = false;
 
 function getUniformLocation(name: string): WebGLUniformLocation | null {
     return gl.getUniformLocation(program, name);
@@ -138,12 +135,11 @@ export function initDraw2d() {
     bindAttrib('u', 4, byteSize, 1, 28, GL.FLOAT, false);
     // colorLocation
     bindAttrib('c', 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
-    // zLocation
-    bindAttrib('z', 1, byteSize, 1, 48, GL.FLOAT, false);
+    // colorOffsetLocation
+    bindAttrib('o', 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
 
     matrixLocation = getUniformLocation('m');
     textureLocation = getUniformLocation('x');
-    alphaTestLocation = getUniformLocation('j');
 }
 
 function begin(w: number, h: number) {
@@ -176,7 +172,6 @@ export interface Texture {
     u2: number;
     v2: number;
 
-    pa: number;
     t: WebGLTexture;
 }
 
@@ -189,29 +184,19 @@ export function getSubTexture(src: Texture, x: number, y: number, w: number, h: 
         v: y / src.h,
         u2: w / src.w,
         v2: h / src.h,
-        pa: src.pa,
         t: src.t
     };
 }
 
-export function createTexture(source: TexImageSource, alphaTest: number, smooth: boolean, mipmap: boolean): Texture {
+export function createTexture(source: TexImageSource): Texture {
     const w = source.width;
     const h = source.height;
     const t = gl.createTexture();
 
     gl.bindTexture(GL.TEXTURE_2D, t);
-    // NEAREST || LINEAR
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST | +smooth);
-    // NEAREST || LINEAR || NEAREST_MIPMAP_LINEAR || LINEAR_MIPMAP_LINEAR
-    gl.texParameteri(
-        GL.TEXTURE_2D,
-        GL.TEXTURE_MIN_FILTER,
-        GL.NEAREST | +smooth | (+mipmap << 8) | (+mipmap << 1),
-    );
+    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
-    if (mipmap) {
-        gl.generateMipmap(GL.TEXTURE_2D);
-    }
 
     return {
         w,
@@ -222,7 +207,6 @@ export function createTexture(source: TexImageSource, alphaTest: number, smooth:
         v: 0,
         u2: 1,
         v2: 1,
-        pa: alphaTest,
         t,
     };
 }
@@ -276,33 +260,22 @@ export function beginRender(viewportWidth: number, viewportHeight: number) {
 
     gl.useProgram(program);
     gl.enable(GL.BLEND);
-    gl.enable(GL.DEPTH_TEST);
-
     gl.uniformMatrix4fv(matrixLocation, false, projection);
     gl.viewport(0, 0, width, height);
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 }
 
-export function beginRenderGroup(alphaTest: boolean) {
-    alphaTestMode = alphaTest;
+export function beginRenderGroup() {
 }
 
 export function flush() {
     if (!count) return;
 
-    if (alphaTestMode) {
-      gl.disable(GL.BLEND);
-    } else {
-      gl.enable(GL.BLEND);
-      gl.blendFunc(blend, GL.ONE_MINUS_SRC_ALPHA);
-    }
-
-    gl.blendFunc(alphaTestMode ? GL.ONE : blend, alphaTestMode ? GL.ZERO : GL.ONE_MINUS_SRC_ALPHA);
-    gl.depthFunc(alphaTestMode ? GL.LESS : GL.LEQUAL);
+    gl.enable(GL.BLEND);
+    gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
 
     gl.bindTexture(GL.TEXTURE_2D, currentTexture.t);
     gl.uniform1i(textureLocation, 0);
-    gl.uniform1f(alphaTestLocation, alphaTestMode ? currentTexture.pa : 0);
 
     gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
     //ext.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
@@ -310,7 +283,7 @@ export function flush() {
     count = 0;
 }
 
-export function draw(texture: Texture, x: number, y: number, r: number, sx: number, sy: number, color: number, z: number) {
+export function draw(texture: Texture, x: number, y: number, r: number, sx: number, sy: number, color: number, offset?: number) {
     if (count === maxBatch) {
         flush();
     }
@@ -336,7 +309,7 @@ export function draw(texture: Texture, x: number, y: number, r: number, sx: numb
     floatView[i++] = texture.u2;
     floatView[i++] = texture.v2;
     uintView[i++] = color >>> 0;
-    floatView[i] = z;
+    uintView[i++] = offset >>> 0;
 
     count++;
 }

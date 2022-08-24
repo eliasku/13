@@ -1,4 +1,4 @@
-import {ClientEvent, InitData, Packet, Actor} from "./types";
+import {Actor, ActorType, ClientEvent, InitData, Packet} from "./types";
 import {Const} from "./config";
 import {decodeRLE, encodeRLE} from "../utils/rle";
 
@@ -49,13 +49,17 @@ export function unpack(data: ArrayBuffer): Packet {
     if (hasInit) {
         const init: InitData = {
             mapSeed_: u32[ptr++],
-            startSeed_: u32[ptr++],
-            actors_: [],
+            seed_: u32[ptr++],
+            players_: [],
+            barrels_: [],
+            trees_: [],
+            bullets_: [],
+            items_: [],
         };
-        const playersCount = u32[ptr++];
-        for (let i = 0; i < playersCount; ++i) {
+        let count = u32[ptr++];
+        for (let i = 0; i < count; ++i) {
             const p: Actor = {
-                type_: u32[ptr++],
+                type_: ActorType.Player,
                 c: u32[ptr++],
                 btn_: u32[ptr++],
 
@@ -66,8 +70,85 @@ export function unpack(data: ArrayBuffer): Packet {
                 vx: f32[ptr++],
                 vy: f32[ptr++],
                 vz: f32[ptr++],
+                t: f32[ptr++],
+                t2: f32[ptr++],
+                weapon_: u32[ptr++],
+                hp_: u32[ptr++],
             };
-            init.actors_.push(p);
+            init.players_.push(p);
+        }
+        count = u32[ptr++];
+        for (let i = 0; i < count; ++i) {
+            const p: Actor = {
+                type_: ActorType.Barrel,
+                c: u32[ptr++],
+                btn_: u32[ptr++],
+
+                x: f32[ptr++],
+                y: f32[ptr++],
+                z: f32[ptr++],
+
+                vx: f32[ptr++],
+                vy: f32[ptr++],
+                vz: f32[ptr++],
+                t: f32[ptr++],
+                hp_: u32[ptr++],
+            };
+            init.barrels_.push(p);
+        }
+        count = u32[ptr++];
+        for (let i = 0; i < count; ++i) {
+            const p: Actor = {
+                type_: ActorType.Tree,
+                c: u32[ptr++],
+                btn_: u32[ptr++],
+
+                x: f32[ptr++],
+                y: f32[ptr++],
+                z: f32[ptr++],
+
+                vx: f32[ptr++],
+                vy: f32[ptr++],
+                vz: f32[ptr++],
+                t: f32[ptr++],
+            };
+            init.trees_.push(p);
+        }
+        count = u32[ptr++];
+        for (let i = 0; i < count; ++i) {
+            const p: Actor = {
+                type_: ActorType.Bullet,
+                c: u32[ptr++],
+                btn_: u32[ptr++],
+
+                x: f32[ptr++],
+                y: f32[ptr++],
+                z: f32[ptr++],
+
+                vx: f32[ptr++],
+                vy: f32[ptr++],
+                vz: f32[ptr++],
+                t: f32[ptr++],
+            };
+            init.bullets_.push(p);
+        }
+        count = u32[ptr++];
+        for (let i = 0; i < count; ++i) {
+            const p: Actor = {
+                type_: ActorType.Item,
+                c: u32[ptr++],
+                btn_: u32[ptr++],
+
+                x: f32[ptr++],
+                y: f32[ptr++],
+                z: f32[ptr++],
+
+                vx: f32[ptr++],
+                vy: f32[ptr++],
+                vz: f32[ptr++],
+                t: f32[ptr++],
+            };
+            init.items_.push(p);
         }
         packet.s = init;
     }
@@ -123,12 +204,10 @@ export function pack(packet: Packet): ArrayBuffer {
     }
     if (hasInit) {
         u32[ptr++] = packet.s.mapSeed_;
-        u32[ptr++] = packet.s.startSeed_;
-        u32[ptr++] = packet.s.actors_.length;
-        for (let i = 0; i < packet.s.actors_.length; ++i) {
-            const p = packet.s.actors_[i];
-
-            u32[ptr++] = p.type_;
+        u32[ptr++] = packet.s.seed_;
+        u32[ptr++] = packet.s.players_.length;
+        for (let i = 0; i < packet.s.players_.length; ++i) {
+            const p = packet.s.players_[i];
             u32[ptr++] = p.c;
             u32[ptr++] = p.btn_;
             f32[ptr++] = p.x;
@@ -137,6 +216,63 @@ export function pack(packet: Packet): ArrayBuffer {
             f32[ptr++] = p.vx;
             f32[ptr++] = p.vy;
             f32[ptr++] = p.vz;
+            f32[ptr++] = p.t;
+            f32[ptr++] = p.t2;
+            u32[ptr++] = p.weapon_;
+            u32[ptr++] = p.hp_;
+        }
+        u32[ptr++] = packet.s.barrels_.length;
+        for (let i = 0; i < packet.s.barrels_.length; ++i) {
+            const p = packet.s.barrels_[i];
+            u32[ptr++] = p.c;
+            u32[ptr++] = p.btn_;
+            f32[ptr++] = p.x;
+            f32[ptr++] = p.y;
+            f32[ptr++] = p.z;
+            f32[ptr++] = p.vx;
+            f32[ptr++] = p.vy;
+            f32[ptr++] = p.vz;
+            f32[ptr++] = p.t;
+            u32[ptr++] = p.hp_;
+        }
+        u32[ptr++] = packet.s.trees_.length;
+        for (let i = 0; i < packet.s.trees_.length; ++i) {
+            const p = packet.s.trees_[i];
+            u32[ptr++] = p.c;
+            u32[ptr++] = p.btn_;
+            f32[ptr++] = p.x;
+            f32[ptr++] = p.y;
+            f32[ptr++] = p.z;
+            f32[ptr++] = p.vx;
+            f32[ptr++] = p.vy;
+            f32[ptr++] = p.vz;
+            f32[ptr++] = p.t;
+        }
+        u32[ptr++] = packet.s.bullets_.length;
+        for (let i = 0; i < packet.s.bullets_.length; ++i) {
+            const p = packet.s.bullets_[i];
+            u32[ptr++] = p.c;
+            u32[ptr++] = p.btn_;
+            f32[ptr++] = p.x;
+            f32[ptr++] = p.y;
+            f32[ptr++] = p.z;
+            f32[ptr++] = p.vx;
+            f32[ptr++] = p.vy;
+            f32[ptr++] = p.vz;
+            f32[ptr++] = p.t;
+        }
+        u32[ptr++] = packet.s.items_.length;
+        for (let i = 0; i < packet.s.items_.length; ++i) {
+            const p = packet.s.items_[i];
+            u32[ptr++] = p.c;
+            u32[ptr++] = p.btn_;
+            f32[ptr++] = p.x;
+            f32[ptr++] = p.y;
+            f32[ptr++] = p.z;
+            f32[ptr++] = p.vx;
+            f32[ptr++] = p.vy;
+            f32[ptr++] = p.vz;
+            f32[ptr++] = p.t;
         }
     }
 

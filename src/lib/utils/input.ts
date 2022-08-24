@@ -16,7 +16,7 @@ export const keyboardState: Record<string, number> = {};
 export let keyboardDown: Record<string, number> = {};
 export let keyboardUp: Record<string, number> = {};
 
-function getPointer(id: number): Pointer {
+export function getPointer(id: number): Pointer {
     for (let i = 0; i < pointers.length; ++i) {
         if (pointers[i].id_ === id) {
             return pointers[i];
@@ -51,9 +51,6 @@ function handleUp(pointer: Pointer) {
     pointer.active_ = false;
 }
 
-// function getCoordinates(x: number, y:number):{x:number, y:number} {
-// }
-
 export function initInput(canvas: HTMLCanvasElement) {
     oncontextmenu = e => e.preventDefault();
     const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
@@ -61,7 +58,7 @@ export function initInput(canvas: HTMLCanvasElement) {
         const bb = canvas.getBoundingClientRect();
         fn(getPointer(-1),
             ((e.clientX - bb.x) * scale) | 0,
-            ((e.clientY - bb.y) * scale) | 0)
+            ((e.clientY - bb.y) * scale) | 0);
     };
     canvas.addEventListener("mousedown", (e) => {
         handleMouse(e, handleDown);
@@ -87,7 +84,7 @@ export function initInput(canvas: HTMLCanvasElement) {
     });
 
     const handleTouchEvent = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
-        e.preventDefault();
+        //e.preventDefault();
         const scale = canvas.width / canvas.clientWidth;
         const bb = canvas.getBoundingClientRect();
         for (let i = 0; i < e.changedTouches.length; ++i) {

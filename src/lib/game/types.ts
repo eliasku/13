@@ -4,6 +4,13 @@ export const enum ActorType {
     Player = 1,
     Barrel = 2,
     Tree = 3,
+    Bullet = 4,
+    Item = 5,
+}
+
+export const enum EffectItemType {
+    Med = 0,
+    Health = 1,
 }
 
 export interface Actor {
@@ -16,6 +23,10 @@ export interface Actor {
     vy: number;
     vz: number;
     btn_?: number;
+    t?: number;
+    t2?: number;
+    weapon_?:number;
+    hp_?:number;
 }
 
 export interface Client {
@@ -42,8 +53,12 @@ export interface ClientEvent {
 
 export interface InitData {
     mapSeed_: number;
-    startSeed_: number;
-    actors_: Actor[];
+    seed_: number;
+    players_: Actor[];
+    barrels_: Actor[];
+    trees_: Actor[];
+    bullets_: Actor[];
+    items_: Actor[];
 }
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]

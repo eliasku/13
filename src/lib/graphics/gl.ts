@@ -59,8 +59,8 @@ export const enum GL {
 
     FRAMEBUFFER = 0x8D40,
 
-    STATIC_DRAW = 0x88E4,
     STREAM_DRAW = 0x88E0,
+    STATIC_DRAW = 0x88E4,
     DYNAMIC_DRAW = 0x88E8,
     ARRAY_BUFFER = 0x8892,
     ELEMENT_ARRAY_BUFFER = 0x8893,
@@ -94,6 +94,9 @@ export const enum GL {
     NOTEQUAL = 0x0205,
     GEQUAL = 0x0206,
     ALWAYS = 0x0207,
+
+
+    UNPACK_PREMULTIPLY_ALPHA_WEBGL = 0x9241,
 }
 
 export let gl: WebGL2RenderingContext = null as WebGL2RenderingContext;
@@ -109,6 +112,7 @@ export function initGL(canvas: HTMLCanvasElement) {
     if (!gl) {
         alert("WebGL 2 is required");
     }
+    gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
     // const fp16 = gl.getExtension('EXT_color_buffer_half_float');
     // const fp32 = gl.getExtension('EXT_color_buffer_float');
     // if (!fp16 && !fp32) {

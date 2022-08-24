@@ -4,6 +4,10 @@ import {createAudioBufferFromSong} from "../audio/soundbox";
 import {song} from "../songs/0bit";
 
 export let snd_blip: AudioBuffer | null = null;
+export let snd_pick: AudioBuffer | null = null;
+export let snd_heal: AudioBuffer | null = null;
+export let snd_med: AudioBuffer | null = null;
+export let snd_shoot: AudioBuffer | null = null;
 export let snd_music: AudioBuffer | null = null;
 
 export let img_atlas: Texture;
@@ -11,6 +15,7 @@ export let img_players: Texture[] = [];
 export let img_barrels: Texture[] = [];
 export let img_trees: Texture[] = [];
 export let img_weapons: Texture[] = [];
+export let img_items: Texture[] = [];
 
 export let img_box: Texture;
 export let img_cirle: Texture;
@@ -23,7 +28,6 @@ function createAtlas(): Texture[] {
     let x = 1;
     let y = 1;
     let x1 = 1;
-    // let y1 = 1;
     let maxHeight = 0;
     let coords: number[] = [];
 
@@ -43,12 +47,11 @@ function createAtlas(): Texture[] {
     };
 
     let emojiSize = 14;
-
     const createEmoji = (emoji: string) => {
         const w_ = emojiSize + 4; // 14->16
         const h_ = emojiSize + 6; // 14 -> 20
         pushSprite(w_, h_);
-        ctx.font = emojiSize + "px sans";
+        ctx.font = emojiSize + "px emoji";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(emoji, x + w_ / 2, y + h_ / 2);
@@ -64,12 +67,21 @@ function createAtlas(): Texture[] {
     ctx.closePath();
     ctx.fill();
 
-    `💀,👹,😵,🌚,🛢️,📦,🗡,🔪,🔫`.split(",").map(createEmoji);
+    `💀,👹,😵,🌚,😷,🤡,👨🏻,🛢️,📦`.split(",").map(createEmoji);
+
+    emojiSize = 14;
+    createEmoji("🔪");
+    createEmoji("🔨");
+    createEmoji("⛏");
+    createEmoji("🗡");
+    createEmoji("🔫");
+
+    `💊,❤️`.split(",").map(createEmoji);
     emojiSize = 28;
     "🌳,🌲".split(",").map(createEmoji);
 
     let sprites: Texture[] = [];
-    img_atlas = createTexture(canvas, 0, false, false);
+    img_atlas = createTexture(canvas);
     for (let i = 0; i < coords.length;) {
         sprites.push(getSubTexture(img_atlas, coords[i++], coords[i++], coords[i++], coords[i++], coords[i++], coords[i++]));
     }
@@ -83,22 +95,35 @@ function createAtlas(): Texture[] {
 }
 
 function createImages() {
-    "💊,💔,❤️,💙,💛,💜,💗,💖,💕,♡,♥,💕,❤";
-    "🔥,☁️,☠,🗡,🔪,🔫,🚀,⭐,🌟";
+    "💊,💔,❤️,🖤,💙,💛,💜,💗,💖,💕,♡,♥,💕,❤";
+    "🔥,☁️,☠,🔨,⛏️,🗡,🔪,🔫,🚀,⭐,🌟";
     "★,☆,✢,✥,✦,✧,❂,❉,✯,✰,⋆,✪";
 
     const sprites = createAtlas();
     let idx = 0;
     img_box = sprites[idx++];
     img_cirle = sprites[idx++];
-    img_players.push(sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++]);
+    img_players.push(sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++]);
     img_barrels.push(sprites[idx++], sprites[idx++]);
-    img_weapons.push(sprites[idx++], sprites[idx++], sprites[idx++]);
+    img_weapons.push(sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++]);
+    img_weapons[0].x = 0.7;
+    img_weapons[0].y = 0.3;
+    img_weapons[1].x = 0.3;
+    img_weapons[1].y = 0.3;
+    img_weapons[2].x = 0.7;
+    img_weapons[2].y = 0.3;
+    img_weapons[3].x = 0.7;
+    img_weapons[3].y = 0.3;
+    img_weapons[4].x = 0.3;
+    img_weapons[4].y = 0.5;
+
+    img_items.push(sprites[idx++], sprites[idx++]);
     img_trees.push(sprites[idx++], sprites[idx++]);
 }
 
 function createAudio() {
-    snd_blip = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
+    snd_med = snd_heal = snd_pick = snd_blip = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
+    snd_shoot = createAudioBuffer([0,0,0.257585,0,0.229939,0.846236,0.0561515,-0.611704,0,0,0,0,0,0.775923,-0.102723,0,0,0,1,0,0,0.028879,0]);
     snd_music = createAudioBufferFromSong(song);
 }
 

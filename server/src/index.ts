@@ -2,13 +2,7 @@ import * as http from "http";
 import {IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
 import * as fs from "fs";
 import * as url from 'url';
-import {
-    ClientID,
-    EventSourceUrl,
-    PostMessagesResponse,
-    Request,
-    ServerEventName,
-} from "../../src/shared/types";
+import {ClientID, EventSourceUrl, PostMessagesResponse, Request, ServerEventName} from "../../src/shared/types";
 
 const defaultPort = 8080;
 const port = +process.env.PORT || defaultPort;
@@ -27,51 +21,34 @@ const clients = new Map<ClientID, ClientState>();
 
 setInterval(() => {
     for (const client of clients.values()) {
-        if (!sendServerEvent(client.id, ServerEventName.Ping, "")) {
-            removeClient(client.id);
+        if (!sendServerEvent(client, ServerEventName.Ping, "")) {
+            removeClient(client);
         }
     }
 }, 5000);
 
-function sendCloseServerEvent(id: ClientID) {
-    const client = clients.get(id);
-    const res = client.es;
-    res.write(`id: -1\ndata: \n\n`);
-    res.end();
+function sendCloseServerEvent(client: ClientState) {
+    client.es.write(`id: -1\ndata: \n\n`);
+    client.es.end();
 }
 
-function sendServerEvent(id: ClientID, event: string, data: string) {
-    const client = clients.get(id);
-    const res = client.es;
-    return res.write(`id: ${client.ei++}\nevent: ${event}\ndata: ${data}\n\n`);
+function sendServerEvent(client: ClientState, event: ServerEventName, data: string) {
+    return client.es.write(`id: ${client.ei++}\nevent: ${event}\ndata: ${data}\n\n`);
 }
 
-function broadcastServerEvent(from: ClientID, event: string, data: string) {
+function broadcastServerEvent(from: ClientID, event: ServerEventName, data: string) {
     for (const client of clients.values()) {
         if (client.id !== from) {
-            sendServerEvent(client.id, event, data);
+            sendServerEvent(client, event, data);
         }
     }
 }
 
-const _404 = (req: IncomingMessage, res: ServerResponse, err?: any) => {
-    res.writeHead(404);
-    res.end();//"not found" + (err ? "\n" + JSON.stringify(err) : ""));
-};
-
-const _500: RequestListener = (req, res) => {
-    res.writeHead(500);
-    res.end();//"internal error");
-};
-
-function removeClient(id: number) {
-    const client = clients.get(id);
-    if (client) {
-        sendCloseServerEvent(id);
-        clients.delete(id);
-    }
-    broadcastServerEvent(id, ServerEventName.ClientRemove, "" + id);
-    console.info("broadcast client " + id + " removed ");
+function removeClient(client: ClientState) {
+    sendCloseServerEvent(client);
+    clients.delete(client.id);
+    broadcastServerEvent(client.id, ServerEventName.ClientRemove, "" + client.id);
+    console.info("broadcast client " + client.id + " removed ");
 }
 
 function processServerEvents(req: IncomingMessage, res: ServerResponse) {
@@ -90,15 +67,15 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
         ei: 0
     };
 
-    req.on("close", () => removeClient(id));
-
     const otherClientIds = [...clients.keys()];
     clients.set(id, client);
-    sendServerEvent(id, ServerEventName.ClientConnected, id + ";" + otherClientIds.join(";"));
+
+    req.on("close", () => removeClient(client));
+    sendServerEvent(client, ServerEventName.ClientConnected, id + ";" + otherClientIds.join(";"));
     broadcastServerEvent(id, ServerEventName.ClientAdd, "" + id);
 }
 
-async function readJSON(req: IncomingMessage):Promise<Request|undefined> {
+async function readJSON(req: IncomingMessage): Promise<Request | undefined> {
     try {
         const buffers = [];
         for await (const chunk of req) {
@@ -106,15 +83,14 @@ async function readJSON(req: IncomingMessage):Promise<Request|undefined> {
         }
         const data = Buffer.concat(buffers).toString();
         return JSON.parse(data) as Request;
-    }
-    catch {
+    } catch {
         console.warn("error decode JSON from /1");
     }
 }
 
 async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) {
     const reqData = await readJSON(req);
-    if(!reqData) {
+    if (!reqData) {
         res.write(500);
         res.end();
     }
@@ -136,7 +112,7 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
             if (msg.d) {
                 const toClient = clients.get(msg.d);
                 if (toClient) {
-                    sendServerEvent(msg.d, ServerEventName.ClientUpdate, JSON.stringify(msg));
+                    sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
                 }
             }
             ++numProcessedMessages;
@@ -154,31 +130,31 @@ const requestListener: RequestListener = async (req, res) => {
         } else if (req.method === "POST") {
             await processIncomeMessages(req, res);
         } else {
-            _500(req, res);
+            res.writeHead(500);
+            res.end();
         }
-        return;
-    }
-
-    if (req.method === "GET") {
+    } else if (req.method === "GET") {
         const publicDir = url.fileURLToPath(new URL('.', import.meta.url));
         const filePath = publicDir + (req.url === '/' ? '/index.html' : req.url);
-        let headers: OutgoingHttpHeaders = {"Cache-Control": "no-cache"};
-        if (filePath.endsWith(".html")) {
-            headers["Content-Type"] = "text/html; charset=utf-8";
-        } else if (filePath.endsWith(".js")) {
-            headers["Content-Type"] = "application/javascript";
-        }
         fs.readFile(filePath, (err, data) => {
             if (err) {
-                _404(req, res, err);
-                return;
+                res.writeHead(404);
+                res.end();
+            } else {
+                let headers: OutgoingHttpHeaders = {"Cache-Control": "no-cache"};
+                if (filePath.endsWith(".html")) {
+                    headers["Content-Type"] = "text/html; charset=utf-8";
+                } else if (filePath.endsWith(".js")) {
+                    headers["Content-Type"] = "application/javascript";
+                }
+                res.writeHead(200, headers);
+                res.end(data);
             }
-            res.writeHead(200, headers);
-            res.end(data);
         });
-        return;
+    } else {
+        res.writeHead(500);
+        res.end();
     }
-    _500(req, res);
 };
 
 const server = http.createServer(requestListener);

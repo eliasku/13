@@ -35,7 +35,7 @@ export function generateMapBackground(): HTMLCanvasElement {
         ctx.fillRect(rand() % w, rand() % h, 1, 2 + rand() % 4);
     }
 
-    ctx.font = "5px serif";
+    ctx.font = "5px emoji";
     ctx.fillStyle = "white";
     ctx.save();
     ctx.scale(1, 0.5);
@@ -43,6 +43,11 @@ export function generateMapBackground(): HTMLCanvasElement {
         ctx.fillText(["🌼", "🌸","🌺", "🍀"][rand() % 4], rand() % w, rand() % (h * 2));
     }
     ctx.restore();
+
+    ctx.font = "8px emoji";
+    for (let i = 0; i < 32; ++i) {
+        ctx.fillText(["🌷", "🌻", "🥀","🌿"][rand() %4], rand() % w, rand() % h);
+    }
 
     return canvas;
 }

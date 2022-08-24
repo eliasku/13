@@ -1,5 +1,4 @@
 export const DEV_MODE = process.env.NODE_ENV === "development";
-export const MUTE_ALL = DEV_MODE;
 
 export const DEBUG_TERM = 1;
 
@@ -11,6 +10,7 @@ export const enum Const {
     RLE = 1,
 
     AnglesRes = 16,
+    ViewAngleRes = 256,
 }
 
 export const DEBUG_LAG_ENABLED = DEV_MODE;

@@ -175,7 +175,7 @@ function initSSE(): Promise<void> {
         waitForConnectedEvent = resolve;
         eventSource = new EventSource(EventSourceUrl);
         eventSource.onerror = onSSEError;
-        eventSource.addEventListener(ServerEventName.ClientConnected, (e: MessageEvent<string>) => {
+        eventSource.addEventListener(""+ServerEventName.ClientConnected, (e: MessageEvent<string>) => {
             const ids = e.data.split(";").map(x => Number.parseInt(x));
             clientId = ids.shift();
             for (const id of ids) {
@@ -183,9 +183,9 @@ function initSSE(): Promise<void> {
             }
             waitForConnectedEvent();
             eventSource.onmessage = onSSEMessage;
-            eventSource.addEventListener(ServerEventName.ClientUpdate, onSSEUpdate);
-            eventSource.addEventListener(ServerEventName.ClientAdd, onSSEClientAdd);
-            eventSource.addEventListener(ServerEventName.ClientRemove, onSSEClientRemove);
+            eventSource.addEventListener(""+ServerEventName.ClientUpdate, onSSEUpdate);
+            eventSource.addEventListener(""+ServerEventName.ClientAdd, onSSEClientAdd);
+            eventSource.addEventListener(""+ServerEventName.ClientRemove, onSSEClientRemove);
         }, {once: true});
     });
 }
@@ -195,9 +195,9 @@ function termSSE() {
         log("terminate SSE");
         eventSource.onerror = null;
         eventSource.onmessage = null;
-        eventSource.removeEventListener(ServerEventName.ClientUpdate, onSSEUpdate);
-        eventSource.removeEventListener(ServerEventName.ClientAdd, onSSEClientAdd);
-        eventSource.removeEventListener(ServerEventName.ClientRemove, onSSEClientRemove);
+        eventSource.removeEventListener(""+ServerEventName.ClientUpdate, onSSEUpdate);
+        eventSource.removeEventListener(""+ServerEventName.ClientAdd, onSSEClientAdd);
+        eventSource.removeEventListener(""+ServerEventName.ClientRemove, onSSEClientRemove);
         eventSource.close();
         eventSource = null;
         waitForConnectedEvent = null;

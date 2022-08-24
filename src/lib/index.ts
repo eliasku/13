@@ -1,12 +1,11 @@
 import {connect, disconnect, getClientId, getRemoteClients} from "./net/messaging";
-import {initInput, resetInput} from "./fluid/input";
+import {initInput, resetInput} from "./utils/input";
 import {initGL} from "./graphics/gl";
 import {termClear, termFlush, termPrint} from "./debug/log";
 import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
 import {loadResources, snd_blip, snd_music} from "./game/res";
 import {play} from "./audio/context";
-import {MUTE_ALL} from "./game/config";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
 
 const canvas = document.getElementById("g") as HTMLCanvasElement;
@@ -30,10 +29,7 @@ const onStart = async () => {
     window.addEventListener("beforeunload", disconnect);
     await connect();
 
-    if (!MUTE_ALL) {
-        play(snd_blip);
-        play(snd_music, true, 0.05);
-    }
+    play(snd_music, true, 0.05);
 
     initTestGame();
     started = true;
