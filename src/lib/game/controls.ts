@@ -38,6 +38,10 @@ export function updateControls(player: Actor) {
         viewX = lookAtX - px;
         viewY = lookAtY - py;
     }
+    else {
+        viewX = 0;
+        viewY = 0;
+    }
 
     shootButtonDown = ((viewX || viewY) && mouse.active_) as any | 0;
 

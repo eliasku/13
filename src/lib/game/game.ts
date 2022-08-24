@@ -225,11 +225,12 @@ function drawGame() {
     drawMapOverlay();
     drawCrosshair();
     flush();
+}
 
-    camera.toX =
-    camera.toY =
-    camera.atX =
-    camera.atY = 0.0;
+function drawOverlay() {
+    const w = gl.drawingBufferWidth;
+    const h = gl.drawingBufferHeight;
+    camera.toX = camera.toY = camera.atX = camera.atY = 0.0;
     beginRender(w, h);
     beginRenderGroup();
     drawVirtualPad();
@@ -325,8 +326,10 @@ export function updateTestGame(ts: number) {
         beginPrediction();
         {
             drawGame();
+            // check input before overlay, or save camera settings
             checkPlayerInput();
             checkJoinSync(gameTic - 1);
+            drawOverlay();
         }
         endPrediction();
         trySendInput();
