@@ -203,19 +203,19 @@ export function initTestGame() {
 function drawGame() {
     const w = gl.drawingBufferWidth;
     const h = gl.drawingBufferHeight;
-    camera.scale = Math.min(w, h) / 256;
-    camera.toX = 0.5;
-    camera.toY = 0.5;
-    camera.atX = camera.atY = boundsSize >> 1;
+    camera.scale_ = Math.min(w, h) / 256;
+    camera.toX_ = 0.5;
+    camera.toY_ = 0.5;
+    camera.atX_ = camera.atY_ = boundsSize >> 1;
     const p0 = getMyPlayer();
     if (p0) {
         const wpn = getWeapon(p0);
-        camera.atX = p0.x + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * p0.t) * (lookAtX - p0.x);
-        camera.atY = p0.y + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * p0.t) * (lookAtY - p0.y);
+        camera.atX_ = p0.x + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * p0.t) * (lookAtX - p0.x);
+        camera.atY_ = p0.y + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * p0.t) * (lookAtY - p0.y);
         //camera.scale -= Math.hypot(p0.vx, p0.vy) / 128;
     }
-    camera.atX += ((Math.random() - 0.5) * cameraShake * 8) | 0;
-    camera.atY += ((Math.random() - 0.5) * cameraShake * 8) | 0;
+    camera.atX_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
+    camera.atY_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
     beginRender(w, h);
     gl.clearColor(0.4, 0.4, 0.4, 1.0);
     gl.clear(GL.COLOR_BUFFER_BIT);
@@ -230,7 +230,7 @@ function drawGame() {
 function drawOverlay() {
     const w = gl.drawingBufferWidth;
     const h = gl.drawingBufferHeight;
-    camera.toX = camera.toY = camera.atX = camera.atY = 0.0;
+    camera.toX_ = camera.toY_ = camera.atX_ = camera.atY_ = 0.0;
     beginRender(w, h);
     beginRenderGroup();
     drawVirtualPad();
@@ -1130,10 +1130,10 @@ function collectVisibleActors(...lists: Actor[][]) {
     const pad = objectRadiusUnit * 2;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
-    const l = (0 - W * camera.toX) / camera.scale + camera.atX - pad;
-    const t = (0 - H * camera.toY) / camera.scale + camera.atY - pad - 128;
-    const r = (W - W * camera.toX) / camera.scale + camera.atX + pad;
-    const b = (H - H * camera.toY) / camera.scale + camera.atY + pad + 128;
+    const l = (0 - W * camera.toX_) / camera.scale_ + camera.atX_ - pad;
+    const t = (0 - H * camera.toY_) / camera.scale_ + camera.atY_ - pad - 128;
+    const r = (W - W * camera.toX_) / camera.scale_ + camera.atX_ + pad;
+    const b = (H - H * camera.toY_) / camera.scale_ + camera.atY_ + pad + 128;
     for (const list of lists) {
         for (const a of list) {
             if (a.x > l && a.x < r && a.y > t && a.y < b) {
@@ -1299,7 +1299,7 @@ function drawPlayer(p: Actor) {
     {
         const s = p.vz * 0.002;
         const a = 0.002 * p.vx;
-        draw(img_players[(p.c +debugCheckAvatar)% img_players.length], x, y - 14 + base * 2, a, 1 - s, 1 + s, 0xFFFFFFFF);
+        draw(img_players[(p.c +debugCheckAvatar)% img_players.length], x, y - 16 + base * 2, a, 1 - s, 1 + s, 0xFFFFFFFF);
     }
 
 

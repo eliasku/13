@@ -24,7 +24,7 @@ const enum StartState {
     Connected = 3,
 }
 
-let state = 0;
+let state = StartState.Loading;
 const onStart = async () => {
     if (state !== StartState.TapToConnect) return;
     state = StartState.Connecting;
@@ -40,11 +40,12 @@ const onStart = async () => {
     state = StartState.Connected;
 };
 
-const font = new FontFace("emoji", "url(https://xem.github.io/unicode13/Twemoji.ttf)");
+const font = new FontFace("emoji", `url(emoji.ttf)`);
 font.load().then(() => {
+    document.fonts.add(font);
     loadResources();
-    canvas.addEventListener("touchstart", onStart, {passive: true});
-    canvas.addEventListener("mousedown", onStart);
+    canvas.addEventListener("touchstart", onStart, false);
+    canvas.addEventListener("mousedown", onStart, false);
     state = StartState.TapToConnect;
 });
 

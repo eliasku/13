@@ -95,3 +95,11 @@ console.info(report.join("\n"));
 
 // LZMA: 12784
 
+// ADD functionality: VPad, new avatars, etc
+// BUILD: 95285
+// C2LET: 94557
+// TERSER: 35219
+// ROADROLL: 17812
+// LZMA: 13107
+
+

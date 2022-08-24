@@ -54,12 +54,30 @@ function createAtlas(): Texture[] {
         ctx.font = emojiSize + "px emoji";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(emoji, x + w_ / 2, y + h_ / 2);
+        const comp = 1 + (emojiSize / 5);
+        const ty = y + (h_ / 2 + comp) | 0;
+        // ctx.fillStyle = "white";
+        ctx.fillText(emoji, x + (w_ >>> 1), ty);
+
+        // ctx.fillStyle = "rgba(255,255,255,0.5)";
+        // ctx.fillRect(x, ty, w_, 1);
+        // ctx.fillRect(x, y, w_, 1);
+        // ctx.fillRect(x, y + h_ - 1, w_, 1);
+
         const bmp = ctx.getImageData(x, y, w_, h_);
         for (let i = 0; i < bmp.data.length; i += 4) {
-            let a = bmp.data[i + 3];
-            if (a >= 0x66) bmp.data[i + 3] = 0xFF;
-            else bmp.data[i + 3] = 0;
+            let a = bmp.data[i + 3] / 0xFF;
+            if (a > 0.5) {
+                bmp.data[i + 3] = 0xFF;
+                // bmp.data[i + 2] /= a;
+                // bmp.data[i + 1] /= a;
+                // bmp.data[i + 0] /= a;
+            } else {
+                bmp.data[i + 3] = 0;
+                bmp.data[i + 2] = 0;
+                bmp.data[i + 1] = 0;
+                bmp.data[i + 0] = 0;
+            }
         }
         ctx.putImageData(bmp, x, y);
     }
@@ -79,7 +97,7 @@ function createAtlas(): Texture[] {
     emojiSize = 20;
     `🛢️,📦`.split(",").map(createEmoji);
 
-    emojiSize = 8;
+    emojiSize = 10;
     createEmoji("🔪");
     emojiSize = 16;
     createEmoji("🔨");

@@ -33,12 +33,11 @@ export function updateControls(player: Actor) {
     const py = player.y - player.z - 10;
 
     if (mouse.x_ >= 0 && mouse.x_ < W && mouse.y_ >= 0 && mouse.y_ < H) {
-        lookAtX = (mouse.x_ - W * camera.toX) / camera.scale + camera.atX;
-        lookAtY = (mouse.y_ - H * camera.toY) / camera.scale + camera.atY;
+        lookAtX = (mouse.x_ - W * camera.toX_) / camera.scale_ + camera.atX_;
+        lookAtY = (mouse.y_ - H * camera.toY_) / camera.scale_ + camera.atY_;
         viewX = lookAtX - px;
         viewY = lookAtY - py;
-    }
-    else {
+    } else {
         viewX = 0;
         viewY = 0;
     }
@@ -60,7 +59,7 @@ export function updateControls(player: Actor) {
 
     {
         updateVirtualPad();
-        const k = 1.0 / camera.scale;
+        const k = 1.0 / camera.scale_;
         if (touchPadActive) {
             {
                 let dx = 0;
@@ -108,7 +107,9 @@ function updateVirtualPad() {
         // capture
         for (const p of inputPointers) {
             if (p.id_ >= 0 && p.down_ && p.x_ < W / 2 && p.y_ > H / 2) {
-                vpadL = p;
+                if (p !== vpadR && p !== topR) {
+                    vpadL = p;
+                }
             }
         }
     }
@@ -126,7 +127,9 @@ function updateVirtualPad() {
         // capture
         for (const p of inputPointers) {
             if (p.id_ >= 0 && p.down_ && p.x_ > W / 2 && p.y_ > H / 2) {
-                vpadR = p;
+                if (p !== vpadL && p !== topR) {
+                    vpadR = p;
+                }
             }
         }
     }
@@ -139,16 +142,19 @@ function updateVirtualPad() {
         }
     }
 
-    if(!topR) {
+    if (!topR) {
         for (const p of inputPointers) {
             if (p.id_ >= 0 && p.down_ && p.x_ > W / 2 && p.y_ < H / 2) {
-                topR = p;
+                if (p !== vpadL && p !== vpadR) {
+                    topR = p;
+                }
             }
         }
     }
     // if captured
     if (topR) {
-        if (!topR.active_) {
+        const outOfZone = topR.x_ < (W / 2) || topR.y_ > (H / 2);
+        if (!topR.active_ || outOfZone) {
             // release
             topR = undefined;
         }
@@ -160,7 +166,7 @@ export function drawVirtualPad() {
     if (!touchPadActive) {
         return;
     }
-    const k = 1.0 / camera.scale;
+    const k = 1.0 / camera.scale_;
     const W = gl.drawingBufferWidth * k;
     const H = gl.drawingBufferHeight * k;
     {

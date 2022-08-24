@@ -62,29 +62,29 @@ export function initInput(canvas: HTMLCanvasElement) {
     };
     canvas.addEventListener("mousedown", (e) => {
         handleMouse(e, handleDown);
-    });
+    }, false);
 
     canvas.addEventListener("mouseup", (e) => {
         handleUp(getPointer(-1));
         e.preventDefault();
-    });
+    }, false);
 
     canvas.addEventListener("mouseleave", (e) => {
         handleUp(getPointer(-1));
-    });
+    }, false);
 
     canvas.addEventListener("mouseenter", (e) => {
         if (e.buttons) {
             handleMouse(e, handleDown);
         }
-    });
+    }, false);
 
     canvas.addEventListener("mousemove", (e) => {
         handleMouse(e, handleMove);
-    });
+    }, false);
 
     const handleTouchEvent = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
-        //e.preventDefault();
+        e.preventDefault();
         const scale = canvas.width / canvas.clientWidth;
         const bb = canvas.getBoundingClientRect();
         for (let i = 0; i < e.changedTouches.length; ++i) {
@@ -96,30 +96,30 @@ export function initInput(canvas: HTMLCanvasElement) {
     };
     canvas.addEventListener("touchstart", (e) => {
         handleTouchEvent(e, handleDown);
-    }, {passive: true});
+    }, false);
     canvas.addEventListener("touchmove", (e) => {
         handleTouchEvent(e, handleMove);
-    }, {passive: true});
+    }, false);
     const onTouchEnd = (e: TouchEvent) => {
+        e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; ++i) {
             const touch = e.changedTouches.item(i)!;
             handleUp(getPointer(touch.identifier));
         }
-        e.preventDefault();
     };
     canvas.addEventListener("touchend", onTouchEnd, false);
 
     const wnd = document;
     //wnd.addEventListener("keypress", onKey, true);
     wnd.addEventListener("keydown", (e) => {
+        e.preventDefault();
         keyboardDown[e.code] = +(!keyboardState[e.code]);
         keyboardState[e.code] = 1;
-        e.preventDefault();
     }, false);
     wnd.addEventListener("keyup", (e) => {
+        e.preventDefault();
         keyboardUp[e.code] = +(!!keyboardState[e.code]);
         keyboardState[e.code] = 0;
-        e.preventDefault();
     }, false);
 }
 

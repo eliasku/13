@@ -1,14 +1,5 @@
 import {gl, GL} from "./gl";
 
-class Point {
-    constructor(public x: number, public y: number) {
-    }
-
-    static xy(xy: number) {
-        return new Point(xy, xy);
-    }
-}
-
 const vertexShader = `attribute vec2 g;
 attribute vec2 a;
 attribute vec2 t;
@@ -151,13 +142,22 @@ function clear(r: number, g: number, b: number, a: number) {
     gl.clearColor(r, g, b, a);
 }
 
-export let camera = {
-    atX: 0,
-    atY: 0,
-    toX: 0,
-    toY: 0,
-    angle: 0,
-    scale: 1,
+interface Camera {
+    atX_: number;
+    atY_: number;
+    toX_: number;
+    toY_: number;
+    angle_: number;
+    scale_: number;
+}
+
+export let camera: Camera = {
+    atX_: 0,
+    atY_: 0,
+    toX_: 0,
+    toY_: 0,
+    angle_: 0,
+    scale_: 1,
 };
 
 export interface Texture {
@@ -215,13 +215,13 @@ export function beginRender(viewportWidth: number, viewportHeight: number) {
     width = viewportWidth;
     height = viewportHeight;
 
-    const {atX, atY, toX, toY, angle, scale} = camera;
+    const {atX_, atY_, toX_, toY_, angle_, scale_} = camera;
 
-    const x = atX - width * toX;
-    const y = atY - height * toY;
+    const x = atX_ - width * toX_;
+    const y = atY_ - height * toY_;
 
-    const c = scale * Math.cos(angle);
-    const s = scale * Math.sin(angle);
+    const c = scale_ * Math.cos(angle_);
+    const s = scale_ * Math.sin(angle_);
 
     const w = 2 / width;
     const h = -2 / height;
@@ -253,8 +253,8 @@ export function beginRender(viewportWidth: number, viewportHeight: number) {
         -s * w, c * h, 0, 0,
         0, 0, -1 / depth, 0,
 
-        (atX * (1 - c) + atY * s) * w - 2 * x / width - 1,
-        (atY * (1 - c) - atX * s) * h + 2 * y / height + 1,
+        (atX_ * (1 - c) + atY_ * s) * w - 2 * x / width - 1,
+        (atY_ * (1 - c) - atX_ * s) * h + 2 * y / height + 1,
         0, 1,
     ];
 

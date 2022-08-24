@@ -4,15 +4,12 @@ import * as fs from "fs";
 import * as url from 'url';
 import {ClientID, EventSourceUrl, PostMessagesResponse, Request, ServerEventName} from "../../src/shared/types";
 
-const defaultPort = 8080;
-const port = +process.env.PORT || defaultPort;
-
-export interface ClientState {
-    id: ClientID;
+interface ClientState {
+    id_: ClientID;
     // last time client or server communicates with client
-    ts: number;
-    es: ServerResponse;
-    ei: number;
+    ts_: number;
+    eventStream_: ServerResponse;
+    nextEventId_: number;
 }
 
 let nextClientId = 1;
@@ -27,18 +24,26 @@ setInterval(() => {
     }
 }, 5000);
 
+function constructMessage(id:number, data:string) {
+    return `id:${id}\ndata:${data}\n\n`;
+}
+
 function sendCloseServerEvent(client: ClientState) {
-    client.es.write(`id:-1\ndata:\n\n`);
-    client.es.end();
+    client.eventStream_.write(
+        constructMessage(-1, "")
+    );
+    client.eventStream_.end();
 }
 
 function sendServerEvent(client: ClientState, event: ServerEventName, data: string) {
-    return client.es.write(`id:${client.ei++}\ndata:${event}${data}\n\n`);
+    return client.eventStream_.write(
+        constructMessage(client.nextEventId_++, event + data)
+    );
 }
 
 function broadcastServerEvent(from: ClientID, event: ServerEventName, data: string) {
     for (const client of clients.values()) {
-        if (client.id !== from) {
+        if (client.id_ !== from) {
             sendServerEvent(client, event, data);
         }
     }
@@ -46,16 +51,16 @@ function broadcastServerEvent(from: ClientID, event: ServerEventName, data: stri
 
 function removeClient(client: ClientState) {
     sendCloseServerEvent(client);
-    clients.delete(client.id);
-    broadcastServerEvent(client.id, ServerEventName.ClientListChange, "-" + client.id);
-    console.info("broadcast client " + client.id + " removed ");
+    clients.delete(client.id_);
+    broadcastServerEvent(client.id_, ServerEventName.ClientListChange, "-" + client.id_);
+    console.info("broadcast client " + client.id_ + " removed ");
 }
 
 function processServerEvents(req: IncomingMessage, res: ServerResponse) {
     res.writeHead(200, {
-        "Connection": "keep-alive",
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
+        "connection": "keep-alive",
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
     });
 
     // create new client connection
@@ -63,20 +68,20 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
 
     const id = nextClientId++;
     const client: ClientState = {
-        id,
-        ts: performance.now(),
-        es: res,
-        ei: 0
+        id_: id,
+        ts_: performance.now(),
+        eventStream_: res,
+        nextEventId_: 0
     };
     clients.set(id, client);
     clientIds.unshift(id);
 
     req.on("close", () => removeClient(client));
 
-    console.info("init client " + client.id);
+    console.info("init client " + client.id_);
     sendServerEvent(client, ServerEventName.ClientInit, clientIds.join(";"));
 
-    console.info("broadcast add client " + client.id);
+    console.info("broadcast add client " + client.id_);
     broadcastServerEvent(id, ServerEventName.ClientListChange, "" + id);
 }
 
@@ -102,7 +107,7 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
     // process new clients
     const client = clients.get(reqData.s);
     if (client) {
-        client.ts = performance.now();
+        client.ts_ = performance.now();
     } else {
         // handle on client bad connection state (need to connect again and get new ID)
         console.warn("client is not active: ", reqData.s);
@@ -146,11 +151,14 @@ const requestListener: RequestListener = async (req, res) => {
                 res.writeHead(404);
                 res.end();
             } else {
-                let headers: OutgoingHttpHeaders = {"Cache-Control": "no-cache"};
+                let headers: OutgoingHttpHeaders = {"cache-control": "no-cache"};
                 if (filePath.endsWith(".html")) {
-                    headers["Content-Type"] = "text/html; charset=utf-8";
+                    headers["content-type"] = "text/html;charset=utf-8";
                 } else if (filePath.endsWith(".js")) {
-                    headers["Content-Type"] = "application/javascript";
+                    headers["content-type"] = "application/javascript";
+                } else if (filePath.endsWith(".ttf")) {
+                    headers["content-type"] = "font/ttf";
+                    delete headers["cache-control"];
                 }
                 res.writeHead(200, headers);
                 res.end(data);
@@ -163,9 +171,7 @@ const requestListener: RequestListener = async (req, res) => {
 };
 
 const server = http.createServer(requestListener);
-server.listen(port, () => {
-    const info = server.address();
-    if (typeof info === "object") {
-        console.log(`Server is running on http://localhost:${info.port}`);
-    }
-});
+server.listen(+process.env.PORT || 8080);
+
+// console will be dropped for prod build
+console.log(`Local server http://localhost:8080`);
