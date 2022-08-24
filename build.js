@@ -3,6 +3,8 @@ import {readFileSync, rmSync, writeFileSync} from "fs";
 
 let report = [];
 const files = ["public/index.js", "public/server.js", "public/index.html"];
+const devBuild = process.argv.indexOf("--dev") > 0;
+const envDef = devBuild ? "development" : "production";
 
 function del(...files) {
     for (const file of files) {
@@ -36,25 +38,31 @@ function const2let(file) {
 del("public/index.js", "public/server.js", "game.zip");
 
 // execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
-execSync(`esbuild server/src/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"production\"' --platform=node --target=node16 --outfile=public/server.js`);
-execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"production\"' --outfile=public/index.js`);
+execSync(`esbuild server/src/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server.js`);
+execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index.js`);
 report.push("BUILD: " + sz(...files));
 
 const2let("public/server.js");
 const2let("public/index.js");
 report.push("C2LET: " + sz(...files));
 
-execSync(`terser public/server.js --toplevel --module --ecma=2020 --compress drop_console=true,booleans_as_integers=true,unsafe_arrows=true,unsafe=true,passes=8 --mangle-props regex=/_$/ -m -o public/server.js`);
-execSync(`terser public/index.js --toplevel --module --ecma=2020 --compress drop_console=true,booleans_as_integers=true,unsafe_arrows=true,unsafe=true,passes=8 --mangle-props regex=/_$/ -m -o public/index.js`);
+
+let compress = ["booleans_as_integers=true","unsafe_arrows=true","passes=8"];//"unsafe=true",
+if(!devBuild) {
+    compress.push("drop_console=true");
+}
+
+execSync(`terser public/server.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/_$/ -m -o public/server.js`);
+execSync(`terser public/index.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/_$/ -m -o public/index.js`);
 report.push("TERSER: " + sz(...files));
 
-execSync(`roadroller -D -O1 -- public/index.js -o public/index.js`);
-report.push("ROADROLL: " + sz(...files));
-
 if (process.argv.indexOf("--zip") > 0) {
+
     // Include only files you need! Do not include some hidden files like .DS_Store (6kb)
     // execSync(`zip -9 -X -D game.zip public/index.js public/server.js public/index.html`);
     // report.push("ZIP: " + sz("game.zip"));
+    execSync(`roadroller -D -O1 -- public/index.js -o public/index.js`);
+    report.push("ROADROLL: " + sz(...files));
 
     try {
         // https://linux.die.net/man/1/advzip

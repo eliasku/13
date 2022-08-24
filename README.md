@@ -23,8 +23,9 @@ External [Twemoji Mozilla](https://github.com/mozilla/twemoji-colr/releases) is 
 
 # TODO
 
-- [ ] disable mobile safari select canvas on long touch
-- [ ] fix capturing already captured v-pad
+- [x] disable mobile safari select canvas on long touch
+- [x] fix capturing already captured v-pad
+- [x] fix unsafe minification broke connecting
 
 ----
 

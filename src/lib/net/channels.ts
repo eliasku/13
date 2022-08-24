@@ -29,6 +29,15 @@ export function setRTMessageHandler(handler: RTMessageHandler) {
     onRTMessage = handler;
 }
 
+function send(dc: RTCDataChannel, data: ArrayBuffer) {
+    try {
+        dc.send(data);
+    } catch (e) {
+        // sometimes Firefox throw error on send
+        console.warn("data channel send error:", e);
+    }
+}
+
 export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer) {
     const dc = client.dc;
     if (DEBUG_LAG_ENABLED) {
@@ -40,19 +49,19 @@ export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer)
         if (!chance(sendPacketLoss)) {
             if (document.hidden) {
                 // can't simulate lag when tab in background because of setTimeout stall
-                dc.send(data);
+                send(dc, data);
             } else {
                 const delay = range(sendLagMin, sendLagMax);
                 setTimeout(() => {
                     if (dc.readyState === "open") {
-                        dc.send(data);
+                        send(dc, data);
                     }
                 }, delay);
             }
         }
         return;
     }
-    dc.send(data);
+    send(dc, data);
 }
 
 export function channels_processMessage(from: ClientID, msg: MessageEvent<ArrayBuffer>) {

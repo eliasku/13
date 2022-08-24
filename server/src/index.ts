@@ -94,14 +94,14 @@ async function readJSON(req: IncomingMessage): Promise<Request | undefined> {
         const data = Buffer.concat(buffers).toString();
         return JSON.parse(data) as Request;
     } catch {
-        console.warn("error decode JSON from /1");
+        console.warn("error decode JSON from /0");
     }
 }
 
 async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) {
     const reqData = await readJSON(req);
     if (!reqData) {
-        res.write(500);
+        res.writeHead(500);
         res.end();
     }
     // process new clients
@@ -151,14 +151,16 @@ const requestListener: RequestListener = async (req, res) => {
                 res.writeHead(404);
                 res.end();
             } else {
-                let headers: OutgoingHttpHeaders = {"cache-control": "no-cache"};
+                let headers: OutgoingHttpHeaders = {};
                 if (filePath.endsWith(".html")) {
                     headers["content-type"] = "text/html;charset=utf-8";
+                    headers["cache-control"] = "no-cache";
                 } else if (filePath.endsWith(".js")) {
                     headers["content-type"] = "application/javascript";
+                    headers["cache-control"] = "no-cache";
                 } else if (filePath.endsWith(".ttf")) {
                     headers["content-type"] = "font/ttf";
-                    delete headers["cache-control"];
+                    headers["cache-control"] = "max-age=86400";
                 }
                 res.writeHead(200, headers);
                 res.end(data);

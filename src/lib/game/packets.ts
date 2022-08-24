@@ -124,9 +124,9 @@ export function pack(packet: Packet): ArrayBuffer {
             u32[ptr++] = e.btn_;
         }
         if (e.spawn_) {
-            f32[ptr++] = e.spawn_.x;
-            f32[ptr++] = e.spawn_.y;
-            f32[ptr++] = e.spawn_.z;
+            u32[ptr++] = e.spawn_.x;
+            u32[ptr++] = e.spawn_.y;
+            u32[ptr++] = e.spawn_.z;
         }
         if (!!e.c) {
             u32[ptr++] = e.c;

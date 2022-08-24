@@ -335,10 +335,9 @@ export function updateTestGame(ts: number) {
         trySendInput();
         cleaningUpClients();
     }
-
+    printStatus();
     printRemoteClients();
 }
-
 
 let prevRenderTic = 0;
 
@@ -357,6 +356,18 @@ const icons_channelState = {
     "closed": "🔴",
     "closing": "❌",
 };
+
+function printStatus() {
+    if(joined) {
+        const p0 = getMyPlayer();
+        if(!p0) {
+            termPrint("Tap to spawn!\n");
+        }
+    }
+    else {
+        termPrint("Joining room...\n");
+    }
+}
 
 function printRemoteClients() {
     let text = "🌐";
@@ -480,13 +491,17 @@ function checkJoinSync(lastTic: number) {
                     return;
                 }
             }
+            else {
+                log("still connecting...");
+                return;
+            }
         }
         joined = true;
         log("All in sync");
         getLocalEvent(ticToSpawn).spawn_ = {
-            x: Math.random() * 800.0,
-            y: 200 + 400 * Math.random(),
-            z: 100 * Math.random()
+            x: (Math.random() * 800)|0,
+            y: 200 + (400 * Math.random())|8,
+            z: (100 * Math.random())|0
         };
     }
 }
