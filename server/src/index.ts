@@ -28,12 +28,12 @@ setInterval(() => {
 }, 5000);
 
 function sendCloseServerEvent(client: ClientState) {
-    client.es.write(`id: -1\ndata: \n\n`);
+    client.es.write(`id:-1\ndata:\n\n`);
     client.es.end();
 }
 
 function sendServerEvent(client: ClientState, event: ServerEventName, data: string) {
-    return client.es.write(`id: ${client.ei++}\nevent: ${event}\ndata: ${data}\n\n`);
+    return client.es.write(`id:${client.ei++}\ndata:${event}${data}\n\n`);
 }
 
 function broadcastServerEvent(from: ClientID, event: ServerEventName, data: string) {
@@ -47,7 +47,7 @@ function broadcastServerEvent(from: ClientID, event: ServerEventName, data: stri
 function removeClient(client: ClientState) {
     sendCloseServerEvent(client);
     clients.delete(client.id);
-    broadcastServerEvent(client.id, ServerEventName.ClientRemove, "" + client.id);
+    broadcastServerEvent(client.id, ServerEventName.ClientListChange, "-" + client.id);
     console.info("broadcast client " + client.id + " removed ");
 }
 
@@ -59,6 +59,8 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
     });
 
     // create new client connection
+    const clientIds = [...clients.keys()];
+
     const id = nextClientId++;
     const client: ClientState = {
         id,
@@ -66,13 +68,16 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
         es: res,
         ei: 0
     };
-
-    const otherClientIds = [...clients.keys()];
     clients.set(id, client);
+    clientIds.unshift(id);
 
     req.on("close", () => removeClient(client));
-    sendServerEvent(client, ServerEventName.ClientConnected, id + ";" + otherClientIds.join(";"));
-    broadcastServerEvent(id, ServerEventName.ClientAdd, "" + id);
+
+    console.info("init client " + client.id);
+    sendServerEvent(client, ServerEventName.ClientInit, clientIds.join(";"));
+
+    console.info("broadcast add client " + client.id);
+    broadcastServerEvent(id, ServerEventName.ClientListChange, "" + id);
 }
 
 async function readJSON(req: IncomingMessage): Promise<Request | undefined> {

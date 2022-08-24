@@ -1,6 +1,6 @@
 import {ClientID} from "../../shared/types";
 import {getClientId, getRemoteClient, getRemoteClients} from "../net/messaging";
-import {gl} from "../graphics/gl";
+import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {log, termPrint} from "../debug/log";
 import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
@@ -22,11 +22,11 @@ import {
 } from "./res";
 import {Const} from "./config";
 import {generateMapBackground} from "./maze";
-import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, Packet} from "./types";
+import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet} from "./types";
 import {pack, unpack} from "./packets";
-import {reach} from "../utils/math";
+import {reach, toRad} from "../utils/math";
 import {
-    ControlsFlag,
+    ControlsFlag, drawVirtualPad,
     dropButton,
     jumpButtonDown,
     lookAtX,
@@ -39,8 +39,7 @@ import {
     viewX,
     viewY
 } from "./controls";
-
-let imgMap: Texture = null;
+import {keyboardDown, keyboardState} from "../utils/input";
 
 let clientActive = true;
 
@@ -61,12 +60,16 @@ let lastFrameTs = 0;
 let lastInputTic = 0;
 let lastInputCmd = 0;
 
+// static state
+let imgMap: Texture = null;
+let trees: Actor[] = [];
+
+// dynamic state
 let state: InitData = {
     seed_: 0,
     mapSeed_: 0,
     players_: [],
     barrels_: [],
-    trees_: [],
     bullets_: [],
     items_: [],
 }
@@ -75,6 +78,7 @@ let lastState: InitData;
 
 let simulatedFrames = 0;
 
+const PlayerHandsZ = 10;
 const boundsSize = 0x200;
 const jumpVel = 0x50;
 const gravity = 0x100;
@@ -98,6 +102,8 @@ interface WeaponConfig {
     cameraFeedback_: number;
     cameraLookForward_: number;
     gfx_: number;
+    gfxRot_: number;
+    gfxSx_: number;
     bulletType_: number;
     bulletLifeTime_: number;
 }
@@ -116,6 +122,8 @@ function createArmWeapon(gfx: number): WeaponConfig {
         cameraFeedback_: 0.02,
         cameraLookForward_: 0.1,
         gfx_: gfx,
+        gfxRot_: 0,
+        gfxSx_: 1,
         bulletType_: 1,
         bulletLifeTime_: 0.2,
     };
@@ -142,16 +150,38 @@ const weapons: WeaponConfig[] = [
         cameraFeedback_: 0.01,
         cameraLookForward_: 0.2,
         gfx_: 4,
+        gfxRot_: 0,
+        gfxSx_: 1,
         bulletType_: 2,
         bulletLifeTime_: 0,
     }
-]
+];
+weapons[0].rate_ = 2;
+weapons[0].gfx_ = -1;
+// 🔪
+weapons[1].rate_ = 4;
+weapons[1].gfxRot_ = toRad(-90);
+weapons[1].gfx_ = 0;
+// 🔨
+weapons[2].gfx_ = 1;
+weapons[2].gfxSx_ = -1;
+// ⛏
+weapons[3].gfx_ = 2;
+weapons[3].gfxSx_ = -1;
+// 🗡
+weapons[4].gfx_ = 3;
+weapons[4].gfxRot_ = toRad(180 - 45);
+// weapons[4].gfxSx_ = -1;
+
+// 🔫
+weapons[5].gfx_ = 4;
+weapons[5].gfxSx_ = -1;
 
 function getWeapon(player: Actor): WeaponConfig {
     return weapons[player.weapon_];
 }
 
-function requireClient(id: ClientID) {
+function requireClient(id: ClientID): Client {
     if (!clients[id]) {
         clients[id] = {c: id, t: 0, acknowledgedTic_: 0};
     }
@@ -186,35 +216,35 @@ function drawGame() {
     }
     camera.atX += ((Math.random() - 0.5) * cameraShake * 8) | 0;
     camera.atY += ((Math.random() - 0.5) * cameraShake * 8) | 0;
-    gl.clearColor(0.4, 0.4, 0.4, 1.0);
     beginRender(w, h);
+    gl.clearColor(0.4, 0.4, 0.4, 1.0);
+    gl.clear(GL.COLOR_BUFFER_BIT);
     beginRenderGroup();
     drawMapBackground();
     drawObjects();
     drawMapOverlay();
     drawCrosshair();
     flush();
+
+    camera.toX =
+    camera.toY =
+    camera.atX =
+    camera.atY = 0.0;
+    beginRender(w, h);
+    beginRenderGroup();
+    drawVirtualPad();
+    flush()
 }
 
-function recreateMap(seed1: number) {
-    const seed0 = getSeed();
-    seed(seed1);
+function recreateMap() {
     // generate map
-    state.mapSeed_ = seed1;
+    seed(state.mapSeed_);
     const mapbg = generateMapBackground();
     imgMap = createTexture(mapbg);
-    seed(seed0);
-}
 
-function createSeedGameState() {
-    startTick = 0;
-    gameTic = 0;
-    netTick = 0;
-    startTime = prevTime = lastFrameTs;
-    //players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, z: 100, s: 1, vx: 0, vy: 0, vz: 0};
-    recreateMap(1);
+    trees = [];
     for (let i = 0; i < 32; ++i) {
-        state.trees_.push({
+        trees.push({
             type_: ActorType.Tree,
             x: rand() % boundsSize,
             y: rand() % boundsSize,
@@ -225,6 +255,17 @@ function createSeedGameState() {
             c: rand() & 1
         });
     }
+}
+
+function createSeedGameState() {
+    startTick = 0;
+    gameTic = 0;
+    netTick = 0;
+    startTime = prevTime = lastFrameTs;
+    //players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, z: 100, s: 1, vx: 0, vy: 0, vz: 0};
+    state.mapSeed_ = getSeed();
+    recreateMap();
+    state.seed_ = getSeed();
 
     for (let i = 0; i < 32; ++i) {
         state.barrels_.push({
@@ -412,12 +453,18 @@ function checkPlayerInput() {
         if (dropButton) {
             btn |= ControlsFlag.Drop;
         }
+
+        if(keyboardDown["Digit1"]) {
+            ++debugCheckAvatar;
+        }
     }
     if (lastInputCmd !== btn) {
         getLocalEvent(inputTic).btn_ = btn;
         lastInputCmd = btn;
     }
 }
+
+let debugCheckAvatar = 0;
 
 function checkJoinSync(lastTic: number) {
     if (!joined && startTick >= 0) {
@@ -567,20 +614,18 @@ function trySendInput() {
     }
 }
 
-function rtHandler(from: ClientID, buffer: ArrayBuffer) {
-    const data = unpack(buffer);
+function processPacket(sender: Client, data: Packet) {
     if (startTick < 0 && data.s) {
         startTick = data.t;
         startTime = prevTime = lastFrameTs;
         gameTic = data.t + 1;
         state = data.s;
-        seed(data.s.seed_);
         netTick = 0;
-        recreateMap(data.s.mapSeed_);
+        recreateMap();
+        seed(data.s.seed_);
 
-        const cl = requireClient(from);
-        cl.t = data.t;
-        cl.acknowledgedTic_ = data.receivedOnSender_;
+        sender.t = data.t;
+        sender.acknowledgedTic_ = data.receivedOnSender_;
         for (const e of data.e) {
             const cld = requireClient(e.c);
             if (cld.t < e.t) {
@@ -590,25 +635,33 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
             receivedEvents.push(e);
         }
     } else {
-        const cl = requireClient(from);
-        cl.ready_ = data.sync_;
+        sender.ready_ = data.sync_;
         // ignore old packets
-        if (data.t > cl.t) {
-            cl.isPlaying_ = true;
+        if (data.t > sender.t) {
+            sender.isPlaying_ = true;
             for (const e of data.e) {
-                if (e.t > cl.t /*alreadyReceivedTic*/) {
+                if (e.t > sender.t /*alreadyReceivedTic*/) {
                     receivedEvents.push(e);
                 }
             }
-            cl.t = data.t;
+            sender.t = data.t;
         }
         // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
         // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
         // then we will send only events from [acknowledgedTic + 1] index
-        if (cl.acknowledgedTic_ < data.receivedOnSender_) {
+        if (sender.acknowledgedTic_ < data.receivedOnSender_) {
             // update ack
-            cl.acknowledgedTic_ = data.receivedOnSender_;
+            sender.acknowledgedTic_ = data.receivedOnSender_;
         }
+    }
+}
+
+function rtHandler(from: ClientID, buffer: ArrayBuffer) {
+    const data = unpack(buffer);
+    if (data) {
+        processPacket(requireClient(from), data);
+    } else {
+        console.warn("income packet data size mismatch");
     }
     // if (!clientActive) {
     lastFrameTs = performance.now() * 0.001;
@@ -706,7 +759,6 @@ function pickItem(item: Actor, player: Actor) {
 function simulateTic(dt: number) {
     sortList(state.players_);
     sortList(state.barrels_);
-    sortList(state.trees_);
     sortList(state.bullets_);
     sortList(state.items_);
     for (const player of state.players_) {
@@ -728,7 +780,7 @@ function simulateTic(dt: number) {
         item.vx = reach(item.vx, 0, 512 * dt);
         item.vy = reach(item.vy, 0, 512 * dt);
         for (const player of state.players_) {
-            if (testIntersection(item, player)) {
+            if (testIntersection(item, player, objectRadiusUnit, objectRadiusUnit)) {
                 pickItem(item, player);
             }
         }
@@ -754,8 +806,8 @@ function simulateTic(dt: number) {
     updateBodyInterCollisions(state.players_);
     updateBodyInterCollisions(state.barrels_);
     updateBodyInterCollisions2(state.players_, state.barrels_);
-    updateBodyInterCollisions2(state.players_, state.trees_);
-    updateBodyInterCollisions2(state.barrels_, state.trees_);
+    updateBodyInterCollisions2(state.players_, trees);
+    updateBodyInterCollisions2(state.barrels_, trees);
     cameraShake = reach(cameraShake, 0, dt);
 }
 
@@ -820,11 +872,11 @@ function updateBodyInterCollisions(list: Actor[]) {
     }
 }
 
-function testIntersection(a: Actor, b: Actor): boolean {
+function testIntersection(a: Actor, b: Actor, r1: number, r2: number): boolean {
     let nx = a.x - b.x;
-    let ny = (a.y - b.y) * 2;
+    let ny = a.y - b.y;
     let nz = a.z - b.z;
-    const D = bulletRadiusUnit + objectRadiusUnit;
+    const D = r1 + r2;
     return nx * nx + ny * ny + nz * nz < D * D;
 }
 
@@ -883,7 +935,7 @@ function updateBulletCollision(list: Actor[]) {
         for (let j = 0; j < list.length; ++j) {
             const a = list[j];
             const owned = !(a.c - b.c);
-            if (!owned && testIntersection(a, b)) {
+            if (!owned && testIntersection(a, b, bulletRadiusUnit, objectRadiusUnit)) {
                 hitWithBullet(a, b);
             }
         }
@@ -975,7 +1027,7 @@ function updatePlayer(player: Actor, dt: number) {
                 type_: ActorType.Item,
                 x: player.x + objectRadiusUnit * dx,
                 y: player.y + objectRadiusUnit * dy,
-                z: player.z,
+                z: player.z + PlayerHandsZ,
                 vx: 128 * Math.cos(angle),
                 vy: 128 * Math.sin(angle),
                 vz: 0,
@@ -1014,7 +1066,7 @@ function updatePlayer(player: Actor, dt: number) {
                 c: player.c,
                 x: x0 + weapon.offset_ * dx,
                 y: y0 + weapon.offset_ * dy,
-                z: player.z + 10 + weapon.offsetZ_,
+                z: player.z + PlayerHandsZ + weapon.offsetZ_,
                 vx: bulletVelocity * dx,
                 vy: bulletVelocity * dy,
                 vz: 0,
@@ -1072,12 +1124,13 @@ const drawList: Actor[] = [];
 
 function collectVisibleActors(...lists: Actor[][]) {
     drawList.length = 0;
+    const pad = objectRadiusUnit * 2;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
-    const l = ((-objectRadiusUnit) - W * camera.toX) / camera.scale + camera.atX;
-    const t = ((-objectRadiusUnit - 128) - H * camera.toY) / camera.scale + camera.atY;
-    const r = ((W + objectRadiusUnit) - W * camera.toX) / camera.scale + camera.atX;
-    const b = ((H + objectRadiusUnit + 128) - H * camera.toY) / camera.scale + camera.atY;
+    const l = (0 - W * camera.toX) / camera.scale + camera.atX - pad;
+    const t = (0 - H * camera.toY) / camera.scale + camera.atY - pad - 128;
+    const r = (W - W * camera.toX) / camera.scale + camera.atX + pad;
+    const b = (H - H * camera.toY) / camera.scale + camera.atY + pad + 128;
     for (const list of lists) {
         for (const a of list) {
             if (a.x > l && a.x < r && a.y > t && a.y < b) {
@@ -1108,7 +1161,7 @@ function drawMapOverlay() {
 
 function drawCrosshair() {
     const p0 = getMyPlayer();
-    if (p0) {
+    if (p0 && (viewX || viewY)) {
         img_box.y = 2;
         const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t2) + 4 * Math.min(1, p0.t);
         draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.0, 2, len, 0x77FFFFFF);
@@ -1119,8 +1172,26 @@ function drawCrosshair() {
     }
 }
 
+function drawItem(item: Actor) {
+    if (item.btn_ === ItemCategory.Weapon) {
+        const weapon = weapons[item.t];
+        const img = img_weapons[weapon.gfx_];
+        const px = img.x;
+        const py = img.y;
+        img.x = 0.5;
+        img.y = 0.7;
+        draw(img_weapons[weapon.gfx_], item.x, item.y - item.z, 0, 0.8, 0.8, 0xFFFFFFFF);
+        img.x = px;
+        img.y = py;
+    } else if (item.btn_ === ItemCategory.Effect) {
+        const s = 1 + 0.1 * Math.sin(16 * lastFrameTs);
+        const o = 2 * Math.cos(lastFrameTs);
+        draw(img_items[item.t], item.x, item.y - item.z - objectRadiusUnit - o, 0, s, s, 0xFFFFFFFF);
+    }
+}
+
 function drawObjects() {
-    collectVisibleActors(state.players_, state.barrels_, state.trees_, state.bullets_, state.items_);
+    collectVisibleActors(trees, state.players_, state.barrels_, state.bullets_, state.items_);
     sortList(drawList);
 
     drawShadows();
@@ -1135,28 +1206,19 @@ function drawObjects() {
             drawTree(actor);
         } else if (type === ActorType.Bullet) {
             const a = Math.atan2(actor.vy, actor.vx);
-            if(actor.btn_ === 2) {
+            if (actor.btn_ === 2) {
                 img_cirle.x = 0.6;
                 draw(img_cirle, actor.x, actor.y - actor.z, a, 3, 1.5, 0x11FFFFFF, 0xFF000000);
                 img_cirle.x = 0.7;
                 draw(img_cirle, actor.x, actor.y - actor.z, a, 1.5, 0.6, 0xFFFFFF44, 0x00000000);
                 draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0xFFFFFFFF);
                 img_cirle.x = 0.5;
-            }
-            else if(actor.btn_ === 1) {
+            } else if (actor.btn_ === 1) {
                 draw(img_box, actor.x, actor.y - actor.z, a, 8, 4, 0x22FFFFFF, 0xFF000000);
                 draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0x22FFFFFF, 0xFF000000);
             }
         } else if (type === ActorType.Item) {
-            if (actor.btn_ & 1) {
-                const weapon = weapons[actor.t];
-                //draw(img_cirle, actor.x, actor.y - actor.z - objectRadiusUnit, 0, 2, 2, 0x7700FFFF, 0xFF000000);
-                draw(img_weapons[weapon.gfx_], actor.x, actor.y - actor.z - objectRadiusUnit, lastFrameTs, 1, 1, 0xFFFFFFFF);
-            } else if (actor.btn_ & 2) {
-                const s = 1 + 0.1 * Math.sin(16 * lastFrameTs);
-                const o = 2 * Math.cos(lastFrameTs);
-                draw(img_items[actor.t], actor.x, actor.y - actor.z - objectRadiusUnit - o, 0, s, s, 0xFFFFFFFF);
-            }
+            drawItem(actor);
         }
     }
 }
@@ -1182,15 +1244,15 @@ function drawPlayer(p: Actor) {
     // const weaponBaseScaleX = 0.5;// -1 for gun
     // const weaponBaseScaleY = 0.5;// -1 for gun
 
-    const weaponBaseAngle = 0;
-    const weaponBaseScaleX = -1;// -1 for gun
-    const weaponBaseScaleY = 1;// -1 for gun
+    const weaponBaseAngle = wpn.gfxRot_;
+    const weaponBaseScaleX = wpn.gfxSx_;
+    const weaponBaseScaleY = 1;
 
     // const weaponBaseAngle = Math.PI - Math.PI / 4;
     // const weaponBaseScaleX = 1;// -1 for gun
     // const weaponBaseScaleY = 1;// -1 for gun
     let weaponX = x;
-    let weaponY = y - 10;
+    let weaponY = y - PlayerHandsZ;
     let weaponAngle = Math.atan2(
         y + 1000 * Math.sin(viewAngle) - weaponY,
         x + 1000 * Math.cos(viewAngle) - weaponX
@@ -1204,7 +1266,7 @@ function drawPlayer(p: Actor) {
     }
     const A = Math.sin(weaponAngle - Math.PI);
     let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
-    if(wpn.bulletType_ === 1) {
+    if (wpn.bulletType_ === 1) {
         const t = Math.max(0, (p.t - 0.8) * 5);
         wd += t * 12;
         weaponAngle -= Math.PI * 0.25 * Math.sin(t * t * Math.PI * 2);
@@ -1234,7 +1296,7 @@ function drawPlayer(p: Actor) {
     {
         const s = p.vz * 0.002;
         const a = 0.002 * p.vx;
-        draw(img_players[p.c % img_players.length], x, y - 14 + base * 2, a, 1 - s, 1 + s, 0xFFFFFFFF);
+        draw(img_players[(p.c +debugCheckAvatar)% img_players.length], x, y - 14 + base * 2, a, 1 - s, 1 + s, 0xFFFFFFFF);
     }
 
 
@@ -1243,7 +1305,7 @@ function drawPlayer(p: Actor) {
     img_box.y = 0.5;
     const rArmX = x + 4;
     const lArmX = x - 4;
-    const armY = (y - 10 + base * 2);
+    const armY = (y - PlayerHandsZ + base * 2);
     const rArmRot = Math.atan2(weaponY - armY, weaponX - rArmX);
     const lArmRot = Math.atan2(weaponY - armY, weaponX - lArmX);
     const lArmLen = Math.hypot(weaponX - lArmX, weaponY - armY) - 1;
@@ -1269,14 +1331,14 @@ function drawBarrel(p: Actor) {
     const x = p.x;
     const y = p.y - p.z;
 
-    draw(img_barrels[p.c], x, y - 8, 0, 1, 1, 0xFFFFFFFF);
+    draw(img_barrels[p.c], x, y, 0, 1, 1, 0xFFFFFFFF);
 }
 
 function drawTree(p: Actor) {
     const x = p.x;
     const y = p.y - p.z;
 
-    draw(img_trees[p.c], x, y - 12, 0, 1, 1, 0xFFFFFFFF);
+    draw(img_trees[p.c], x, y, 0, 1, 1, 0xFFFFFFFF);
 }
 
 function unpackAngleByte(angleByte: number, resolution: number) {

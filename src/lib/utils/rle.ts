@@ -8,7 +8,7 @@ export function decodeRLE(src: Uint8Array, size: number, dest: Uint8Array): numb
     while (i < size) {
         const currChar = src[i++];
         dest[ptr++] = currChar;
-        if (currChar === prevChar) {
+        if (currChar === prevChar && /* end of buffer */i < size) {
             let count = src[i++];
             while (count > 0) {
                 dest[ptr++] = currChar;

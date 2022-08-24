@@ -1,4 +1,4 @@
-import {log, logAssert, logWarn} from "../debug/log";
+import {log, logWarn} from "../debug/log";
 import {
     ClientID,
     EventSourceUrl,
@@ -6,8 +6,7 @@ import {
     MessageData,
     MessageType,
     PostMessagesResponse,
-    Request,
-    ServerEventName
+    Request
 } from "../../shared/types";
 import {channels_processMessage} from "./channels";
 
@@ -130,63 +129,24 @@ async function _post(req: Request): Promise<PostMessagesResponse> {
         method: "POST",
         body
     });
-    if (!response.ok) {
-        disconnect();
+    if (response.ok) {
+        return await response.json() as PostMessagesResponse;
     }
-    return await response.json() as PostMessagesResponse;
+    disconnect();
 }
 
 let waitForConnectedEvent: () => void | null = null;
-
-function onSSEClientAdd(e: MessageEvent<string>) {
-    const id = Number.parseInt(e.data);
-    logAssert(!Number.isNaN(id));
-    logAssert(!remoteClients[id]);
-    const rc: RemoteClient = {id};
-    remoteClients[id] = rc;
-    connectToRemote(rc);
-    log(`remote client ${id} added`);
-}
-
-function onSSEClientRemove(e: MessageEvent<string>) {
-    const id = Number.parseInt(e.data);
-    logAssert(!Number.isNaN(id));
-    const remoteClient = remoteClients[id];
-    if (remoteClient) {
-        closePeerConnection(remoteClient);
-    }
-    remoteClients[id] = undefined;
-    log(`remote client ${id} removed`);
-}
-
-function onSSEUpdate(e: MessageEvent<string>) {
-    const message = JSON.parse(e.data) as Message;
-    const waiter = message.c ? callbacks[message.c] : undefined;
-    if (waiter) {
-        waiter(message);
-    } else {
-        requestHandler(message);
-    }
-}
 
 function initSSE(): Promise<void> {
     log("initialize SSE");
     return new Promise((resolve, _) => {
         waitForConnectedEvent = resolve;
         eventSource = new EventSource(EventSourceUrl);
-        eventSource.onerror = onSSEError;
-        eventSource.addEventListener(""+ServerEventName.ClientConnected, (e: MessageEvent<string>) => {
-            const ids = e.data.split(";").map(x => Number.parseInt(x));
-            clientId = ids.shift();
-            for (const id of ids) {
-                remoteClients[id] = {id};
-            }
-            waitForConnectedEvent();
-            eventSource.onmessage = onSSEMessage;
-            eventSource.addEventListener(""+ServerEventName.ClientUpdate, onSSEUpdate);
-            eventSource.addEventListener(""+ServerEventName.ClientAdd, onSSEClientAdd);
-            eventSource.addEventListener(""+ServerEventName.ClientRemove, onSSEClientRemove);
-        }, {once: true});
+        eventSource.onerror = (e) => {
+            log("server-event error");
+            termSSE();
+        };
+        eventSource.onmessage = (e) => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
     });
 }
 
@@ -195,25 +155,55 @@ function termSSE() {
         log("terminate SSE");
         eventSource.onerror = null;
         eventSource.onmessage = null;
-        eventSource.removeEventListener(""+ServerEventName.ClientUpdate, onSSEUpdate);
-        eventSource.removeEventListener(""+ServerEventName.ClientAdd, onSSEClientAdd);
-        eventSource.removeEventListener(""+ServerEventName.ClientRemove, onSSEClientRemove);
         eventSource.close();
         eventSource = null;
         waitForConnectedEvent = null;
     }
 }
 
-function onSSEMessage(e: MessageEvent<string>) {
-    if (e.lastEventId === "-1") {
-        termSSE();
+const onSSE: ((data: string) => void)[] = [
+    // CLOSE
+    termSSE,
+    // PING
+    () => {
+    },
+    // INIT
+    (data: string) => {
+        console.info("[SSE] got init " + data);
+        console.info("[SSE] got init " + data.split(";"));
+        const ids = data.split(";").map(Number);
+        clientId = ids.shift();
+        for (const id of ids) {
+            console.info(`remote client ${id} observed`);
+            remoteClients[id] = {id};
+        }
+        waitForConnectedEvent();
+    },
+    // UPDATE
+    (data: string) => {
+        const message = JSON.parse(data) as Message;
+        const waiter = message.c ? callbacks[message.c] : undefined;
+        if (waiter) {
+            waiter(message);
+        } else {
+            requestHandler(message);
+        }
+    },
+    // LIST CHANGE
+    (data: string) => {
+        const id = Number.parseInt(data);
+        const rc: RemoteClient = id > 0 ? {id} : remoteClients[-id];
+        if (id > 0) {
+            remoteClients[id] = rc;
+            connectToRemote(rc);
+            console.info(`remote client ${id} added`);
+        } else if (rc) {
+            closePeerConnection(rc);
+            remoteClients[-id] = undefined;
+            console.info(`remote client ${-id} removed`);
+        }
     }
-}
-
-function onSSEError(e: Event) {
-    log("server-event error");
-    termSSE();
-}
+];
 
 export async function connect() {
     if (running || connecting) return;

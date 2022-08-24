@@ -2,19 +2,21 @@ import {Actor, ActorType, ClientEvent, InitData, Packet} from "./types";
 import {Const} from "./config";
 import {decodeRLE, encodeRLE} from "../utils/rle";
 
-const _packU8 = new Uint8Array(2048);
+const _packU8 = new Uint8Array(1024 * 16);
 const _packU32 = new Uint32Array(_packU8.buffer);
 const _packF32 = new Float32Array(_packU8.buffer);
-const _rleBuffer = new Uint8Array(2048);
+const _rleBuffer = new Uint8Array(1024 * 16);
 
-export function unpack(data: ArrayBuffer): Packet {
+export function unpack(data: ArrayBuffer): Packet|undefined {
     const u32 = Const.RLE ? _packU32 : new Uint32Array(data);
     const f32 = Const.RLE ? _packF32 : new Float32Array(data);
-    if (Const.RLE) {
-        decodeRLE(new Uint8Array(data), data.byteLength, _packU8);
-    }
+    const gotByteLength = Const.RLE ? decodeRLE(new Uint8Array(data), data.byteLength, _packU8) : data.byteLength;
 
     let ptr = 0;
+    const packetDwordsSize = u32[ptr++];
+    if(packetDwordsSize * 4 > gotByteLength) {
+        return undefined;
+    }
     const packet: Packet = {
         sync_: u32[ptr++] !== 0,
         c: u32[ptr++],
@@ -52,14 +54,17 @@ export function unpack(data: ArrayBuffer): Packet {
             seed_: u32[ptr++],
             players_: [],
             barrels_: [],
-            trees_: [],
             bullets_: [],
             items_: [],
         };
         let count = u32[ptr++];
+        let lists = [init.players_, init.barrels_, init.bullets_, init.items_];
         for (let i = 0; i < count; ++i) {
+            const hdr = u32[ptr++];
             const p: Actor = {
-                type_: ActorType.Player,
+                type_: hdr & 0xFF,
+                hp_: (hdr >> 8) & 0xFF,
+                weapon_: (hdr >> 16) & 0xFF,
                 c: u32[ptr++],
                 btn_: u32[ptr++],
 
@@ -72,83 +77,8 @@ export function unpack(data: ArrayBuffer): Packet {
                 vz: f32[ptr++],
                 t: f32[ptr++],
                 t2: f32[ptr++],
-                weapon_: u32[ptr++],
-                hp_: u32[ptr++],
             };
-            init.players_.push(p);
-        }
-        count = u32[ptr++];
-        for (let i = 0; i < count; ++i) {
-            const p: Actor = {
-                type_: ActorType.Barrel,
-                c: u32[ptr++],
-                btn_: u32[ptr++],
-
-                x: f32[ptr++],
-                y: f32[ptr++],
-                z: f32[ptr++],
-
-                vx: f32[ptr++],
-                vy: f32[ptr++],
-                vz: f32[ptr++],
-                t: f32[ptr++],
-                hp_: u32[ptr++],
-            };
-            init.barrels_.push(p);
-        }
-        count = u32[ptr++];
-        for (let i = 0; i < count; ++i) {
-            const p: Actor = {
-                type_: ActorType.Tree,
-                c: u32[ptr++],
-                btn_: u32[ptr++],
-
-                x: f32[ptr++],
-                y: f32[ptr++],
-                z: f32[ptr++],
-
-                vx: f32[ptr++],
-                vy: f32[ptr++],
-                vz: f32[ptr++],
-                t: f32[ptr++],
-            };
-            init.trees_.push(p);
-        }
-        count = u32[ptr++];
-        for (let i = 0; i < count; ++i) {
-            const p: Actor = {
-                type_: ActorType.Bullet,
-                c: u32[ptr++],
-                btn_: u32[ptr++],
-
-                x: f32[ptr++],
-                y: f32[ptr++],
-                z: f32[ptr++],
-
-                vx: f32[ptr++],
-                vy: f32[ptr++],
-                vz: f32[ptr++],
-                t: f32[ptr++],
-            };
-            init.bullets_.push(p);
-        }
-        count = u32[ptr++];
-        for (let i = 0; i < count; ++i) {
-            const p: Actor = {
-                type_: ActorType.Item,
-                c: u32[ptr++],
-                btn_: u32[ptr++],
-
-                x: f32[ptr++],
-                y: f32[ptr++],
-                z: f32[ptr++],
-
-                vx: f32[ptr++],
-                vy: f32[ptr++],
-                vz: f32[ptr++],
-                t: f32[ptr++],
-            };
-            init.items_.push(p);
+            lists[p.type_].push(p);
         }
         packet.s = init;
     }
@@ -158,7 +88,7 @@ export function unpack(data: ArrayBuffer): Packet {
 export function pack(packet: Packet): ArrayBuffer {
     const u32 = _packU32;
     const f32 = _packF32;
-    let ptr = 0;
+    let ptr = 1;
     u32[ptr++] = packet.sync_ ? 1 : 0;
     u32[ptr++] = packet.c;
     u32[ptr++] = packet.receivedOnSender_;
@@ -205,9 +135,11 @@ export function pack(packet: Packet): ArrayBuffer {
     if (hasInit) {
         u32[ptr++] = packet.s.mapSeed_;
         u32[ptr++] = packet.s.seed_;
-        u32[ptr++] = packet.s.players_.length;
-        for (let i = 0; i < packet.s.players_.length; ++i) {
-            const p = packet.s.players_[i];
+        const list = packet.s.players_.concat(packet.s.barrels_, packet.s.bullets_, packet.s.items_);
+        u32[ptr++] = list.length;
+        for (let i = 0; i < list.length; ++i) {
+            const p = list[i];
+            u32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16);
             u32[ptr++] = p.c;
             u32[ptr++] = p.btn_;
             f32[ptr++] = p.x;
@@ -218,63 +150,11 @@ export function pack(packet: Packet): ArrayBuffer {
             f32[ptr++] = p.vz;
             f32[ptr++] = p.t;
             f32[ptr++] = p.t2;
-            u32[ptr++] = p.weapon_;
-            u32[ptr++] = p.hp_;
-        }
-        u32[ptr++] = packet.s.barrels_.length;
-        for (let i = 0; i < packet.s.barrels_.length; ++i) {
-            const p = packet.s.barrels_[i];
-            u32[ptr++] = p.c;
-            u32[ptr++] = p.btn_;
-            f32[ptr++] = p.x;
-            f32[ptr++] = p.y;
-            f32[ptr++] = p.z;
-            f32[ptr++] = p.vx;
-            f32[ptr++] = p.vy;
-            f32[ptr++] = p.vz;
-            f32[ptr++] = p.t;
-            u32[ptr++] = p.hp_;
-        }
-        u32[ptr++] = packet.s.trees_.length;
-        for (let i = 0; i < packet.s.trees_.length; ++i) {
-            const p = packet.s.trees_[i];
-            u32[ptr++] = p.c;
-            u32[ptr++] = p.btn_;
-            f32[ptr++] = p.x;
-            f32[ptr++] = p.y;
-            f32[ptr++] = p.z;
-            f32[ptr++] = p.vx;
-            f32[ptr++] = p.vy;
-            f32[ptr++] = p.vz;
-            f32[ptr++] = p.t;
-        }
-        u32[ptr++] = packet.s.bullets_.length;
-        for (let i = 0; i < packet.s.bullets_.length; ++i) {
-            const p = packet.s.bullets_[i];
-            u32[ptr++] = p.c;
-            u32[ptr++] = p.btn_;
-            f32[ptr++] = p.x;
-            f32[ptr++] = p.y;
-            f32[ptr++] = p.z;
-            f32[ptr++] = p.vx;
-            f32[ptr++] = p.vy;
-            f32[ptr++] = p.vz;
-            f32[ptr++] = p.t;
-        }
-        u32[ptr++] = packet.s.items_.length;
-        for (let i = 0; i < packet.s.items_.length; ++i) {
-            const p = packet.s.items_[i];
-            u32[ptr++] = p.c;
-            u32[ptr++] = p.btn_;
-            f32[ptr++] = p.x;
-            f32[ptr++] = p.y;
-            f32[ptr++] = p.z;
-            f32[ptr++] = p.vx;
-            f32[ptr++] = p.vy;
-            f32[ptr++] = p.vz;
-            f32[ptr++] = p.t;
         }
     }
+
+    // save packet dwords size to header
+    u32[0] = ptr;
 
     if (Const.RLE) {
         const size = encodeRLE(_packU8, ptr * 4, _rleBuffer);

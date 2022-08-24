@@ -80,3 +80,18 @@ console.info(report.join("\n"));
 // ROADROLL: 17151
 // LZMA: 12566
 
+// BUILD: 92829
+// C2LET: 92131
+// TERSER: 34709
+// ROADROLL: 17158
+// LZMA: 12575
+
+// array of callbacks
+// BUILD: 92419
+// C2LET: 91729
+// TERSER: 34565
+// ROADROLL: 17109
+// LZMA: 12539
+
+// LZMA: 12784
+

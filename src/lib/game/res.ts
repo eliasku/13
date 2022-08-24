@@ -55,6 +55,13 @@ function createAtlas(): Texture[] {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(emoji, x + w_ / 2, y + h_ / 2);
+        const bmp = ctx.getImageData(x, y, w_, h_);
+        for (let i = 0; i < bmp.data.length; i += 4) {
+            let a = bmp.data[i + 3];
+            if (a >= 0x66) bmp.data[i + 3] = 0xFF;
+            else bmp.data[i + 3] = 0;
+        }
+        ctx.putImageData(bmp, x, y);
     }
 
     // BOX
@@ -67,13 +74,18 @@ function createAtlas(): Texture[] {
     ctx.closePath();
     ctx.fill();
 
-    `💀,👹,😵,🌚,😷,🤡,👨🏻,🛢️,📦`.split(",").map(createEmoji);
-
     emojiSize = 14;
+    `💀,👹,😵,🌚,😷,🤡,👨🏻,🤖,💩,🎃,🤓,😡,🤢,🦝,🐙,🦑,🍏,😾`.split(",").map(createEmoji);
+    emojiSize = 20;
+    `🛢️,📦`.split(",").map(createEmoji);
+
+    emojiSize = 8;
     createEmoji("🔪");
+    emojiSize = 16;
     createEmoji("🔨");
     createEmoji("⛏");
     createEmoji("🗡");
+    emojiSize = 12;
     createEmoji("🔫");
 
     `💊,❤️`.split(",").map(createEmoji);
@@ -103,27 +115,36 @@ function createImages() {
     let idx = 0;
     img_box = sprites[idx++];
     img_cirle = sprites[idx++];
-    img_players.push(sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++]);
+    for (let i = 0; i < 11 + 7; ++i) {
+        img_players.push(sprites[idx++]);
+    }
     img_barrels.push(sprites[idx++], sprites[idx++]);
+    img_barrels[0].y = 0.95;
+    img_barrels[1].y = 0.85;
     img_weapons.push(sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++]);
-    img_weapons[0].x = 0.7;
+    img_weapons[0].x = 0.3;
     img_weapons[0].y = 0.3;
-    img_weapons[1].x = 0.3;
-    img_weapons[1].y = 0.3;
+
+    img_weapons[1].x = 0.7;
+    img_weapons[1].y = 0.7;
     img_weapons[2].x = 0.7;
-    img_weapons[2].y = 0.3;
+    img_weapons[2].y = 0.7;
+
     img_weapons[3].x = 0.7;
     img_weapons[3].y = 0.3;
-    img_weapons[4].x = 0.3;
+
+    img_weapons[4].x = 0.6;
     img_weapons[4].y = 0.5;
 
     img_items.push(sprites[idx++], sprites[idx++]);
     img_trees.push(sprites[idx++], sprites[idx++]);
+    img_trees[0].y = 0.95;
+    img_trees[1].y = 0.95;
 }
 
 function createAudio() {
     snd_med = snd_heal = snd_pick = snd_blip = createAudioBuffer([2, 0, 0.032, 0.099, 0.0816678, 0.818264, 0, -0.241811, 0, 0.541487, 0.418269, 0, 0, 0, 0, 0, 0.175963, -0.27499, 1, 0, 0, 0.900178, 0]);
-    snd_shoot = createAudioBuffer([0,0,0.257585,0,0.229939,0.846236,0.0561515,-0.611704,0,0,0,0,0,0.775923,-0.102723,0,0,0,1,0,0,0.028879,0]);
+    snd_shoot = createAudioBuffer([0, 0, 0.257585, 0, 0.229939, 0.846236, 0.0561515, -0.611704, 0, 0, 0, 0, 0, 0.775923, -0.102723, 0, 0, 0, 1, 0, 0, 0.028879, 0]);
     snd_music = createAudioBufferFromSong(song);
 }
 

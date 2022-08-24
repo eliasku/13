@@ -1,11 +1,11 @@
 export class Pointer {
     id_ = 0;
-    startX_ = +0.0;
-    startY_ = +0.0;
-    prevX_ = +0.0;
-    prevY_ = +0.0;
-    x_ = +0.0;
-    y_ = +0.0;
+    startX_ = 0;
+    startY_ = 0;
+    prevX_ = 0;
+    prevY_ = 0;
+    x_ = 0;
+    y_ = 0;
     down_ = false;
     active_ = false;
 }

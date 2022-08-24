@@ -262,7 +262,6 @@ export function beginRender(viewportWidth: number, viewportHeight: number) {
     gl.enable(GL.BLEND);
     gl.uniformMatrix4fv(matrixLocation, false, projection);
     gl.viewport(0, 0, width, height);
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 }
 
 export function beginRenderGroup() {

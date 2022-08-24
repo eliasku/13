@@ -1,4 +1,4 @@
-import {u2f} from "./bits";
+import {unorm_f32_from_u32} from "./bits";
 
 const enum Tempering {
     MaskB = 0x9D2C5680,
@@ -29,12 +29,6 @@ export function rand(): number /* u32 */ {
     x = (Math.imul(x, 1103515245) + 12345) >>> 0;
     _state = x;
     return temper(x) >>> 1;
-}
-
-function unorm_f32_from_u32(value: number /* u32 */): number {
-    const exponent = 127;
-    const mantissa = value & ((1 << 23) - 1);
-    return u2f((exponent << 23) | mantissa) - 1.0;
 }
 
 export function random() {

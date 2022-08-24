@@ -4,7 +4,7 @@ import {initGL} from "./graphics/gl";
 import {termClear, termFlush, termPrint} from "./debug/log";
 import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
-import {loadResources, snd_blip, snd_music} from "./game/res";
+import {loadResources, snd_music} from "./game/res";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
 
@@ -17,12 +17,17 @@ initInput(canvas);
 initGL(canvas);
 initDraw2d();
 
-let starting = false;
-let started = false;
-const onStart = async () => {
-    if(starting || started) return;
+const enum StartState {
+    Loading = 0,
+    TapToConnect = 1,
+    Connecting = 2,
+    Connected = 3,
+}
 
-    starting = true;
+let state = 0;
+const onStart = async () => {
+    if (state !== StartState.TapToConnect) return;
+    state = StartState.Connecting;
     canvas.removeEventListener("touchstart", onStart);
     canvas.removeEventListener("mousedown", onStart);
 
@@ -32,14 +37,19 @@ const onStart = async () => {
     play(snd_music, true, 0.05);
 
     initTestGame();
-    started = true;
+    state = StartState.Connected;
 };
 
-loadResources();
-canvas.addEventListener("touchstart", onStart, {passive: true});
-canvas.addEventListener("mousedown", onStart);
+const font = new FontFace("emoji", "url(https://xem.github.io/unicode13/Twemoji.ttf)");
+font.load().then(() => {
+    loadResources();
+    canvas.addEventListener("touchstart", onStart, {passive: true});
+    canvas.addEventListener("mousedown", onStart);
+    state = StartState.TapToConnect;
+});
 
 let idxResize = 0;
+
 function doResize() {
     if (0 >= --idxResize) {
         idxResize = 30;
@@ -54,7 +64,7 @@ function doResize() {
             canvas.height = (sh * ss) | 0;
         }
     }
-};
+}
 
 let tsPrev = 0.0;
 let rawDeltaTime = 0.0;
@@ -75,19 +85,23 @@ function doFrame(ts: number) {
     updateFpsMeter(ts);
     termClear();
     termPrint(`FPS: ${fps}\n`);
-    if (started) {
-        updateTestGame(ts);
-    } else {
-        if(!starting) {
+    switch (state) {
+        case StartState.TapToConnect:
             termPrint("\nTap to connect!\n");
-        }
-        else {
+            break;
+        case StartState.Loading:
+            termPrint("\nLoading...\n");
+            break;
+        case StartState.Connecting:
             termPrint("Connecting...\n");
             termPrint("┌ " + getClientId() + "\n");
             for (const rc of getRemoteClients()) {
                 termPrint("├ " + rc.id + " " + (rc.pc ? rc.pc.iceConnectionState : "x") + "\n");
             }
-        }
+            break;
+        default:
+            updateTestGame(ts);
+            break;
     }
     termFlush();
 }

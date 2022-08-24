@@ -1,11 +1,18 @@
 import {ClientID} from "../../shared/types";
 
 export const enum ActorType {
-    Player = 1,
-    Barrel = 2,
-    Tree = 3,
-    Bullet = 4,
-    Item = 5,
+    Player = 0,
+    Barrel = 1,
+    Bullet = 2,
+    Item = 3,
+
+    // static game objects
+    Tree = 16,
+}
+
+export const enum ItemCategory {
+    Weapon = 1,
+    Effect = 2,
 }
 
 export const enum EffectItemType {
@@ -56,7 +63,6 @@ export interface InitData {
     seed_: number;
     players_: Actor[];
     barrels_: Actor[];
-    trees_: Actor[];
     bullets_: Actor[];
     items_: Actor[];
 }
