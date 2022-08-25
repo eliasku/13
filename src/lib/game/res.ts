@@ -18,7 +18,8 @@ export let img_weapons: Texture[] = [];
 export let img_items: Texture[] = [];
 
 export let img_box: Texture;
-export let img_cirle: Texture;
+export let img_circle_4: Texture;
+export let img_circle_16: Texture;
 
 function createAtlas(): Texture[] {
     const canvas = document.createElement("canvas");
@@ -82,15 +83,20 @@ function createAtlas(): Texture[] {
         ctx.putImageData(bmp, x, y);
     }
 
+    const createCircle = (r: number) =>{
+        const s = r * 2;
+        pushSprite(s, s);
+        ctx.beginPath();
+        ctx.arc(x + r, y + r, r * 0.925, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+    }
     // BOX
     pushSprite(1, 1);
     ctx.fillRect(x, y, 1, 1);
     // CIRCLE
-    pushSprite(8, 8);
-    ctx.beginPath();
-    ctx.arc(x + 4, y + 4, 3.7, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.fill();
+    createCircle(4);
+    createCircle(16);
 
     emojiSize = 14;
     `💀,👹,😵,🌚,😷,🤡,👨🏻,🤖,💩,🎃,🤓,😡,🤢,🦝,🐙,🦑,🍏,😾`.split(",").map(createEmoji);
@@ -132,7 +138,8 @@ function createImages() {
     const sprites = createAtlas();
     let idx = 0;
     img_box = sprites[idx++];
-    img_cirle = sprites[idx++];
+    img_circle_4 = sprites[idx++];
+    img_circle_16 = sprites[idx++];
     for (let i = 0; i < 11 + 7; ++i) {
         img_players.push(sprites[idx++]);
     }

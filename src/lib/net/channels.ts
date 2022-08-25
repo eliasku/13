@@ -34,6 +34,7 @@ function send(dc: RTCDataChannel, data: ArrayBuffer) {
         dc.send(data);
     } catch (e) {
         // sometimes Firefox throw error on send
+        // TODO: or maybe it was just unsafe minify and we tried use not opened data-channel
         console.warn("data channel send error:", e);
     }
 }

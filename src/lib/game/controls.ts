@@ -2,7 +2,7 @@ import {gl} from "../graphics/gl";
 import {getPointer, inputPointers, keyboardState, Pointer} from "../utils/input";
 import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
-import {img_box, img_cirle} from "./res";
+import {img_box, img_circle_16} from "./res";
 
 export const enum ControlsFlag {
     Move = 0x100,
@@ -64,9 +64,10 @@ export function updateControls(player: Actor) {
             {
                 let dx = 0;
                 let dy = 0;
-                if (vpadL) {
-                    dx = (vpadL.x_ - vpadL.startX_) * k;
-                    dy = (vpadL.y_ - vpadL.startY_) * k;
+                const pp = vpad[0].pointer_;
+                if (pp) {
+                    dx = (pp.x_ - pp.startX_) * k;
+                    dy = (pp.y_ - pp.startY_) * k;
                 }
                 const len = Math.hypot(dx, dy);
                 moveX = dx;
@@ -77,9 +78,10 @@ export function updateControls(player: Actor) {
             {
                 let dx = 0;
                 let dy = 0;
-                if (vpadR) {
-                    dx = (vpadR.x_ - vpadR.startX_) * k;
-                    dy = (vpadR.y_ - vpadR.startY_) * k;
+                const pp = vpad[1].pointer_;
+                if (pp) {
+                    dx = (pp.x_ - pp.startX_) * k;
+                    dy = (pp.y_ - pp.startY_) * k;
                 }
                 const len = Math.hypot(dx, dy);
                 viewX = dx;
@@ -88,78 +90,73 @@ export function updateControls(player: Actor) {
                 lookAtY = py + dy * 3;
                 shootButtonDown = (len > 24) as any | 0;
             }
-            dropButton = topR ? 1 : 0;
+            dropButton = vpad[2].pointer_ ? 1 : 0;
         }
     }
 }
 
-let topR: Pointer | undefined;
-let vpadL: Pointer | undefined;
-let vpadR: Pointer | undefined;
+interface VPadControl {
+    l_: number;
+    t_: number;
+    r_: number;
+    b_: number;
+    flags_?: number;
+    pointer_?: Pointer | undefined;
+}
+
+const vpad: VPadControl[] = [
+    {l_: 0, t_: 0.5, r_: 0.5, b_: 1},
+    {l_: 0.5, t_: 0.5, r_: 1, b_: 1},
+    {l_: 0.5, t_: 0, r_: 1, b_: 0.5, flags_: 1},
+];
 let touchPadActive = false;
+
+function checkPointerIsAvailableForCapturing(pointer: Pointer) {
+    for (const control of vpad) {
+        if (control.pointer_ === pointer) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function testZone(control: VPadControl, rx: number, ry: number) {
+    return rx > control.l_ && rx < control.r_ && ry > control.t_ && ry < control.b_;
+}
 
 function updateVirtualPad() {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
 
-    // if not captured
-    if (!vpadL) {
-        // capture
-        for (const p of inputPointers) {
-            if (p.id_ >= 0 && p.down_ && p.x_ < W / 2 && p.y_ > H / 2) {
-                if (p !== vpadR && p !== topR) {
-                    vpadL = p;
+    for (const control of vpad) {
+        // if not captured
+        if (!control.pointer_) {
+            // capture
+            for (const p of inputPointers) {
+                if (p.id_ >= 0 &&
+                    p.down_ &&
+                    testZone(control, p.startX_ / W, p.startY_ / H) &&
+                    checkPointerIsAvailableForCapturing(p)) {
+                    control.pointer_ = p;
                 }
             }
         }
-    }
-
-    // if captured
-    if (vpadL) {
-        if (!vpadL.active_) {
-            // release
-            vpadL = undefined;
-        }
-    }
-
-    // if not captured
-    if (!vpadR) {
-        // capture
-        for (const p of inputPointers) {
-            if (p.id_ >= 0 && p.down_ && p.x_ > W / 2 && p.y_ > H / 2) {
-                if (p !== vpadL && p !== topR) {
-                    vpadR = p;
-                }
+        // if captured
+        if (control.pointer_) {
+            const p = control.pointer_;
+            let release = !p.active_;
+            // out-of-zone mode
+            if (control.flags_ & 1) {
+                release ||= !testZone(control, p.x_ / W, p.y_ / H);
+            }
+            if (release) {
+                // release
+                control.pointer_ = undefined;
+            } else {
+                touchPadActive = true;
             }
         }
     }
-
-    // if captured
-    if (vpadR) {
-        if (!vpadR.active_) {
-            // release
-            vpadR = undefined;
-        }
-    }
-
-    if (!topR) {
-        for (const p of inputPointers) {
-            if (p.id_ >= 0 && p.down_ && p.x_ > W / 2 && p.y_ < H / 2) {
-                if (p !== vpadL && p !== vpadR) {
-                    topR = p;
-                }
-            }
-        }
-    }
-    // if captured
-    if (topR) {
-        const outOfZone = topR.x_ < (W / 2) || topR.y_ > (H / 2);
-        if (!topR.active_ || outOfZone) {
-            // release
-            topR = undefined;
-        }
-    }
-    touchPadActive = touchPadActive || !!vpadL || !!vpadR || !!topR;
 }
 
 export function drawVirtualPad() {
@@ -169,32 +166,21 @@ export function drawVirtualPad() {
     const k = 1.0 / camera.scale_;
     const W = gl.drawingBufferWidth * k;
     const H = gl.drawingBufferHeight * k;
-    {
-        const cx = W / 4;
-        const cy = H * 3 / 4;
-        draw(img_cirle, cx, cy, 0, 10, 10, 0x22000000);
-        if (vpadL) {
-            draw(img_box, vpadL.startX_ * k, vpadL.startY_ * k, 0, 32, 32, 0x77FFFFFF);
-            draw(img_box, vpadL.startX_ * k, vpadL.startY_ * k, 0, 64, 64, 0x77FFFFFF);
-            draw(img_cirle, vpadL.x_ * k, vpadL.y_ * k, 0, 1, 1, 0xFFFFFFFF);
+    for (const control of vpad) {
+        const w_ = W * (control.r_ - control.l_);
+        const h_ = H * (control.b_ - control.t_);
+        const cx = W * control.l_ + w_ / 2;
+        const cy = H * control.t_ + h_ / 2;
+        draw(img_circle_16, cx, cy, 0, 2, 2, 0x22000000);
+        const pp = control.pointer_;
+        if (pp) {
+            if (control.flags_ & 1) {
+                draw(img_box, cx, cy, 0, w_, h_, pp ? 0x22FFFFFF : 0x22000000);
+            } else {
+                draw(img_box, pp.startX_ * k, pp.startY_ * k, 0, 32, 32, 0x77FFFFFF);
+                draw(img_box, pp.startX_ * k, pp.startY_ * k, 0, 64, 64, 0x77FFFFFF);
+                draw(img_circle_16, pp.x_ * k, pp.y_ * k, 0, 1, 1, 0x77FFFFFF);
+            }
         }
-    }
-
-    {
-        const cx = W * 3 / 4;
-        const cy = H * 3 / 4;
-        draw(img_cirle, cx, cy, 0, 10, 10, 0x22000000);
-        if (vpadR) {
-            draw(img_box, vpadR.startX_ * k, vpadR.startY_ * k, 0, 32, 32, 0x77FFFFFF);
-            draw(img_box, vpadR.startX_ * k, vpadR.startY_ * k, 0, 64, 64, 0x77FFFFFF);
-            draw(img_cirle, vpadR.x_ * k, vpadR.y_ * k, 0, 1, 1, 0xFFFFFFFF);
-        }
-    }
-
-
-    {
-        const cx = W * 3 / 4;
-        const cy = H * 1 / 4;
-        draw(img_box, cx, cy, 0, W / 4, H / 4, topR ? 0x22FFFFFF : 0x22000000);
     }
 }

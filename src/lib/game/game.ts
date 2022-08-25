@@ -9,7 +9,7 @@ import {channels_sendObjectData, getChannelPacketSize, setRTMessageHandler} from
 import {
     img_barrels,
     img_box,
-    img_cirle,
+    img_circle_4,
     img_items,
     img_players,
     img_trees,
@@ -1146,9 +1146,9 @@ function drawShadows() {
         let shadowScale = (2 - actor.z / 64.0);
         if (actor.type_ === ActorType.Bullet) {
             shadowScale *= 2;
-            draw(img_cirle, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0x11FFFFFF, 0xFF000000);
+            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0x11FFFFFF, 0xFF000000);
         } else {
-            draw(img_cirle, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0x77000000);
+            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0x77000000);
         }
     }
 }
@@ -1240,12 +1240,12 @@ function drawObjects() {
         } else if (type === ActorType.Bullet) {
             const a = Math.atan2(actor.vy, actor.vx);
             if (actor.btn_ === 2) {
-                img_cirle.x = 0.6;
-                draw(img_cirle, actor.x, actor.y - actor.z, a, 3, 1.5, 0x11FFFFFF, 0xFF000000);
-                img_cirle.x = 0.7;
-                draw(img_cirle, actor.x, actor.y - actor.z, a, 1.5, 0.6, 0xFFFFFF44, 0x00000000);
+                img_circle_4.x = 0.6;
+                draw(img_circle_4, actor.x, actor.y - actor.z, a, 3, 1.5, 0x11FFFFFF, 0xFF000000);
+                img_circle_4.x = 0.7;
+                draw(img_circle_4, actor.x, actor.y - actor.z, a, 1.5, 0.6, 0xFFFFFF44, 0x00000000);
                 draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0xFFFFFFFF);
-                img_cirle.x = 0.5;
+                img_circle_4.x = 0.5;
             } else if (actor.btn_ === 1) {
                 draw(img_box, actor.x, actor.y - actor.z, a, 8, 4, 0x22FFFFFF, 0xFF000000);
                 draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0x22FFFFFF, 0xFF000000);
