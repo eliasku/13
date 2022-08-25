@@ -76,7 +76,10 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
             const hdr = u32[ptr++];
             const c = u32[ptr++];
             const btn_ = u32[ptr++];
-            const GAP = u32[ptr++];
+
+            const anim = u32[ptr++];
+            const anim0_ = anim & 0xFF;
+            const anim_ = (anim >> 8) & 0xFF;
 
             const p: Actor = {
                 type_: hdr & 0xFF,
@@ -84,6 +87,8 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                 weapon_: (hdr >> 16) & 0xFF,
                 c,
                 btn_,
+                anim0_,
+                animHit_: anim_,
 
                 x: f64[(ptr >> 1) + 0],
                 y: f64[(ptr >> 1) + 1],
@@ -179,8 +184,7 @@ export function pack(packet: Packet): ArrayBuffer {
             u32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16);
             u32[ptr++] = p.c;
             u32[ptr++] = p.btn_;
-            // GAP:
-            u32[ptr++] = 0;
+            u32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
 
             f64[(ptr >> 1) + 0] = p.x;
             f64[(ptr >> 1) + 1] = p.y;

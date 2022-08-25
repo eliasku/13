@@ -17,6 +17,7 @@ export const enum ServerEventName {
 export const enum MessageType {
     RtcOffer = 1,
     RtcCandidate = 2,
+    Name = 3,
 }
 
 export interface Message {

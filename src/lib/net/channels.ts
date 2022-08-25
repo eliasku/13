@@ -40,9 +40,9 @@ function send(dc: RTCDataChannel, data: ArrayBuffer) {
 }
 
 export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer) {
-    const dc = client.dc;
+    const dc = client.dc_;
     if (DEBUG_LAG_ENABLED) {
-        client.B = data.byteLength;
+        client.debugPacketByteLength_ = data.byteLength;
         if (data.byteLength >= 1200 / 2) {
             console.warn("HUGE packet could not be delivered: " + data.byteLength);
             //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
@@ -83,6 +83,6 @@ export function channels_processMessage(from: ClientID, msg: MessageEvent<ArrayB
 }
 
 export function getChannelPacketSize(client: RemoteClient) {
-    return DEBUG_LAG_ENABLED ? client.dc.bufferedAmount : (client.B | 0);
+    return DEBUG_LAG_ENABLED ? client.dc_.bufferedAmount : (client.debugPacketByteLength_ | 0);
 }
 

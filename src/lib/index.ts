@@ -1,4 +1,4 @@
-import {connect, disconnect, getClientId, getRemoteClients} from "./net/messaging";
+import {connect, disconnect, getRemoteClients, getUserName, setUserName} from "./net/messaging";
 import {initInput, resetInput} from "./utils/input";
 import {initGL} from "./graphics/gl";
 import {termClear, termFlush, termPrint} from "./debug/log";
@@ -46,6 +46,10 @@ font.load().then(() => {
     loadResources();
     canvas.addEventListener("touchstart", onStart, false);
     canvas.addEventListener("mousedown", onStart, false);
+    if (!getUserName()) {
+        const defaultName = "guest";
+        setUserName(prompt("pick your name", defaultName) || defaultName);
+    }
     state = StartState.TapToConnect;
 });
 
@@ -95,9 +99,9 @@ function doFrame(ts: number) {
             break;
         case StartState.Connecting:
             termPrint("Connecting...\n");
-            termPrint("┌ " + getClientId() + "\n");
+            termPrint("┌ " + getUserName() + "\n");
             for (const rc of getRemoteClients()) {
-                termPrint("├ " + rc.id + " " + (rc.pc ? rc.pc.iceConnectionState : "x") + "\n");
+                termPrint("├ " + rc.name_ + " " + (rc.pc_ ? rc.pc_.iceConnectionState : "x") + "\n");
             }
             break;
         default:

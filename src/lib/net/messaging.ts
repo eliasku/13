@@ -11,10 +11,22 @@ import {
 import {channels_processMessage} from "./channels";
 
 export interface RemoteClient {
-    id: ClientID;
-    pc?: RTCPeerConnection;
-    dc?: RTCDataChannel;
-    B?: number;
+    id_: ClientID;
+    pc_?: RTCPeerConnection;
+    dc_?: RTCDataChannel;
+    name_?: string;
+    debugPacketByteLength_?: number;
+}
+
+let username: string = localStorage.getItem("name");
+
+export function setUserName(name: string) {
+    localStorage.setItem("name", name);
+    username = name;
+}
+
+export function getUserName() {
+    return username;
 }
 
 let clientId: undefined | ClientID = undefined;
@@ -175,7 +187,8 @@ const onSSE: ((data: string) => void)[] = [
         clientId = ids.shift();
         for (const id of ids) {
             console.info(`remote client ${id} observed`);
-            remoteClients[id] = {id};
+            remoteClients[id] = {id_: id};
+            remoteSend(id, MessageType.Name, username);
         }
         waitForConnectedEvent();
     },
@@ -192,10 +205,11 @@ const onSSE: ((data: string) => void)[] = [
     // LIST CHANGE
     (data: string) => {
         const id = Number.parseInt(data);
-        const rc: RemoteClient = id > 0 ? {id} : remoteClients[-id];
+        const rc: RemoteClient = id > 0 ? {id_: id} : remoteClients[-id];
         if (id > 0) {
             remoteClients[id] = rc;
             connectToRemote(rc);
+            remoteSend(id, MessageType.Name, username);
             console.info(`remote client ${id} added`);
         } else if (rc) {
             closePeerConnection(rc);
@@ -265,10 +279,10 @@ const rtcConfiguration: RTCConfiguration = {
 
 async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negotiation?: boolean) {
     try {
-        const pc = remoteClient.pc;
+        const pc = remoteClient.pc_;
         const offer = await pc.createOffer({iceRestart});
         await pc.setLocalDescription(offer);
-        const result = await remoteCall(remoteClient.id, MessageType.RtcOffer, offer);
+        const result = await remoteCall(remoteClient.id_, MessageType.RtcOffer, offer);
         if (result) {
             await pc.setRemoteDescription(new RTCSessionDescription(result));
         }
@@ -278,9 +292,9 @@ async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negot
 }
 
 function initPeerConnection(remoteClient: RemoteClient) {
-    const id = remoteClient.id;
+    const id = remoteClient.id_;
     const pc = new RTCPeerConnection(rtcConfiguration);
-    remoteClient.pc = pc;
+    remoteClient.pc_ = pc;
     pc.onicecandidate = (e) => {
         const candidate = e.candidate;
         if (candidate) {
@@ -297,7 +311,7 @@ function initPeerConnection(remoteClient: RemoteClient) {
         log("received data-channel on Slave");
 
         const channel = e.channel;
-        remoteClient.dc = channel;
+        remoteClient.dc_ = channel;
         if (channel) {
             channel.binaryType = "arraybuffer";
             channel.onmessage = (msg) => channels_processMessage(id, msg);
@@ -311,34 +325,34 @@ function initPeerConnection(remoteClient: RemoteClient) {
 }
 
 function closePeerConnection(toRemoteClient: RemoteClient) {
-    if (toRemoteClient.pc) {
-        if (toRemoteClient.dc) {
-            toRemoteClient.dc.close();
-            toRemoteClient.dc = undefined;
+    if (toRemoteClient.pc_) {
+        if (toRemoteClient.dc_) {
+            toRemoteClient.dc_.close();
+            toRemoteClient.dc_ = undefined;
         }
-        toRemoteClient.pc.close();
-        toRemoteClient.pc = undefined;
+        toRemoteClient.pc_.close();
+        toRemoteClient.pc_ = undefined;
     }
 }
 
 export async function connectToRemote(rc: RemoteClient) {
     initPeerConnection(rc);
-    rc.pc.oniceconnectionstatechange = (e) => {
-        if (rc.pc) {
-            if (rc.pc.iceConnectionState === "failed") {
+    rc.pc_.oniceconnectionstatechange = (e) => {
+        if (rc.pc_) {
+            if (rc.pc_.iceConnectionState === "failed") {
                 sendOffer(rc, true);
-            } else if (rc.pc.iceConnectionState === "disconnected") {
+            } else if (rc.pc_.iceConnectionState === "disconnected") {
                 //disconnect();
             }
         }
     };
     await sendOffer(rc);
 
-    rc.dc = rc.pc.createDataChannel("net", {ordered: false, maxRetransmits: 0});
-    rc.dc.binaryType = "arraybuffer";
-    rc.dc.onopen = () => log("data channel opened");
-    rc.dc.onerror = (e) => console.error("data channel error", e);
-    rc.dc.onmessage = (msg) => channels_processMessage(rc.id, msg);
+    rc.dc_ = rc.pc_.createDataChannel("net", {ordered: false, maxRetransmits: 0});
+    rc.dc_.binaryType = "arraybuffer";
+    rc.dc_.onopen = () => log("data channel opened");
+    rc.dc_.onerror = (e) => console.error("data channel error", e);
+    rc.dc_.onmessage = (msg) => channels_processMessage(rc.id_, msg);
 }
 
 // export function connectToRemotes(): Promise<any> {
@@ -349,25 +363,25 @@ function requireRemoteClient(id: ClientID): RemoteClient {
     let rc = remoteClients[id];
     if (!rc) {
         logWarn(`WARNING: required remote client ${id} not found and created`);
-        remoteClients[id] = rc = {id};
+        remoteClients[id] = rc = {id_: id};
     }
     return rc;
 }
 
 handlers[MessageType.RtcOffer] = async (req) => {
     const remoteClient = requireRemoteClient(req.s);
-    if (!remoteClient.pc) {
+    if (!remoteClient.pc_) {
         initPeerConnection(remoteClient);
     }
     try {
-        await remoteClient.pc.setRemoteDescription(req.a);
+        await remoteClient.pc_.setRemoteDescription(req.a);
     } catch (err) {
         logWarn("setRemoteDescription error");
         //console.error(err);
         return null;
     }
-    const answer = await remoteClient.pc.createAnswer();
-    await remoteClient.pc.setLocalDescription(answer);
+    const answer = await remoteClient.pc_.createAnswer();
+    await remoteClient.pc_.setLocalDescription(answer);
     return answer;
 };
 
@@ -375,13 +389,14 @@ handlers[MessageType.RtcCandidate] = async (req) => {
     if (req.a.candidate) {
         try {
             const rc = requireRemoteClient(req.s);
-            if (!rc.pc) {
+            if (!rc.pc_) {
                 initPeerConnection(rc);
             }
-            await rc.pc.addIceCandidate(new RTCIceCandidate(req.a));
+            await rc.pc_.addIceCandidate(new RTCIceCandidate(req.a));
         } catch (error: any) {
             log("ice candidate set failed: " + error.message);
         }
     }
-    return undefined;
 };
+
+handlers[MessageType.Name] = (req) => requireRemoteClient(req.s).name_ = req.a;

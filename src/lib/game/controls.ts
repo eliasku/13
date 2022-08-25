@@ -4,6 +4,11 @@ import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img_box, img_circle_16} from "./res";
 
+// TODO: positioning of controls
+// ToDO: control zone padding should include max radius
+// TODO: return mouse control
+// TODO: combine pad + keyboard
+
 export const enum ControlsFlag {
     Move = 0x100,
     Run = 0x200,
@@ -109,8 +114,6 @@ interface VPadControl {
     r2_?:number|undefined;
 }
 
-// TODO: positioning of controls
-// ToDO: control zone padding should include max radius
 const vpad: VPadControl[] = [
     {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: 16, r2_: 32},
     {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: 8, r2_: 24},

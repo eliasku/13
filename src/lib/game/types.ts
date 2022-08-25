@@ -5,9 +5,8 @@ export const enum ActorType {
     Barrel = 1,
     Bullet = 2,
     Item = 3,
-
     // static game objects
-    Tree = 16,
+    Tree = 4,
 }
 
 export const enum ItemCategory {
@@ -34,6 +33,10 @@ export interface Actor {
     t2?: number;
     weapon_?:number;
     hp_?:number;
+    // 1 byte: just generated anim start point
+    anim0_?: number;
+    // hit effect (4 bits: 0...15)
+    animHit_?: number;
 }
 
 export interface Client {

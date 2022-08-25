@@ -2,6 +2,7 @@ import {createTexture, getSubTexture, Texture} from "../graphics/draw2d";
 import {createAudioBuffer} from "../audio/sfxr";
 import {createAudioBufferFromSong} from "../audio/soundbox";
 import {song} from "../songs/0bit";
+import {toRad} from "../utils/math";
 
 export let snd_blip: AudioBuffer | null = null;
 export let snd_pick: AudioBuffer | null = null;
@@ -21,27 +22,35 @@ export let img_box: Texture;
 export let img_circle_4: Texture;
 export let img_circle_16: Texture;
 
-function createAtlas(): Texture[] {
+const tempSize = 512;
+const atlasSize = 256;
+
+function createCanvas(w: number, h: number) {
     const canvas = document.createElement("canvas");
-    const SIZE = 256;
-    canvas.width = canvas.height = SIZE;
-    const ctx = canvas.getContext("2d", {alpha: true});
+    canvas.width = w;
+    canvas.height = h;
+    return canvas.getContext("2d", {alpha: true});
+}
+
+function createAtlas(): Texture[] {
+    const temp = createCanvas(tempSize, tempSize);
+    const atlas = createCanvas(atlasSize, atlasSize);
     let x = 1;
     let y = 1;
     let x1 = 1;
     let maxHeight = 0;
     let coords: number[] = [];
 
-    ctx.fillStyle = "#FFF";
+    atlas.fillStyle = "#FFF";
 
     const pushSprite = (w: number, h: number) => {
         x = x1;
-        x1 += w;
-        if (x1 + 1 >= SIZE) {
+        x1 = x + w + 1;
+        if (x1 + 1 >= atlasSize) {
             y += 1 + maxHeight;
             maxHeight = h;
             x = 1;
-            x1 = w + 1;
+            x1 = x + w + 1;
         }
         if (h > maxHeight) maxHeight = h;
         coords.push(x, y, w, h, 0.5, 0.5);
@@ -52,86 +61,142 @@ function createAtlas(): Texture[] {
         const w_ = emojiSize + 4; // 14->16
         const h_ = emojiSize + 6; // 14 -> 20
         pushSprite(w_, h_);
-        ctx.font = emojiSize + "px emoji";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+        atlas.font = emojiSize + "px emoji";
+        atlas.textAlign = "center";
+        atlas.textBaseline = "middle";
         const comp = 1 + (emojiSize / 5);
         const ty = y + (h_ / 2 + comp) | 0;
-        // ctx.fillStyle = "white";
-        ctx.fillText(emoji, x + (w_ >>> 1), ty);
+        atlas.fillText(emoji, x + (w_ >>> 1), ty);
 
-        // ctx.fillStyle = "rgba(255,255,255,0.5)";
-        // ctx.fillRect(x, ty, w_, 1);
-        // ctx.fillRect(x, y, w_, 1);
-        // ctx.fillRect(x, y + h_ - 1, w_, 1);
-
-        const bmp = ctx.getImageData(x, y, w_, h_);
+        const bmp = atlas.getImageData(x, y, w_, h_);
         for (let i = 0; i < bmp.data.length; i += 4) {
             let a = bmp.data[i + 3] / 0xFF;
             if (a > 0.5) {
                 bmp.data[i + 3] = 0xFF;
-                // bmp.data[i + 2] /= a;
-                // bmp.data[i + 1] /= a;
-                // bmp.data[i + 0] /= a;
             } else {
-                bmp.data[i + 3] = 0;
-                bmp.data[i + 2] = 0;
-                bmp.data[i + 1] = 0;
                 bmp.data[i + 0] = 0;
+                bmp.data[i + 1] = 0;
+                bmp.data[i + 2] = 0;
+                bmp.data[i + 3] = 0;
             }
         }
-        ctx.putImageData(bmp, x, y);
+        atlas.putImageData(bmp, x, y);
     }
 
-    const createCircle = (r: number) =>{
+    const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number, a: number, sx: number, sy: number, cut: number) => {
+        const scaleUp = 8;
+        const emojiSize = (size * scaleUp) | 0;
+        temp.clearRect(0, 0, tempSize, tempSize);
+        temp.font = emojiSize + "px emoji";
+        temp.textAlign = "center";
+        temp.textBaseline = "middle";
+        temp.translate(tempSize / 2, tempSize / 2);
+        temp.rotate(toRad(a ?? 0));
+        temp.scale(sx ?? 1, sy ?? 1);
+        temp.fillText(emoji, 0, 0);
+        temp.resetTransform();
+        const alphaThreshold = cut ?? 0x80;
+        const scale = 1 / scaleUp;
+        pushSprite(w, h);
+        // atlas.imageSmoothingEnabled = false;
+        atlas.scale(scale, scale);
+        atlas.translate(-ox, -oy);
+        atlas.drawImage(temp.canvas, (1 + x) / scale, (1 + y) / scale);
+        atlas.resetTransform();
+        // atlas.imageSmoothingEnabled = true;
+        const bmp = atlas.getImageData(x, y, w, h);
+        for (let i = 0; i < bmp.data.length; i += 4) {
+            let a = bmp.data[i + 3];
+            if (a >= alphaThreshold) {
+                bmp.data[i + 3] = 0xFF;
+            } else {
+                bmp.data[i] = 0;
+                bmp.data[i + 1] = 0;
+                bmp.data[i + 2] = 0;
+                bmp.data[i + 3] = 0;
+            }
+        }
+        atlas.putImageData(bmp, x, y);
+    }
+
+    const createCircle = (r: number) => {
         const s = r * 2;
         pushSprite(s, s);
-        ctx.beginPath();
-        ctx.arc(x + r, y + r, r * 0.925, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.fill();
+        atlas.beginPath();
+        atlas.arc(x + r, y + r, r * 0.925, 0, Math.PI * 2);
+        atlas.closePath();
+        atlas.fill();
     }
     // BOX
     pushSprite(1, 1);
-    ctx.fillRect(x, y, 1, 1);
+    atlas.fillRect(x, y, 1, 1);
     // CIRCLE
     createCircle(4);
     createCircle(16);
 
-    emojiSize = 14;
-    `💀,👹,😵,🌚,😷,🤡,👨🏻,🤖,💩,🎃,🤓,😡,🤢,🦝,🐙,🦑,🍏,😾`.split(",").map(createEmoji);
-    emojiSize = 20;
-    `🛢️,📦`.split(",").map(createEmoji);
+    //emojiSize = 14;
+    //`💀,👹,😵,🌚,😷,🤡,👨🏻,🤖,💩,🎃,🤓,😡,🤢,🦝,🐙,🦑,🍏,😾`.split(",").map(createEmoji);
 
-    emojiSize = 10;
-    createEmoji("🔪");
-    emojiSize = 16;
-    createEmoji("🔨");
-    createEmoji("⛏");
-    createEmoji("🗡");
-    emojiSize = 12;
-    createEmoji("🔫");
+    createEmoji2("💀", 198, 166, 17, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("👹", 192, 166, 19, 18, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("😵", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🌚", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("😷", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🤡", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("👨", 203, 166, 16, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🤖", 192, 166, 19, 18, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("💩", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🎃", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🤓", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("😡", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🤢", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🦝", 192, 172, 19, 17, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🐙", 192, 166, 19, 18, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🦑", 201, 166, 16, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("🍏", 203, 166, 16, 19, 16, undefined, undefined, undefined, undefined);
+    createEmoji2("😾", 192, 166, 19, 19, 16, undefined, undefined, undefined, undefined);
 
-    `💊,❤️`.split(",").map(createEmoji);
-    emojiSize = 28;
-    "🌳,🌲".split(",").map(createEmoji);
+    createEmoji2("🔪", 180, 234, 19, 7, 12, -50, undefined, undefined, undefined);
+    createEmoji2("🔨", 193, 189, 20, 13, 16, 44.5, -1, undefined, undefined);
+    createEmoji2("🪓", 198, 210, 20, 10, 16, 45, -1, undefined, undefined);
+    createEmoji2("🗡", 156, 204, 24, 12, 16, -45, -1, undefined, undefined);
+    createEmoji2("🔫", 208, 198, 15, 12, 12, undefined, -1, undefined, undefined);
+    createEmoji2("🖊️", 157, 211, 24, 8, 16, -45, -1, undefined, undefined);
+    createEmoji2("✏️️", 186, 216, 23, 8, 16, 44.5, -1, undefined, undefined);
+    createEmoji2("🪥", 175, 261, 20, 8, 16, 45, undefined, -1, undefined);
+    createEmoji2("⛏", 196, 216, 21, 17, 16, 135, undefined, undefined, undefined);
+
+    createEmoji2("🛢", 203, 144, 16, 23, 20, undefined, undefined, undefined, undefined);
+    createEmoji2("📦", 193, 144, 18, 22, 20, undefined, undefined, undefined, undefined);
+    createEmoji2("🪦", 176, 144, 23, 23, 20, undefined, undefined, undefined, undefined);
+
+    createEmoji2("💊", 216, 200, 13, 13, 10, undefined, undefined, undefined, undefined);
+    createEmoji2("❤️", 208, 194, 15, 13, 12, undefined, undefined, undefined, undefined);
+
+    createEmoji2("🌳", 156, 99, 28, 31, 28, undefined, undefined, undefined, 136);
+    createEmoji2("🌲", 162, 99, 26, 31, 28, undefined, undefined, undefined, 136);
 
     let sprites: Texture[] = [];
-    img_atlas = createTexture(canvas);
+    img_atlas = createTexture(atlas.canvas);
     for (let i = 0; i < coords.length;) {
         sprites.push(getSubTexture(img_atlas, coords[i++], coords[i++], coords[i++], coords[i++], coords[i++], coords[i++]));
     }
 
-    canvas.width = canvas.height = 0;
-    // document.body.appendChild(canvas);
-    // canvas.style.position = "fixed";
-    // canvas.style.top = "0";
-    // canvas.style.left = "0";
+    atlas.canvas.width = atlas.canvas.height = 0;
+    temp.canvas.width = temp.canvas.height = 0;
+    // document.body.appendChild(atlas.canvas);
+    // atlas.canvas.style.position = "fixed";
+    // atlas.canvas.style.top = "0";
+    // atlas.canvas.style.left = "0";
     return sprites;
 }
 
 function createImages() {
-    "💊,💔,❤️,🖤,💙,💛,💜,💗,💖,💕,♡,♥,💕,❤";
+    "💊,💔,🤍,❤️,🖤,💟,💙,💛,🧡,🤎,💜,💗,💖,💕,♡,♥,💕,❤";
+    "🩸🧻";
+    // 🧱 looks like ammo particle
+    // 🪦 when player died
+    // 📏 also good shell alternative yellow color
     "🔥,☁️,☠,🔨,⛏️,🗡,🔪,🔫,🚀,⭐,🌟";
     "★,☆,✢,✥,✦,✧,❂,❉,✯,✰,⋆,✪";
 
@@ -140,29 +205,48 @@ function createImages() {
     img_box = sprites[idx++];
     img_circle_4 = sprites[idx++];
     img_circle_16 = sprites[idx++];
-    for (let i = 0; i < 11 + 7; ++i) {
+    for (let i = 0; i < 18; ++i) {
         img_players.push(sprites[idx++]);
     }
-    img_barrels.push(sprites[idx++], sprites[idx++]);
+
+    img_weapons.push(undefined);
+    for (let i = 0; i < 9; ++i) {
+        img_weapons.push(sprites[idx++]);
+    }
+    img_weapons[1].x = 0.3;
+    // img_weapons[1].y = 0.3;
+
+    img_weapons[2].x = 0.3;
+    // img_weapons[2].y = 0.7;
+    img_weapons[3].x = 0.3;
+    // img_weapons[3].y = 0.7;
+
+    img_weapons[4].x = 0.3;
+    // img_weapons[4].y = 0.3;
+
+    img_weapons[5].x = 0.3;
+    // img_weapons[5].y = 0.4;
+
+    img_weapons[6].x = 0.5;
+    // img_weapons[6].y = 0.6;
+
+    //img_weapons[7].x = img_weapons[7].y = 0.6;
+
+    // img_weapons[8].x = img_weapons[8].y = 0.6;
+
+    for (let i = 0; i < 3; ++i) {
+        img_barrels.push(sprites[idx++]);
+    }
     img_barrels[0].y = 0.95;
     img_barrels[1].y = 0.85;
-    img_weapons.push(sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++], sprites[idx++]);
-    img_weapons[0].x = 0.3;
-    img_weapons[0].y = 0.3;
+    img_barrels[2].y = 0.95;
 
-    img_weapons[1].x = 0.7;
-    img_weapons[1].y = 0.7;
-    img_weapons[2].x = 0.7;
-    img_weapons[2].y = 0.7;
-
-    img_weapons[3].x = 0.7;
-    img_weapons[3].y = 0.3;
-
-    img_weapons[4].x = 0.6;
-    img_weapons[4].y = 0.5;
-
-    img_items.push(sprites[idx++], sprites[idx++]);
-    img_trees.push(sprites[idx++], sprites[idx++]);
+    for (let i = 0; i < 2; ++i) {
+        img_items.push(sprites[idx++]);
+    }
+    for (let i = 0; i < 2; ++i) {
+        img_trees.push(sprites[idx++]);
+    }
     img_trees[0].y = 0.95;
     img_trees[1].y = 0.95;
 }
