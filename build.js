@@ -1,10 +1,11 @@
 import {execSync} from "child_process";
-import {readFileSync, rmSync, writeFileSync} from "fs";
+import {copyFileSync, readFileSync, rmSync, writeFileSync} from "fs";
 
 let report = [];
 const files = ["public/index.js", "public/server.js", "public/index.html"];
-const devBuild = process.argv.indexOf("--dev") > 0;
-const envDef = devBuild ? "development" : "production";
+const zipFolderFiles = ["zip/index.js", "zip/server.js", "zip/index.html"];
+const isProd = process.argv.indexOf("--dev") < 0;
+const envDef = isProd ? "production" : "development";
 
 function del(...files) {
     for (const file of files) {
@@ -35,7 +36,11 @@ function const2let(file) {
     writeFileSync(file, js, "utf8");
 }
 
-del("public/index.js", "public/server.js", "game.zip");
+del("game.zip");
+del(...files);
+del(...zipFolderFiles);
+
+execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
 
 // execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
 execSync(`esbuild server/src/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server.js`);
@@ -47,8 +52,8 @@ const2let("public/index.js");
 report.push("C2LET: " + sz(...files));
 
 
-let compress = ["booleans_as_integers=true","unsafe_arrows=true","passes=8"];//"unsafe=true",
-if(!devBuild) {
+const compress = ["booleans_as_integers=true", "unsafe_arrows=true", "passes=8", "keep_fargs=false"];//"unsafe=true",
+if (isProd) {
     compress.push("drop_console=true");
 }
 
@@ -61,15 +66,18 @@ if (process.argv.indexOf("--zip") > 0) {
     // Include only files you need! Do not include some hidden files like .DS_Store (6kb)
     // execSync(`zip -9 -X -D game.zip public/index.js public/server.js public/index.html`);
     // report.push("ZIP: " + sz("game.zip"));
-    execSync(`roadroller -D -O1 -- public/index.js -o public/index.js`);
-    report.push("ROADROLL: " + sz(...files));
+    execSync(`roadroller -D -O1 -- public/index.js -o zip/index.js`);
+    copyFileSync("public/server.js", "zip/server.js");
+    copyFileSync("public/index.html", "zip/index.html");
+
+    report.push("ROADROLL: " + sz(...zipFolderFiles));
 
     try {
         // https://linux.die.net/man/1/advzip
         // execSync(`advzip --not-zip --shrink-insane --recompress game.zip`);
         const mode = "--shrink-insane";
         // const mode = "--shrink-extra";
-        execSync(`advzip --not-zip ${mode} --iter=1000 --add game.zip ${files.join(" ")}`);
+        execSync(`advzip --not-zip ${mode} --iter=1000 --add game.zip ${zipFolderFiles.join(" ")}`);
         report.push("LZMA: " + sz("game.zip"));
     } catch {
         console.warn("please install `advancecomp`");
@@ -78,36 +86,19 @@ if (process.argv.indexOf("--zip") > 0) {
 
 console.info(report.join("\n"));
 
-
-
-
 // Baseline:
-// BUILD: 93232
-// C2LET: 92538
-// TERSER: 34869
-// ROADROLL: 17151
-// LZMA: 12566
-
-// BUILD: 92829
-// C2LET: 92131
-// TERSER: 34709
-// ROADROLL: 17158
-// LZMA: 12575
-
-// array of callbacks
-// BUILD: 92419
-// C2LET: 91729
-// TERSER: 34565
-// ROADROLL: 17109
-// LZMA: 12539
-
-// LZMA: 12784
-
-// ADD functionality: VPad, new avatars, etc
-// BUILD: 95285
-// C2LET: 94557
-// TERSER: 35219
-// ROADROLL: 17812
-// LZMA: 13107
-
+// -----
+// BUILD: 104797
+// C2LET: 103967
+// TERSER: 38841
+// ROADROLL: 18880
+// LZMA: 13936
+//
+// Length   Method    Size  Ratio   Date   Time   CRC-32    Name
+// --------  ------  ------- -----   ----   ----   ------    ----
+//     16602  Defl:X    12433  25%  08-26-22 10:00  bf80c15c  index.js
+// 1762  Defl:X      873  50%  08-26-22 10:00  bb37c256  server.js
+// 516  Defl:X      326  36%  08-26-22 10:00  917c37a6  index.html
+// --------          -------  ---                            -------
+//     18880            13632  27%                            3 files
 

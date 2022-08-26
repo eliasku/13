@@ -41,7 +41,7 @@ import {
     viewX,
     viewY
 } from "./controls";
-import {inputPointers, keyboardDown} from "../utils/input";
+import {isAnyKeyDown, inputPointers, keyboardDown} from "../utils/input";
 
 let clientActive = true;
 
@@ -639,13 +639,7 @@ function checkPlayerInput() {
     }
 
     if (!waitToSpawn && !player && joined) {
-        let anyKeyDown = 0;
-        for (const p of inputPointers) {
-            if (p.down_) {
-                anyKeyDown = 1;
-            }
-        }
-        if (anyKeyDown) {
+        if (isAnyKeyDown()) {
             respawnPlayer();
         }
     }
@@ -868,7 +862,7 @@ function rtHandler(from: ClientID, buffer: ArrayBuffer) {
         console.warn("income packet data size mismatch");
     }
     // if (!clientActive) {
-    lastFrameTs = performance.now() * 0.001;
+    lastFrameTs = performance.now() / 1000;
     if (tryRunTicks(lastFrameTs)) {
         trySendInput();
         cleaningUpClients();

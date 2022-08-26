@@ -20,6 +20,11 @@ External [Twemoji Mozilla](https://github.com/mozilla/twemoji-colr/releases) is 
 
 
 
+## JS
+
+strict `boolean` to 0/1 conversion: `+(boolean expr)`
+
+strict `undefined|null|number|boolean` to 0/1: `(expr)|0`
 
 # TODO
 

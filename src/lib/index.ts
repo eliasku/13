@@ -1,5 +1,5 @@
 import {connect, disconnect, getRemoteClients, getUserName, setUserName} from "./net/messaging";
-import {initInput, resetInput} from "./utils/input";
+import {isAnyKeyDown, initInput, resetInput} from "./utils/input";
 import {initGL} from "./graphics/gl";
 import {termClear, termFlush, termPrint} from "./debug/log";
 import {initTestGame, updateTestGame} from "./game/game";
@@ -8,7 +8,7 @@ import {loadResources, snd_music} from "./game/res";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
 
-const canvas = document.getElementById("g") as HTMLCanvasElement;
+const canvas = document.getElementById("a") as HTMLCanvasElement;
 let sw = 1000;
 let sh = 1000;
 let ss = 1.0;
@@ -28,9 +28,6 @@ let state = StartState.Loading;
 const onStart = async () => {
     if (state !== StartState.TapToConnect) return;
     state = StartState.Connecting;
-    canvas.removeEventListener("touchstart", onStart);
-    canvas.removeEventListener("mousedown", onStart);
-
     window.addEventListener("beforeunload", disconnect);
     await connect();
 
@@ -44,8 +41,6 @@ const font = new FontFace("emoji", `url(emoji.ttf)`);
 font.load().then(() => {
     document.fonts.add(font);
     loadResources();
-    canvas.addEventListener("touchstart", onStart, false);
-    canvas.addEventListener("mousedown", onStart, false);
     if (!getUserName()) {
         const defaultName = "guest";
         setUserName(prompt("pick your name", defaultName) || defaultName);
@@ -53,36 +48,22 @@ font.load().then(() => {
     state = StartState.TapToConnect;
 });
 
-let idxResize = 0;
-
-function doResize() {
-    if (0 >= --idxResize) {
-        idxResize = 30;
-        const b = document.body;
-        if (ss !== devicePixelRatio || sw !== b.clientWidth || sh !== b.clientHeight) {
-            ss = devicePixelRatio;
-            sw = b.clientWidth;
-            sh = b.clientHeight;
-            canvas.style.width = sw + "px";
-            canvas.style.height = sh + "px";
-            canvas.width = (sw * ss) | 0;
-            canvas.height = (sh * ss) | 0;
-        }
+setInterval(() => {
+    const b = document.body;
+    if (ss !== devicePixelRatio || sw !== b.clientWidth || sh !== b.clientHeight) {
+        ss = devicePixelRatio;
+        sw = b.clientWidth;
+        sh = b.clientHeight;
+        canvas.style.width = sw + "px";
+        canvas.style.height = sh + "px";
+        canvas.width = (sw * ss) | 0;
+        canvas.height = (sh * ss) | 0;
     }
-}
+}, 500);
 
-let tsPrev = 0.0;
-let rawDeltaTime = 0.0;
-let deltaTime = 0.0;
 const raf = (ts: DOMHighResTimeStamp) => {
-    rawDeltaTime = (ts - tsPrev) * 0.001;
-    deltaTime = Math.min(0.1, rawDeltaTime);
-
-    doResize();
-    doFrame(ts / 1000.0);
+    doFrame(ts / 1000);
     resetInput();
-
-    tsPrev = ts;
     requestAnimationFrame(raf);
 };
 
@@ -93,6 +74,9 @@ function doFrame(ts: number) {
     switch (state) {
         case StartState.TapToConnect:
             termPrint("\nTap to connect!\n");
+            if (isAnyKeyDown()) {
+                onStart();
+            }
             break;
         case StartState.Loading:
             termPrint("\nLoading...\n");

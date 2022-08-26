@@ -47,7 +47,7 @@ export function updateControls(player: Actor) {
         viewY = 0;
     }
 
-    shootButtonDown = ((viewX || viewY) && mouse.active_) as any | 0;
+    shootButtonDown = +((viewX || viewY) && mouse.active_);
 
     moveX = ((keyboardState["KeyD"] || keyboardState["ArrowRight"]) | 0)
         - ((keyboardState["KeyA"] || keyboardState["ArrowLeft"]) | 0);
@@ -55,7 +55,7 @@ export function updateControls(player: Actor) {
         - ((keyboardState["KeyW"] || keyboardState["ArrowUp"]) | 0);
 
     if (moveX || moveY) {
-        moveFast = (!(keyboardState["ShiftLeft"] || keyboardState["ShiftRight"])) as any | 0;
+        moveFast = +!(keyboardState["ShiftLeft"] || keyboardState["ShiftRight"]);
     }
 
     jumpButtonDown = keyboardState["Space"] | 0;
@@ -78,8 +78,8 @@ export function updateControls(player: Actor) {
                 const len = Math.hypot(dx, dy);
                 moveX = dx;
                 moveY = dy;
-                moveFast = (len > control.r1_) as any | 0;
-                jumpButtonDown = (len > control.r2_) as any | 0;
+                moveFast = +(len > control.r1_);
+                jumpButtonDown = +(len > control.r2_);
             }
             {
                 const control = vpad[1];
@@ -95,7 +95,7 @@ export function updateControls(player: Actor) {
                 viewY = dy;
                 lookAtX = px + dx * 3;
                 lookAtY = py + dy * 3;
-                shootButtonDown = (len > control.r2_) as any | 0;
+                shootButtonDown = +(len > control.r2_);
             }
             dropButton = vpad[2].pointer_ ? 1 : 0;
         }

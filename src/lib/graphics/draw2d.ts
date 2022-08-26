@@ -109,28 +109,28 @@ export function initDraw2d() {
     createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
 
     // vertexLocation
-    bindAttrib('g', 2, 0, 0, 0, GL.FLOAT, false);
+    bindAttrib("g", 2, 0, 0, 0, GL.FLOAT, false);
 
     // dynamicBuffer
     createBuffer(GL.ARRAY_BUFFER, arrayBuffer, GL.DYNAMIC_DRAW);
 
     // anchorLocation
-    bindAttrib('a', 2, byteSize, 1, 0, GL.FLOAT, false);
+    bindAttrib("a", 2, byteSize, 1, 0, GL.FLOAT, false);
     // scaleLocation
-    bindAttrib('s', 2, byteSize, 1, 8, GL.FLOAT, false);
+    bindAttrib("s", 2, byteSize, 1, 8, GL.FLOAT, false);
     // rotationLocation
-    bindAttrib('r', 1, byteSize, 1, 16, GL.FLOAT, false);
+    bindAttrib("r", 1, byteSize, 1, 16, GL.FLOAT, false);
     // translationLocation
-    bindAttrib('t', 2, byteSize, 1, 20, GL.FLOAT, false);
+    bindAttrib("t", 2, byteSize, 1, 20, GL.FLOAT, false);
     // uvsLocation
-    bindAttrib('u', 4, byteSize, 1, 28, GL.FLOAT, false);
+    bindAttrib("u", 4, byteSize, 1, 28, GL.FLOAT, false);
     // colorLocation
-    bindAttrib('c', 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
+    bindAttrib("c", 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
     // colorOffsetLocation
-    bindAttrib('o', 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
+    bindAttrib("o", 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
 
-    matrixLocation = getUniformLocation('m');
-    textureLocation = getUniformLocation('x');
+    matrixLocation = getUniformLocation("m");
+    textureLocation = getUniformLocation("x");
 }
 
 function begin(w: number, h: number) {

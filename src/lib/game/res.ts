@@ -35,13 +35,12 @@ function createCanvas(w: number, h: number) {
 function createAtlas(): Texture[] {
     const temp = createCanvas(tempSize, tempSize);
     const atlas = createCanvas(atlasSize, atlasSize);
+    atlas.fillStyle = "#FFF";
     let x = 1;
     let y = 1;
     let x1 = 1;
     let maxHeight = 0;
     let coords: number[] = [];
-
-    atlas.fillStyle = "#FFF";
 
     const pushSprite = (w: number, h: number) => {
         x = x1;
@@ -55,33 +54,6 @@ function createAtlas(): Texture[] {
         if (h > maxHeight) maxHeight = h;
         coords.push(x, y, w, h, 0.5, 0.5);
     };
-
-    let emojiSize = 14;
-    const createEmoji = (emoji: string) => {
-        const w_ = emojiSize + 4; // 14->16
-        const h_ = emojiSize + 6; // 14 -> 20
-        pushSprite(w_, h_);
-        atlas.font = emojiSize + "px emoji";
-        atlas.textAlign = "center";
-        atlas.textBaseline = "middle";
-        const comp = 1 + (emojiSize / 5);
-        const ty = y + (h_ / 2 + comp) | 0;
-        atlas.fillText(emoji, x + (w_ >>> 1), ty);
-
-        const bmp = atlas.getImageData(x, y, w_, h_);
-        for (let i = 0; i < bmp.data.length; i += 4) {
-            let a = bmp.data[i + 3] / 0xFF;
-            if (a > 0.5) {
-                bmp.data[i + 3] = 0xFF;
-            } else {
-                bmp.data[i + 0] = 0;
-                bmp.data[i + 1] = 0;
-                bmp.data[i + 2] = 0;
-                bmp.data[i + 3] = 0;
-            }
-        }
-        atlas.putImageData(bmp, x, y);
-    }
 
     const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number, a: number, sx: number, sy: number, cut: number) => {
         const scaleUp = 8;
@@ -133,9 +105,6 @@ function createAtlas(): Texture[] {
     // CIRCLE
     createCircle(4);
     createCircle(16);
-
-    //emojiSize = 14;
-    //`💀,👹,😵,🌚,😷,🤡,👨🏻,🤖,💩,🎃,🤓,😡,🤢,🦝,🐙,🦑,🍏,😾`.split(",").map(createEmoji);
 
     createEmoji2("💀", 198, 166, 17, 19, 16, undefined, undefined, undefined, undefined);
     createEmoji2("👹", 192, 166, 19, 18, 16, undefined, undefined, undefined, undefined);
@@ -214,25 +183,10 @@ function createImages() {
         img_weapons.push(sprites[idx++]);
     }
     img_weapons[1].x = 0.3;
-    // img_weapons[1].y = 0.3;
-
     img_weapons[2].x = 0.3;
-    // img_weapons[2].y = 0.7;
     img_weapons[3].x = 0.3;
-    // img_weapons[3].y = 0.7;
-
     img_weapons[4].x = 0.3;
-    // img_weapons[4].y = 0.3;
-
     img_weapons[5].x = 0.3;
-    // img_weapons[5].y = 0.4;
-
-    img_weapons[6].x = 0.5;
-    // img_weapons[6].y = 0.6;
-
-    //img_weapons[7].x = img_weapons[7].y = 0.6;
-
-    // img_weapons[8].x = img_weapons[8].y = 0.6;
 
     for (let i = 0; i < 3; ++i) {
         img_barrels.push(sprites[idx++]);

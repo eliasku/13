@@ -2,7 +2,7 @@ let ctx_: AudioContext | null = null;
 
 export function getAudioContext(): AudioContext {
     if (!ctx_) {
-        const ctr = (window as any)['AudioContext'] ?? (window as any)['webkitAudioContext'];
+        const ctr = (window as any)["AudioContext"] ?? (window as any)["webkitAudioContext"];
         if (ctr) {
             ctx_ = new AudioContext();
         }

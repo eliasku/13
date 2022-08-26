@@ -32,9 +32,9 @@ export let keyboardDown: Record<string, number> = {};
 export let keyboardUp: Record<string, number> = {};
 
 export function getPointer(id: number): Pointer {
-    for (let i = 0; i < pointers.length; ++i) {
-        if (pointers[i].id_ === id) {
-            return pointers[i];
+    for (const p of pointers) {
+        if (p.id_ === id) {
+            return p;
         }
     }
     const pointer = newPointer(id);
@@ -140,4 +140,11 @@ export function initInput(canvas: HTMLCanvasElement) {
 export function resetInput() {
     keyboardDown = {};
     keyboardUp = {};
+}
+
+export function isAnyKeyDown() {
+    for (const p of pointers) {
+        if (p.down_) return true;
+    }
+    return mousePointer.down_;
 }

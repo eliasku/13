@@ -18,15 +18,7 @@ export function logAssert(expr: boolean): void {
     }
 }
 
-export function logDoc(html: string): void {
-    if (DEBUG_TERM) {
-        const p = document.createElement("p");
-        p.innerHTML = html;
-        document.body.prepend(p);
-    }
-}
-
-let textTerminal: HTMLLabelElement | null = DEBUG_TERM && document.getElementById("l") as HTMLLabelElement;
+let textTerminal: HTMLLabelElement | null = DEBUG_TERM && document.getElementById("c") as HTMLLabelElement;
 let textTerminalBuffer = "";
 
 export function termPrint(text: string) {
