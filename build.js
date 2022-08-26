@@ -52,13 +52,23 @@ const2let("public/index.js");
 report.push("C2LET: " + sz(...files));
 
 
-const compress = ["booleans_as_integers=true", "unsafe_arrows=true", "passes=100", "keep_fargs=false", "pure_getters=true", "pure_funcs=['console.log','console.warn','console.info','console.error']"];//"unsafe=true",
+const compress = [
+    "booleans_as_integers=true",
+    "unsafe_arrows=true",
+    "passes=100",
+    "keep_fargs=false",
+    "pure_getters=true",
+    "pure_funcs=['console.log','console.warn','console.info','console.error']",
+    "unsafe_methods=true",
+];//"unsafe=true",
+
 if (isProd) {
     compress.push("drop_console=true");
 }
 
 execSync(`terser public/server.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/_$/ -m -o public/server.js`);
 execSync(`terser public/index.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/_$/ -m -o public/index.js`);
+
 report.push("TERSER: " + sz(...files));
 
 if (process.argv.indexOf("--zip") > 0) {
@@ -66,6 +76,7 @@ if (process.argv.indexOf("--zip") > 0) {
     // Include only files you need! Do not include some hidden files like .DS_Store (6kb)
     // execSync(`zip -9 -X -D game.zip public/index.js public/server.js public/index.html`);
     // report.push("ZIP: " + sz("game.zip"));
+
     execSync(`roadroller -D -O1 -- public/index.js -o zip/index.js`);
     copyFileSync("public/server.js", "zip/server.js");
     copyFileSync("public/index.html", "zip/index.html");
