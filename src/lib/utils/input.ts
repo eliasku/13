@@ -1,17 +1,31 @@
-export class Pointer {
-    id_ = 0;
-    startX_ = 0;
-    startY_ = 0;
-    prevX_ = 0;
-    prevY_ = 0;
-    x_ = 0;
-    y_ = 0;
-    down_ = false;
-    active_ = false;
+export interface Pointer {
+    id_: number;
+    startX_: number;
+    startY_: number;
+    prevX_: number;
+    prevY_: number;
+    x_: number;
+    y_: number;
+    down_: boolean;
+    active_: boolean;
+}
+
+function newPointer(id_: number): Pointer {
+    return {
+        id_,
+        startX_: 0,
+        startY_: 0,
+        prevX_: 0,
+        prevY_: 0,
+        x_: 0,
+        y_: 0,
+        down_: false,
+        active_: false,
+    };
 }
 
 const pointers: Pointer[] = [];
-export const mousePointer = new Pointer();
+export const mousePointer = newPointer(0);
 export const inputPointers = pointers;
 export const keyboardState: Record<string, number> = {};
 export let keyboardDown: Record<string, number> = {};
@@ -23,8 +37,7 @@ export function getPointer(id: number): Pointer {
             return pointers[i];
         }
     }
-    const pointer = new Pointer();
-    pointer.id_ = id;
+    const pointer = newPointer(id);
     pointers.push(pointer);
     return pointer;
 }

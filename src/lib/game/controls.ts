@@ -1,5 +1,5 @@
 import {gl} from "../graphics/gl";
-import {getPointer, inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
+import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
 import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img_box, img_circle_16} from "./res";
@@ -110,8 +110,8 @@ interface VPadControl {
     flags_?: number;
     pointer_?: Pointer | undefined;
     // any len > undefined = false (undefined is NaN)
-    r1_?:number|undefined;
-    r2_?:number|undefined;
+    r1_?: number | undefined;
+    r2_?: number | undefined;
 }
 
 const vpad: VPadControl[] = [
