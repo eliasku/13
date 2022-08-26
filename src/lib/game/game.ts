@@ -1477,7 +1477,7 @@ function drawPlayer(p: Actor) {
     const speed = Math.hypot(p.u, p.v, p.w);
     const walk = Math.min(1, speed / 100);
     let base = -0.5 * walk * 0.5 * (1.0 + Math.sin(40 * lastFrameTs));
-    const idle_base = (1 - walk) * 0.5 * (Math.pow(1 + Math.sin(15 * lastFrameTs), 2) / 4);
+    const idle_base = (1 - walk) * 0.5 * ((1 + Math.sin(15 * lastFrameTs) ** 2) / 4);
     base += idle_base;
     const leg1 = 5 - 4 * walk * 0.5 * (1.0 + Math.sin(40 * lastFrameTs));
     const leg2 = 5 - 4 * walk * 0.5 * (1.0 + Math.sin(40 * lastFrameTs + Math.PI));

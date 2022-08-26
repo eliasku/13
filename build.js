@@ -97,24 +97,16 @@ if (process.argv.indexOf("--zip") > 0) {
 
 console.info(report.join("\n"));
 
-// Baseline:
-// -----
-// BUILD: 104797
-// C2LET: 103967
-// TERSER: 38841
-// ROADROLL: 18880
-// LZMA: 13936
+// Before:
+// BUILD: 103525
+// C2LET: 102717
+// TERSER: 37641
+// ROADROLL: 18455
+// LZMA: 13620
 
-// item #2
-// BUILD: 103639
-// C2LET: 102835
-// TERSER: 37741
-// ROADROLL: 18512
-// LZMA: 13663
-
-// BUILD: 103570
-// C2LET: 102768
-// TERSER: 37670
-// ROADROLL: 18493
-// LZMA: 13645
-
+// After:
+// BUILD: 102866
+// C2LET: 102072
+// TERSER: 37396
+// ROADROLL: 18413
+// LZMA: 13590

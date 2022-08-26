@@ -35,38 +35,33 @@ const enum FParam {
     p_hpf_ramp,
 }
 
-function pow2(x: number) {
-    return x * x;
-}
-
-function pow3(x: number) {
-    return x * x * x;
-}
+// render volume
+const masterVolume = 1;
+const OVERSAMPLING = 8;
+// default sample parameters
+const base_sound_vol = 0.5;
+const gain = masterVolume * (Math.exp(base_sound_vol) - 1);
 
 // Sound generation parameters are on [0,1] unless noted SIGNED & thus
 // on [-1,1]
 function render(ps: number[]): Float32Array {
-    // render volume
-    const masterVolume = 1;
-    const OVERSAMPLING = 8;
-
     let elapsedSinceRepeat = 0;
 
-    const period0 = 100 / (ps[FParam.p_base_freq] * ps[FParam.p_base_freq] + 0.001);
-    const periodMax = 100 / (ps[FParam.p_freq_limit] * ps[FParam.p_freq_limit] + 0.001);
+    const period0 = 100 / (ps[FParam.p_base_freq] ** 2 + 0.001);
+    const periodMax = 100 / (ps[FParam.p_freq_limit] ** 2 + 0.001);
     const enableFrequencyCutoff = (ps[FParam.p_freq_limit] > 0);
-    const periodMult0 = 1 - pow3(ps[FParam.p_freq_ramp]) * 0.01;
-    const periodMultSlide = -pow3(ps[FParam.p_freq_dramp]) * 0.000001;
+    const periodMult0 = 1 - (ps[FParam.p_freq_ramp] ** 3) * 0.01;
+    const periodMultSlide = -(ps[FParam.p_freq_dramp] ** 3) * 0.000001;
     const dutyCycle0 = 0.5 - ps[FParam.p_duty] * 0.5;
     const dutyCycleSlide0 = -ps[FParam.p_duty_ramp] * 0.00005;
 
     let arpeggioMultiplier: number;
     if (ps[FParam.p_arp_mod] >= 0) {
-        arpeggioMultiplier = 1 - pow2(ps[FParam.p_arp_mod]) * .9;
+        arpeggioMultiplier = 1 - (ps[FParam.p_arp_mod] ** 2) * .9;
     } else {
-        arpeggioMultiplier = 1 + pow2(ps[FParam.p_arp_mod]) * 10;
+        arpeggioMultiplier = 1 + (ps[FParam.p_arp_mod] ** 2) * 10;
     }
-    let arpeggioTime0 = (pow2(1 - ps[FParam.p_arp_speed]) * 20000 + 32) | 0;
+    let arpeggioTime0 = (((1 - ps[FParam.p_arp_speed]) ** 2) * 20000 + 32) | 0;
     if (ps[FParam.p_arp_speed] === 1) {
         arpeggioTime0 = 0;
     }
@@ -82,47 +77,43 @@ function render(ps: number[]): Float32Array {
     const waveShape = ps[FParam.wave] | 0;
 
     // Filter
-    let fltw = pow3(ps[FParam.p_lpf_freq]) * 0.1;
+    let fltw = (ps[FParam.p_lpf_freq] ** 3) * 0.1;
     const enableLowPassFilter = (ps[FParam.p_lpf_freq] !== 1);
     const fltw_d = 1 + ps[FParam.p_lpf_ramp] * 0.0001;
-    let fltdmp = 5 / (1 + pow2(ps[FParam.p_lpf_resonance]) * 20) * (0.01 + fltw);
+    let fltdmp = 5 / (1 + (ps[FParam.p_lpf_resonance] ** 2) * 20) * (0.01 + fltw);
     if (fltdmp > 0.8) {
         fltdmp = 0.8;
     }
-    let flthp = pow2(ps[FParam.p_hpf_freq]) * 0.1;
+    let flthp = (ps[FParam.p_hpf_freq] ** 2) * 0.1;
     const flthp_d = 1 + ps[FParam.p_hpf_ramp] * 0.0003;
 
     // Vibrato
-    const vibratoSpeed = pow2(ps[FParam.p_vib_speed]) * 0.01;
+    const vibratoSpeed = (ps[FParam.p_vib_speed] ** 2) * 0.01;
     const vibratoAmplitude = ps[FParam.p_vib_strength] * 0.5;
 
     // Envelope
     const envelopeLength = [
-        Math.floor(ps[FParam.p_env_attack] * ps[FParam.p_env_attack] * 100000),
-        Math.floor(ps[FParam.p_env_sustain] * ps[FParam.p_env_sustain] * 100000),
-        Math.floor(ps[FParam.p_env_decay] * ps[FParam.p_env_decay] * 100000)
+        ((ps[FParam.p_env_attack] ** 2) * 100000) | 0,
+        ((ps[FParam.p_env_sustain] ** 2) * 100000) | 0,
+        ((ps[FParam.p_env_decay] ** 2) * 100000) | 0,
     ];
     const envelopePunch = ps[FParam.p_env_punch];
 
     // Flanger
-    let flangerOffset = pow2(ps[FParam.p_pha_offset]) * 1020;
+    let flangerOffset = (ps[FParam.p_pha_offset] ** 2) * 1020;
     if (ps[FParam.p_pha_offset] < 0) {
         flangerOffset = -flangerOffset;
     }
-    let flangerOffsetSlide = pow2(ps[FParam.p_pha_ramp]);
+    let flangerOffsetSlide = ps[FParam.p_pha_ramp] ** 2;
     if (ps[FParam.p_pha_ramp] < 0) {
         flangerOffsetSlide = -flangerOffsetSlide;
     }
 
     // Repeat
-    let repeatTime = (pow2(1 - ps[FParam.p_repeat_speed]) * 20000 + 32) | 0;
+    let repeatTime = (((1 - ps[FParam.p_repeat_speed]) ** 2) * 20000 + 32) | 0;
     if (ps[FParam.p_repeat_speed] === 0) {
         repeatTime = 0.0;
     }
-
-    // default sample parameters
-    const base_sound_vol = 0.5;
-    const gain = Math.exp(base_sound_vol) - 1;
 
     ////////// RENDER
     let fltp = 0;
@@ -131,7 +122,7 @@ function render(ps: number[]): Float32Array {
 
     let noise_buffer = new Float32Array(32);
     for (let i = 0; i < 32; ++i) {
-        noise_buffer[i] = Math.random() * 2.0 - 1.0;
+        noise_buffer[i] = Math.random() * 2 - 1;
     }
 
     let envelopeStage = 0;
@@ -257,7 +248,7 @@ function render(ps: number[]): Float32Array {
             } else if (waveShape === WaveShape.SINE) {
                 sub_sample = Math.sin(fp * 2 * Math.PI);
             } else if (waveShape === WaveShape.NOISE) {
-                sub_sample = noise_buffer[Math.floor(phase * 32 / iperiod)];
+                sub_sample = noise_buffer[(phase * 32 / iperiod)|0];
             } else {
                 // no-op; invalid wave shape
             }
@@ -295,7 +286,7 @@ function render(ps: number[]): Float32Array {
         }
 
         // store normalized floating point sample
-        normalized.push(sample * gain * masterVolume / OVERSAMPLING);
+        normalized.push(sample * gain / OVERSAMPLING);
     }
 
     return new Float32Array(normalized);

@@ -1,32 +1,8 @@
 import {audioContext} from "./context";
 
-// Oscillators
-
-function osc_sin(value: number): number {
-    return Math.sin(value * 6.283184);
-}
-
-function osc_saw(value: number): number {
-    return 2 * (value % 1) - 1;
-}
-
-function osc_square(value: number): number {
-    return (value % 1) < 0.5 ? 1 : -1;
-}
-
-function osc_tri(value: number): number {
-    const v2 = (value % 1) * 4;
-    if (v2 < 2) return v2 - 1;
-    return 3 - v2;
-}
-
-function pow2(y: number): number {
-    return Math.pow(2, y);
-}
-
 function getNoteFreq(n: number): number {
     // 174.61.. / 44100 = 0.003959503758 (F3)
-    return 174.61 * pow2((n - 128) / 12) / 44100;
+    return 174.61 * (2 ** ((n - 128) / 12)) / 44100;
 }
 
 function createNote(instr: any, n: number, rowLen: number) {
@@ -43,7 +19,7 @@ function createNote(instr: any, n: number, rowLen: number) {
     const releaseInv = 1 / release;
     const expDecay = -instr.i[13] / 16;
     let arp = instr.i[14];
-    const arpInterval = rowLen * pow2(2 - instr.i[15]);
+    const arpInterval = rowLen * (2 ** (2 - instr.i[15]));
 
     const noteBuf = new Int32Array(attack + sustain + release);
 
@@ -72,15 +48,15 @@ function createNote(instr: any, n: number, rowLen: number) {
             e = j / attack;
         } else if (j >= attack + sustain) {
             e = (j - attack - sustain) * releaseInv;
-            e = (1 - e) * Math.pow(3, expDecay * e);
+            e = (1 - e) * (3 ** (expDecay * e));
         }
 
         // Oscillator 1
-        c1 += o1t * Math.pow(e, o1xenv);
+        c1 += o1t * (e ** o1xenv);
         let sample = osc1(c1) * o1vol;
 
         // Oscillator 2
-        c2 += o2t * Math.pow(e, o2xenv);
+        c2 += o2t * (e ** o2xenv);
         sample += osc2(c2) * o2vol;
 
         // Noise oscillator
@@ -97,16 +73,22 @@ function createNote(instr: any, n: number, rowLen: number) {
 
 // Array of oscillator functions
 const oscillators = [
-    osc_sin,
-    osc_square,
-    osc_saw,
-    osc_tri
+    //osc_sin,
+    (value: number): number => Math.sin(value * 6.283184),
+    //osc_square,
+    (value: number): number => (value % 1) < 0.5 ? 1 : -1,
+    //osc_saw,
+    (value: number): number => 2 * (value % 1) - 1,
+    (value: number): number => {
+        const v2 = (value % 1) * 4;
+        return (v2 < 2) ? (v2 - 1) : (3 - v2);
+    },
 ];
 
 // Generate audio data for a single track
-function generate(song: SongData, mix: Int32Array, track: number): void {
+function generate(song: SongData, mixL: Float32Array, mixR: Float32Array, track: number): void {
     // Put performance critical items in local variables
-    const chnBuf = new Int32Array(mix.length);
+    const chnBuf = new Int32Array(mixL.length * 2);
     const instr = song.songData_[track];
     const rowLen = song.rowLen_;
     const patternLen = song.patternLen_;
@@ -142,7 +124,7 @@ function generate(song: SongData, mix: Int32Array, track: number): void {
             // Put performance critical instrument properties in local variables
             const oscLFO = oscillators[instr.i[16]];
             const lfoAmt = instr.i[17] / 512;
-            const lfoFreq = pow2(instr.i[18] - 9) / rowLen;
+            const lfoFreq = (2 ** (instr.i[18] - 9)) / rowLen;
             const fxLFO = instr.i[19];
             const fxFilter = instr.i[20];
             const fxFreq = instr.i[21] * 43.23529 * 3.141592 / 44100;
@@ -150,7 +132,7 @@ function generate(song: SongData, mix: Int32Array, track: number): void {
             const dist = instr.i[23] * 1e-5;
             const drive = instr.i[24] / 32;
             const panAmt = instr.i[25] / 512;
-            const panFreq = 6.283184 * pow2(instr.i[26] - 9) / rowLen;
+            const panFreq = 6.283184 * (2 ** (instr.i[26] - 9)) / rowLen;
             const dlyAmt = instr.i[27] / 255;
             const dly = instr.i[28] * rowLen & ~1;  // Must be an even number
 
@@ -195,7 +177,7 @@ function generate(song: SongData, mix: Int32Array, track: number): void {
                     // Distortion
                     if (dist) {
                         rsample *= dist;
-                        rsample = rsample < 1 ? rsample > -1 ? osc_sin(rsample * .25) : -1 : 1;
+                        rsample = rsample < 1 ? rsample > -1 ? oscillators[0](rsample * .25) : -1 : 1;
                         rsample /= dist;
                     }
 
@@ -227,48 +209,38 @@ function generate(song: SongData, mix: Int32Array, track: number): void {
                 chnBuf[k + 1] = rsample | 0;
 
                 // ...and add to stereo mix buffer
-                mix[k] += lsample | 0;
-                mix[k + 1] += rsample | 0;
+                mixL[k >> 1] += lsample / 65536;
+                mixR[k >> 1] += rsample / 65536;
             }
         }
     }
 }
 
-function generateAll(song: SongData, mix: Int32Array) {
-    const numTracks = song.numChannels_;
-    for (let i = 0; i < numTracks; ++i) {
-        generate(song, mix, i);
+function generateAll(song: SongData, mixL: Float32Array, mixR: Float32Array) {
+    for (let i = 0; i < song.numChannels_; ++i) {
+        generate(song, mixL, mixR, i);
     }
 }
 
 export function createAudioBufferFromSong(song: SongData): AudioBuffer {
-    const numChannels = 2;
     const len = song.rowLen_ * song.patternLen_ * (song.endPattern_ + 1);
-    const numWords = len * numChannels;
-    const mix = new Int32Array(numWords);
-
-    generateAll(song, mix);
-
-    const buffer = audioContext.createBuffer(numChannels, len, 44100);
-    for (let i = 0; i < numChannels; i++) {
-        const data = buffer.getChannelData(i);
-        for (let j = i; j < numWords; j += numChannels) {
-            data[j >> 1] = mix[j] / 65536;
-        }
-    }
+    const buffer = audioContext.createBuffer(2, len, 44100);
+    const l = buffer.getChannelData(0);
+    const r = buffer.getChannelData(1);
+    generateAll(song, l, r);
     return buffer;
 }
 
 interface SongDataColumn {
-    n:(number|undefined)[];
-    f:(number|undefined)[];
+    n: (number | undefined)[];
+    f: (number | undefined)[];
 }
 
 interface SongDataInstrument {
     // instrument
     i: number[];
     // patterns
-    p: (number|undefined)[];
+    p: (number | undefined)[];
     // columns
     c: SongDataColumn[];
 }
