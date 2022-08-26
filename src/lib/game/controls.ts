@@ -1,5 +1,5 @@
 import {gl} from "../graphics/gl";
-import {getPointer, inputPointers, keyboardState, Pointer} from "../utils/input";
+import {getPointer, inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
 import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img_box, img_circle_16} from "./res";
@@ -32,7 +32,7 @@ export function updateControls(player: Actor) {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
 
-    const mouse = getPointer(-1);
+    const mouse = mousePointer;
 
     const px = player.x;
     const py = player.y - player.z - 10;
@@ -115,7 +115,7 @@ interface VPadControl {
 }
 
 const vpad: VPadControl[] = [
-    {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: 16, r2_: 32},
+    {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: 16, r2_: 48},
     {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: 8, r2_: 24},
     {l_: 0.5, t_: 0, r_: 1, b_: 0.5, flags_: 1},
 ];
@@ -143,8 +143,7 @@ function updateVirtualPad() {
         if (!control.pointer_) {
             // capture
             for (const p of inputPointers) {
-                if (p.id_ >= 0 &&
-                    p.down_ &&
+                if (p.down_ &&
                     testZone(control, p.startX_ / W, p.startY_ / H) &&
                     checkPointerIsAvailableForCapturing(p)) {
                     control.pointer_ = p;

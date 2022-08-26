@@ -11,6 +11,7 @@ export class Pointer {
 }
 
 const pointers: Pointer[] = [];
+export const mousePointer = new Pointer();
 export const inputPointers = pointers;
 export const keyboardState: Record<string, number> = {};
 export let keyboardDown: Record<string, number> = {};
@@ -56,7 +57,7 @@ export function initInput(canvas: HTMLCanvasElement) {
     const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
         const scale = canvas.width / canvas.clientWidth;
         const bb = canvas.getBoundingClientRect();
-        fn(getPointer(-1),
+        fn(mousePointer,
             ((e.clientX - bb.x) * scale) | 0,
             ((e.clientY - bb.y) * scale) | 0);
     };
@@ -65,12 +66,12 @@ export function initInput(canvas: HTMLCanvasElement) {
     }, false);
 
     canvas.addEventListener("mouseup", (e) => {
-        handleUp(getPointer(-1));
+        handleUp(mousePointer);
         e.preventDefault();
     }, false);
 
     canvas.addEventListener("mouseleave", (e) => {
-        handleUp(getPointer(-1));
+        handleUp(mousePointer);
     }, false);
 
     canvas.addEventListener("mouseenter", (e) => {
