@@ -43,8 +43,8 @@ del(...zipFolderFiles);
 execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
 
 // execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
-execSync(`esbuild server/src/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server.js`);
-execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index.js`);
+execSync(`esbuild server/src/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server.js --metafile=server-build.json`);
+execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index.js --metafile=index-build.json`);
 report.push("BUILD: " + sz(...files));
 
 const2let("public/server.js");
@@ -52,7 +52,7 @@ const2let("public/index.js");
 report.push("C2LET: " + sz(...files));
 
 
-const compress = ["booleans_as_integers=true", "unsafe_arrows=true", "passes=8", "keep_fargs=false"];//"unsafe=true",
+const compress = ["booleans_as_integers=true", "unsafe_arrows=true", "passes=100", "keep_fargs=false", "pure_getters=true", "pure_funcs=['console.log','console.warn','console.info','console.error']"];//"unsafe=true",
 if (isProd) {
     compress.push("drop_console=true");
 }
@@ -93,12 +93,10 @@ console.info(report.join("\n"));
 // TERSER: 38841
 // ROADROLL: 18880
 // LZMA: 13936
-//
-// Length   Method    Size  Ratio   Date   Time   CRC-32    Name
-// --------  ------  ------- -----   ----   ----   ------    ----
-//     16602  Defl:X    12433  25%  08-26-22 10:00  bf80c15c  index.js
-// 1762  Defl:X      873  50%  08-26-22 10:00  bb37c256  server.js
-// 516  Defl:X      326  36%  08-26-22 10:00  917c37a6  index.html
-// --------          -------  ---                            -------
-//     18880            13632  27%                            3 files
 
+// item #2
+// BUILD: 103639
+// C2LET: 102835
+// TERSER: 37741
+// ROADROLL: 18512
+// LZMA: 13663

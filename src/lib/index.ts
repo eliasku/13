@@ -1,6 +1,5 @@
 import {connect, disconnect, getRemoteClients, getUserName, setUserName} from "./net/messaging";
-import {isAnyKeyDown, initInput, resetInput} from "./utils/input";
-import {initGL} from "./graphics/gl";
+import {isAnyKeyDown, initInput, updateInput} from "./utils/input";
 import {termClear, termFlush, termPrint} from "./debug/log";
 import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
@@ -8,13 +7,7 @@ import {loadResources, snd_music} from "./game/res";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
 
-const canvas = document.getElementById("a") as HTMLCanvasElement;
-let sw = 1000;
-let sh = 1000;
-let ss = 1.0;
-
-initInput(canvas);
-initGL(canvas);
+initInput();
 initDraw2d();
 
 const enum StartState {
@@ -48,22 +41,9 @@ font.load().then(() => {
     state = StartState.TapToConnect;
 });
 
-setInterval(() => {
-    const b = document.body;
-    if (ss !== devicePixelRatio || sw !== b.clientWidth || sh !== b.clientHeight) {
-        ss = devicePixelRatio;
-        sw = b.clientWidth;
-        sh = b.clientHeight;
-        canvas.style.width = sw + "px";
-        canvas.style.height = sh + "px";
-        canvas.width = (sw * ss) | 0;
-        canvas.height = (sh * ss) | 0;
-    }
-}, 500);
-
 const raf = (ts: DOMHighResTimeStamp) => {
     doFrame(ts / 1000);
-    resetInput();
+    updateInput();
     requestAnimationFrame(raf);
 };
 

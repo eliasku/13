@@ -8,7 +8,7 @@
 import type {SongData} from "../audio/soundbox";
 
 export const song:SongData = {
-    songData: [
+    songData_: [
         { // Instrument 0
             i: [
                 3, // OSC1_WAVEFORM
@@ -306,8 +306,8 @@ export const song:SongData = {
             ]
         },
     ],
-    rowLen: 6014,   // In sample lengths
-    patternLen: 32,  // Rows per pattern
-    endPattern: 14,  // End pattern
-    numChannels: 7  // Number of channels
+    rowLen_: 6014,   // In sample lengths
+    patternLen_: 32,  // Rows per pattern
+    endPattern_: 14,  // End pattern
+    numChannels_: 7  // Number of channels
 };

@@ -1,25 +1,13 @@
-let ctx_: AudioContext | null = null;
-
-export function getAudioContext(): AudioContext {
-    if (!ctx_) {
-        const ctr = (window as any)["AudioContext"] ?? (window as any)["webkitAudioContext"];
-        if (ctr) {
-            ctx_ = new AudioContext();
-        }
-        setupUnlock();
-    }
-    return ctx_;
-}
+export const audioContext = new AudioContext();
 
 const channels: AudioBufferSourceNode[] = [];
 
 export function play(audioBuffer: AudioBuffer, loop?: boolean, vol?: number): AudioBufferSourceNode {
-    const ctx = getAudioContext();
-    const source = ctx.createBufferSource();
+    const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
-    const gainNode = ctx.createGain()
+    const gainNode = audioContext.createGain()
     gainNode.gain.value = vol ?? 1.0;
-    gainNode.connect(ctx.destination);
+    gainNode.connect(audioContext.destination);
     source.connect(gainNode);
     source.loop = !!loop;
     source.start();
@@ -27,25 +15,13 @@ export function play(audioBuffer: AudioBuffer, loop?: boolean, vol?: number): Au
     return source;
 }
 
-export function setupUnlock() {
-    // "touchstart", "touchend", "mousedown", "pointerdown"
-    const events = ["touchstart", "touchend", "mousedown", "click", "keydown"];
-    const num = events.length;
-    const doc = document;
-    const handle = () => {
-        if (ctx_.state === "suspended") {
-            ctx_.resume().then(() => {
-                //log(Message.DeviceResumed);
-            }).catch((reason) => {
-                //error(Message.DeviceResumeError, reason);
-            });
-            return;
-        }
-        for (let i = 0; i < num; ++i) {
-            doc.removeEventListener(events[i], handle, true);
-        }
-    };
-    for (let i = 0; i < num; ++i) {
-        doc.addEventListener(events[i], handle, true);
+export function unlockAudio() {
+    if (audioContext.state === "suspended") {
+        // audioContext.resume().then(() => {
+        //     console.info("AudioContext resumed");
+        // }).catch((reason) => {
+        //     console.error("AudioContext resume failed:", reason);
+        // });
+        audioContext.resume().catch();
     }
 }

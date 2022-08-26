@@ -1,3 +1,6 @@
+import {unlockAudio} from "../audio/context";
+import {gl} from "../graphics/gl";
+
 export interface Pointer {
     id_: number;
     startX_: number;
@@ -6,7 +9,8 @@ export interface Pointer {
     prevY_: number;
     x_: number;
     y_: number;
-    down_: boolean;
+    downEvent_: boolean;
+    upEvent_: boolean;
     active_: boolean;
 }
 
@@ -19,27 +23,25 @@ function newPointer(id_: number): Pointer {
         prevY_: 0,
         x_: 0,
         y_: 0,
-        down_: false,
+        downEvent_: false,
+        upEvent_: false,
         active_: false,
     };
 }
 
-const pointers: Pointer[] = [];
 export const mousePointer = newPointer(0);
-export const inputPointers = pointers;
-export const keyboardState: Record<string, number> = {};
-export let keyboardDown: Record<string, number> = {};
-export let keyboardUp: Record<string, number> = {};
+export const inputPointers = new Map<number, Pointer>();
+export const keyboardState: Set<string> = new Set();
+export const keyboardDown: Set<string> = new Set();
+export const keyboardUp: Set<string> = new Set();
 
 export function getPointer(id: number): Pointer {
-    for (const p of pointers) {
-        if (p.id_ === id) {
-            return p;
-        }
+    let p = inputPointers.get(id);
+    if(!p) {
+        p = newPointer(id);
+        inputPointers.set(id, p);
     }
-    const pointer = newPointer(id);
-    pointers.push(pointer);
-    return pointer;
+    return p;
 }
 
 function handleDown(pointer: Pointer, x: number, y: number) {
@@ -49,7 +51,7 @@ function handleDown(pointer: Pointer, x: number, y: number) {
     pointer.prevY_ = y;
     pointer.startX_ = x;
     pointer.startY_ = y;
-    pointer.down_ = true;
+    pointer.downEvent_ = true;
     pointer.active_ = true;
 }
 
@@ -61,11 +63,12 @@ function handleMove(pointer: Pointer, x: number, y: number) {
 }
 
 function handleUp(pointer: Pointer) {
-    pointer.down_ = false;
+    pointer.upEvent_ = true;
     pointer.active_ = false;
 }
 
-export function initInput(canvas: HTMLCanvasElement) {
+export function initInput() {
+    const canvas = gl.canvas;
     oncontextmenu = e => e.preventDefault();
     const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
         const scale = canvas.width / canvas.clientWidth;
@@ -76,6 +79,7 @@ export function initInput(canvas: HTMLCanvasElement) {
     };
     canvas.addEventListener("mousedown", (e) => {
         handleMouse(e, handleDown);
+        unlockAudio();
     }, false);
 
     canvas.addEventListener("mouseup", (e) => {
@@ -110,6 +114,7 @@ export function initInput(canvas: HTMLCanvasElement) {
     };
     canvas.addEventListener("touchstart", (e) => {
         handleTouchEvent(e, handleDown);
+        unlockAudio();
     }, false);
     canvas.addEventListener("touchmove", (e) => {
         handleTouchEvent(e, handleMove);
@@ -127,24 +132,35 @@ export function initInput(canvas: HTMLCanvasElement) {
     //wnd.addEventListener("keypress", onKey, true);
     wnd.addEventListener("keydown", (e) => {
         e.preventDefault();
-        keyboardDown[e.code] = +(!keyboardState[e.code]);
-        keyboardState[e.code] = 1;
+        if (!keyboardState.has(e.code)) {
+            keyboardDown.add(e.code);
+        }
+        keyboardState.add(e.code);
+        unlockAudio();
     }, false);
     wnd.addEventListener("keyup", (e) => {
         e.preventDefault();
-        keyboardUp[e.code] = +(!!keyboardState[e.code]);
-        keyboardState[e.code] = 0;
+        if (keyboardState.has(e.code)) {
+            keyboardUp.add(e.code);
+        }
+        keyboardState.delete(e.code);
     }, false);
 }
 
-export function resetInput() {
-    keyboardDown = {};
-    keyboardUp = {};
+export function updateInput() {
+    keyboardDown.clear();
+    keyboardUp.clear();
+    mousePointer.downEvent_ = false;
+    mousePointer.upEvent_ = false;
+    for(const [,p] of inputPointers) {
+        p.downEvent_ = false;
+        p.upEvent_ = false;
+    }
 }
 
 export function isAnyKeyDown() {
-    for (const p of pointers) {
-        if (p.down_) return true;
+    for (const [,p] of inputPointers) {
+        if (p.downEvent_) return true;
     }
-    return mousePointer.down_;
+    return mousePointer.downEvent_ || keyboardDown.size;
 }

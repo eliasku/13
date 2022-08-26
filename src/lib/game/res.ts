@@ -52,7 +52,7 @@ function createAtlas(): Texture[] {
             x1 = x + w + 1;
         }
         if (h > maxHeight) maxHeight = h;
-        coords.push(x, y, w, h, 0.5, 0.5);
+        coords.push(x, y, w, h);
     };
 
     const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number, a: number, sx: number, sy: number, cut: number) => {
@@ -148,11 +148,12 @@ function createAtlas(): Texture[] {
     let sprites: Texture[] = [];
     img_atlas = createTexture(atlas.canvas);
     for (let i = 0; i < coords.length;) {
-        sprites.push(getSubTexture(img_atlas, coords[i++], coords[i++], coords[i++], coords[i++], coords[i++], coords[i++]));
+        sprites.push(getSubTexture(img_atlas, coords[i++], coords[i++], coords[i++], coords[i++]));
     }
 
-    atlas.canvas.width = atlas.canvas.height = 0;
-    temp.canvas.width = temp.canvas.height = 0;
+    // TODO: dispose
+    atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
+
     // document.body.appendChild(atlas.canvas);
     // atlas.canvas.style.position = "fixed";
     // atlas.canvas.style.top = "0";

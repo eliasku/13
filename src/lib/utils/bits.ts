@@ -9,5 +9,5 @@ export function u2f(u:number):number {
 export function unorm_f32_from_u32(value: number /* u32 */): number {
     const exponent = 127;
     const mantissa = value & ((1 << 23) - 1);
-    return u2f((exponent << 23) | mantissa) - 1.0;
+    return u2f((exponent << 23) | mantissa) - 1;
 }

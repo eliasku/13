@@ -93,11 +93,11 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                 x: f64[(ptr >> 1) + 0],
                 y: f64[(ptr >> 1) + 1],
                 z: f64[(ptr >> 1) + 2],
-                vx: f64[(ptr >> 1) + 3],
-                vy: f64[(ptr >> 1) + 4],
-                vz: f64[(ptr >> 1) + 5],
-                t: f64[(ptr >> 1) + 6],
-                t2: f64[(ptr >> 1) + 7],
+                u: f64[(ptr >> 1) + 3],
+                v: f64[(ptr >> 1) + 4],
+                w: f64[(ptr >> 1) + 5],
+                s: f64[(ptr >> 1) + 6],
+                t: f64[(ptr >> 1) + 7],
             };
             ptr += 8 * 2;
             lists[p.type_].push(p);
@@ -189,11 +189,11 @@ export function pack(packet: Packet): ArrayBuffer {
             f64[(ptr >> 1) + 0] = p.x;
             f64[(ptr >> 1) + 1] = p.y;
             f64[(ptr >> 1) + 2] = p.z;
-            f64[(ptr >> 1) + 3] = p.vx;
-            f64[(ptr >> 1) + 4] = p.vy;
-            f64[(ptr >> 1) + 5] = p.vz;
-            f64[(ptr >> 1) + 6] = p.t;
-            f64[(ptr >> 1) + 7] = p.t2;
+            f64[(ptr >> 1) + 3] = p.u;
+            f64[(ptr >> 1) + 4] = p.v;
+            f64[(ptr >> 1) + 5] = p.w;
+            f64[(ptr >> 1) + 6] = p.s;
+            f64[(ptr >> 1) + 7] = p.t;
             ptr += 8 * 2;
         }
     }

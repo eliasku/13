@@ -1,5 +1,6 @@
+import {audioContext} from "./context";
+
 // Wave shapes
-import {getAudioContext} from "./context";
 
 const enum WaveShape {
     SQUARE = 0,
@@ -7,11 +8,6 @@ const enum WaveShape {
     SINE = 2,
     NOISE = 3,
 }
-
-// Playback volume
-let masterVolume = 1;
-
-const OVERSAMPLING = 8;
 
 const enum FParam {
     wave = 0,
@@ -47,11 +43,13 @@ function pow3(x: number) {
     return x * x * x;
 }
 
-/*** Main entry point ***/
-
 // Sound generation parameters are on [0,1] unless noted SIGNED & thus
 // on [-1,1]
 function render(ps: number[]): Float32Array {
+    // render volume
+    const masterVolume = 1;
+    const OVERSAMPLING = 8;
+
     let elapsedSinceRepeat = 0;
 
     const period0 = 100 / (ps[FParam.p_base_freq] * ps[FParam.p_base_freq] + 0.001);
@@ -125,7 +123,6 @@ function render(ps: number[]): Float32Array {
     // default sample parameters
     const base_sound_vol = 0.5;
     const gain = Math.exp(base_sound_vol) - 1;
-    const sampleRate = 44100;
 
     ////////// RENDER
     let fltp = 0;
@@ -149,11 +146,7 @@ function render(ps: number[]): Float32Array {
         flanger_buffer[i] = 0;
     }
 
-    let normalized = [];
-
-    let sample_sum = 0;
-    let num_summed = 0;
-    let summands = Math.floor(44100 / sampleRate);
+    let normalized: number[] = [];
 
     for (let t = 0; ; ++t) {
 
@@ -301,31 +294,16 @@ function render(ps: number[]): Float32Array {
             sample += sub_sample * env_vol;
         }
 
-        // Accumulate samples appropriately for sample rate
-        sample_sum += sample;
-        if (++num_summed >= summands) {
-            num_summed = 0;
-            sample = sample_sum / summands;
-            sample_sum = 0;
-        } else {
-            continue;
-        }
-
-        sample = sample / OVERSAMPLING * masterVolume;
-        sample *= gain;
-
         // store normalized floating point sample
-        normalized.push(sample);
+        normalized.push(sample * gain * masterVolume / OVERSAMPLING);
     }
 
     return new Float32Array(normalized);
 }
 
 export function createAudioBuffer(params: number[]): AudioBuffer {
-    const ctx = getAudioContext();
     const samples = render(params);
-    const sampleRate = 44100;
-    const audioBuffer = ctx.createBuffer(1, samples.length, sampleRate);
+    const audioBuffer = audioContext.createBuffer(1, samples.length, 44100);
     audioBuffer.copyToChannel(samples, 0, 0);
     return audioBuffer;
 }

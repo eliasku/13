@@ -1,13 +1,4 @@
-import {log, logWarn} from "../debug/log";
-import {
-    ClientID,
-    EventSourceUrl,
-    Message,
-    MessageData,
-    MessageType,
-    PostMessagesResponse,
-    Request
-} from "../../shared/types";
+import {ClientID, Message, MessageData, MessageType, PostMessagesResponse, Request} from "../../shared/types";
 import {channels_processMessage} from "./channels";
 
 export interface RemoteClient {
@@ -38,7 +29,7 @@ let nextCallId = 1;
 let eventSource: EventSource | null = null;
 
 export function remoteCall(to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> {
-    log(`call to ${to} type ${type}`);
+    console.log(`call to ${to} type ${type}`);
     return new Promise((resolve, reject) => {
         const call = nextCallId++;
         callbacks[call] = (res) => {
@@ -56,7 +47,7 @@ export function remoteCall(to: ClientID, type: MessageType, data: MessageData): 
 }
 
 export function remoteSend(to: ClientID, type: MessageType, data: MessageData): void {
-    log(`send to ${to} type ${type}`);
+    console.log(`send to ${to} type ${type}`);
     messagesToPost.push({
         s: clientId,
         d: to,
@@ -137,7 +128,7 @@ async function process(): Promise<void> {
 
 async function _post(req: Request): Promise<PostMessagesResponse> {
     const body = JSON.stringify(req);
-    const response = await fetch(EventSourceUrl, {
+    const response = await fetch(/*EventSourceUrl*/"0", {
         method: "POST",
         body
     });
@@ -150,12 +141,12 @@ async function _post(req: Request): Promise<PostMessagesResponse> {
 let waitForConnectedEvent: () => void | null = null;
 
 function initSSE(): Promise<void> {
-    log("initialize SSE");
+    console.log("initialize SSE");
     return new Promise((resolve, _) => {
         waitForConnectedEvent = resolve;
-        eventSource = new EventSource(EventSourceUrl);
+        eventSource = new EventSource(/*EventSourceUrl*/ "0");
         eventSource.onerror = (e) => {
-            log("server-event error");
+            console.warn("server-event error");
             termSSE();
         };
         eventSource.onmessage = (e) => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
@@ -164,7 +155,7 @@ function initSSE(): Promise<void> {
 
 function termSSE() {
     if (eventSource) {
-        log("terminate SSE");
+        console.log("terminate SSE");
         eventSource.onerror = null;
         eventSource.onmessage = null;
         eventSource.close();
@@ -242,7 +233,7 @@ export function disconnect() {
         remoteClients = [];
         clientId = undefined;
     } else if (connecting) {
-        logWarn("currently connecting");
+        console.warn("currently connecting");
     }
 }
 
@@ -262,18 +253,7 @@ export function getRemoteClient(id: ClientID): RemoteClient | undefined {
 
 const rtcConfiguration: RTCConfiguration = {
     iceServers: [
-        // {urls: 'stun:23.21.150.121'},
-        // {urls: 'stun:stun.l.google.com:19302?transport=udp'},
         {urls: 'stun:stun.l.google.com:19302'},
-        // {
-        //     urls: [
-        //         "stun:stun.l.google.com:19302",
-        //         "stun:stun1.l.google.com:19302",
-        //         "stun:stun2.l.google.com:19302",
-        //         "stun:stun3.l.google.com:19302",
-        // "stun:stun4.l.google.com:19302",
-        // ]
-        // },
     ],
 };
 
@@ -287,7 +267,7 @@ async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negot
             await pc.setRemoteDescription(new RTCSessionDescription(result));
         }
     } catch (e) {
-        logWarn("Couldn't create offer");
+        console.warn("Couldn't create offer");
     }
 }
 
@@ -303,24 +283,20 @@ function initPeerConnection(remoteClient: RemoteClient) {
     };
 
     pc.onnegotiationneeded = async () => {
-        log("negotiation needed");
+        console.log("negotiation needed");
         await sendOffer(remoteClient, false);
     };
 
     pc.ondatachannel = (e) => {
-        log("received data-channel on Slave");
-
-        const channel = e.channel;
-        remoteClient.dc_ = channel;
-        if (channel) {
-            channel.binaryType = "arraybuffer";
-            channel.onmessage = (msg) => channels_processMessage(id, msg);
-            channel.onerror = () => logWarn("data channel error");
+        console.log("received data-channel on Slave");
+        remoteClient.dc_ = e.channel;
+        if (e.channel) {
+            setupDataChannel(id, e.channel);
         }
     };
 
     pc.onicecandidateerror = (e: RTCPeerConnectionIceErrorEvent) => {
-        log("ice candidate error: " + e.errorText);
+        console.warn("ice candidate error: " + e.errorText);
     };
 }
 
@@ -349,20 +325,20 @@ export async function connectToRemote(rc: RemoteClient) {
     await sendOffer(rc);
 
     rc.dc_ = rc.pc_.createDataChannel("net", {ordered: false, maxRetransmits: 0});
-    rc.dc_.binaryType = "arraybuffer";
-    rc.dc_.onopen = () => log("data channel opened");
-    rc.dc_.onerror = (e) => console.error("data channel error", e);
-    rc.dc_.onmessage = (msg) => channels_processMessage(rc.id_, msg);
+    setupDataChannel(rc.id_, rc.dc_);
 }
 
-// export function connectToRemotes(): Promise<any> {
-//     return Promise.all(remoteClients.filter(x => !!x).map(connectToRemote));
-// }
+function setupDataChannel(id: ClientID, channel: RTCDataChannel) {
+    channel.binaryType = "arraybuffer";
+    channel.onopen = () => console.log("data channel opened");
+    channel.onerror = (e) => console.warn("data channel error", e);
+    channel.onmessage = (msg) => channels_processMessage(id, msg);
+}
 
 function requireRemoteClient(id: ClientID): RemoteClient {
     let rc = remoteClients[id];
     if (!rc) {
-        logWarn(`WARNING: required remote client ${id} not found and created`);
+        console.warn(`WARNING: required remote client ${id} not found and created`);
         remoteClients[id] = rc = {id_: id};
     }
     return rc;
@@ -376,8 +352,7 @@ handlers[MessageType.RtcOffer] = async (req) => {
     try {
         await remoteClient.pc_.setRemoteDescription(req.a);
     } catch (err) {
-        logWarn("setRemoteDescription error");
-        //console.error(err);
+        console.warn("setRemoteDescription error");
         return null;
     }
     const answer = await remoteClient.pc_.createAnswer();
@@ -394,7 +369,7 @@ handlers[MessageType.RtcCandidate] = async (req) => {
             }
             await rc.pc_.addIceCandidate(new RTCIceCandidate(req.a));
         } catch (error: any) {
-            log("ice candidate set failed: " + error.message);
+            console.warn("ice candidate set failed: " + error.message);
         }
     }
 };

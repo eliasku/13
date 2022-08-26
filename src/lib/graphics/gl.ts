@@ -95,210 +95,47 @@ export const enum GL {
     GEQUAL = 0x0206,
     ALWAYS = 0x0207,
 
-
     UNPACK_PREMULTIPLY_ALPHA_WEBGL = 0x9241,
 }
 
-export let gl: WebGL2RenderingContext = null as WebGL2RenderingContext;
+const canvas = document.getElementById("0") as HTMLCanvasElement;
+export const gl: WebGL2RenderingContext = canvas.getContext("webgl2", {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    // seems like disabled by default
+    //stencil: false,
+});
 
-export function initGL(canvas: HTMLCanvasElement) {
-    const params: WebGLContextAttributes = {
-        alpha: false,
-        depth: false,
-        stencil: false,
-        antialias: false
-    };
-    gl = canvas.getContext("webgl2", params);
-    if (!gl) {
-        alert("WebGL 2 is required");
-    }
-    gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
-    // const fp16 = gl.getExtension('EXT_color_buffer_half_float');
-    // const fp32 = gl.getExtension('EXT_color_buffer_float');
-    // if (!fp16 && !fp32) {
-    //     logDoc("😵 <b>EXT_color_buffer_half_float</b> or <b>EXT_color_buffer_float</b> is required");
-    // }
-
-    // const linearFiltering = gl.getExtension('OES_texture_half_float_linear');
-    // if (!linearFiltering) {
-    //     logToDocument("😵‍💫 <b>OES_texture_half_float_linear</b> is required");
-    //     return null;
-    // }
+if (!gl) {
+    alert("WebGL 2 is required");
 }
+gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+// const fp16 = gl.getExtension('EXT_color_buffer_half_float');
+// const fp32 = gl.getExtension('EXT_color_buffer_float');
+// if (!fp16 && !fp32) {
+//     logDoc("😵 <b>EXT_color_buffer_half_float</b> or <b>EXT_color_buffer_float</b> is required");
+// }
 
-export interface TextureObject {
-    texture_: WebGLTexture;
-    width_: number;
-    height_: number;
+// const linearFiltering = gl.getExtension('OES_texture_half_float_linear');
+// if (!linearFiltering) {
+//     logToDocument("😵‍💫 <b>OES_texture_half_float_linear</b> is required");
+//     return null;
+// }
 
-    attach_(id: number): number;
-}
+let ss = 1.0;
+let sw = 1;
+let sh = 1;
 
-export function createTextureDefer(url: string): TextureObject {
-    const texture = gl.createTexture()!;
-    gl.bindTexture(GL.TEXTURE_2D, texture);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.REPEAT);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.REPEAT);
-    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255]));
-
-    let obj: TextureObject = {
-        texture_: texture,
-        width_: 1,
-        height_: 1,
-        attach_(id: number) {
-            gl.activeTexture(GL.TEXTURE0 + id);
-            gl.bindTexture(GL.TEXTURE_2D, texture);
-            return id;
-        }
-    };
-
-    let image = new Image();
-    image.onload = () => {
-        obj.width_ = image.width;
-        obj.height_ = image.height;
-        gl.bindTexture(GL.TEXTURE_2D, texture);
-        gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGB, GL.RGB, GL.UNSIGNED_BYTE, image);
-    };
-    image.src = url;
-
-    return obj;
-}
-
-type UniformMap = { [key: string]: WebGLUniformLocation | null };
-
-function createShader(type: GLenum, code: string) {
-    const shader = gl.createShader(type)!;
-    gl.shaderSource(shader, code);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, GL.COMPILE_STATUS)) {
-        console.warn(gl.getShaderInfoLog(shader));
+setInterval(() => {
+    const b = document.body;
+    if (ss !== devicePixelRatio || sw !== b.clientWidth || sh !== b.clientHeight) {
+        ss = devicePixelRatio;
+        sw = b.clientWidth;
+        sh = b.clientHeight;
+        canvas.style.width = sw + "px";
+        canvas.style.height = sh + "px";
+        canvas.width = (sw * ss) | 0;
+        canvas.height = (sh * ss) | 0;
     }
-    return shader;
-}
-
-function createProgram(vertexShader: string, fragmentShader: string) {
-    const program = gl.createProgram()!;
-    const vs = createShader(GL.VERTEX_SHADER, vertexShader)!;
-    const fs = createShader(GL.FRAGMENT_SHADER, fragmentShader)!;
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, GL.LINK_STATUS)) {
-        console.warn(gl.getProgramInfoLog(program));
-    }
-    return program;
-}
-
-function getUniforms(program: WebGLProgram): UniformMap {
-    let uniforms: UniformMap = {};
-    let uniformCount = gl.getProgramParameter(program, GL.ACTIVE_UNIFORMS);
-    for (let i = 0; i < uniformCount; i++) {
-        let uniformName = gl.getActiveUniform(program, i)?.name;
-        if (uniformName) {
-            uniforms[uniformName] = gl.getUniformLocation(program, uniformName);
-        }
-    }
-    return uniforms;
-}
-
-export class Program {
-    uniforms_: UniformMap;
-    program_: WebGLProgram;
-
-    constructor(vertexShader: string,
-                fragmentShader: string) {
-        this.program_ = createProgram(vertexShader, fragmentShader);
-        this.uniforms_ = getUniforms(this.program_);
-    }
-
-    bind_() {
-        gl.useProgram(this.program_);
-    }
-}
-
-export class Fbo {
-    texture_: WebGLTexture;
-    fbo_: WebGLFramebuffer;
-    texelSizeX_: number;
-    texelSizeY_: number;
-
-    constructor(readonly width_: number,
-                readonly height_: number,
-                internalFormat: GLenum,
-                format: GLenum,
-                type: GLenum,
-                param: GLint) {
-        gl.activeTexture(GL.TEXTURE0);
-
-        this.texture_ = gl.createTexture()!;
-        gl.bindTexture(GL.TEXTURE_2D, this.texture_);
-        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, param);
-        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, param);
-        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
-        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
-        let err = gl.getError();
-        gl.texImage2D(GL.TEXTURE_2D, 0, internalFormat, width_, height_, 0, format, type, null);
-        err = gl.getError();
-        if (err !== GL.NO_ERROR) {
-            console.error(gl);
-        }
-        this.fbo_ = gl.createFramebuffer()!;
-        gl.bindFramebuffer(GL.FRAMEBUFFER, this.fbo_);
-        gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, this.texture_, 0);
-        gl.viewport(0, 0, width_, height_);
-        gl.clear(GL.COLOR_BUFFER_BIT);
-
-        this.texelSizeX_ = 1.0 / width_;
-        this.texelSizeY_ = 1.0 / height_;
-    }
-
-    attach_(id: GLint): GLint {
-        gl.activeTexture(GL.TEXTURE0 + id);
-        gl.bindTexture(GL.TEXTURE_2D, this.texture_);
-        return id;
-    }
-}
-
-export class DoubleFbo {
-    fbo1_: Fbo;
-    fbo2_: Fbo;
-    texelSizeX_: number;
-    texelSizeY_: number;
-
-    constructor(readonly width_: number,
-                readonly height_: number,
-                internalFormat: GLenum,
-                format: GLenum,
-                type: GLenum,
-                param: GLint) {
-        this.fbo1_ = new Fbo(width_, height_, internalFormat, format, type, param);
-        this.fbo2_ = new Fbo(width_, height_, internalFormat, format, type, param);
-
-        this.texelSizeX_ = 1.0 / width_;
-        this.texelSizeY_ = 1.0 / height_;
-    }
-
-    get read_(): Fbo {
-        return this.fbo1_;
-    }
-
-    set read_(value) {
-        this.fbo1_ = value;
-    }
-
-    get write_(): Fbo {
-        return this.fbo2_;
-    }
-
-    set write_(value) {
-        this.fbo2_ = value;
-    }
-
-    swap_() {
-        const temp = this.fbo1_;
-        this.fbo1_ = this.fbo2_;
-        this.fbo2_ = temp;
-    }
-}
+}, 500);

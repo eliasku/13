@@ -1,24 +1,6 @@
 import {DEBUG_TERM, DEV_MODE} from "../game/config";
 
-export function logWarn(msg: string): void {
-    if (DEV_MODE) {
-        console.warn(msg);
-    }
-}
-
-export function log(msg: string): void {
-    if (DEV_MODE) {
-        console.log(msg);
-    }
-}
-
-export function logAssert(expr: boolean): void {
-    if (DEV_MODE) {
-        console.assert(expr);
-    }
-}
-
-let textTerminal: HTMLLabelElement | null = DEBUG_TERM && document.getElementById("c") as HTMLLabelElement;
+const textTerminal: HTMLLabelElement | null = DEBUG_TERM && document.getElementById("1") as HTMLLabelElement;
 let textTerminalBuffer = "";
 
 export function termPrint(text: string) {

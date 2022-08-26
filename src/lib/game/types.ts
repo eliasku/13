@@ -22,15 +22,19 @@ export const enum EffectItemType {
 export interface Actor {
     type_: ActorType;
     c: ClientID;
+    btn_?: number;
+    // position
     x: number;
     y: number;
     z: number;
-    vx: number;
-    vy: number;
-    vz: number;
-    btn_?: number;
+    // velocity
+    u: number;
+    v: number;
+    w: number;
+    // stpq
+    s?: number;
     t?: number;
-    t2?: number;
+
     weapon_?:number;
     hp_?:number;
     // 1 byte: just generated anim start point

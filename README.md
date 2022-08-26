@@ -18,7 +18,12 @@ External [Twemoji Mozilla](https://github.com/mozilla/twemoji-colr/releases) is 
 
 `brew install advancecomp`
 
+## Minimal requirements
 
+- `AudioContext` support is required (available from Safari iOS 14.5, April 2021)
+
+- `webgl2` context is required
+- Modern JS syntax support
 
 ## JS
 

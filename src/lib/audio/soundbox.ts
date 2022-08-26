@@ -1,4 +1,4 @@
-import {getAudioContext} from "./context";
+import {audioContext} from "./context";
 
 // Oscillators
 
@@ -26,7 +26,7 @@ function pow2(y: number): number {
 
 function getNoteFreq(n: number): number {
     // 174.61.. / 44100 = 0.003959503758 (F3)
-    return 0.003959503758 * pow2((n - 128) / 12);
+    return 174.61 * pow2((n - 128) / 12) / 44100;
 }
 
 function createNote(instr: any, n: number, rowLen: number) {
@@ -107,9 +107,9 @@ const oscillators = [
 function generate(song: SongData, mix: Int32Array, track: number): void {
     // Put performance critical items in local variables
     const chnBuf = new Int32Array(mix.length);
-    const instr = song.songData[track];
-    const rowLen = song.rowLen;
-    const patternLen = song.patternLen;
+    const instr = song.songData_[track];
+    const rowLen = song.rowLen_;
+    const patternLen = song.patternLen_;
 
     // Clear effect state
     let low = 0;
@@ -122,7 +122,7 @@ function generate(song: SongData, mix: Int32Array, track: number): void {
     let noteCache = [];
 
     // Patterns
-    const lastRow = song.endPattern;
+    const lastRow = song.endPattern_;
     for (let p = 0; p <= lastRow; ++p) {
         const cp = instr.p[p];
 
@@ -235,22 +235,21 @@ function generate(song: SongData, mix: Int32Array, track: number): void {
 }
 
 function generateAll(song: SongData, mix: Int32Array) {
-    const numTracks = song.numChannels;
+    const numTracks = song.numChannels_;
     for (let i = 0; i < numTracks; ++i) {
         generate(song, mix, i);
     }
 }
 
 export function createAudioBufferFromSong(song: SongData): AudioBuffer {
-    const ctx = getAudioContext();
     const numChannels = 2;
-    const len = song.rowLen * song.patternLen * (song.endPattern + 1);
+    const len = song.rowLen_ * song.patternLen_ * (song.endPattern_ + 1);
     const numWords = len * numChannels;
     const mix = new Int32Array(numWords);
 
     generateAll(song, mix);
 
-    const buffer = ctx.createBuffer(numChannels, len, 44100);
+    const buffer = audioContext.createBuffer(numChannels, len, 44100);
     for (let i = 0; i < numChannels; i++) {
         const data = buffer.getChannelData(i);
         for (let j = i; j < numWords; j += numChannels) {
@@ -275,9 +274,9 @@ interface SongDataInstrument {
 }
 
 export interface SongData {
-    songData: SongDataInstrument[];
-    rowLen: number;
-    patternLen: number;
-    endPattern: number;
-    numChannels: number;
+    songData_: SongDataInstrument[];
+    rowLen_: number;
+    patternLen_: number;
+    endPattern_: number;
+    numChannels_: number;
 }

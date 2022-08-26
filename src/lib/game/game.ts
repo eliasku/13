@@ -2,10 +2,10 @@ import {ClientID} from "../../shared/types";
 import {getClientId, getRemoteClient, getRemoteClients, getUserName} from "../net/messaging";
 import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
-import {log, termPrint} from "../debug/log";
-import {beginRender, beginRenderGroup, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
+import {termPrint} from "../debug/log";
+import {beginRender, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
 import {getSeed, rand, random, seed} from "../utils/rnd";
-import {channels_sendObjectData, getChannelPacketSize, setRTMessageHandler} from "../net/channels";
+import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {
     img_barrels,
     img_box,
@@ -41,7 +41,7 @@ import {
     viewX,
     viewY
 } from "./controls";
-import {isAnyKeyDown, inputPointers, keyboardDown} from "../utils/input";
+import {isAnyKeyDown, keyboardDown} from "../utils/input";
 
 let clientActive = true;
 
@@ -320,12 +320,12 @@ function newItemRandomWeapon(): Actor {
         x: 0,
         y: 0,
         z: 0,
-        vx: 0,
-        vy: 0,
-        vz: 0,
+        u: 0,
+        v: 0,
+        w: 0,
         btn_: 1,
         c: 0,
-        t: pickRandomWeaponId(),
+        s: pickRandomWeaponId(),
         anim0_: rand() & 0xFF,
     };
     state.items_.push(item);
@@ -338,12 +338,12 @@ function newItemRandomEffect(): Actor {
         x: 0,
         y: 0,
         z: 0,
-        vx: 0,
-        vy: 0,
-        vz: 0,
+        u: 0,
+        v: 0,
+        w: 0,
         btn_: 2,
         c: 0,
-        t: rand() % 2,
+        s: rand() % 2,
         anim0_: rand() & 0xFF,
     };
     state.items_.push(item);
@@ -358,15 +358,13 @@ function requireClient(id: ClientID): Client {
 }
 
 export function initTestGame() {
-    log("init game");
-    setRTMessageHandler(rtHandler);
-
-    document.addEventListener("visibilitychange", () => {
-        const active = !document.hidden;
-        if (clientActive !== active) {
-            clientActive = active;
-        }
-    });
+    console.log("init game");
+    // document.addEventListener("visibilitychange", () => {
+    //     const active = !document.hidden;
+    //     if (clientActive !== active) {
+    //         clientActive = active;
+    //     }
+    // });
 }
 
 function drawGame() {
@@ -388,7 +386,6 @@ function drawGame() {
     beginRender(w, h);
     gl.clearColor(0.4, 0.4, 0.4, 1.0);
     gl.clear(GL.COLOR_BUFFER_BIT);
-    beginRenderGroup();
     drawMapBackground();
     drawObjects();
     if (process.env.NODE_ENV === "development") {
@@ -404,7 +401,6 @@ function drawOverlay() {
     const h = gl.drawingBufferHeight;
     camera.toX_ = camera.toY_ = camera.atX_ = camera.atY_ = 0.0;
     beginRender(w, h);
-    beginRenderGroup();
     drawVirtualPad();
     flush()
 }
@@ -423,9 +419,9 @@ function recreateMap() {
                 x: 0,
                 y: 0,
                 z: 0,
-                vx: 0,
-                vy: 0,
-                vz: 0,
+                u: 0,
+                v: 0,
+                w: 0,
                 c: rand() & 1
             })
         );
@@ -449,9 +445,9 @@ function createSeedGameState() {
                 x: 0,
                 y: 0,
                 z: 0,
-                vx: 0,
-                vy: 0,
-                vz: 0,
+                u: 0,
+                v: 0,
+                w: 0,
                 hp_: 3 + rand() % 4,
                 c: rand() & 1
             })
@@ -537,10 +533,10 @@ function printRemoteClients() {
     if (fr > 0) text = "✨";
     if ((simulatedFrames | 0) > 0) text = "🔮";
     prevRenderTic = gameTic;
-    text += ` b:${(((lastFrameTs - prevTime) / Const.NetDt) | 0)}`;
+    text += ` b:${(((lastFrameTs - prevTime) * Const.NetFq) | 0)}`;
     text += " r:" + (simulatedFrames | 0) + (fr > 0 ? "." : "") + "\n";
     text += "d " + (lastFrameTs - prevTime).toFixed(2) + "\n";
-    text += "~ " + (gameTic * Const.NetDt).toFixed(2) + "\n";
+    text += "~ " + (gameTic / Const.NetFq).toFixed(2) + "\n";
     text += "visible: " + drawList.length + "\n";
 
     text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTick}\n`;
@@ -629,7 +625,7 @@ function checkPlayerInput() {
             btn |= ControlsFlag.Drop;
         }
 
-        if (keyboardDown["Digit1"]) {
+        if (keyboardDown.has("Digit1")) {
             ++debugCheckAvatar;
         }
     }
@@ -653,16 +649,16 @@ function checkJoinSync(lastTic: number) {
             if (rc.dc_ && rc.dc_.readyState === "open") {
                 const cl = clients[rc.id_];
                 if (!cl || !cl.ready_) {
-                    log("syncing...");
+                    console.log("syncing...");
                     return;
                 }
             } else {
-                log("still connecting...");
+                console.log("still connecting...");
                 return;
             }
         }
         joined = true;
-        log("All in sync");
+        console.log("All in sync");
         respawnPlayer();
     }
 }
@@ -703,14 +699,14 @@ function tryRunTicks(ts: number): number {
     let framesProcessed = 0;
     while (gameTic <= netTick && frameN > 0) {
         processTicCommands(getCommandsForTic(gameTic));
-        simulateTic(Const.NetDt);
+        simulateTic(1/Const.NetFq);
         ++gameTic;
         --frameN;
         ++framesProcessed;
     }
     // compensate
     // we must try to keep netTic >= gameTic + Const.InputDelay
-    prevTime += framesProcessed * Const.NetDt;
+    prevTime += framesProcessed / Const.NetFq;
 
     // we played all available net-events
     const dropRate = 1;
@@ -718,12 +714,12 @@ function tryRunTicks(ts: number): number {
     if (gameTic > netTick) {
         // slow down a bit in case if we predict a lot
         const allowFramesToPredict = Const.InputDelay;
-        if (ts - prevTime > allowFramesToPredict * Const.NetDt) {
+        if (ts - prevTime > allowFramesToPredict / Const.NetFq) {
             // console.info("slow down");
 
             // prevTime += Const.NetDt * dropRate;
             // prevTime += 0.1 * (ts - prevTime);
-            prevTime = (1 - k) * prevTime + k * (ts - allowFramesToPredict * Const.NetDt);
+            prevTime = (1 - k) * prevTime + k * (ts - allowFramesToPredict / Const.NetFq);
 
             // prevTime = ts - allowFramesToPredict * Const.NetDt;
         }
@@ -733,7 +729,7 @@ function tryRunTicks(ts: number): number {
             // speed up
             // console.info("speed up");
             // prevTime -= Const.NetDt * dropRate;
-            prevTime = (1 - k) * prevTime + k * (ts - Const.InputDelay * Const.NetDt);
+            prevTime = (1 - k) * prevTime + k * (ts - Const.InputDelay / Const.NetFq);
 
             // prevTime = ts - Const.InputDelay * Const.NetDt;
         }
@@ -854,7 +850,7 @@ function processPacket(sender: Client, data: Packet) {
     }
 }
 
-function rtHandler(from: ClientID, buffer: ArrayBuffer) {
+export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
     const data = unpack(buffer);
     if (data) {
         processPacket(requireClient(from), data);
@@ -901,11 +897,11 @@ function processTicCommands(commands: ClientEvent[]) {
                 x: cmd.spawn_.x,
                 y: cmd.spawn_.y,
                 z: cmd.spawn_.z,
-                vx: 0,
-                vy: 0,
-                vz: 0,
+                u: 0,
+                v: 0,
+                w: 0,
+                s: 0,
                 t: 0,
-                t2: 0,
                 weapon_: 0,
                 hp_: 10,
             };
@@ -935,16 +931,16 @@ function pickItem(item: Actor, player: Actor) {
         const playerHasNoWeapon = !player.weapon_;
         const playerNotDropping = !(player.btn_ & ControlsFlag.Drop);
         if (playerHasNoWeapon && playerNotDropping) {
-            player.weapon_ = item.t;
+            player.weapon_ = item.s;
             play(snd_pick, false, 0.5);
             item.btn_ = 0;
         }
     }
     if (item.btn_ & 2) {
-        if (item.t === EffectItemType.Med) {
+        if (item.s === EffectItemType.Med) {
             play(snd_med, false, 0.5);
             item.btn_ = 0;
-        } else if (item.t === EffectItemType.Health) {
+        } else if (item.s === EffectItemType.Health) {
             if (player.hp_ < 10) {
                 ++player.hp_;
                 play(snd_heal, false, 0.5);
@@ -961,12 +957,12 @@ function updateAnim(actor: Actor, dt: number) {
 }
 
 function applyVelocityPlaneFriction(p: Actor, amount: number) {
-    let v0 = Math.hypot(p.vx, p.vy);
+    let v0 = Math.hypot(p.u, p.v);
     if (v0 > 0) {
         const v1 = reach(v0, 0, amount);
         const k = v1 / v0;
-        p.vx *= k;
-        p.vy *= k;
+        p.u *= k;
+        p.v *= k;
     }
 }
 
@@ -1011,9 +1007,9 @@ function simulateTic(dt: number) {
         if (collideBounds(bullet)) {
             bullet.btn_ = 0;
         }
-        if (bullet.t > 0) {
-            bullet.t -= dt;
-            if (bullet.t <= 0) {
+        if (bullet.s > 0) {
+            bullet.s -= dt;
+            if (bullet.s <= 0) {
                 bullet.btn_ = 0;
             }
         }
@@ -1132,9 +1128,9 @@ function kill(actor: Actor) {
             item.x = actor.x;
             item.y = actor.y;
             item.z = actor.z + objectHeightByType[actor.type_];
-            item.vx = v * Math.cos(a);
-            item.vy = v * Math.sin(a);
-            item.vz = v;
+            item.u = v * Math.cos(a);
+            item.v = v * Math.sin(a);
+            item.w = v;
             item.animHit_ = hitAnimMax;
         }
     }
@@ -1146,20 +1142,20 @@ function kill(actor: Actor) {
             item.x = actor.x;
             item.y = actor.y;
             item.z = actor.z + objectHeightByType[actor.type_];
-            item.vx = actor.vx + v * Math.cos(a);
-            item.vy = actor.vy + v * Math.sin(a);
-            item.vz = actor.vz + v;
-            item.t = actor.weapon_;
+            item.u = actor.u + v * Math.cos(a);
+            item.v = actor.v + v * Math.sin(a);
+            item.w = actor.w + v;
+            item.s = actor.weapon_;
             item.animHit_ = hitAnimMax;
         }
-        const grave = {
+        const grave: Actor = {
             type_: ActorType.Barrel,
             x: actor.x,
             y: actor.y,
             z: actor.z + objectHeightByType[actor.type_],
-            vx: actor.vx,
-            vy: actor.vy,
-            vz: actor.vz + 32,
+            u: actor.u,
+            v: actor.v,
+            w: actor.w + 32,
             hp_: 20,
             c: 2
         };
@@ -1168,8 +1164,8 @@ function kill(actor: Actor) {
 }
 
 function hitWithBullet(actor: Actor, bullet: Actor) {
-    actor.vx += 0.1 * bullet.vx;
-    actor.vy += 0.1 * bullet.vy;
+    actor.u += 0.1 * bullet.u;
+    actor.v += 0.1 * bullet.v;
     actor.animHit_ = hitAnimMax;
     bullet.btn_ = 0;
     if (actor.hp_ > 0) {
@@ -1193,18 +1189,18 @@ function updateBulletCollision(list: Actor[]) {
 }
 
 function updateBody(body: Actor, dt: number, g: number) {
-    body.x += body.vx * dt;
-    body.y += body.vy * dt;
-    body.z += body.vz * dt;
-    body.vz -= g * dt;
+    body.x += body.u * dt;
+    body.y += body.v * dt;
+    body.z += body.w * dt;
+    body.w -= g * dt;
 
     if (body.z <= 0) {
         body.z = 0;
-        if (body.vz < 0.0) {
+        if (body.w < 0.0) {
             if (body.type_ === ActorType.Player) {
-                body.vz = 0.0;
+                body.w = 0.0;
             } else {
-                body.vz = (-body.vz) >>> 2;
+                body.w = (-body.w) >>> 2;
             }
         }
     }
@@ -1216,27 +1212,27 @@ function collideBounds(body: Actor): number {
     if (body.y >= boundsSize - R) {
         body.y = boundsSize - R;
         has = 1;
-        if (body.vy > 0) {
-            body.vy = -body.vy / 2;
+        if (body.v > 0) {
+            body.v = -body.v / 2;
         }
     } else if (body.y <= R) {
         body.y = R;
         has = 1;
-        if (body.vy < 0) {
-            body.vy = -body.vy / 2;
+        if (body.v < 0) {
+            body.v = -body.v / 2;
         }
     }
     if (body.x >= boundsSize - R) {
         body.x = boundsSize - R;
         has = 1;
-        if (body.vx > 0) {
-            body.vx = -body.vx / 2;
+        if (body.u > 0) {
+            body.u = -body.u / 2;
         }
     } else if (body.x <= R) {
         body.x = R;
         has = 1;
-        if (body.vx < 0) {
-            body.vx = -body.vx / 2;
+        if (body.u < 0) {
+            body.u = -body.u / 2;
         }
     }
     return has;
@@ -1247,12 +1243,12 @@ function updatePlayer(player: Actor, dt: number) {
         player.btn_ = 0;
     }
 
-    let grounded = player.z === 0 && player.vz === 0;
+    let grounded = player.z === 0 && player.w === 0;
 
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
             player.z = 1;
-            player.vz = jumpVel;
+            player.w = jumpVel;
             grounded = false;
             play(snd_blip, false, 0.2 + 0.8 * random());
         }
@@ -1262,8 +1258,8 @@ function updatePlayer(player: Actor, dt: number) {
         const dir = unpackAngleByte(player.btn_ & 0xFF, Const.AnglesRes);
         const speed = (player.btn_ & ControlsFlag.Run) ? 2 : 1;
         const vel = speed * 60;
-        player.vx = reach(player.vx, vel * Math.cos(dir), vel * dt * c);
-        player.vy = reach(player.vy, vel * Math.sin(dir), vel * dt * c);
+        player.u = reach(player.u, vel * Math.cos(dir), vel * dt * c);
+        player.v = reach(player.v, vel * Math.sin(dir), vel * dt * c);
     } else {
         applyVelocityPlaneFriction(player, 100 * dt * c);
     }
@@ -1278,13 +1274,13 @@ function updatePlayer(player: Actor, dt: number) {
                 x: player.x + objectRadiusUnit * dx,
                 y: player.y + objectRadiusUnit * dy,
                 z: player.z + PlayerHandsZ,
-                vx: 64 * Math.cos(angle),
-                vy: 64 * Math.sin(angle),
-                vz: 0,
+                u: 64 * Math.cos(angle),
+                v: 64 * Math.sin(angle),
+                w: 0,
                 c: 0,
                 // set weapon item
                 btn_: 1,
-                t: player.weapon_,
+                s: player.weapon_,
                 anim0_: rand() & 0xFF,
                 animHit_: hitAnimMax,
             });
@@ -1294,22 +1290,22 @@ function updatePlayer(player: Actor, dt: number) {
 
     const weapon = getWeapon(player);
     let cooldownSpeed = (player.btn_ & ControlsFlag.Shooting) ? 1 : 2;
-    player.t = reach(player.t, 0, cooldownSpeed * weapon.rate_ * dt);
+    player.s = reach(player.s, 0, cooldownSpeed * weapon.rate_ * dt);
     if (player.btn_ & ControlsFlag.Shooting) {
-        if (!player.t) {
+        if (!player.s) {
             cameraShake = Math.max(weapon.cameraShake_, cameraShake);
             const angle = unpackAngleByte((player.btn_ >>> 16) & 0xFF, Const.ViewAngleRes)
-                + Math.min(1, player.t2) * (0.5 - random()) * weapon.angleSpread_;
+                + Math.min(1, player.t) * (0.5 - random()) * weapon.angleSpread_;
             let x0 = player.x;
             let y0 = player.y;
             const dx = Math.cos(angle);
             const dy = Math.sin(angle);
-            player.t = 1;
+            player.s = 1;
             cameraFeedback = 1;
-            player.t2 = reach(player.t2, 1, dt * weapon.detuneSpeed_);
-            player.vx -= weapon.kickBack_ * dx;
-            player.vy -= weapon.kickBack_ * dy;
-            player.vz += weapon.jumpBack_;
+            player.t = reach(player.t, 1, dt * weapon.detuneSpeed_);
+            player.u -= weapon.kickBack_ * dx;
+            player.v -= weapon.kickBack_ * dy;
+            player.w += weapon.jumpBack_;
             // most fast moving object: (r * 2) * 60 = 960
             //const maxSpeed = objectRadiusUnit * 2 * Const.NetFq;
             play(snd_shoot, false, 0.1 + 0.1 * random());
@@ -1320,15 +1316,15 @@ function updatePlayer(player: Actor, dt: number) {
                 x: x0 + weapon.offset_ * dx,
                 y: y0 + weapon.offset_ * dy,
                 z: player.z + PlayerHandsZ + weapon.offsetZ_,
-                vx: bulletVelocity * dx,
-                vy: bulletVelocity * dy,
-                vz: 0,
+                u: bulletVelocity * dx,
+                v: bulletVelocity * dy,
+                w: 0,
                 btn_: weapon.bulletType_,
-                t: weapon.bulletLifeTime_,
+                s: weapon.bulletLifeTime_,
             });
         }
     } else {
-        player.t2 = reach(player.t2, 0, dt * 16);
+        player.t = reach(player.t, 0, dt * 16);
     }
 }
 
@@ -1349,11 +1345,11 @@ function beginPrediction() {
     // let time = lastFrameTs - prevTime;
     let tic = gameTic;
     while (time > 0) {
-        const dt = Math.min(time, Const.NetDt);
+        const dt = Math.min(time, 1/Const.NetFq);
         processTicCommands(getCommandsForTic(tic));
         simulateTic(dt);
         time -= dt;
-        simulatedFrames += dt / Const.NetDt;
+        simulatedFrames += dt * Const.NetFq;
         ++tic;
     }
 }
@@ -1368,9 +1364,9 @@ function drawShadows() {
         let shadowScale = (2 - actor.z / 64.0);
         if (actor.type_ === ActorType.Bullet) {
             shadowScale *= 2;
-            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0x11FFFFFF, 0xFF000000);
+            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0.07, 0xFFFFFF, 1);
         } else {
-            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0x77000000);
+            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0.5, 0x0);
         }
     }
 }
@@ -1397,19 +1393,19 @@ function collectVisibleActors(...lists: Actor[][]) {
 
 function drawMapBackground() {
     if (imgMap) {
-        draw(imgMap, 0, 0, 0, 1, 1, 0xFFFFFFFF);
+        draw(imgMap, 0, 0, 0, 1, 1);
     }
     img_box.x = img_box.y = 0;
-    draw(img_box, 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 0xFF666666);
-    draw(img_box, 0, -objectRadiusUnit * 3, 0, boundsSize + 2, objectRadiusUnit * 4, 0x77000000);
+    draw(img_box, 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
+    draw(img_box, 0, -objectRadiusUnit * 3, 0, boundsSize + 2, objectRadiusUnit * 4, 0.5, 0);
     img_box.x = img_box.y = 0.5;
 }
 
 function drawMapOverlay() {
     img_box.x = img_box.y = 0;
-    draw(img_box, 0, boundsSize - objectRadiusUnit * 2, 0, boundsSize + 2, objectRadiusUnit * 4, 0xFF666666);
-    draw(img_box, -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 0xFF666666);
-    draw(img_box, boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 0xFF666666);
+    draw(img_box, 0, boundsSize - objectRadiusUnit * 2, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
+    draw(img_box, -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
+    draw(img_box, boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
 
     img_box.x = img_box.y = 0.5;
 }
@@ -1418,11 +1414,11 @@ function drawCrosshair() {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
         img_box.y = 2;
-        const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t2) + 4 * Math.min(1, p0.t);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.0, 2, len, 0x77FFFFFF);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.5, 2, len, 0x77FFFFFF);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.0, 2, len, 0x77FFFFFF);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.5, 2, len, 0x77FFFFFF);
+        const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t) + 4 * Math.min(1, p0.s);
+        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.0, 2, len, 0.5);
+        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.5, 2, len, 0.5);
+        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.0, 2, len, 0.5);
+        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.5, 2, len, 0.5);
         img_box.y = 0.5;
     }
 }
@@ -1430,14 +1426,14 @@ function drawCrosshair() {
 function drawItem(item: Actor) {
     const colorOffset = getHitColorOffset(item.animHit_);
     if (item.btn_ === ItemCategory.Weapon) {
-        const weapon = weapons[item.t];
+        const weapon = weapons[item.s];
         const img = img_weapons[weapon.gfx_];
         if (img) {
             const px = img.x;
             const py = img.y;
             img.x = 0.5;
             img.y = 0.7;
-            draw(img, item.x, item.y - item.z, 0, 0.8, 0.8, 0xFFFFFFFF, colorOffset);
+            draw(img, item.x, item.y - item.z, 0, 0.8, 0.8, 1, 0xFFFFFF, 0, colorOffset);
             img.x = px;
             img.y = py;
         }
@@ -1445,7 +1441,7 @@ function drawItem(item: Actor) {
         const anim = item.anim0_ / 0xFF;
         const s = 1 + 0.1 * Math.sin(16 * (lastFrameTs + anim * 10));
         const o = 2 * Math.cos(lastFrameTs + anim * 10);
-        draw(img_items[item.t], item.x, item.y - item.z - objectRadiusUnit - o, 0, s, s, 0xFFFFFFFF, colorOffset);
+        draw(img_items[item.s], item.x, item.y - item.z - objectRadiusUnit - o, 0, s, s, 1, 0xFFFFFF, 0, colorOffset);
     }
 }
 
@@ -1464,17 +1460,17 @@ function drawObjects() {
         } else if (type === ActorType.Tree) {
             drawTree(actor);
         } else if (type === ActorType.Bullet) {
-            const a = Math.atan2(actor.vy, actor.vx);
+            const a = Math.atan2(actor.v, actor.u);
             if (actor.btn_ === 2) {
                 img_circle_4.x = 0.6;
-                draw(img_circle_4, actor.x, actor.y - actor.z, a, 3, 1.5, 0x11FFFFFF, 0xFF000000);
+                draw(img_circle_4, actor.x, actor.y - actor.z, a, 3, 1.5, 0.07, 0xFFFFFF, 1);
                 img_circle_4.x = 0.7;
-                draw(img_circle_4, actor.x, actor.y - actor.z, a, 1.5, 0.6, 0xFFFFFF44, 0x00000000);
-                draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0xFFFFFFFF);
+                draw(img_circle_4, actor.x, actor.y - actor.z, a, 1.5, 0.6, 1, 0xFFFF44);
+                draw(img_box, actor.x, actor.y - actor.z, a, 4, 2);
                 img_circle_4.x = 0.5;
             } else if (actor.btn_ === 1) {
-                draw(img_box, actor.x, actor.y - actor.z, a, 8, 4, 0x22FFFFFF, 0xFF000000);
-                draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0x22FFFFFF, 0xFF000000);
+                draw(img_box, actor.x, actor.y - actor.z, a, 8, 4, 0.13, 0xFFFFFF, 1);
+                draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0.13, 0xFFFFFF, 1);
             }
         } else if (type === ActorType.Item) {
             drawItem(actor);
@@ -1487,7 +1483,7 @@ function drawPlayer(p: Actor) {
 
     const x = p.x;
     const y = p.y - p.z;
-    const speed = Math.hypot(p.vx, p.vy, p.vz);
+    const speed = Math.hypot(p.u, p.v, p.w);
     const walk = Math.min(1, speed / 100);
     let base = -0.5 * walk * 0.5 * (1.0 + Math.sin(40 * lastFrameTs));
     const idle_base = (1 - walk) * 0.5 * (Math.pow(1 + Math.sin(15 * lastFrameTs), 2) / 4);
@@ -1528,7 +1524,7 @@ function drawPlayer(p: Actor) {
     const A = Math.sin(weaponAngle - Math.PI);
     let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
     if (wpn.bulletType_ === 1) {
-        const t = Math.max(0, (p.t - 0.8) * 5);
+        const t = Math.max(0, (p.s - 0.8) * 5);
         wd += t * 12;
         weaponAngle -= Math.PI * 0.25 * Math.sin(t * t * Math.PI * 2);
     }
@@ -1543,21 +1539,21 @@ function drawPlayer(p: Actor) {
     weaponAngle += weaponBaseAngle;
 
     if (weaponBack && wpn.gfx_ > 0) {
-        draw(img_weapons[wpn.gfx_], weaponX, weaponY, weaponAngle, weaponSX, weaponSY, 0xFFFFFFFF);
+        draw(img_weapons[wpn.gfx_], weaponX, weaponY, weaponAngle, weaponSX, weaponSY);
     }
 
     img_box.x = 0.5;
     img_box.y = 0;
-    draw(img_box, x - 3, y + 4 - 8 - 1, 0, 2, leg1, 0xFF888888, co);
-    draw(img_box, x + 3, y + 4 - 8 - 1, 0, 2, leg2, 0xFF888888, co);
+    draw(img_box, x - 3, y + 4 - 8 - 1, 0, 2, leg1, 1, 0x888888, 0, co);
+    draw(img_box, x + 3, y + 4 - 8 - 1, 0, 2, leg2, 1, 0x888888, 0, co);
     img_box.x = 0.5;
     img_box.y = 0.5;
-    draw(img_box, x, y - 6 - 1 + base, 0, 8, 6, 0xFF444444, co);
+    draw(img_box, x, y - 6 - 1 + base, 0, 8, 6, 1, 0x444444, 0, co);
 
     {
-        const s = p.vz * 0.002;
-        const a = 0.002 * p.vx;
-        draw(img_players[(p.c + debugCheckAvatar) % img_players.length], x, y - 16 + base * 2, a, 1 - s, 1 + s, 0xFFFFFFFF, co);
+        const s = p.w * 0.002;
+        const a = 0.002 * p.u;
+        draw(img_players[(p.c + debugCheckAvatar) % img_players.length], x, y - 16 + base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);
     }
 
 
@@ -1573,18 +1569,18 @@ function drawPlayer(p: Actor) {
     const rArmLen = Math.hypot(weaponX - rArmX, weaponY - armY) - 1;
 
     if (wpn.gfx_ > 0) {
-        draw(img_box, x + 4, y - 4 - 5 - 1 + base, rArmRot, rArmLen, 2, 0xFF888888, co);
-        draw(img_box, x - 4, y - 4 - 5 - 1 + base, lArmRot, lArmLen, 2, 0xFF888888, co);
+        draw(img_box, x + 4, y - 4 - 5 - 1 + base, rArmRot, rArmLen, 2, 1, 0x888888, 0, co);
+        draw(img_box, x - 4, y - 4 - 5 - 1 + base, lArmRot, lArmLen, 2, 1, 0x888888, 0, co);
     } else {
-        draw(img_box, x + 4, y - 4 - 5 - 1 + base, sw1 + Math.PI / 4, 5, 2, 0xFF888888, co);
-        draw(img_box, x - 4, y - 4 - 5 - 1 + base, sw2 + Math.PI - Math.PI / 4, 5, 2, 0xFF888888, co);
+        draw(img_box, x + 4, y - 4 - 5 - 1 + base, sw1 + Math.PI / 4, 5, 2, 1, 0x888888, 0, co);
+        draw(img_box, x - 4, y - 4 - 5 - 1 + base, sw2 + Math.PI - Math.PI / 4, 5, 2, 1, 0x888888, 0, co);
     }
 
     img_box.x = 0.5;
     img_box.y = 0.5;
 
     if (!weaponBack && wpn.gfx_ > 0) {
-        draw(img_weapons[wpn.gfx_], weaponX, weaponY, weaponAngle, weaponSX, weaponSY, 0xFFFFFFFF);
+        draw(img_weapons[wpn.gfx_], weaponX, weaponY, weaponAngle, weaponSX, weaponSY);
     }
 }
 
@@ -1600,14 +1596,14 @@ function drawBarrel(p: Actor) {
     const x = p.x;
     const y = p.y - p.z;
     const co = getHitColorOffset(p.animHit_);
-    draw(img_barrels[p.c], x, y, 0, 1, 1, 0xFFFFFFFF, co);
+    draw(img_barrels[p.c], x, y, 0, 1, 1, 1, 0xFFFFFF, 0, co);
 }
 
 function drawTree(p: Actor) {
     const x = p.x;
     const y = p.y - p.z;
     const co = getHitColorOffset(p.animHit_);
-    draw(img_trees[p.c], x, y, 0, 1, 1, 0xFFFFFFFF, co);
+    draw(img_trees[p.c], x, y, 0, 1, 1, 1, 0xFFFFFF, 0, co);
 }
 
 function unpackAngleByte(angleByte: number, resolution: number) {
@@ -1624,8 +1620,8 @@ function drawActorBoundingSphere(p: Actor) {
     const x = p.x;
     const y = p.y - p.z - h;
     const s = r / 16;
-    draw(img_box, x, y, 0, 1, p.z + h, 0xFFFFFFFF);
-    draw(img_circle_16, x, y, 0, s, s, 0x77FF0000);
+    draw(img_box, x, y, 0, 1, p.z + h);
+    draw(img_circle_16, x, y, 0, s, s, 0.5, 0xFF0000);
 }
 
 function drawCollisions() {

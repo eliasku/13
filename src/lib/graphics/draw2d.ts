@@ -133,15 +133,6 @@ export function initDraw2d() {
     textureLocation = getUniformLocation("x");
 }
 
-function begin(w: number, h: number) {
-    width = w;
-    height = h;
-}
-
-function clear(r: number, g: number, b: number, a: number) {
-    gl.clearColor(r, g, b, a);
-}
-
 interface Camera {
     atX_: number;
     atY_: number;
@@ -161,53 +152,52 @@ export let camera: Camera = {
 };
 
 export interface Texture {
+    i: WebGLTexture;
     w: number;
     h: number;
     // anchor
     x: number;
     y: number;
-    // uv rect
-    u: number;
-    v: number;
-    u2: number;
-    v2: number;
-
-    t: WebGLTexture;
+    // uv rect (stpq)
+    s: number;
+    t: number;
+    p: number;
+    q: number;
 }
 
-export function getSubTexture(src: Texture, x: number, y: number, w: number, h: number, anchorX?: number, anchorY?: number): Texture {
+export function getSubTexture(src: Texture, x: number, y: number, w: number, h: number): Texture {
     return {
         w, h,
-        x: anchorX || src.x,
-        y: anchorY || src.y,
-        u: x / src.w,
-        v: y / src.h,
-        u2: w / src.w,
-        v2: h / src.h,
-        t: src.t
+        x: 0.5,
+        y: 0.5,
+        s: x / src.w,
+        t: y / src.h,
+        p: w / src.w,
+        q: h / src.h,
+        i: src.i
     };
 }
 
 export function createTexture(source: TexImageSource): Texture {
     const w = source.width;
     const h = source.height;
-    const t = gl.createTexture();
+    const i = gl.createTexture();
 
-    gl.bindTexture(GL.TEXTURE_2D, t);
+    gl.bindTexture(GL.TEXTURE_2D, i);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
 
     return {
+        i,
         w,
         h,
         x: 0,
         y: 0,
-        u: 0,
-        v: 0,
-        u2: 1,
-        v2: 1,
-        t,
+        s: 0,
+        t: 0,
+        p: 1,
+        q: 1
     };
 }
 
@@ -258,38 +248,32 @@ export function beginRender(viewportWidth: number, viewportHeight: number) {
         0, 1,
     ];
 
-    gl.useProgram(program);
     gl.enable(GL.BLEND);
+    gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(program);
     gl.uniformMatrix4fv(matrixLocation, false, projection);
     gl.viewport(0, 0, width, height);
 }
 
-export function beginRenderGroup() {
-}
-
 export function flush() {
-    if (!count) return;
-
-    gl.enable(GL.BLEND);
-    gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
-
-    gl.bindTexture(GL.TEXTURE_2D, currentTexture.t);
-    gl.uniform1i(textureLocation, 0);
-
-    gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
-    //ext.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
-    gl.drawElementsInstanced(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
-    count = 0;
+    if (count) {
+        gl.bindTexture(GL.TEXTURE_2D, currentTexture.i);
+        gl.uniform1i(textureLocation, 0);
+        gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
+        //ext.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
+        gl.drawElementsInstanced(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
+        count = 0;
+    }
 }
 
-export function draw(texture: Texture, x: number, y: number, r: number, sx: number, sy: number, color: number, offset?: number) {
+export function draw(texture: Texture, x: number, y: number, r: number, sx: number, sy: number, alpha?: number, color?: number, additive?: number, offset?: number) {
     if (count === maxBatch) {
         flush();
     }
 
     if (!currentTexture) {
         currentTexture = texture;
-    } else if (currentTexture.t !== texture.t) {
+    } else if (currentTexture.i !== texture.i) {
         flush();
         currentTexture = texture;
     }
@@ -303,12 +287,12 @@ export function draw(texture: Texture, x: number, y: number, r: number, sx: numb
     floatView[i++] = r;
     floatView[i++] = x;
     floatView[i++] = y;
-    floatView[i++] = texture.u;
-    floatView[i++] = texture.v;
-    floatView[i++] = texture.u2;
-    floatView[i++] = texture.v2;
-    uintView[i++] = color >>> 0;
-    uintView[i++] = offset >>> 0;
+    floatView[i++] = texture.s;
+    floatView[i++] = texture.t;
+    floatView[i++] = texture.p;
+    floatView[i++] = texture.q;
+    uintView[i++] = ((((alpha ?? 1) * 0xFF) << 24) | ((color ?? 0xFFFFFF) & 0xFFFFFF)) >>> 0;
+    uintView[i++] = (((additive * 0xFF) << 24) | (offset & 0xFFFFFF)) >>> 0;
 
     count++;
 }

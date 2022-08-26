@@ -4,7 +4,6 @@ export const DEBUG_TERM = 1;
 
 export const enum Const {
     NetFq = 60,
-    NetDt = 1.0 / NetFq,
     InputDelay = 8,
     Prediction = 1,
     RLE = 1,

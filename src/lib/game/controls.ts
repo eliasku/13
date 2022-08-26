@@ -49,17 +49,17 @@ export function updateControls(player: Actor) {
 
     shootButtonDown = +((viewX || viewY) && mouse.active_);
 
-    moveX = ((keyboardState["KeyD"] || keyboardState["ArrowRight"]) | 0)
-        - ((keyboardState["KeyA"] || keyboardState["ArrowLeft"]) | 0);
-    moveY = ((keyboardState["KeyS"] || keyboardState["ArrowDown"]) | 0)
-        - ((keyboardState["KeyW"] || keyboardState["ArrowUp"]) | 0);
+    moveX = (keyboardState.has("KeyD") || keyboardState.has("ArrowRight")) as any
+        - ((keyboardState.has("KeyA") || keyboardState.has("ArrowLeft")) as any);
+    moveY = (keyboardState.has("KeyS") || keyboardState.has("ArrowDown")) as any
+        - ((keyboardState.has("KeyW") || keyboardState.has("ArrowUp")) as any);
 
     if (moveX || moveY) {
-        moveFast = +!(keyboardState["ShiftLeft"] || keyboardState["ShiftRight"]);
+        moveFast = +!(keyboardState.has("ShiftLeft") || keyboardState.has("ShiftRight"));
     }
 
-    jumpButtonDown = keyboardState["Space"] | 0;
-    dropButton = keyboardState["KeyE"] | 0;
+    jumpButtonDown = +keyboardState.has("Space");
+    dropButton = +keyboardState.has("KeyE");
 
 
     {
@@ -142,8 +142,8 @@ function updateVirtualPad() {
         // if not captured
         if (!control.pointer_) {
             // capture
-            for (const p of inputPointers) {
-                if (p.down_ &&
+            for (const [,p] of inputPointers) {
+                if (p.downEvent_ &&
                     testZone(control, p.startX_ / W, p.startY_ / H) &&
                     checkPointerIsAvailableForCapturing(p)) {
                     control.pointer_ = p;
@@ -180,17 +180,17 @@ export function drawVirtualPad() {
         const h_ = H * (control.b_ - control.t_);
         const cx = W * control.l_ + w_ / 2;
         const cy = H * control.t_ + h_ / 2;
-        draw(img_box, cx, cy, 0, w_, h_, 0x22000000);
+        draw(img_box, cx, cy, 0, w_, h_, 0.1, 0);
         const pp = control.pointer_;
         if (pp) {
             if (control.flags_ & 1) {
-                draw(img_box, cx, cy, 0, w_, h_, pp ? 0x22FFFFFF : 0x22000000);
+                draw(img_box, cx, cy, 0, w_, h_, 0.1, pp ? 0xFFFFFF : 0);
             } else {
                 const r1 = (control.r1_ / 16);
                 const r2 = (control.r2_ / 16);
-                draw(img_circle_16, pp.startX_ * k, pp.startY_ * k, 0, r1, r1, 0x77FFFFFF);
-                draw(img_circle_16, pp.startX_ * k, pp.startY_ * k, 0, r2, r2, 0x77FFFFFF);
-                draw(img_circle_16, pp.x_ * k, pp.y_ * k, 0, 1, 1, 0x77FFFFFF);
+                draw(img_circle_16, pp.startX_ * k, pp.startY_ * k, 0, r1, r1, 0.5);
+                draw(img_circle_16, pp.startX_ * k, pp.startY_ * k, 0, r2, r2, 0.5);
+                draw(img_circle_16, pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
             }
         }
     }
