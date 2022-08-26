@@ -3,7 +3,7 @@ import {getClientId, getRemoteClient, getRemoteClients, getUserName} from "../ne
 import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../debug/log";
-import {beginRender, camera, createTexture, draw, flush, Texture} from "../graphics/draw2d";
+import {beginRender, camera, draw, flush, Texture} from "../graphics/draw2d";
 import {getSeed, rand, random, seed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {
@@ -408,9 +408,7 @@ function drawOverlay() {
 function recreateMap() {
     // generate map
     seed(state.mapSeed_);
-    const mapbg = generateMapBackground();
-    imgMap = createTexture(mapbg);
-
+    imgMap = generateMapBackground();
     trees = [];
     for (let i = 0; i < 32; ++i) {
         trees.push(
@@ -699,7 +697,7 @@ function tryRunTicks(ts: number): number {
     let framesProcessed = 0;
     while (gameTic <= netTick && frameN > 0) {
         processTicCommands(getCommandsForTic(gameTic));
-        simulateTic(1/Const.NetFq);
+        simulateTic(1 / Const.NetFq);
         ++gameTic;
         --frameN;
         ++framesProcessed;
@@ -709,19 +707,12 @@ function tryRunTicks(ts: number): number {
     prevTime += framesProcessed / Const.NetFq;
 
     // we played all available net-events
-    const dropRate = 1;
     const k = 0.01;
+    const allowFramesToPredict = Const.InputDelay;
     if (gameTic > netTick) {
         // slow down a bit in case if we predict a lot
-        const allowFramesToPredict = Const.InputDelay;
         if (ts - prevTime > allowFramesToPredict / Const.NetFq) {
-            // console.info("slow down");
-
-            // prevTime += Const.NetDt * dropRate;
-            // prevTime += 0.1 * (ts - prevTime);
             prevTime = (1 - k) * prevTime + k * (ts - allowFramesToPredict / Const.NetFq);
-
-            // prevTime = ts - allowFramesToPredict * Const.NetDt;
         }
     } else {
         // we got packets to go
@@ -729,7 +720,7 @@ function tryRunTicks(ts: number): number {
             // speed up
             // console.info("speed up");
             // prevTime -= Const.NetDt * dropRate;
-            prevTime = (1 - k) * prevTime + k * (ts - Const.InputDelay / Const.NetFq);
+            prevTime = (1 - k) * prevTime + k * (ts - allowFramesToPredict / Const.NetFq);
 
             // prevTime = ts - Const.InputDelay * Const.NetDt;
         }
@@ -1345,7 +1336,7 @@ function beginPrediction() {
     // let time = lastFrameTs - prevTime;
     let tic = gameTic;
     while (time > 0) {
-        const dt = Math.min(time, 1/Const.NetFq);
+        const dt = Math.min(time, 1 / Const.NetFq);
         processTicCommands(getCommandsForTic(tic));
         simulateTic(dt);
         time -= dt;

@@ -123,19 +123,19 @@ gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 //     return null;
 // }
 
-let ss = 1.0;
-let sw = 1;
-let sh = 1;
-
+const _ = [1, 1, 1];
 setInterval(() => {
+    const s = devicePixelRatio;
     const b = document.body;
-    if (ss !== devicePixelRatio || sw !== b.clientWidth || sh !== b.clientHeight) {
-        ss = devicePixelRatio;
-        sw = b.clientWidth;
-        sh = b.clientHeight;
-        canvas.style.width = sw + "px";
-        canvas.style.height = sh + "px";
-        canvas.width = (sw * ss) | 0;
-        canvas.height = (sh * ss) | 0;
+    const w = b.clientWidth;
+    const h = b.clientHeight;
+    if (_[0] != s || _[1] != w || _[2] != h) {
+        _[0] = s;
+        _[1] = w;
+        _[2] = h;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        canvas.width = (w * s) | 0;
+        canvas.height = (h * s) | 0;
     }
 }, 500);

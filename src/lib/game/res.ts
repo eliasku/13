@@ -22,19 +22,18 @@ export let img_box: Texture;
 export let img_circle_4: Texture;
 export let img_circle_16: Texture;
 
-const tempSize = 512;
-const atlasSize = 256;
-
-function createCanvas(w: number, h: number) {
+export function createCanvas(size: number, alpha: boolean) {
     const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    return canvas.getContext("2d", {alpha: true});
+    canvas.width = canvas.height = size;
+    return canvas.getContext("2d", {alpha});
 }
 
 function createAtlas(): Texture[] {
-    const temp = createCanvas(tempSize, tempSize);
-    const atlas = createCanvas(atlasSize, atlasSize);
+    const tempSize = 512;
+    const atlasSize = 256;
+
+    const temp = createCanvas(tempSize, true);
+    const atlas = createCanvas(atlasSize, true);
     atlas.fillStyle = "#FFF";
     let x = 1;
     let y = 1;

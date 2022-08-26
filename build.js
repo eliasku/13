@@ -100,3 +100,10 @@ console.info(report.join("\n"));
 // TERSER: 37741
 // ROADROLL: 18512
 // LZMA: 13663
+
+// BUILD: 103570
+// C2LET: 102768
+// TERSER: 37670
+// ROADROLL: 18493
+// LZMA: 13645
+
