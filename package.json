@@ -15,10 +15,10 @@
   "author": "eliasku",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^18.7.1",
     "esbuild": "^0.15.0",
-    "terser": "^5.14.2",
+    "html-minifier": "^4.0.0",
     "roadroller": "^2.1.0",
-    "@types/node": "^18.7.1"
-  },
-  "dependencies": {}
+    "terser": "^5.14.2"
+  }
 }
