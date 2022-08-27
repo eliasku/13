@@ -2,7 +2,7 @@ import {ClientID} from "../../shared/types";
 import {getClientId, getRemoteClient, getRemoteClients, getUserName} from "../net/messaging";
 import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
-import {termPrint} from "../debug/log";
+import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush, Texture} from "../graphics/draw2d";
 import {getSeed, rand, random, seed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";

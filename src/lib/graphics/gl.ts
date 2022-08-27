@@ -98,8 +98,7 @@ export const enum GL {
     UNPACK_PREMULTIPLY_ALPHA_WEBGL = 0x9241,
 }
 
-const canvas = document.getElementById("0") as HTMLCanvasElement;
-export const gl: WebGLRenderingContext = canvas.getContext("webgl", {
+export const gl: WebGLRenderingContext = c.getContext("webgl", {
     alpha: false,
     antialias: false,
     depth: false,
@@ -115,17 +114,15 @@ gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
 const _ = [1, 1, 1];
 setInterval(() => {
-    const s = devicePixelRatio;
-    const b = document.body;
     const w = b.clientWidth;
     const h = b.clientHeight;
-    if (_[0] != s || _[1] != w || _[2] != h) {
-        _[0] = s;
+    if (_[0] != devicePixelRatio || _[1] != w || _[2] != h) {
+        _[0] = devicePixelRatio;
         _[1] = w;
         _[2] = h;
-        canvas.style.width = w + "px";
-        canvas.style.height = h + "px";
-        canvas.width = (w * s) | 0;
-        canvas.height = (h * s) | 0;
+        c.style.width = w + "px";
+        c.style.height = h + "px";
+        c.width = (w * devicePixelRatio) | 0;
+        c.height = (h * devicePixelRatio) | 0;
     }
 }, 500);

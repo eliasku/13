@@ -1,6 +1,6 @@
 import {connect, disconnect, getRemoteClients, getUserName, setUserName} from "./net/messaging";
 import {isAnyKeyDown, initInput, updateInput} from "./utils/input";
-import {termClear, termFlush, termPrint} from "./debug/log";
+import {termClear, termFlush, termPrint} from "./utils/log";
 import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
 import {loadAtlas} from "./assets/gfx";
@@ -23,7 +23,7 @@ let state = StartState.Loading;
 const onStart = async () => {
     if (state !== StartState.TapToConnect) return;
     state = StartState.Connecting;
-    window.addEventListener("beforeunload", disconnect);
+    onbeforeunload = disconnect;
     await connect();
 
     play(bgm[Bgm.main], true, 0.05);

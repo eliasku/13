@@ -100,6 +100,13 @@ export function updateControls(player: Actor) {
             dropButton = vpad[2].pointer_ ? 1 : 0;
         }
     }
+
+    if (mousePointer.downEvent_ && touchPadActive) {
+        touchPadActive = false;
+        for (const [, p] of inputPointers) {
+            touchPadActive ||= p.active_;
+        }
+    }
 }
 
 interface VPadControl {

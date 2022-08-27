@@ -1,6 +1,5 @@
-import {DEBUG_TERM, DEV_MODE} from "../game/config";
+import {DEBUG_TERM} from "../game/config";
 
-const textTerminal: HTMLLabelElement | null = DEBUG_TERM && document.getElementById("1") as HTMLLabelElement;
 let textTerminalBuffer = "";
 
 export function termPrint(text: string) {
@@ -11,7 +10,7 @@ export function termPrint(text: string) {
 
 export function termFlush() {
     if (DEBUG_TERM) {
-        textTerminal.innerText = textTerminalBuffer;
+        l.innerText = textTerminalBuffer;
     }
 }
 

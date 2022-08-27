@@ -1,5 +1,4 @@
 import {unlockAudio} from "../audio/context";
-import {gl} from "../graphics/gl";
 
 export interface Pointer {
     id_: number;
@@ -53,6 +52,7 @@ function handleDown(pointer: Pointer, x: number, y: number) {
     pointer.startY_ = y;
     pointer.downEvent_ = true;
     pointer.active_ = true;
+    // console.info("-down:", pointer.id_);
 }
 
 function handleMove(pointer: Pointer, x: number, y: number) {
@@ -60,51 +60,57 @@ function handleMove(pointer: Pointer, x: number, y: number) {
     // pointer.prevY_ = pointer.y_;
     pointer.x_ = x;
     pointer.y_ = y;
+    // console.info("-move:", pointer.id_);
 }
 
 function handleUp(pointer: Pointer) {
     pointer.upEvent_ = true;
     pointer.active_ = false;
+    // console.info("-up:", pointer.id_);
 }
 
 export function initInput() {
-    const canvas = gl.canvas;
     oncontextmenu = e => e.preventDefault();
     const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
-        const scale = canvas.width / canvas.clientWidth;
-        const bb = canvas.getBoundingClientRect();
+        const scale = c.width / c.clientWidth;
+        const bb = c.getBoundingClientRect();
         fn(mousePointer,
             ((e.clientX - bb.x) * scale) | 0,
             ((e.clientY - bb.y) * scale) | 0);
     };
-    canvas.addEventListener("mousedown", (e) => {
+    c.onmousedown = (e) => {
         handleMouse(e, handleDown);
         unlockAudio();
-    }, false);
+        // console.info("onmousedown");
+    };
 
-    canvas.addEventListener("mouseup", (e) => {
+    c.onmouseup = (e) => {
         handleUp(mousePointer);
-        e.preventDefault();
-    }, false);
+        //e.preventDefault();
+        // console.info("onmouseup");
+    };
 
-    canvas.addEventListener("mouseleave", (e) => {
+    c.onmouseleave = (e) => {
         handleUp(mousePointer);
-    }, false);
+        // console.info("onmouseleave");
+    };
 
-    canvas.addEventListener("mouseenter", (e) => {
+    c.onmouseenter = (e) => {
         if (e.buttons) {
             handleMouse(e, handleDown);
         }
-    }, false);
+        // console.info("onmouseenter");
+    };
 
-    canvas.addEventListener("mousemove", (e) => {
+    c.onmousemove = (e) => {
         handleMouse(e, handleMove);
-    }, false);
+        // console.info("onmousemove");
+    };
 
     const handleTouchEvent = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
         e.preventDefault();
-        const scale = canvas.width / canvas.clientWidth;
-        const bb = canvas.getBoundingClientRect();
+        const scale = c.width / c.clientWidth;
+        const bb = c.getBoundingClientRect();
         for (let i = 0; i < e.changedTouches.length; ++i) {
             const touch = e.changedTouches.item(i)!;
             fn(getPointer(touch.identifier),
@@ -112,38 +118,40 @@ export function initInput() {
                 ((touch.clientY - bb.y) * scale) | 0);
         }
     };
-    canvas.addEventListener("touchstart", (e) => {
+    c.ontouchstart = (e: TouchEvent) => {
         handleTouchEvent(e, handleDown);
         unlockAudio();
-    }, false);
-    canvas.addEventListener("touchmove", (e) => {
+        // console.info("ontouchstart");
+    };
+    c.ontouchmove = (e: TouchEvent) => {
         handleTouchEvent(e, handleMove);
-    }, false);
-    const onTouchEnd = (e: TouchEvent) => {
+        // console.info("ontouchmove");
+    };
+    c.ontouchend = (e: TouchEvent) => {
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; ++i) {
             const touch = e.changedTouches.item(i)!;
             handleUp(getPointer(touch.identifier));
         }
+        // console.info("ontouchend");
     };
-    canvas.addEventListener("touchend", onTouchEnd, false);
 
     //document.addEventListener("keypress", onKey, true);
-    document.addEventListener("keydown", (e) => {
+    document.onkeydown = (e: KeyboardEvent) => {
         e.preventDefault();
         if (!keyboardState.has(e.code)) {
             keyboardDown.add(e.code);
         }
         keyboardState.add(e.code);
         unlockAudio();
-    }, false);
-    document.addEventListener("keyup", (e) => {
+    };
+    document.onkeyup = (e: KeyboardEvent) => {
         e.preventDefault();
         if (keyboardState.has(e.code)) {
             keyboardUp.add(e.code);
         }
         keyboardState.delete(e.code);
-    }, false);
+    };
 }
 
 export function updateInput() {
