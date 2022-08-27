@@ -14,12 +14,7 @@ import {
     img_items,
     img_players,
     img_trees,
-    img_weapons,
-    snd_blip,
-    snd_heal,
-    snd_med,
-    snd_pick,
-    snd_shoot
+    img_weapons, snd, Snd,
 } from "./res";
 import {Const, DEV_MODE} from "./config";
 import {generateMapBackground} from "./maze";
@@ -923,18 +918,18 @@ function pickItem(item: Actor, player: Actor) {
         const playerNotDropping = !(player.btn_ & ControlsFlag.Drop);
         if (playerHasNoWeapon && playerNotDropping) {
             player.weapon_ = item.s;
-            play(snd_pick, false, 0.5);
+            play(snd[Snd.pick], false, 0.5);
             item.btn_ = 0;
         }
     }
     if (item.btn_ & 2) {
         if (item.s === EffectItemType.Med) {
-            play(snd_med, false, 0.5);
+            play(snd[Snd.med], false, 0.5);
             item.btn_ = 0;
         } else if (item.s === EffectItemType.Health) {
             if (player.hp_ < 10) {
                 ++player.hp_;
-                play(snd_heal, false, 0.5);
+                play(snd[Snd.heal], false, 0.5);
                 item.btn_ = 0;
             }
         }
@@ -1241,7 +1236,7 @@ function updatePlayer(player: Actor, dt: number) {
             player.z = 1;
             player.w = jumpVel;
             grounded = false;
-            play(snd_blip, false, 0.2 + 0.8 * random());
+            play(snd[Snd.blip], false, 0.2 + 0.8 * random());
         }
     }
     let c = grounded ? 16 : 8;
@@ -1299,7 +1294,7 @@ function updatePlayer(player: Actor, dt: number) {
             player.w += weapon.jumpBack_;
             // most fast moving object: (r * 2) * 60 = 960
             //const maxSpeed = objectRadiusUnit * 2 * Const.NetFq;
-            play(snd_shoot, false, 0.1 + 0.1 * random());
+            play(snd[Snd.shoot], false, 0.1 + 0.1 * random());
             const bulletVelocity = weapon.velocity_;
             state.bullets_.push({
                 type_: ActorType.Bullet,

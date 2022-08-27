@@ -99,29 +99,19 @@ export const enum GL {
 }
 
 const canvas = document.getElementById("0") as HTMLCanvasElement;
-export const gl: WebGL2RenderingContext = canvas.getContext("webgl2", {
+export const gl: WebGLRenderingContext = canvas.getContext("webgl", {
     alpha: false,
     antialias: false,
     depth: false,
     // seems like disabled by default
     //stencil: false,
 });
-
-if (!gl) {
-    alert("WebGL 2 is required");
+export const gl_instanced_arrays = gl.getExtension('ANGLE_instanced_arrays')!;
+if (!gl || !gl_instanced_arrays) {
+    alert("WebGL is required");
 }
-gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
-// const fp16 = gl.getExtension('EXT_color_buffer_half_float');
-// const fp32 = gl.getExtension('EXT_color_buffer_float');
-// if (!fp16 && !fp32) {
-//     logDoc("😵 <b>EXT_color_buffer_half_float</b> or <b>EXT_color_buffer_float</b> is required");
-// }
 
-// const linearFiltering = gl.getExtension('OES_texture_half_float_linear');
-// if (!linearFiltering) {
-//     logToDocument("😵‍💫 <b>OES_texture_half_float_linear</b> is required");
-//     return null;
-// }
+gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
 const _ = [1, 1, 1];
 setInterval(() => {
