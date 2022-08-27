@@ -47,24 +47,15 @@ const gain = masterVolume * (Math.exp(base_sound_vol) - 1);
 function render(ps: number[]): Float32Array {
     let elapsedSinceRepeat = 0;
 
-    const period0 = 100 / (ps[FParam.p_base_freq] ** 2 + 0.001);
-    const periodMax = 100 / (ps[FParam.p_freq_limit] ** 2 + 0.001);
-    const enableFrequencyCutoff = (ps[FParam.p_freq_limit] > 0);
-    const periodMult0 = 1 - (ps[FParam.p_freq_ramp] ** 3) * 0.01;
-    const periodMultSlide = -(ps[FParam.p_freq_dramp] ** 3) * 0.000001;
-    const dutyCycle0 = 0.5 - ps[FParam.p_duty] * 0.5;
-    const dutyCycleSlide0 = -ps[FParam.p_duty_ramp] * 0.00005;
-
-    let arpeggioMultiplier: number;
-    if (ps[FParam.p_arp_mod] >= 0) {
-        arpeggioMultiplier = 1 - (ps[FParam.p_arp_mod] ** 2) * .9;
-    } else {
-        arpeggioMultiplier = 1 + (ps[FParam.p_arp_mod] ** 2) * 10;
-    }
-    let arpeggioTime0 = (((1 - ps[FParam.p_arp_speed]) ** 2) * 20000 + 32) | 0;
-    if (ps[FParam.p_arp_speed] === 1) {
-        arpeggioTime0 = 0;
-    }
+    const period0 = ps[FParam.p_base_freq];
+    const periodMax = Math.abs(ps[FParam.p_freq_limit]);
+    const enableFrequencyCutoff = ps[FParam.p_freq_limit] > 0;
+    const periodMult0 = ps[FParam.p_freq_ramp];
+    const periodMultSlide = ps[FParam.p_freq_dramp];
+    const dutyCycle0 = ps[FParam.p_duty];
+    const dutyCycleSlide0 = ps[FParam.p_duty_ramp];
+    const arpeggioMultiplier = ps[FParam.p_arp_mod];
+    const arpeggioTime0 = ps[FParam.p_arp_speed];
 
     // init repeat
     let period = period0;
@@ -74,46 +65,34 @@ function render(ps: number[]): Float32Array {
     let arpeggioTime = arpeggioTime0;
 
 // Waveform shape
-    const waveShape = ps[FParam.wave] | 0;
+    const waveShape = ps[FParam.wave];
 
     // Filter
-    let fltw = (ps[FParam.p_lpf_freq] ** 3) * 0.1;
-    const enableLowPassFilter = (ps[FParam.p_lpf_freq] !== 1);
-    const fltw_d = 1 + ps[FParam.p_lpf_ramp] * 0.0001;
-    let fltdmp = 5 / (1 + (ps[FParam.p_lpf_resonance] ** 2) * 20) * (0.01 + fltw);
-    if (fltdmp > 0.8) {
-        fltdmp = 0.8;
-    }
-    let flthp = (ps[FParam.p_hpf_freq] ** 2) * 0.1;
-    const flthp_d = 1 + ps[FParam.p_hpf_ramp] * 0.0003;
+    let fltw = ps[FParam.p_lpf_freq];
+    const enableLowPassFilter = (fltw !== 0.1);
+    const fltw_d = ps[FParam.p_lpf_ramp];
+    const fltdmp = ps[FParam.p_lpf_resonance];
+    let flthp = ps[FParam.p_hpf_freq];
+    const flthp_d = ps[FParam.p_hpf_ramp];
 
     // Vibrato
-    const vibratoSpeed = (ps[FParam.p_vib_speed] ** 2) * 0.01;
-    const vibratoAmplitude = ps[FParam.p_vib_strength] * 0.5;
+    const vibratoSpeed = ps[FParam.p_vib_speed];
+    const vibratoAmplitude = ps[FParam.p_vib_strength];
 
     // Envelope
     const envelopeLength = [
-        ((ps[FParam.p_env_attack] ** 2) * 100000) | 0,
-        ((ps[FParam.p_env_sustain] ** 2) * 100000) | 0,
-        ((ps[FParam.p_env_decay] ** 2) * 100000) | 0,
+        ps[FParam.p_env_attack],
+        ps[FParam.p_env_sustain],
+        ps[FParam.p_env_decay],
     ];
     const envelopePunch = ps[FParam.p_env_punch];
 
     // Flanger
-    let flangerOffset = (ps[FParam.p_pha_offset] ** 2) * 1020;
-    if (ps[FParam.p_pha_offset] < 0) {
-        flangerOffset = -flangerOffset;
-    }
-    let flangerOffsetSlide = ps[FParam.p_pha_ramp] ** 2;
-    if (ps[FParam.p_pha_ramp] < 0) {
-        flangerOffsetSlide = -flangerOffsetSlide;
-    }
+    let flangerOffset = ps[FParam.p_pha_offset];
+    const flangerOffsetSlide = ps[FParam.p_pha_ramp];
 
     // Repeat
-    let repeatTime = (((1 - ps[FParam.p_repeat_speed]) ** 2) * 20000 + 32) | 0;
-    if (ps[FParam.p_repeat_speed] === 0) {
-        repeatTime = 0.0;
-    }
+    const repeatTime = ps[FParam.p_repeat_speed];
 
     ////////// RENDER
     let fltp = 0;

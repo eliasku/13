@@ -43,14 +43,24 @@ del(...zipFolderFiles);
 execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
 
 // execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
-execSync(`esbuild server/src/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server.js --metafile=server-build.json`);
-execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index.js --metafile=index-build.json`);
+const esbuildArgs = [];
+if(isProd) {
+    esbuildArgs.push("--minify");
+    esbuildArgs.push("--drop:console");
+    esbuildArgs.push("--drop:debugger");
+    esbuildArgs.push("--mangle-props=_$");
+    esbuildArgs.push("--analyze");
+}
+execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server.js --metafile=public/server-build.json`);
+execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index.js --metafile=public/index-build.json`);
 report.push("BUILD: " + sz(...files));
+
+// execSync(`esbuild server/src/index.ts --splitting ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outdir=dump --metafile=dump/server-dump.json`);
+// execSync(`esbuild src/lib/index.ts --splitting ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outdir=dump --metafile=dump/index-dump.json`);
 
 const2let("public/server.js");
 const2let("public/index.js");
 report.push("C2LET: " + sz(...files));
-
 
 const compress = [
     "booleans_as_integers=true",

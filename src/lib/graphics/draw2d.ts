@@ -1,4 +1,4 @@
-import {gl, GL} from "./gl";
+import {gl, GL, gl_instanced_arrays} from "./gl";
 
 const vertexShader = `attribute vec2 g;
 attribute vec2 a;
@@ -63,31 +63,25 @@ function bindAttrib(name: string, size: number, stride: number, divisor: number,
     gl.enableVertexAttribArray(location);
     gl.vertexAttribPointer(location, size, type, norm, stride, offset);
     if (divisor) {
-        //ext.vertexAttribDivisorANGLE(location, divisor);
-        gl.vertexAttribDivisor(location, divisor);
+        gl_instanced_arrays.vertexAttribDivisorANGLE(location, divisor);
     }
 }
 
 const floatSize = 2 + 2 + 1 + 2 + 4 + 1 + 1 + 1;
 const byteSize = floatSize * 4;
-const arrayBuffer = new ArrayBuffer(maxBatch * byteSize);
+// maxBatch * byteSize
+const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
 const floatView = new Float32Array(arrayBuffer);
 const uintView = new Uint32Array(arrayBuffer);
-// let ext: ANGLE_instanced_arrays | null = null;
 let program: WebGLProgram | null = null;
 let matrixLocation: WebGLUniformLocation = null;
 let textureLocation: WebGLUniformLocation = null;
-
-let scale = 1.0;
-let width: number = 1;
-let height: number = 1;
 
 function getUniformLocation(name: string): WebGLUniformLocation | null {
     return gl.getUniformLocation(program, name);
 }
 
 export function initDraw2d() {
-    //ext = gl.getExtension('ANGLE_instanced_arrays');
     program = gl.createProgram();
 
     gl.attachShader(program, compileShader(vertexShader, GL.VERTEX_SHADER));
@@ -201,10 +195,7 @@ export function createTexture(source: TexImageSource): Texture {
     };
 }
 
-export function beginRender(viewportWidth: number, viewportHeight: number) {
-    width = viewportWidth;
-    height = viewportHeight;
-
+export function beginRender(width: number, height: number) {
     const {atX_, atY_, toX_, toY_, angle_, scale_} = camera;
 
     const x = atX_ - width * toX_;
@@ -260,8 +251,7 @@ export function flush() {
         gl.bindTexture(GL.TEXTURE_2D, currentTexture.i);
         gl.uniform1i(textureLocation, 0);
         gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
-        //ext.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
-        gl.drawElementsInstanced(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
+        gl_instanced_arrays.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
         count = 0;
     }
 }
