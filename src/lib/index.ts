@@ -3,9 +3,11 @@ import {isAnyKeyDown, initInput, updateInput} from "./utils/input";
 import {termClear, termFlush, termPrint} from "./debug/log";
 import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
-import {loadResources, snd_music} from "./game/res";
+import {loadAtlas} from "./assets/gfx";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
+import {Bgm, bgm, loadMusic} from "./assets/bgm";
+import {loadSounds} from "./assets/sfx";
 
 initInput();
 initDraw2d();
@@ -24,7 +26,7 @@ const onStart = async () => {
     window.addEventListener("beforeunload", disconnect);
     await connect();
 
-    play(snd_music, true, 0.05);
+    play(bgm[Bgm.main], true, 0.05);
 
     initTestGame();
     state = StartState.Connected;
@@ -33,7 +35,9 @@ const onStart = async () => {
 const font = new FontFace("emoji", `url(emoji.ttf)`);
 font.load().then(() => {
     document.fonts.add(font);
-    loadResources();
+    loadMusic();
+    loadSounds();
+    loadAtlas();
     if (!getUserName()) {
         const defaultName = "guest";
         setUserName(prompt("pick your name", defaultName) || defaultName);

@@ -2,7 +2,7 @@ import {gl} from "../graphics/gl";
 import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
 import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
-import {img_box, img_circle_16} from "./res";
+import {img_box, img_circle_16} from "../assets/gfx";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -142,7 +142,7 @@ function updateVirtualPad() {
         // if not captured
         if (!control.pointer_) {
             // capture
-            for (const [,p] of inputPointers) {
+            for (const [, p] of inputPointers) {
                 if (p.downEvent_ &&
                     testZone(control, p.startX_ / W, p.startY_ / H) &&
                     checkPointerIsAvailableForCapturing(p)) {

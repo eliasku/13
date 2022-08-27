@@ -1,5 +1,5 @@
 import {rand} from "../utils/rnd";
-import {createCanvas} from "./res";
+import {createCanvas} from "./gfx";
 import {createTexture, Texture} from "../graphics/draw2d";
 
 export function generateMapBackground(): Texture {
@@ -51,9 +51,3 @@ export function generateMapBackground(): Texture {
     ctx.canvas.width = ctx.canvas.height = 0;
     return img;
 }
-
-// let mapHeights: number[][];
-//
-// export function getMapHeight(x:number, y:number):number {
-//
-// }

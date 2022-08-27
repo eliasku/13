@@ -5,8 +5,8 @@ export interface Pointer {
     id_: number;
     startX_: number;
     startY_: number;
-    prevX_: number;
-    prevY_: number;
+    // prevX_: number;
+    // prevY_: number;
     x_: number;
     y_: number;
     downEvent_: boolean;
@@ -19,8 +19,8 @@ function newPointer(id_: number): Pointer {
         id_,
         startX_: 0,
         startY_: 0,
-        prevX_: 0,
-        prevY_: 0,
+        // prevX_: 0,
+        // prevY_: 0,
         x_: 0,
         y_: 0,
         downEvent_: false,
@@ -37,7 +37,7 @@ export const keyboardUp: Set<string> = new Set();
 
 export function getPointer(id: number): Pointer {
     let p = inputPointers.get(id);
-    if(!p) {
+    if (!p) {
         p = newPointer(id);
         inputPointers.set(id, p);
     }
@@ -47,8 +47,8 @@ export function getPointer(id: number): Pointer {
 function handleDown(pointer: Pointer, x: number, y: number) {
     pointer.x_ = x;
     pointer.y_ = y;
-    pointer.prevX_ = x;
-    pointer.prevY_ = y;
+    // pointer.prevX_ = x;
+    // pointer.prevY_ = y;
     pointer.startX_ = x;
     pointer.startY_ = y;
     pointer.downEvent_ = true;
@@ -56,8 +56,8 @@ function handleDown(pointer: Pointer, x: number, y: number) {
 }
 
 function handleMove(pointer: Pointer, x: number, y: number) {
-    pointer.prevX_ = pointer.x_;
-    pointer.prevY_ = pointer.y_;
+    // pointer.prevX_ = pointer.x_;
+    // pointer.prevY_ = pointer.y_;
     pointer.x_ = x;
     pointer.y_ = y;
 }
@@ -128,9 +128,8 @@ export function initInput() {
     };
     canvas.addEventListener("touchend", onTouchEnd, false);
 
-    const wnd = document;
-    //wnd.addEventListener("keypress", onKey, true);
-    wnd.addEventListener("keydown", (e) => {
+    //document.addEventListener("keypress", onKey, true);
+    document.addEventListener("keydown", (e) => {
         e.preventDefault();
         if (!keyboardState.has(e.code)) {
             keyboardDown.add(e.code);
@@ -138,7 +137,7 @@ export function initInput() {
         keyboardState.add(e.code);
         unlockAudio();
     }, false);
-    wnd.addEventListener("keyup", (e) => {
+    document.addEventListener("keyup", (e) => {
         e.preventDefault();
         if (keyboardState.has(e.code)) {
             keyboardUp.add(e.code);
@@ -152,14 +151,14 @@ export function updateInput() {
     keyboardUp.clear();
     mousePointer.downEvent_ = false;
     mousePointer.upEvent_ = false;
-    for(const [,p] of inputPointers) {
+    for (const [, p] of inputPointers) {
         p.downEvent_ = false;
         p.upEvent_ = false;
     }
 }
 
 export function isAnyKeyDown() {
-    for (const [,p] of inputPointers) {
+    for (const [, p] of inputPointers) {
         if (p.downEvent_) return true;
     }
     return mousePointer.downEvent_ || keyboardDown.size;

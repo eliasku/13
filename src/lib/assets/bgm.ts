@@ -6,8 +6,19 @@
 
 // Song data
 import type {SongData} from "../audio/soundbox";
+import {createAudioBufferFromSong} from "../audio/soundbox";
 
-export const song:SongData = {
+export const enum Bgm {
+    main = 0
+}
+
+export const bgm:AudioBuffer[] = [];
+
+export function loadMusic() {
+    bgm.push(createAudioBufferFromSong(song));
+}
+
+const song:SongData = {
     songData_: [
         { // Instrument 0
             i: [

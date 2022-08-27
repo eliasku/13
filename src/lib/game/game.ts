@@ -14,10 +14,10 @@ import {
     img_items,
     img_players,
     img_trees,
-    img_weapons, snd, Snd,
-} from "./res";
+    img_weapons
+} from "../assets/gfx";
 import {Const, DEV_MODE} from "./config";
-import {generateMapBackground} from "./maze";
+import {generateMapBackground} from "../assets/map";
 import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet} from "./types";
 import {pack, unpack} from "./packets";
 import {reach, toRad} from "../utils/math";
@@ -37,8 +37,7 @@ import {
     viewY
 } from "./controls";
 import {isAnyKeyDown, keyboardDown} from "../utils/input";
-
-let clientActive = true;
+import {Snd, snd} from "../assets/sfx";
 
 let clients: Client[] = [];
 let localEvents: ClientEvent[] = [];
