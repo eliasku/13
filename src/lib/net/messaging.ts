@@ -56,7 +56,7 @@ export function remoteSend(to: ClientID, type: MessageType, data: MessageData): 
     });
 }
 
-type Handler = (req: Message) => Promise<MessageData | undefined> | MessageData | undefined;
+type Handler = (req: Message) => Promise<MessageData> | void;
 
 const handlers: Record<number, Handler> = [];
 
@@ -75,14 +75,8 @@ function requestHandler(req: Message) {
         const handler = handlers[req.t];
         if (handler) {
             const result = handler(req);
-            if (req.c) {
-                if (typeof result !== undefined) {
-                    if (result instanceof Promise) {
-                        result.then((resultMessage) => respond(req, resultMessage));
-                    } else if (typeof result === "object") {
-                        respond(req, result);
-                    }
-                }
+            if (req.c && result) {
+                result.then((resultMessage) => respond(req, resultMessage));
             }
         }
     }
@@ -374,4 +368,6 @@ handlers[MessageType.RtcCandidate] = async (req) => {
     }
 };
 
-handlers[MessageType.Name] = (req) => requireRemoteClient(req.s).name_ = req.a;
+handlers[MessageType.Name] = (req): void => {
+    requireRemoteClient(req.s).name_ = req.a;
+};

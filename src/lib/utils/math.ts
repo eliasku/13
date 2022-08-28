@@ -12,3 +12,18 @@ export function reach(t0: number, t1: number, v: number): number {
 export function toRad(degrees: number): number {
     return degrees * Math.PI / 180;
 }
+//
+// /* @__PURE__ */
+// export function max(a:number, b: number) {
+//     return a > b ? a : b;
+// }
+//
+// /* @__PURE__ */
+// export function min(a:number, b: number) {
+//     return a < b ? a : b;
+// }
+//
+// /* @__PURE__ */
+// export function abs(a:number) {
+//     return a < 0 ? -a : a;
+// }

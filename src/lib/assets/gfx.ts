@@ -181,7 +181,7 @@ function createAtlas():void {
     createEmoji2("🌳", 156, 99, 28, 31, 28, 0, 1, 1, 136);
     createEmoji2("🌲", 162, 99, 26, 31, 28, 0, 1, 1, 136);
 
-    uploadTexture(texture, atlas.canvas);
+    uploadTexture(texture.i, atlas.canvas);
 
     // TODO: dispose
     atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;

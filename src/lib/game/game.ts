@@ -4,11 +4,11 @@ import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush, Texture} from "../graphics/draw2d";
-import {getSeed, nextInt, nextFloat, seed, rand, random} from "../utils/rnd";
+import {getSeed, nextFloat, rand, random, seed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
 import {Const, DEV_MODE} from "./config";
-import {generateMapBackground} from "../assets/map";
+import {generateMapBackground, mapTexture} from "../assets/map";
 import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet} from "./types";
 import {pack, unpack} from "./packets";
 import {reach, toRad} from "../utils/math";
@@ -49,7 +49,6 @@ let lastInputTic = 0;
 let lastInputCmd = 0;
 
 // static state
-let imgMap: Texture = null;
 let trees: Actor[] = [];
 
 // dynamic state
@@ -306,7 +305,7 @@ export function initTestGame() {
 function recreateMap() {
     // generate map
     seed(state.mapSeed_);
-    imgMap = generateMapBackground();
+    generateMapBackground();
     trees = [];
     for (let i = 0; i < 32; ++i) {
         const tree = newActorObject(ActorType.Tree);
@@ -1015,14 +1014,14 @@ function kill(actor: Actor) {
             item.animHit_ = hitAnimMax;
         }
         const grave: Actor = newActorObject(ActorType.Barrel);
-        grave.x= actor.x;
-        grave.y= actor.y;
-        grave.z= actor.z + objectHeightByType[actor.type_];
-        grave.u= actor.u;
-        grave.v= actor.v;
-        grave.w= actor.w + 32;
-        grave.hp_= 20;
-        grave.c= 2;
+        grave.x = actor.x;
+        grave.y = actor.y;
+        grave.z = actor.z + objectHeightByType[actor.type_];
+        grave.u = actor.u;
+        grave.v = actor.v;
+        grave.w = actor.w + 32;
+        grave.hp_ = 20;
+        grave.c = 2;
         state.barrels_.push(grave);
     }
 }
@@ -1298,9 +1297,7 @@ function collectVisibleActors(...lists: Actor[][]) {
 }
 
 function drawMapBackground() {
-    if (imgMap) {
-        draw(imgMap, 0, 0, 0, 1, 1);
-    }
+    draw(mapTexture, 0, 0, 0, 1, 1);
     draw(img[Img.box_lt], 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
     draw(img[Img.box_lt], 0, -objectRadiusUnit * 3, 0, boundsSize + 2, objectRadiusUnit * 4, 0.5, 0);
 }
@@ -1421,7 +1418,7 @@ function drawPlayer(p: Actor) {
         // const t = Math.max(0, (p.s - 0.8) * 5);
         const t = Math.max(0, (p.s - 0.5) * 2);
         wd += Math.sin(t * Math.PI) * 12;
-        weaponAngle -= -wx * Math.PI * 0.25 * Math.sin((1 -(1-t) **2 ) * Math.PI * 2);
+        weaponAngle -= -wx * Math.PI * 0.25 * Math.sin((1 - (1 - t) ** 2) * Math.PI * 2);
     }
     weaponX += wd * Math.cos(weaponAngle);
     weaponY += wd * Math.sin(weaponAngle);

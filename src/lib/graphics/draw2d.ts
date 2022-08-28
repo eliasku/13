@@ -186,8 +186,8 @@ export function createTexture(size: number): Texture {
     };
 }
 
-export function uploadTexture(texture: Texture, source: TexImageSource): void {
-    gl.bindTexture(GL.TEXTURE_2D, texture.i);
+export function uploadTexture(glTexture: WebGLTexture, source: TexImageSource): void {
+    gl.bindTexture(GL.TEXTURE_2D, glTexture);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
