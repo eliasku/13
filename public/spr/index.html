@@ -184,7 +184,7 @@
                 document.body.appendChild(previewCanvas);
             }
 
-            output += `createEmoji2("${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${opts.size}, ${opts.a}, ${opts.sx}, ${opts.sy}, ${opts.cut});\n`;
+            output += `createEmoji2("${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${opts.size}, ${opts.a ?? 0}, ${opts.sx ?? 1}, ${opts.sy ?? 1}, ${opts.cut ?? 0x80});\n`;
             return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut];
         }
     }

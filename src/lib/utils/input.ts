@@ -13,6 +13,7 @@ export interface Pointer {
     active_: boolean;
 }
 
+/* @__PURE__ */
 function newPointer(id_: number): Pointer {
     return {
         id_,

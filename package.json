@@ -10,6 +10,7 @@
     "build-dev": "node build.js --dev",
     "zip": "node build.js --zip",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --format=esm --sourcemap --outfile=public/index.js",
+    "client-watch-prod": "esbuild src/lib/index.ts --watch --minify --mangle-props=_$ --bundle --format=esm --sourcemap --outfile=public/index.js",
     "server-watch": "esbuild server/src/index.ts --watch --bundle --platform=node --target=node16 --format=esm --outfile=public/server.js"
   },
   "author": "eliasku",

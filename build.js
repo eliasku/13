@@ -29,13 +29,6 @@ function sz(...files) {
     return total;
 }
 
-function const2let(file) {
-    let js = readFileSync(file, "utf8");
-    js = js.replaceAll("const ", "let ");
-    // js = js.replaceAll("\\n", "\n");
-    writeFileSync(file, js, "utf8");
-}
-
 del("game.zip");
 del(...files);
 del(...zipFolderFiles);
@@ -44,23 +37,35 @@ execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optiona
 
 // execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
 const esbuildArgs = [];
-if(isProd) {
+if (isProd) {
     esbuildArgs.push("--minify");
     esbuildArgs.push("--drop:console");
     esbuildArgs.push("--drop:debugger");
-    esbuildArgs.push("--mangle-props=_$");
+    esbuildArgs.push("--mangle-props=._$");
     esbuildArgs.push("--analyze");
 }
-execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server.js --metafile=public/server-build.json`);
-execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index.js --metafile=public/index-build.json`);
-report.push("BUILD: " + sz(...files));
 
-// execSync(`esbuild server/src/index.ts --splitting ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outdir=dump --metafile=dump/server-dump.json`);
-// execSync(`esbuild src/lib/index.ts --splitting ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outdir=dump --metafile=dump/index-dump.json`);
+execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server0.js --metafile=dump/server-build.json`);
+execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index0.js --metafile=dump/index-build.json`);
+report.push("BUILD: " + sz("public/index0.js", "public/server0.js", "public/index.html"));
 
-const2let("public/server.js");
-const2let("public/index.js");
-report.push("C2LET: " + sz(...files));
+const pureFunc = [
+    'console.log',
+    'console.warn',
+    'console.info',
+    'console.error',
+    'Math.sin',
+    'Math.cos',
+    'Math.sqrt',
+    'Math.hypot',
+    'Math.floor',
+    'Math.round',
+    'Math.ceil',
+    'Math.max',
+    'Math.min',
+    'Math.random',
+    'Math.abs',
+];
 
 const compress = [
     "booleans_as_integers=true",
@@ -68,16 +73,17 @@ const compress = [
     "passes=100",
     "keep_fargs=false",
     "pure_getters=true",
-    "pure_funcs=['console.log','console.warn','console.info','console.error']",
+    `pure_funcs=[${pureFunc.map(x => `'${x}'`).join(",")}]`,
     "unsafe_methods=true",
+    //"inline=2",
 ];//"unsafe=true",
 
 if (isProd) {
     compress.push("drop_console=true");
 }
 
-execSync(`terser public/server.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/_$/ -m -o public/server.js`);
-execSync(`terser public/index.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/_$/ -m -o public/index.js`);
+execSync(`terser public/server0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/._$/ -m -o public/server.js`);
+execSync(`terser public/index0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/._$/ -m -o public/index.js`);
 
 report.push("TERSER: " + sz(...files));
 

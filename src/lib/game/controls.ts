@@ -2,7 +2,7 @@ import {gl} from "../graphics/gl";
 import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
 import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
-import {img_box, img_circle_16} from "../assets/gfx";
+import {img, Img} from "../assets/gfx";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -187,17 +187,17 @@ export function drawVirtualPad() {
         const h_ = H * (control.b_ - control.t_);
         const cx = W * control.l_ + w_ / 2;
         const cy = H * control.t_ + h_ / 2;
-        draw(img_box, cx, cy, 0, w_, h_, 0.1, 0);
+        draw(img[Img.box], cx, cy, 0, w_, h_, 0.1, 0);
         const pp = control.pointer_;
         if (pp) {
             if (control.flags_ & 1) {
-                draw(img_box, cx, cy, 0, w_, h_, 0.1, pp ? 0xFFFFFF : 0);
+                draw(img[Img.box], cx, cy, 0, w_, h_, 0.1, pp ? 0xFFFFFF : 0);
             } else {
                 const r1 = (control.r1_ / 16);
                 const r2 = (control.r2_ / 16);
-                draw(img_circle_16, pp.startX_ * k, pp.startY_ * k, 0, r1, r1, 0.5);
-                draw(img_circle_16, pp.startX_ * k, pp.startY_ * k, 0, r2, r2, 0.5);
-                draw(img_circle_16, pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
+                draw(img[Img.circle_16], pp.startX_ * k, pp.startY_ * k, 0, r1, r1, 0.5);
+                draw(img[Img.circle_16], pp.startX_ * k, pp.startY_ * k, 0, r2, r2, 0.5);
+                draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
             }
         }
     }

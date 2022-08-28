@@ -5,6 +5,7 @@ const enum Tempering {
     MaskC = 0xEFC60000,
 }
 
+/* @__PURE__ */
 function temper(x: number /* u32 */): number /* u32 */ {
     x ^= x >>> 11;
     x ^= (x << 7) & Tempering.MaskB;
@@ -16,6 +17,7 @@ function temper(x: number /* u32 */): number /* u32 */ {
 // simple PRNG from libc with u32 state
 let _state = (Math.random() * 0xFFFFFFFF) >>> 0;
 
+/* @__PURE__ */
 export function getSeed() {
     return _state;
 }

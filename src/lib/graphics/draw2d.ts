@@ -36,7 +36,7 @@ gl_FragColor=c+vec4(j*c.a,0.0);
 const maxBatch = 65535;
 const depth = 1e5;
 let count = 0;
-let currentTexture: Texture | null = null;
+let currentTexture: WebGLTexture = null;
 
 function compileShader(source: string, type: GLenum): WebGLShader {
     const shader = gl.createShader(type);
@@ -146,7 +146,7 @@ export let camera: Camera = {
 };
 
 export interface Texture {
-    i: WebGLTexture;
+    i?: WebGLTexture;
     w: number;
     h: number;
     // anchor
@@ -159,33 +159,24 @@ export interface Texture {
     q: number;
 }
 
-export function getSubTexture(src: Texture, x: number, y: number, w: number, h: number): Texture {
+export function getSubTexture(src: Texture, x: number, y: number, w: number, h: number, ax: number, ay: number): Texture {
     return {
+        i: src.i,
         w, h,
-        x: 0.5,
-        y: 0.5,
+        x: ax,
+        y: ay,
         s: x / src.w,
         t: y / src.h,
         p: w / src.w,
         q: h / src.h,
-        i: src.i
     };
 }
 
-export function createTexture(source: TexImageSource): Texture {
-    const w = source.width;
-    const h = source.height;
-    const i = gl.createTexture();
-
-    gl.bindTexture(GL.TEXTURE_2D, i);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
-
+export function createTexture(size: number): Texture {
     return {
-        i,
-        w,
-        h,
+        i: gl.createTexture(),
+        w: size,
+        h: size,
         x: 0,
         y: 0,
         s: 0,
@@ -193,6 +184,13 @@ export function createTexture(source: TexImageSource): Texture {
         p: 1,
         q: 1
     };
+}
+
+export function uploadTexture(texture: Texture, source: TexImageSource): void {
+    gl.bindTexture(GL.TEXTURE_2D, texture.i);
+    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
 }
 
 export function beginRender(width: number, height: number) {
@@ -248,7 +246,7 @@ export function beginRender(width: number, height: number) {
 
 export function flush() {
     if (count) {
-        gl.bindTexture(GL.TEXTURE_2D, currentTexture.i);
+        gl.bindTexture(GL.TEXTURE_2D, currentTexture);
         gl.uniform1i(textureLocation, 0);
         gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
         gl_instanced_arrays.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
@@ -257,15 +255,9 @@ export function flush() {
 }
 
 export function draw(texture: Texture, x: number, y: number, r: number, sx: number, sy: number, alpha?: number, color?: number, additive?: number, offset?: number) {
-    if (count === maxBatch) {
+    if (currentTexture !== texture.i || count === maxBatch) {
         flush();
-    }
-
-    if (!currentTexture) {
-        currentTexture = texture;
-    } else if (currentTexture.i !== texture.i) {
-        flush();
-        currentTexture = texture;
+        currentTexture = texture.i;
     }
 
     let i = count * floatSize;

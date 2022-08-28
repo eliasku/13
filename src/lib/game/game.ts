@@ -6,16 +6,7 @@ import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush, Texture} from "../graphics/draw2d";
 import {getSeed, rand, random, seed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
-import {
-    img_barrels,
-    img_box,
-    img_circle_16,
-    img_circle_4,
-    img_items,
-    img_players,
-    img_trees,
-    img_weapons
-} from "../assets/gfx";
+import {img, Img} from "../assets/gfx";
 import {Const, DEV_MODE} from "./config";
 import {generateMapBackground} from "../assets/map";
 import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet} from "./types";
@@ -122,175 +113,123 @@ interface WeaponConfig {
     detuneSpeed_: number;
     cameraFeedback_: number;
     cameraLookForward_: number;
-    gfx_: number;
     gfxRot_: number;
     gfxSx_: number;
     bulletType_: number;
     bulletLifeTime_: number;
 }
 
-function createArmWeapon(gfx: number): WeaponConfig {
+function newWeapon(): WeaponConfig {
     return {
         rate_: 1,
-        angleSpread_: 0.5,
-        kickBack_: 40,
-        jumpBack_: 8,
+        angleSpread_: 0,
+        kickBack_: 0,
+        jumpBack_: 0,
         offset_: 0,
         offsetZ_: 0,
-        velocity_: 500,
+        velocity_: 0,
         cameraShake_: 0,
-        detuneSpeed_: 16,
-        cameraFeedback_: 0.02,
-        cameraLookForward_: 0.1,
-        gfx_: gfx,
+        detuneSpeed_: 0,
+        cameraFeedback_: 0,
+        cameraLookForward_: 0,
         gfxRot_: 0,
         gfxSx_: 1,
-        bulletType_: 1,
-        bulletLifeTime_: 0.02,
+        bulletType_: 0,
+        bulletLifeTime_: 0,
     };
 }
 
+function createArmWeapon(): WeaponConfig {
+    const w = newWeapon();
+    w.angleSpread_ = 0.5;
+    w.kickBack_ = 40;
+    w.jumpBack_ = 8;
+    w.offset_ = 0;
+    w.offsetZ_ = 0;
+    w.velocity_ = 500;
+    w.detuneSpeed_ = 16;
+    w.cameraFeedback_ = 0.02;
+    w.cameraLookForward_ = 0.1;
+    w.bulletType_ = 1;
+    w.bulletLifeTime_ = 0.02;
+    return w;
+}
+
+function createGunWeapon(): WeaponConfig {
+    const w = newWeapon();
+    w.kickBack_ = 32;
+    w.jumpBack_ = 8;
+    w.offset_ = 16;
+    w.velocity_ = 600;
+    w.detuneSpeed_ = 16;
+    w.cameraFeedback_ = 0.02;
+    w.cameraLookForward_ = 0.2;
+    w.bulletType_ = 2;
+    return w;
+}
+
 const weapons: WeaponConfig[] = [
+    // HANDS FREE
+    createArmWeapon(),
     // MELEE
-    createArmWeapon(-1),
-    createArmWeapon(0),
-    createArmWeapon(1),
-    createArmWeapon(2),
-    createArmWeapon(3),
+    createArmWeapon(),
+    createArmWeapon(),
+    createArmWeapon(),
     // PISTOL
-    {
-        rate_: 1,
-        angleSpread_: 0.1,
-        kickBack_: 32,
-        jumpBack_: 8,
-        offset_: 16,
-        offsetZ_: 0,
-        velocity_: 330,
-        cameraShake_: 0,
-        detuneSpeed_: 16,
-        cameraFeedback_: 0.1,
-        cameraLookForward_: 0.2,
-        gfx_: 4,
-        gfxRot_: 0,
-        gfxSx_: 1,
-        bulletType_: 2,
-        bulletLifeTime_: 0,
-    },
-    // light auto  rifle
-    {
-        rate_: 12,
-        angleSpread_: 0.25,
-        kickBack_: 20,
-        jumpBack_: 4,
-        offset_: 20,
-        offsetZ_: 0,
-        velocity_: 600,
-        cameraShake_: 0,
-        detuneSpeed_: 16,
-        cameraFeedback_: 0.01,
-        cameraLookForward_: 0.2,
-        gfx_: 4,
-        gfxRot_: 0,
-        gfxSx_: 1,
-        bulletType_: 2,
-        bulletLifeTime_: 0,
-    },
-    // hard machine-gun?
-    {
-        rate_: 8,
-        angleSpread_: 0.25,
-        kickBack_: 20,
-        jumpBack_: 4,
-        offset_: 16,
-        offsetZ_: 0,
-        velocity_: 330,
-        cameraShake_: 0,
-        detuneSpeed_: 16,
-        cameraFeedback_: 0.05,
-        cameraLookForward_: 0.3,
-        gfx_: 4,
-        gfxRot_: 0,
-        gfxSx_: 1,
-        bulletType_: 2,
-        bulletLifeTime_: 0,
-    },
-    // SHOT GUN
-    {
-        rate_: 1,
-        angleSpread_: 0.5,
-        kickBack_: 32,
-        jumpBack_: 8,
-        offset_: 16,
-        offsetZ_: 0,
-        velocity_: 600,
-        cameraShake_: 0,
-        detuneSpeed_: 32,
-        cameraFeedback_: 0.1,
-        cameraLookForward_: 0.2,
-        gfx_: 4,
-        gfxRot_: 0,
-        gfxSx_: 1,
-        bulletType_: 2,
-        bulletLifeTime_: 0,
-    },
-    // CROSS BOW
-    {
-        rate_: 1,
-        angleSpread_: 0,
-        kickBack_: 32,
-        jumpBack_: 8,
-        offset_: 16,
-        offsetZ_: 0,
-        velocity_: 600,
-        cameraShake_: 0,
-        detuneSpeed_: 32,
-        cameraFeedback_: 0.1,
-        cameraLookForward_: 0.3,
-        gfx_: 4,
-        gfxRot_: 0,
-        gfxSx_: 1,
-        bulletType_: 2,
-        bulletLifeTime_: 0,
-    }
+    createGunWeapon(),
+    createGunWeapon(),
+    createGunWeapon(),
+    createGunWeapon(),
+    createGunWeapon(),
 ];
 
-weapons[0].gfx_ = 0;
 weapons[0].rate_ = 2;
 
 // 🔪
-weapons[1].gfx_ = 1;
 weapons[1].gfxRot_ = toRad(-45);
 weapons[1].rate_ = 4;
 // 🔨
-weapons[2].gfx_ = 2;
+//weapons[2].gfxRot_ = toRad(-45);
+
+// AXE
 weapons[2].gfxRot_ = toRad(-45);
-// ⛏
-weapons[3].gfx_ = 3;
-weapons[3].gfxRot_ = toRad(-45);
 // 🗡
-weapons[4].gfx_ = 4;
-weapons[4].gfxRot_ = toRad(-45);
-// weapons[4].gfxSx_ = -1;
+weapons[3].gfxRot_ = toRad(-45);
 
 // 🔫
-weapons[5].gfx_ = 5;
-//weapons[5].gfxSx_ = -1;
+weapons[4].angleSpread_ = 0.1;
+weapons[4].velocity_ /= 2;
+weapons[4].detuneSpeed_ = 16;
+weapons[4].cameraFeedback_ = 0.1;
 
-// 🖊
-weapons[6].gfx_ = 6;
-//weapons[6].gfxRot_ = toRad(180 + 90 - 45);
+// 🖊 light auto gun
+weapons[5].rate_ = 12;
+weapons[5].angleSpread_ = 0.25;
+weapons[5].kickBack_ = 20;
+weapons[5].jumpBack_ = 4;
+weapons[5].offset_ = 20;
+weapons[5].detuneSpeed_ = 16;
+weapons[5].cameraFeedback_ = 0.01;
 
-// ✏️
-weapons[7].gfx_ = 7;
-//weapons[7].gfxRot_ = toRad(180 - 45);
-// 🪥
-weapons[8].gfx_ = 8;
-// weapons[8].gfxSx_ = -1;
-//weapons[8].gfxRot_ = toRad(-90 - 45);
-// ⛏
-weapons[9].gfx_ = 9;
+// ✏️ hard machine-gun?
+weapons[6].rate_ = 8;
+weapons[6].angleSpread_ = 0.25;
+weapons[6].kickBack_ = 20;
+weapons[6].jumpBack_ = 4;
+weapons[6].velocity_ /= 2;
+weapons[6].detuneSpeed_ = 16;
+weapons[6].cameraFeedback_ = 0.05;
+weapons[6].cameraLookForward_ = 0.3;
 
-//weapons[9].gfxRot_ = toRad(180 - 45);
+// 🪥 SHOT GUN
+weapons[7].angleSpread_ = 0.5;
+weapons[7].detuneSpeed_ = 32;
+weapons[7].cameraFeedback_ = 0.1;
+
+// CROSS BOW ⛏
+weapons[8].detuneSpeed_ = 32;
+weapons[8].cameraFeedback_ = 0.1;
+weapons[8].cameraLookForward_ = 0.3;
 
 function pickRandomWeaponId() {
     // const min = 1;
@@ -308,38 +247,42 @@ function setRandomPosition(actor: Actor): Actor {
     return actor;
 }
 
-function newItemRandomWeapon(): Actor {
-    const item: Actor = {
-        type_: ActorType.Item,
+function newActorObject(type: ActorType): Actor {
+    return {
+        type_: type,
         x: 0,
         y: 0,
         z: 0,
+
         u: 0,
         v: 0,
         w: 0,
-        btn_: 1,
+
+        btn_: 0,
         c: 0,
-        s: pickRandomWeaponId(),
+
+        s: 0,
+        t: 0,
+
+        weapon_: 0,
         anim0_: rand() & 0xFF,
+        animHit_: 0,
+        hp_: 0,
     };
+}
+
+function newItemRandomWeapon(): Actor {
+    const item = newActorObject(ActorType.Item);
+    item.btn_ = 1;
+    item.s = pickRandomWeaponId();
     state.items_.push(item);
     return item;
 }
 
 function newItemRandomEffect(): Actor {
-    const item: Actor = {
-        type_: ActorType.Item,
-        x: 0,
-        y: 0,
-        z: 0,
-        u: 0,
-        v: 0,
-        w: 0,
-        btn_: 2,
-        c: 0,
-        s: rand() % 2,
-        anim0_: rand() & 0xFF,
-    };
+    const item = newActorObject(ActorType.Item);
+    item.btn_ = 2;
+    item.s = rand() % 2;
     state.items_.push(item);
     return item;
 }
@@ -361,61 +304,16 @@ export function initTestGame() {
     // });
 }
 
-function drawGame() {
-    const w = gl.drawingBufferWidth;
-    const h = gl.drawingBufferHeight;
-    camera.scale_ = Math.min(w, h) / 256;
-    camera.toX_ = 0.5;
-    camera.toY_ = 0.5;
-    camera.atX_ = camera.atY_ = boundsSize >> 1;
-    const p0 = getMyPlayer();
-    if (p0) {
-        const wpn = getWeapon(p0);
-        camera.atX_ = p0.x + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x);
-        camera.atY_ = p0.y + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y);
-        //camera.scale -= Math.hypot(p0.vx, p0.vy) / 128;
-    }
-    camera.atX_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
-    camera.atY_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
-    beginRender(w, h);
-    gl.clearColor(0.4, 0.4, 0.4, 1.0);
-    gl.clear(GL.COLOR_BUFFER_BIT);
-    drawMapBackground();
-    drawObjects();
-    if (process.env.NODE_ENV === "development") {
-        drawCollisions();
-    }
-    drawMapOverlay();
-    drawCrosshair();
-    flush();
-}
-
-function drawOverlay() {
-    const w = gl.drawingBufferWidth;
-    const h = gl.drawingBufferHeight;
-    camera.toX_ = camera.toY_ = camera.atX_ = camera.atY_ = 0.0;
-    beginRender(w, h);
-    drawVirtualPad();
-    flush()
-}
-
 function recreateMap() {
     // generate map
     seed(state.mapSeed_);
     imgMap = generateMapBackground();
     trees = [];
     for (let i = 0; i < 32; ++i) {
+        const tree = newActorObject(ActorType.Tree);
+        tree.c = rand() & 1;
         trees.push(
-            setRandomPosition({
-                type_: ActorType.Tree,
-                x: 0,
-                y: 0,
-                z: 0,
-                u: 0,
-                v: 0,
-                w: 0,
-                c: rand() & 1
-            })
+            setRandomPosition(tree)
         );
     }
 }
@@ -425,24 +323,16 @@ function createSeedGameState() {
     gameTic = 0;
     netTick = 0;
     startTime = prevTime = lastFrameTs;
-    //players[0] = {c: getClientId(), x: Math.random() * 800, y: 400, z: 100, s: 1, vx: 0, vy: 0, vz: 0};
     state.mapSeed_ = getSeed();
     recreateMap();
     state.seed_ = getSeed();
 
     for (let i = 0; i < 32; ++i) {
+        const actor = newActorObject(ActorType.Barrel);
+        actor.hp_ = 3 + rand() % 4;
+        actor.c = rand() & 1;
         state.barrels_.push(
-            setRandomPosition({
-                type_: ActorType.Barrel,
-                x: 0,
-                y: 0,
-                z: 0,
-                u: 0,
-                v: 0,
-                w: 0,
-                hp_: 3 + rand() % 4,
-                c: rand() & 1
-            })
+            setRandomPosition(actor)
         );
     }
 
@@ -876,20 +766,12 @@ function processTicCommands(commands: ClientEvent[]) {
     for (const cmd of commands) {
         const source = cmd.c ?? getClientId();
         if (cmd.spawn_) {
-            const player: Actor = {
-                type_: ActorType.Player,
-                c: source,
-                x: cmd.spawn_.x,
-                y: cmd.spawn_.y,
-                z: cmd.spawn_.z,
-                u: 0,
-                v: 0,
-                w: 0,
-                s: 0,
-                t: 0,
-                weapon_: 0,
-                hp_: 10,
-            };
+            const player = newActorObject(ActorType.Player);
+            player.c = source;
+            player.x = cmd.spawn_.x;
+            player.y = cmd.spawn_.y;
+            player.z = cmd.spawn_.z;
+            player.hp_ = 10;
             state.players_ = state.players_.filter(p => p.c !== player.c);
             state.players_.push(player);
         }
@@ -1133,17 +1015,15 @@ function kill(actor: Actor) {
             item.s = actor.weapon_;
             item.animHit_ = hitAnimMax;
         }
-        const grave: Actor = {
-            type_: ActorType.Barrel,
-            x: actor.x,
-            y: actor.y,
-            z: actor.z + objectHeightByType[actor.type_],
-            u: actor.u,
-            v: actor.v,
-            w: actor.w + 32,
-            hp_: 20,
-            c: 2
-        };
+        const grave: Actor = newActorObject(ActorType.Barrel);
+        grave.x= actor.x;
+        grave.y= actor.y;
+        grave.z= actor.z + objectHeightByType[actor.type_];
+        grave.u= actor.u;
+        grave.v= actor.v;
+        grave.w= actor.w + 32;
+        grave.hp_= 20;
+        grave.c= 2;
         state.barrels_.push(grave);
     }
 }
@@ -1344,14 +1224,56 @@ function endPrediction() {
     seed(state.seed_);
 }
 
+/*** DRAWING ***/
+
+function drawGame() {
+    const w = gl.drawingBufferWidth;
+    const h = gl.drawingBufferHeight;
+    camera.scale_ = Math.min(w, h) / 256;
+    camera.toX_ = 0.5;
+    camera.toY_ = 0.5;
+    camera.atX_ = camera.atY_ = boundsSize >> 1;
+    const p0 = getMyPlayer();
+    if (p0) {
+        const wpn = getWeapon(p0);
+        camera.atX_ = p0.x + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x);
+        camera.atY_ = p0.y + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y);
+        //camera.scale -= Math.hypot(p0.vx, p0.vy) / 128;
+    }
+    camera.atX_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
+    camera.atY_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
+    beginRender(w, h);
+    gl.clearColor(0.4, 0.4, 0.4, 1.0);
+    gl.clear(GL.COLOR_BUFFER_BIT);
+    drawMapBackground();
+    drawObjects();
+
+    //if (process.env.NODE_ENV === "development") {
+    //drawCollisions();
+    //}
+
+    drawMapOverlay();
+    drawCrosshair();
+    flush();
+}
+
+function drawOverlay() {
+    const w = gl.drawingBufferWidth;
+    const h = gl.drawingBufferHeight;
+    camera.toX_ = camera.toY_ = camera.atX_ = camera.atY_ = 0.0;
+    beginRender(w, h);
+    drawVirtualPad();
+    flush()
+}
+
 function drawShadows() {
     for (const actor of drawList) {
         let shadowScale = (2 - actor.z / 64.0);
         if (actor.type_ === ActorType.Bullet) {
             shadowScale *= 2;
-            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0.07, 0xFFFFFF, 1);
+            draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .1, 0xFFFFFF, 1);
         } else {
-            draw(img_circle_4, actor.x, actor.y, 0, shadowScale, shadowScale / 4, 0.5, 0x0);
+            draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .4, 0x0);
         }
     }
 }
@@ -1380,53 +1302,45 @@ function drawMapBackground() {
     if (imgMap) {
         draw(imgMap, 0, 0, 0, 1, 1);
     }
-    img_box.x = img_box.y = 0;
-    draw(img_box, 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
-    draw(img_box, 0, -objectRadiusUnit * 3, 0, boundsSize + 2, objectRadiusUnit * 4, 0.5, 0);
-    img_box.x = img_box.y = 0.5;
+    draw(img[Img.box_lt], 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
+    draw(img[Img.box_lt], 0, -objectRadiusUnit * 3, 0, boundsSize + 2, objectRadiusUnit * 4, 0.5, 0);
 }
 
 function drawMapOverlay() {
-    img_box.x = img_box.y = 0;
-    draw(img_box, 0, boundsSize - objectRadiusUnit * 2, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
-    draw(img_box, -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
-    draw(img_box, boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
-
-    img_box.x = img_box.y = 0.5;
+    draw(img[Img.box_lt], 0, boundsSize - objectRadiusUnit * 2, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
+    draw(img[Img.box_lt], -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
+    draw(img[Img.box_lt], boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
 }
 
 function drawCrosshair() {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
-        img_box.y = 2;
         const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t) + 4 * Math.min(1, p0.s);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.0, 2, len, 0.5);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.5, 2, len, 0.5);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.0, 2, len, 0.5);
-        draw(img_box, lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.5, 2, len, 0.5);
-        img_box.y = 0.5;
+        draw(img[Img.box_t2], lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.0, 2, len, 0.5);
+        draw(img[Img.box_t2], lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 0.5, 2, len, 0.5);
+        draw(img[Img.box_t2], lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.0, 2, len, 0.5);
+        draw(img[Img.box_t2], lookAtX, lookAtY, 0.1 * lastFrameTs + Math.PI * 1.5, 2, len, 0.5);
     }
 }
 
 function drawItem(item: Actor) {
     const colorOffset = getHitColorOffset(item.animHit_);
     if (item.btn_ === ItemCategory.Weapon) {
-        const weapon = weapons[item.s];
-        const img = img_weapons[weapon.gfx_];
-        if (img) {
-            const px = img.x;
-            const py = img.y;
-            img.x = 0.5;
-            img.y = 0.7;
-            draw(img, item.x, item.y - item.z, 0, 0.8, 0.8, 1, 0xFFFFFF, 0, colorOffset);
-            img.x = px;
-            img.y = py;
+        const weaponImage = item.s ? img[Img.weapon0 + item.s - 1] : undefined;
+        if (weaponImage) {
+            const px = weaponImage.x;
+            const py = weaponImage.y;
+            weaponImage.x = 0.5;
+            weaponImage.y = 0.7;
+            draw(weaponImage, item.x, item.y - item.z, 0, 0.8, 0.8, 1, 0xFFFFFF, 0, colorOffset);
+            weaponImage.x = px;
+            weaponImage.y = py;
         }
     } else if (item.btn_ === ItemCategory.Effect) {
         const anim = item.anim0_ / 0xFF;
         const s = 1 + 0.1 * Math.sin(16 * (lastFrameTs + anim * 10));
         const o = 2 * Math.cos(lastFrameTs + anim * 10);
-        draw(img_items[item.s], item.x, item.y - item.z - objectRadiusUnit - o, 0, s, s, 1, 0xFFFFFF, 0, colorOffset);
+        draw(img[Img.item0 + item.s], item.x, item.y - item.z - objectRadiusUnit - o, 0, s, s, 1, 0xFFFFFF, 0, colorOffset);
     }
 }
 
@@ -1447,15 +1361,15 @@ function drawObjects() {
         } else if (type === ActorType.Bullet) {
             const a = Math.atan2(actor.v, actor.u);
             if (actor.btn_ === 2) {
-                img_circle_4.x = 0.6;
-                draw(img_circle_4, actor.x, actor.y - actor.z, a, 3, 1.5, 0.07, 0xFFFFFF, 1);
-                img_circle_4.x = 0.7;
-                draw(img_circle_4, actor.x, actor.y - actor.z, a, 1.5, 0.6, 1, 0xFFFF44);
-                draw(img_box, actor.x, actor.y - actor.z, a, 4, 2);
-                img_circle_4.x = 0.5;
+                img[Img.circle_4].x = 0.6;
+                draw(img[Img.circle_4], actor.x, actor.y - actor.z, a, 3, 1.5, 0.07, 0xFFFFFF, 1);
+                img[Img.circle_4].x = 0.7;
+                draw(img[Img.circle_4], actor.x, actor.y - actor.z, a, 1.5, 0.6, 1, 0xFFFF44);
+                draw(img[Img.box], actor.x, actor.y - actor.z, a, 4, 2);
+                img[Img.circle_4].x = 0.5;
             } else if (actor.btn_ === 1) {
-                draw(img_box, actor.x, actor.y - actor.z, a, 8, 4, 0.13, 0xFFFFFF, 1);
-                draw(img_box, actor.x, actor.y - actor.z, a, 4, 2, 0.13, 0xFFFFFF, 1);
+                draw(img[Img.box], actor.x, actor.y - actor.z, a, 8, 4, 0.13, 0xFFFFFF, 0);
+                draw(img[Img.box], actor.x, actor.y - actor.z, a, 4, 2, 0.13, 0xFFFFFF, 0);
             }
         } else if (type === ActorType.Item) {
             drawItem(actor);
@@ -1482,17 +1396,9 @@ function drawPlayer(p: Actor) {
 
     const wpn = getWeapon(p);
     let viewAngle = unpackAngleByte((p.btn_ >>> 16) & 0xFF, Const.ViewAngleRes);
-    // const weaponBaseAngle = -Math.PI / 4;
-    // const weaponBaseScaleX = 0.5;// -1 for gun
-    // const weaponBaseScaleY = 0.5;// -1 for gun
-
     const weaponBaseAngle = wpn.gfxRot_;
     const weaponBaseScaleX = wpn.gfxSx_;
     const weaponBaseScaleY = 1;
-
-    // const weaponBaseAngle = Math.PI - Math.PI / 4;
-    // const weaponBaseScaleX = 1;// -1 for gun
-    // const weaponBaseScaleY = 1;// -1 for gun
     let weaponX = x;
     let weaponY = y - PlayerHandsZ;
     let weaponAngle = Math.atan2(
@@ -1508,43 +1414,41 @@ function drawPlayer(p: Actor) {
     }
     const A = Math.sin(weaponAngle - Math.PI);
     let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
+    let wx = 1;
+    if (weaponAngle < -Math.PI * 0.5 || weaponAngle > Math.PI * 0.5) {
+        wx = -1;
+    }
     if (wpn.bulletType_ === 1) {
-        const t = Math.max(0, (p.s - 0.8) * 5);
-        wd += t * 12;
-        weaponAngle -= Math.PI * 0.25 * Math.sin(t * t * Math.PI * 2);
+        // const t = Math.max(0, (p.s - 0.8) * 5);
+        const t = Math.max(0, (p.s - 0.5) * 2);
+        wd += Math.sin(t * Math.PI) * 12;
+        weaponAngle -= -wx * Math.PI * 0.25 * Math.sin((1 -(1-t) **2 ) * Math.PI * 2);
     }
     weaponX += wd * Math.cos(weaponAngle);
     weaponY += wd * Math.sin(weaponAngle);
 
-    if (weaponAngle < -Math.PI * 0.5 || weaponAngle > Math.PI * 0.5) {
-        weaponSX *= -1;
+    if (wx < 0) {
+        weaponSX *= wx;
         weaponAngle -= Math.PI + 2 * weaponBaseAngle;
     }
 
     weaponAngle += weaponBaseAngle;
 
-    if (weaponBack && wpn.gfx_ > 0) {
-        draw(img_weapons[wpn.gfx_], weaponX, weaponY, weaponAngle, weaponSX, weaponSY);
+    if (weaponBack && p.weapon_) {
+        draw(img[Img.weapon0 + p.weapon_ - 1], weaponX, weaponY, weaponAngle, weaponSX, weaponSY);
     }
 
-    img_box.x = 0.5;
-    img_box.y = 0;
-    draw(img_box, x - 3, y + 4 - 8 - 1, 0, 2, leg1, 1, 0x888888, 0, co);
-    draw(img_box, x + 3, y + 4 - 8 - 1, 0, 2, leg2, 1, 0x888888, 0, co);
-    img_box.x = 0.5;
-    img_box.y = 0.5;
-    draw(img_box, x, y - 6 - 1 + base, 0, 8, 6, 1, 0x444444, 0, co);
+    draw(img[Img.box_t], x - 3, y + 4 - 8 - 1, 0, 2, leg1, 1, 0x888888, 0, co);
+    draw(img[Img.box_t], x + 3, y + 4 - 8 - 1, 0, 2, leg2, 1, 0x888888, 0, co);
+    draw(img[Img.box], x, y - 6 - 1 + base, 0, 8, 6, 1, 0x444444, 0, co);
 
     {
         const s = p.w * 0.002;
         const a = 0.002 * p.u;
-        draw(img_players[(p.c + debugCheckAvatar) % img_players.length], x, y - 16 + base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);
+        draw(img[Img.avatar0 + (p.c + debugCheckAvatar) % Img.num_avatars], x, y - 16 + base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);
     }
 
-
     // DRAW HANDS
-    img_box.x = 0;
-    img_box.y = 0.5;
     const rArmX = x + 4;
     const lArmX = x - 4;
     const armY = (y - PlayerHandsZ + base * 2);
@@ -1553,19 +1457,16 @@ function drawPlayer(p: Actor) {
     const lArmLen = Math.hypot(weaponX - lArmX, weaponY - armY) - 1;
     const rArmLen = Math.hypot(weaponX - rArmX, weaponY - armY) - 1;
 
-    if (wpn.gfx_ > 0) {
-        draw(img_box, x + 4, y - 4 - 5 - 1 + base, rArmRot, rArmLen, 2, 1, 0x888888, 0, co);
-        draw(img_box, x - 4, y - 4 - 5 - 1 + base, lArmRot, lArmLen, 2, 1, 0x888888, 0, co);
+    if (p.weapon_) {
+        draw(img[Img.box_l], x + 4, y - 4 - 5 - 1 + base, rArmRot, rArmLen, 2, 1, 0x888888, 0, co);
+        draw(img[Img.box_l], x - 4, y - 4 - 5 - 1 + base, lArmRot, lArmLen, 2, 1, 0x888888, 0, co);
     } else {
-        draw(img_box, x + 4, y - 4 - 5 - 1 + base, sw1 + Math.PI / 4, 5, 2, 1, 0x888888, 0, co);
-        draw(img_box, x - 4, y - 4 - 5 - 1 + base, sw2 + Math.PI - Math.PI / 4, 5, 2, 1, 0x888888, 0, co);
+        draw(img[Img.box_l], x + 4, y - 4 - 5 - 1 + base, sw1 + Math.PI / 4, 5, 2, 1, 0x888888, 0, co);
+        draw(img[Img.box_l], x - 4, y - 4 - 5 - 1 + base, sw2 + Math.PI - Math.PI / 4, 5, 2, 1, 0x888888, 0, co);
     }
 
-    img_box.x = 0.5;
-    img_box.y = 0.5;
-
-    if (!weaponBack && wpn.gfx_ > 0) {
-        draw(img_weapons[wpn.gfx_], weaponX, weaponY, weaponAngle, weaponSX, weaponSY);
+    if (!weaponBack && p.weapon_) {
+        draw(img[Img.weapon0 + p.weapon_ - 1], weaponX, weaponY, weaponAngle, weaponSX, weaponSY);
     }
 }
 
@@ -1577,18 +1478,19 @@ function getHitColorOffset(anim: number) {
     return (x << 16) | (x << 8) | x;
 }
 
-function drawBarrel(p: Actor) {
+function drawObject(img: Texture, p: Actor) {
     const x = p.x;
     const y = p.y - p.z;
     const co = getHitColorOffset(p.animHit_);
-    draw(img_barrels[p.c], x, y, 0, 1, 1, 1, 0xFFFFFF, 0, co);
+    draw(img, x, y, 0, 1, 1, 1, 0xFFFFFF, 0, co);
+}
+
+function drawBarrel(p: Actor) {
+    drawObject(img[Img.barrel0 + p.c], p);
 }
 
 function drawTree(p: Actor) {
-    const x = p.x;
-    const y = p.y - p.z;
-    const co = getHitColorOffset(p.animHit_);
-    draw(img_trees[p.c], x, y, 0, 1, 1, 1, 0xFFFFFF, 0, co);
+    drawObject(img[Img.tree0 + p.c], p);
 }
 
 function unpackAngleByte(angleByte: number, resolution: number) {
@@ -1605,14 +1507,12 @@ function drawActorBoundingSphere(p: Actor) {
     const x = p.x;
     const y = p.y - p.z - h;
     const s = r / 16;
-    draw(img_box, x, y, 0, 1, p.z + h);
-    draw(img_circle_16, x, y, 0, s, s, 0.5, 0xFF0000);
+    draw(img[Img.box_t], x, y, 0, 1, p.z + h);
+    draw(img[Img.circle_16], x, y, 0, s, s, 0.5, 0xFF0000);
 }
 
 function drawCollisions() {
-    img_box.y = 0;
     for (const p of drawList) {
-        // drawActorBoundingSphere(p);
+        drawActorBoundingSphere(p);
     }
-    img_box.y = 0.5;
 }
