@@ -38,18 +38,9 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         const flags = u32[ptr++];
         const GAP = u32[ptr++];
         const hasBtn = flags & 1;
-        const hasSpawn = flags & 2;
-        const hasClientID = flags & 4;
+        const hasClientID = flags & 2;
         if (hasBtn) {
             e.btn_ = u32[ptr++];
-            const GAP = u32[ptr++];
-        }
-        if (hasSpawn) {
-            e.spawn_ = {
-                x: u32[ptr++],
-                y: u32[ptr++],
-                z: u32[ptr++],
-            };
             const GAP = u32[ptr++];
         }
         if (hasClientID) {
@@ -148,21 +139,13 @@ export function pack(packet: Packet): ArrayBuffer {
         ++i;
         let flags = 0;
         if (e.btn_ !== undefined) flags |= 1;
-        if (e.spawn_) flags |= 2;
-        if (!!e.c) flags |= 4;
+        if (!!e.c) flags |= 2;
         u32[ptr++] = flags;
         // GAP:
         u32[ptr++] = 0;
 
         if (e.btn_ !== undefined) {
             u32[ptr++] = e.btn_;
-            // GAP:
-            u32[ptr++] = 0;
-        }
-        if (e.spawn_) {
-            u32[ptr++] = e.spawn_.x;
-            u32[ptr++] = e.spawn_.y;
-            u32[ptr++] = e.spawn_.z;
             // GAP:
             u32[ptr++] = 0;
         }

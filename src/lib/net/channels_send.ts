@@ -26,7 +26,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
         } else {
             const delay = range(DebugLag.LagMin / 4, DebugLag.LagMax / 4);
             setTimeout(() => {
-                if (client.dc_.readyState === "open") {
+                if (client.dc_?.readyState === "open") {
                     try {
                         client.dc_.send(data);
                     } catch (e) {
@@ -50,7 +50,7 @@ export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer)
     }
 }
 
-export function getChannelPacketSize(client: RemoteClient) {
+export function getChannelPacketSize(client: RemoteClient):number {
     return process.env.NODE_ENV === "development" ?
         (client.debugPacketByteLength_ | 0) :
         (client.dc_.bufferedAmount);

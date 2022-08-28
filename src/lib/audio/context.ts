@@ -1,17 +1,24 @@
 export const audioContext = new AudioContext();
 
-const channels: AudioBufferSourceNode[] = [];
+//const channels: AudioBufferSourceNode[] = [];
 
-export function play(audioBuffer: AudioBuffer, loop?: boolean, vol?: number): AudioBufferSourceNode {
+export function play(audioBuffer: AudioBuffer, vol?: number, pan?: number, loop?: boolean): AudioBufferSourceNode {
+    const testMasterVol = 0.05;
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
-    const gainNode = audioContext.createGain()
-    gainNode.gain.value = vol ?? 1.0;
+
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = (vol ?? 1) * testMasterVol;
     gainNode.connect(audioContext.destination);
-    source.connect(gainNode);
+
+    const panNode = audioContext.createStereoPanner();
+    panNode.pan.value = pan ?? 0;
+    panNode.connect(gainNode);
+
+    source.connect(panNode);
     source.loop = !!loop;
     source.start();
-    channels.push(source);
+    //channels.push(source);
     return source;
 }
 

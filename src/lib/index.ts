@@ -1,5 +1,5 @@
-import {connect, disconnect, remoteClients, getUserName, setUserName} from "./net/messaging";
-import {isAnyKeyDown, initInput, updateInput} from "./utils/input";
+import {connect, disconnect, getUserName, remoteClients, setUserName} from "./net/messaging";
+import {initInput, isAnyKeyDown, updateInput} from "./utils/input";
 import {termClear, termFlush, termPrint} from "./utils/log";
 import {initTestGame, updateTestGame} from "./game/game";
 import {initDraw2d} from "./graphics/draw2d";
@@ -26,7 +26,7 @@ const onStart = async () => {
     onbeforeunload = disconnect;
     await connect();
 
-    play(bgm[Bgm.main], true, 0.05);
+    play(bgm[Bgm.main], 0.05, 0, true);
 
     initTestGame();
     state = StartState.Connected;
@@ -68,7 +68,7 @@ function doFrame(ts: number) {
         case StartState.Connecting:
             termPrint("Connecting...\n");
             termPrint("┌ " + getUserName() + "\n");
-            for (const [,rc] of remoteClients) {
+            for (const [, rc] of remoteClients) {
                 termPrint("├ " + rc.name_ + " " + (rc.pc_ ? rc.pc_.iceConnectionState : "x") + "\n");
             }
             break;

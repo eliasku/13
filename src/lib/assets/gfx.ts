@@ -17,17 +17,17 @@ export const enum Img {
     avatar4,
     avatar5,
     avatar6,
-    avatar7,
-    avatar8,
-    avatar9,
-    avatar10,
-    avatar11,
-    avatar12,
-    avatar13,
-    avatar14,
-    avatar15,
-    avatar16,
-    avatar17,
+    // avatar7,
+    // avatar8,
+    // avatar9,
+    // avatar10,
+    // avatar11,
+    // avatar12,
+    // avatar13,
+    // avatar14,
+    // avatar15,
+    // avatar16,
+    // avatar17,
 
     weapon0,
     weapon1,
@@ -37,6 +37,7 @@ export const enum Img {
     weapon5,
     weapon6,
     weapon7,
+    weapon8,
 
     barrel0,
     barrel1,
@@ -48,7 +49,8 @@ export const enum Img {
     tree0,
     tree1,
 
-    num_avatars = 18,
+    // num_avatars = 18,
+    num_avatars = 7,
 }
 
 export const img: Texture[] = [];
@@ -148,22 +150,26 @@ function createAtlas():void {
 
     createEmoji2("💀", 198, 166, 17, 19, 16, 0, 1, 1, 128);
     createEmoji2("👹", 192, 166, 19, 18, 16, 0, 1, 1, 128);
-    createEmoji2("😵", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🌚", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("😷", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("😵", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("🌚", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("😷", 192, 166, 19, 19, 16, 0, 1, 1, 128);
     createEmoji2("🤡", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("👨", 203, 166, 16, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("👨", 203, 166, 16, 19, 16, 0, 1, 1, 128);
     createEmoji2("🤖", 192, 166, 19, 18, 16, 0, 1, 1, 128);
-    createEmoji2("💩", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("💩", 192, 166, 19, 19, 16, 0, 1, 1, 128);
     createEmoji2("🎃", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🤓", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("😡", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🤢", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("🤓", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("😡", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("🤢", 192, 166, 19, 19, 16, 0, 1, 1, 128);
     createEmoji2("🦝", 192, 172, 19, 17, 16, 0, 1, 1, 128);
     createEmoji2("🐙", 192, 166, 19, 18, 16, 0, 1, 1, 128);
-    createEmoji2("🦑", 201, 166, 16, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🍏", 203, 166, 16, 19, 16, 0, 1, 1, 128);
-    createEmoji2("😾", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("🦑", 201, 166, 16, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("🍏", 203, 166, 16, 19, 16, 0, 1, 1, 128);
+    // createEmoji2("😾", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+
+    // none weapon gfx index
+    img.push(undefined);
+
     createEmoji2("🔪", 180, 234, 19, 7, 12, -50, 1, 1, 128);
     //createEmoji2("🔨", 193, 189, 20, 13, 16, 44.5, -1, 1, 128);
     createEmoji2("🪓", 198, 210, 20, 10, 16, 45, -1, 1, 128);
@@ -201,10 +207,10 @@ export function loadAtlas() {
     "★,☆,✢,✥,✦,✧,❂,❉,✯,✰,⋆,✪";
 
     createAtlas();
-    img[Img.weapon0].x = 0.3;
     img[Img.weapon1].x = 0.3;
     img[Img.weapon2].x = 0.3;
     img[Img.weapon3].x = 0.3;
+    img[Img.weapon4].x = 0.3;
     img[Img.barrel0].y = 0.95;
     img[Img.barrel1].y = 0.85;
     img[Img.barrel2].y = 0.95;

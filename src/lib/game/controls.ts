@@ -15,6 +15,7 @@ export const enum ControlsFlag {
     Jump = 0x400,
     Shooting = 0x800,
     Drop = 0x1000,
+    Spawn = 0x2000,
 }
 
 export let lookAtX = 0;

@@ -10,8 +10,8 @@ export const enum ActorType {
 }
 
 export const enum ItemCategory {
-    Weapon = 1,
-    Effect = 2,
+    Effect = 0x100,
+    Weapon = 0x200,
 }
 
 export const enum EffectItemType {
@@ -59,7 +59,6 @@ export interface Client {
 
 export interface ClientEvent {
     t: number;
-    spawn_?: { x: number, y: number, z: number };
     btn_?: number;
     // will be populated from packet info
     c?: ClientID;
