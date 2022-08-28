@@ -872,13 +872,31 @@ function hitWithBullet(actor: Actor, bullet: Actor) {
     }
     if(bullet.hp_) {
         --bullet.hp_;
+        if(bullet.hp_) {
+            let nx = bullet.x - actor.x;
+            let ny = bullet.y - actor.y;
+            const dist = Math.hypot(nx, ny);
+            const pen = objectRadiusByType[actor.type_] + bulletRadiusUnit + 1;
+            nx /= dist;
+            ny /= dist;
+            reflectVelocity(bullet, nx, ny);
+            bullet.x = actor.x + pen * nx;
+            bullet.y = actor.y + pen * ny;
+        }
     }
+}
+
+function reflectVelocity(actor:Actor, nx: number, ny:number) {
+    // r = d - 2(d⋅n)n
+    const Z = 2 * (actor.u * nx + actor.v * ny);
+    actor.u -= Z * nx;
+    actor.v -= Z * ny;
 }
 
 function updateBulletCollision(list: Actor[]) {
     for (let i = 0; i < state.bullets_.length; ++i) {
         const b = state.bullets_[i];
-        if(b.hp_ > 0) {
+        if(b.hp_) {
             for (let j = 0; j < list.length; ++j) {
                 const a = list[j];
                 const owned = !(a.c - b.c);
