@@ -26,13 +26,22 @@ export function seed(state: number) {
     _state = state;
 }
 
-export function rand(): number /* u32 */ {
+export function nextInt(): number /* u32 */ {
     let x = _state;
     x = (Math.imul(x, 1103515245) + 12345) >>> 0;
     _state = x;
     return temper(x) >>> 1;
 }
 
-export function random() {
-    return unorm_f32_from_u32(rand());
+export function rand(max: number): number /* u32 */ {
+    return nextInt() % max;
+}
+
+export function random(max: number): number /* u32 */ {
+    return nextFloat() * max;
+}
+
+
+export function nextFloat() {
+    return unorm_f32_from_u32(nextInt());
 }

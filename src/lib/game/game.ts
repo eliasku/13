@@ -4,7 +4,7 @@ import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush, Texture} from "../graphics/draw2d";
-import {getSeed, rand, random, seed} from "../utils/rnd";
+import {getSeed, nextInt, nextFloat, seed, rand, random} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
 import {Const, DEV_MODE} from "./config";
@@ -232,9 +232,8 @@ weapons[8].cameraFeedback_ = 0.1;
 weapons[8].cameraLookForward_ = 0.3;
 
 function pickRandomWeaponId() {
-    // const min = 1;
     const min = 1;
-    return min + rand() % (weapons.length - min);
+    return min + rand(weapons.length - min);
 }
 
 function getWeapon(player: Actor): WeaponConfig {
@@ -242,8 +241,8 @@ function getWeapon(player: Actor): WeaponConfig {
 }
 
 function setRandomPosition(actor: Actor): Actor {
-    actor.x = objectRadiusUnit + rand() % (boundsSize - objectRadiusUnit * 2);
-    actor.y = objectRadiusUnit + rand() % (boundsSize - objectRadiusUnit * 2);
+    actor.x = objectRadiusUnit + rand(boundsSize - objectRadiusUnit * 2);
+    actor.y = objectRadiusUnit + rand(boundsSize - objectRadiusUnit * 2);
     return actor;
 }
 
@@ -265,7 +264,7 @@ function newActorObject(type: ActorType): Actor {
         t: 0,
 
         weapon_: 0,
-        anim0_: rand() & 0xFF,
+        anim0_: rand(0x100),
         animHit_: 0,
         hp_: 0,
     };
@@ -282,7 +281,7 @@ function newItemRandomWeapon(): Actor {
 function newItemRandomEffect(): Actor {
     const item = newActorObject(ActorType.Item);
     item.btn_ = 2;
-    item.s = rand() % 2;
+    item.s = rand(2);
     state.items_.push(item);
     return item;
 }
@@ -311,7 +310,7 @@ function recreateMap() {
     trees = [];
     for (let i = 0; i < 32; ++i) {
         const tree = newActorObject(ActorType.Tree);
-        tree.c = rand() & 1;
+        tree.c = rand(2);
         trees.push(
             setRandomPosition(tree)
         );
@@ -329,8 +328,8 @@ function createSeedGameState() {
 
     for (let i = 0; i < 32; ++i) {
         const actor = newActorObject(ActorType.Barrel);
-        actor.hp_ = 3 + rand() % 4;
-        actor.c = rand() & 1;
+        actor.hp_ = 3 + rand(4);
+        actor.c = rand(2);
         state.barrels_.push(
             setRandomPosition(actor)
         );
@@ -987,10 +986,10 @@ function testIntersection(a: Actor, b: Actor): boolean {
 
 function kill(actor: Actor) {
     if (actor.type_ === ActorType.Barrel) {
-        const amount = 1 + rand() % 3;
+        const amount = 1 + rand(3);
         for (let i = 0; i < amount; ++i) {
-            const a = random() * Math.PI * 2;
-            const v = 32 + rand() % 64;
+            const a = random(Math.PI * 2);
+            const v = 32 + rand(64);
             const item = newItemRandomEffect();
             item.x = actor.x;
             item.y = actor.y;
@@ -1003,8 +1002,8 @@ function kill(actor: Actor) {
     }
     if (actor.type_ === ActorType.Player) {
         if (actor.weapon_ > 0) {
-            const a = random() * Math.PI * 2;
-            const v = 32 + rand() % 64;
+            const a = random(Math.PI * 2);
+            const v = 32 + rand(64);
             const item = newItemRandomWeapon();
             item.x = actor.x;
             item.y = actor.y;
@@ -1115,7 +1114,7 @@ function updatePlayer(player: Actor, dt: number) {
             player.z = 1;
             player.w = jumpVel;
             grounded = false;
-            play(snd[Snd.blip], false, 0.2 + 0.8 * random());
+            play(snd[Snd.blip], false, 0.2 + random(0.8));
         }
     }
     let c = grounded ? 16 : 8;
@@ -1146,7 +1145,7 @@ function updatePlayer(player: Actor, dt: number) {
                 // set weapon item
                 btn_: 1,
                 s: player.weapon_,
-                anim0_: rand() & 0xFF,
+                anim0_: rand(0x100),
                 animHit_: hitAnimMax,
             });
             player.weapon_ = 0;
@@ -1160,7 +1159,7 @@ function updatePlayer(player: Actor, dt: number) {
         if (!player.s) {
             cameraShake = Math.max(weapon.cameraShake_, cameraShake);
             const angle = unpackAngleByte((player.btn_ >>> 16) & 0xFF, Const.ViewAngleRes)
-                + Math.min(1, player.t) * (0.5 - random()) * weapon.angleSpread_;
+                + Math.min(1, player.t) * (0.5 - nextFloat()) * weapon.angleSpread_;
             let x0 = player.x;
             let y0 = player.y;
             const dx = Math.cos(angle);
@@ -1173,7 +1172,7 @@ function updatePlayer(player: Actor, dt: number) {
             player.w += weapon.jumpBack_;
             // most fast moving object: (r * 2) * 60 = 960
             //const maxSpeed = objectRadiusUnit * 2 * Const.NetFq;
-            play(snd[Snd.shoot], false, 0.1 + 0.1 * random());
+            play(snd[Snd.shoot], false, 0.1 + random(0.1));
             const bulletVelocity = weapon.velocity_;
             state.bullets_.push({
                 type_: ActorType.Bullet,
