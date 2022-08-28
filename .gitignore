@@ -3,6 +3,7 @@ node_modules/
 public/*.js
 public/*.js.map
 public/index.html
+public/debug.html
 zip/*.js
 zip/*.html
 dump/

@@ -1,4 +1,4 @@
-import {connect, disconnect, getRemoteClients, getUserName, setUserName} from "./net/messaging";
+import {connect, disconnect, remoteClients, getUserName, setUserName} from "./net/messaging";
 import {isAnyKeyDown, initInput, updateInput} from "./utils/input";
 import {termClear, termFlush, termPrint} from "./utils/log";
 import {initTestGame, updateTestGame} from "./game/game";
@@ -68,7 +68,7 @@ function doFrame(ts: number) {
         case StartState.Connecting:
             termPrint("Connecting...\n");
             termPrint("┌ " + getUserName() + "\n");
-            for (const rc of getRemoteClients()) {
+            for (const [,rc] of remoteClients) {
                 termPrint("├ " + rc.name_ + " " + (rc.pc_ ? rc.pc_.iceConnectionState : "x") + "\n");
             }
             break;

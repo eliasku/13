@@ -1,5 +1,5 @@
 import {ClientID} from "../../shared/types";
-import {getClientId, getRemoteClient, getRemoteClients, getUserName} from "../net/messaging";
+import {getClientId, getUserName, remoteClients} from "../net/messaging";
 import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
@@ -7,7 +7,7 @@ import {beginRender, camera, draw, flush, Texture} from "../graphics/draw2d";
 import {getSeed, nextFloat, rand, random, seed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
-import {Const, DEV_MODE} from "./config";
+import {Const} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet} from "./types";
 import {pack, unpack} from "./packets";
@@ -347,7 +347,7 @@ export function updateTestGame(ts: number) {
         lastFrameTs = ts;
     }
 
-    if (startTick < 0 && getRemoteClients().length === 0) {
+    if (startTick < 0 && !remoteClients.size) {
         createSeedGameState();
     }
 
@@ -366,7 +366,9 @@ export function updateTestGame(ts: number) {
         cleaningUpClients();
     }
     printStatus();
-    printRemoteClients();
+    if (process.env.NODE_ENV === "development") {
+        printDebugInfo();
+    }
 }
 
 let prevRenderTic = 0;
@@ -406,7 +408,7 @@ function printStatus() {
     }
 }
 
-function printRemoteClients() {
+function printDebugInfo() {
     let text = "🌐";
     if (prevRenderTic === gameTic) text = "🥶";
     const fr = simulatedFrames - (simulatedFrames | 0);
@@ -420,8 +422,7 @@ function printRemoteClients() {
     text += "visible: " + drawList.length + "\n";
 
     text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTick}\n`;
-    const remoteClients = getRemoteClients();
-    for (const remoteClient of remoteClients) {
+    for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;
         const cl = clients[remoteClient.id_];
@@ -471,6 +472,20 @@ function getNextInputTic() {
 }
 
 function checkPlayerInput() {
+    if (process.env.NODE_ENV === "development") {
+        if (keyboardDown.has("Digit1")) {
+            ++debugCheckAvatar;
+        }
+        if (keyboardDown.has("Digit2")) {
+            drawCollisionEnabled = !drawCollisionEnabled;
+        }
+    }
+
+    const player = getMyPlayer();
+    if (player) {
+        updateControls(player);
+    }
+
     const inputTic = getNextInputTic();
     if (lastInputTic >= inputTic) {
         return;
@@ -479,7 +494,6 @@ function checkPlayerInput() {
     // localEvents = localEvents.filter((x) => x.t < inputTic || x.spawn);
 
     let btn = 0;
-    const player = getMyPlayer();
     if (player) {
         updateControls(player);
 
@@ -504,11 +518,8 @@ function checkPlayerInput() {
         if (dropButton) {
             btn |= ControlsFlag.Drop;
         }
-
-        if (keyboardDown.has("Digit1")) {
-            ++debugCheckAvatar;
-        }
     }
+
     if (lastInputCmd !== btn) {
         getLocalEvent(inputTic).btn_ = btn;
         lastInputCmd = btn;
@@ -525,7 +536,7 @@ let debugCheckAvatar = 0;
 
 function checkJoinSync(lastTic: number) {
     if (!joined && startTick >= 0) {
-        for (const rc of getRemoteClients()) {
+        for (const [, rc] of remoteClients) {
             if (rc.dc_ && rc.dc_.readyState === "open") {
                 const cl = clients[rc.id_];
                 if (!cl || !cl.ready_) {
@@ -555,21 +566,19 @@ function respawnPlayer() {
 }
 
 function calcNetTick() {
-    let tmin = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0;
-    let amin = tmin;
-    for (const client of getRemoteClients()) {
+    netTick = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0;
+    ackMin = netTick;
+    for (const [, client] of remoteClients) {
         const cl = clients[client.id_];
         if (cl) {
-            if (cl.t < tmin) {
-                tmin = cl.t;
+            if (netTick > cl.t) {
+                netTick = cl.t;
             }
-            if (cl.acknowledgedTic_ < amin) {
-                amin = cl.acknowledgedTic_;
+            if (ackMin > cl.acknowledgedTic_) {
+                ackMin = cl.acknowledgedTic_;
             }
         }
     }
-    netTick = tmin;
-    ackMin = amin;
 }
 
 function tryRunTicks(ts: number): number {
@@ -617,7 +626,7 @@ function tryRunTicks(ts: number): number {
 function trySendInput() {
     const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
     const lastTic = gameTic - 1;
-    for (const client of getRemoteClients()) {
+    for (const [, client] of remoteClients) {
         if (client.dc_ && client.dc_.readyState === "open") {
             const cl = clients[client.id_];
 
@@ -693,7 +702,7 @@ function processPacket(sender: Client, data: Packet) {
             receivedEvents.push(e);
         }
     } else {
-        if (DEV_MODE) {
+        if (process.env.NODE_ENV === "development") {
             if (data.check_tic_ === (gameTic - 1)) {
                 if (data.check_seed_ !== getSeed()) {
                     console.warn("seed mismatch from client " + data.c + " at tic " + data.check_tic_);
@@ -742,12 +751,10 @@ export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
 function cleaningUpClients() {
     for (const cl of clients) {
         if (cl) {
-            const rc = getRemoteClient(cl.c);
-            if (rc) {
-                if (rc.dc_.readyState === "open") {
-                    // alive
-                    continue;
-                }
+            const rc = remoteClients.get(cl.c);
+            if (rc && rc.dc_.readyState === "open") {
+                // alive
+                continue;
             }
             clients[cl.c] = undefined;
             const p = getPlayerByClient(cl.c);
@@ -1246,9 +1253,11 @@ function drawGame() {
     drawMapBackground();
     drawObjects();
 
-    //if (process.env.NODE_ENV === "development") {
-    //drawCollisions();
-    //}
+    if (process.env.NODE_ENV === "development") {
+        if (drawCollisionEnabled) {
+            drawCollisions();
+        }
+    }
 
     drawMapOverlay();
     drawCrosshair();
@@ -1267,12 +1276,14 @@ function drawOverlay() {
 function drawShadows() {
     for (const actor of drawList) {
         let shadowScale = (2 - actor.z / 64.0);
+        let additive = 0;
+        let color = 0;
         if (actor.type_ === ActorType.Bullet) {
             shadowScale *= 2;
-            draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .1, 0xFFFFFF, 1);
-        } else {
-            draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .4, 0x0);
+            additive = 1;
+            color = 0x333333;
         }
+        draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .4, color, additive);
     }
 }
 
@@ -1467,10 +1478,7 @@ function drawPlayer(p: Actor) {
 }
 
 function getHitColorOffset(anim: number) {
-    let x = Math.min(hitAnimMax, (anim * 2)) / hitAnimMax;
-    // x = 1 - x;
-    // x = 1 - x * x;
-    x = (x * 0xFF) | 0;
+    const x = 0xFF * Math.min(1, 2 * anim / hitAnimMax);
     return (x << 16) | (x << 8) | x;
 }
 
@@ -1506,6 +1514,8 @@ function drawActorBoundingSphere(p: Actor) {
     draw(img[Img.box_t], x, y, 0, 1, p.z + h);
     draw(img[Img.circle_16], x, y, 0, s, s, 0.5, 0xFF0000);
 }
+
+let drawCollisionEnabled = false;
 
 function drawCollisions() {
     for (const p of drawList) {

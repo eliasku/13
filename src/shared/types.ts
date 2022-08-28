@@ -15,30 +15,40 @@ export const enum ServerEventName {
 }
 
 export const enum MessageType {
+    Nop = 0,
     RtcOffer = 1,
     RtcCandidate = 2,
     Name = 3,
 }
 
-export interface Message {
-    // source - from
-    s: ClientID;
-    // destination - to
-    d: ClientID;
-    // type
-    t: MessageTypeID;
-    // payload
-    a: MessageData;
-    // call identifier
-    c?: CallID;
+export const enum MessageField {
+    Source = 0,
+    Destination = 1,
+    Type = 2,
+    Call = 3,
+    Data = 4,
 }
 
-export interface Request {
+export type Message = [
     // source - from
-    s?: ClientID;
+    ClientID,
+    // destination - to
+    ClientID,
+    // type
+    MessageTypeID,
+    // call id
+    CallID,
+    // payload
+    MessageData,
+    // call identifier
+];
+
+export type Request = [
+    // source - from
+    ClientID,
     // messages array
-    a?: Message[];
-}
+    Message[]
+];
 
 export interface PostMessagesResponse {
     // number of processed messages

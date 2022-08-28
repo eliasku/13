@@ -137,21 +137,19 @@ export function initInput() {
         // console.info("ontouchend");
     };
 
-    //document.addEventListener("keypress", onKey, true);
     document.onkeydown = (e: KeyboardEvent) => {
         e.preventDefault();
-        if (!keyboardState.has(e.code)) {
+        if (!keyboardState.has(e.code) && !e.repeat) {
             keyboardDown.add(e.code);
+            keyboardState.add(e.code);
         }
-        keyboardState.add(e.code);
         unlockAudio();
     };
     document.onkeyup = (e: KeyboardEvent) => {
         e.preventDefault();
-        if (keyboardState.has(e.code)) {
+        if (keyboardState.delete(e.code)) {
             keyboardUp.add(e.code);
         }
-        keyboardState.delete(e.code);
     };
 }
 

@@ -1,13 +1,5 @@
-import {DEBUG_LAG_ENABLED, DebugLag} from "../game/config";
+import {DebugLag} from "../game/config";
 import {RemoteClient} from "./messaging";
-
-// round-trip
-const lagMin = DebugLag.LagMin / 2;
-const lagMax = DebugLag.LagMax / 2;
-const packetLoss = DebugLag.PacketLoss;
-const sendLagMin = lagMin / 2;
-const sendLagMax = lagMax / 2;
-const sendPacketLoss = packetLoss * packetLoss;
 
 function chance(prob: number): boolean {
     return Math.random() < prob;
@@ -23,7 +15,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
         console.warn("HUGE packet could not be delivered: " + data.byteLength);
         //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
     }
-    if (!chance(sendPacketLoss)) {
+    if (!chance(DebugLag.PacketLoss ** 2)) {
         if (document.hidden) {
             // can't simulate lag when tab in background because of setTimeout stall
             try {
@@ -32,7 +24,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
                 console.warn("DataChannel send error:", e)
             }
         } else {
-            const delay = range(sendLagMin, sendLagMax);
+            const delay = range(DebugLag.LagMin / 4, DebugLag.LagMax / 4);
             setTimeout(() => {
                 if (client.dc_.readyState === "open") {
                     try {
@@ -47,7 +39,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
 }
 
 export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer) {
-    if (DEBUG_LAG_ENABLED) {
+    if (process.env.NODE_ENV === "development") {
         sendWithDebugLag(client, data);
     } else {
         try {
@@ -59,6 +51,8 @@ export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer)
 }
 
 export function getChannelPacketSize(client: RemoteClient) {
-    return DEBUG_LAG_ENABLED ? client.dc_.bufferedAmount : (client.debugPacketByteLength_ | 0);
+    return process.env.NODE_ENV === "development" ?
+        (client.debugPacketByteLength_ | 0) :
+        (client.dc_.bufferedAmount);
 }
 

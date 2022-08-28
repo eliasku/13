@@ -1,5 +1,5 @@
 import {execSync} from "child_process";
-import {copyFileSync, readFileSync, rmSync, writeFileSync} from "fs";
+import {copyFileSync, readFileSync, rmSync} from "fs";
 
 let report = [];
 const files = ["public/index.js", "public/server.js", "public/index.html"];
@@ -34,6 +34,7 @@ del(...files);
 del(...zipFolderFiles);
 
 execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
+copyFileSync("html/debug.html", "public/debug.html");
 
 // execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
 const esbuildArgs = [];
@@ -47,6 +48,10 @@ if (isProd) {
 
 execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server0.js --metafile=dump/server-build.json`);
 execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index0.js --metafile=dump/index-build.json`);
+
+// debug.js
+execSync(`esbuild src/lib/index.ts --minify --mangle-props=._$ --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
+
 report.push("BUILD: " + sz("public/index0.js", "public/server0.js", "public/index.html"));
 
 const pureFunc = [
@@ -104,6 +109,7 @@ if (process.argv.indexOf("--zip") > 0) {
         // execSync(`advzip --not-zip --shrink-insane --recompress game.zip`);
         const mode = "--shrink-insane";
         // const mode = "--shrink-extra";
+        // advzip --not-zip --shrink-insane --iter=1000 --add game.zip zip/index.js zip/server.js zip/index.html
         execSync(`advzip --not-zip ${mode} --iter=1000 --add game.zip ${zipFolderFiles.join(" ")}`);
         report.push("LZMA: " + sz("game.zip"));
     } catch {

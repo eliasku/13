@@ -1,18 +1,19 @@
-export const DEV_MODE = process.env.NODE_ENV === "development";
-
 export const DEBUG_TERM = 1;
 
 export const enum Const {
     NetFq = 60,
     InputDelay = 8,
-    Prediction = 1,
-    RLE = 1,
+
+    // ~35 bytes
+    Prediction = 0,
+
+    // ~130 bytes
+    RLE = 0,
 
     AnglesRes = 16,
     ViewAngleRes = 256,
 }
 
-export const DEBUG_LAG_ENABLED = DEV_MODE;
 export const enum DebugLag {
     // LagMin = 20,
     // LagMax = 200,

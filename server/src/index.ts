@@ -2,7 +2,14 @@ import * as http from "http";
 import {IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
 import * as fs from "fs";
 import * as url from 'url';
-import {ClientID, EventSourceUrl, PostMessagesResponse, Request, ServerEventName} from "../../src/shared/types";
+import {
+    ClientID,
+    EventSourceUrl,
+    MessageField,
+    PostMessagesResponse,
+    Request,
+    ServerEventName
+} from "../../src/shared/types";
 
 interface ClientState {
     id_: ClientID;
@@ -24,7 +31,7 @@ setInterval(() => {
     }
 }, 5000);
 
-function constructMessage(id:number, data:string) {
+function constructMessage(id: number, data: string) {
     return `id:${id}\ndata:${data}\n\n`;
 }
 
@@ -105,28 +112,23 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
         res.end();
     }
     // process new clients
-    const client = clients.get(reqData.s);
-    if (client) {
-        client.ts_ = performance.now();
-    } else {
+    const client = clients.get(reqData[0]);
+    if (!client) {
         // handle on client bad connection state (need to connect again and get new ID)
-        console.warn("client is not active: ", reqData.s);
+        console.warn("client is not active: ", reqData[0]);
         res.writeHead(404);
         res.end();
         return;
     }
 
+    client.ts_ = performance.now();
     let numProcessedMessages = 0;
-    if (reqData.a) {
-        for (const msg of reqData.a) {
-            if (msg.d) {
-                const toClient = clients.get(msg.d);
-                if (toClient) {
-                    sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
-                }
-            }
-            ++numProcessedMessages;
+    for (const msg of reqData[1]) {
+        const toClient = clients.get(msg[MessageField.Destination]);
+        if (toClient) {
+            sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
         }
+        ++numProcessedMessages;
     }
     res.writeHead(200, {"Content-Type": "application/json"});
     const responseData: PostMessagesResponse = {a: numProcessedMessages};
@@ -156,10 +158,10 @@ const requestListener: RequestListener = async (req, res) => {
                     headers["content-type"] = "text/html;charset=utf-8";
                     headers["cache-control"] = "no-cache";
                 } else if (filePath.endsWith(".js")) {
-                    headers["content-type"] = "application/javascript";
+                    // headers["content-type"] = "application/javascript";
                     headers["cache-control"] = "no-cache";
                 } else if (filePath.endsWith(".ttf")) {
-                    headers["content-type"] = "font/ttf";
+                    // headers["content-type"] = "font/ttf";
                     headers["cache-control"] = "max-age=86400";
                 }
                 res.writeHead(200, headers);
