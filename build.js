@@ -36,13 +36,14 @@ del(...zipFolderFiles);
 execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
 copyFileSync("html/debug.html", "public/debug.html");
 
+const manglePropsRegex = "._$";
 // execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
 const esbuildArgs = [];
 if (isProd) {
     esbuildArgs.push("--minify");
     esbuildArgs.push("--drop:console");
     esbuildArgs.push("--drop:debugger");
-    esbuildArgs.push("--mangle-props=._$");
+    esbuildArgs.push("--mangle-props=" + manglePropsRegex);
     esbuildArgs.push("--analyze");
 }
 
@@ -50,7 +51,7 @@ execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format
 execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index0.js --metafile=dump/index-build.json`);
 
 // debug.js
-execSync(`esbuild src/lib/index.ts --minify --mangle-props=._$ --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
+execSync(`esbuild src/lib/index.ts --minify --mangle-props=${manglePropsRegex} --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
 
 report.push("BUILD: " + sz("public/index0.js", "public/server0.js", "public/index.html"));
 
@@ -87,9 +88,10 @@ if (isProd) {
     compress.push("drop_console=true");
 }
 
-execSync(`terser public/server0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/._$/ -m -o public/server.js`);
-execSync(`terser public/index0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/._$/ -m -o public/index.js`);
-
+execSync(`terser public/server0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/server.js`);
+execSync(`terser public/index0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/index.js`);
+// copyFileSync("public/index0.js", "public/index.js");
+// copyFileSync("public/server0.js", "public/server.js");
 report.push("TERSER: " + sz(...files));
 
 if (process.argv.indexOf("--zip") > 0) {

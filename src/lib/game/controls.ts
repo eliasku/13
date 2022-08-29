@@ -3,6 +3,8 @@ import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/inpu
 import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img, Img} from "../assets/gfx";
+import {COLOR_WHITE} from "../assets/colors";
+import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./config";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -18,6 +20,7 @@ export const enum ControlsFlag {
     Spawn = 0x2000,
 }
 
+export const gameCamera: number[] = [0, 0, 1];
 export let lookAtX = 0;
 export let lookAtY = 0;
 export let viewX = 0;
@@ -39,8 +42,8 @@ export function updateControls(player: Actor) {
     const py = player.y - player.z - 10;
 
     if (mouse.x_ >= 0 && mouse.x_ < W && mouse.y_ >= 0 && mouse.y_ < H) {
-        lookAtX = (mouse.x_ - W * camera.toX_) / camera.scale_ + camera.atX_;
-        lookAtY = (mouse.y_ - H * camera.toY_) / camera.scale_ + camera.atY_;
+        lookAtX = (mouse.x_ - W / 2) * gameCamera[2] + gameCamera[0];
+        lookAtY = (mouse.y_ - H / 2) * gameCamera[2] + gameCamera[1];
         viewX = lookAtX - px;
         viewY = lookAtY - py;
     } else {
@@ -65,7 +68,7 @@ export function updateControls(player: Actor) {
 
     {
         updateVirtualPad();
-        const k = 1.0 / camera.scale_;
+        const k = gameCamera[2];
         if (touchPadActive) {
             {
                 const control = vpad[0];
@@ -94,8 +97,8 @@ export function updateControls(player: Actor) {
                 const len = Math.hypot(dx, dy);
                 viewX = dx;
                 viewY = dy;
-                lookAtX = px + dx * 3;
-                lookAtY = py + dy * 3;
+                lookAtX = px + dx * 2;
+                lookAtY = py + dy * 2;
                 shootButtonDown = +(len > control.r2_);
             }
             dropButton = vpad[2].pointer_ ? 1 : 0;
@@ -123,8 +126,8 @@ interface VPadControl {
 }
 
 const vpad: VPadControl[] = [
-    {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: 16, r2_: 48},
-    {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: 8, r2_: 24},
+    {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: PAD_MOVE_RADIUS_0, r2_: PAD_MOVE_RADIUS_1},
+    {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: PAD_FIRE_RADIUS_0, r2_: PAD_FIRE_RADIUS_1},
     {l_: 0.5, t_: 0, r_: 1, b_: 0.5, flags_: 1},
 ];
 let touchPadActive = false;
@@ -180,26 +183,23 @@ export function drawVirtualPad() {
     if (!touchPadActive) {
         return;
     }
-    const k = 1.0 / camera.scale_;
-    const W = gl.drawingBufferWidth * k;
-    const H = gl.drawingBufferHeight * k;
+    const W = gl.drawingBufferWidth;
+    const H = gl.drawingBufferHeight;
+    const k = 1 / camera.scale_;
+    let i = 0;
     for (const control of vpad) {
         const w_ = W * (control.r_ - control.l_);
         const h_ = H * (control.b_ - control.t_);
-        const cx = W * control.l_ + w_ / 2;
-        const cy = H * control.t_ + h_ / 2;
-        draw(img[Img.box], cx, cy, 0, w_, h_, 0.1, 0);
+        let cx = k * (W * control.l_ + w_ / 2);
+        let cy = k * (H * control.t_ + h_ / 2);
+        // draw(img[Img.box], cx, cy, 0, w_ * k, h_ * k, 0.1, 0);
         const pp = control.pointer_;
-        if (pp) {
-            if (control.flags_ & 1) {
-                draw(img[Img.box], cx, cy, 0, w_, h_, 0.1, pp ? 0xFFFFFF : 0);
-            } else {
-                const r1 = (control.r1_ / 16);
-                const r2 = (control.r2_ / 16);
-                draw(img[Img.circle_16], pp.startX_ * k, pp.startY_ * k, 0, r1, r1, 0.5);
-                draw(img[Img.circle_16], pp.startX_ * k, pp.startY_ * k, 0, r2, r2, 0.5);
-                draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
-            }
+        if (!(control.flags_ & 1) && pp) {
+            cx = pp.startX_ * k;
+            cy = pp.startY_ * k;
+            draw(img[Img.circle_16], pp.x_* k, pp.y_* k, 0, 1, 1, 0.5);
         }
+        draw(img[Img.joy0 + i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
+        ++i;
     }
 }

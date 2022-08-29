@@ -2,7 +2,7 @@ import {rand} from "../utils/rnd";
 import {createCanvas} from "./gfx";
 import {createTexture, Texture, uploadTexture} from "../graphics/draw2d";
 
-const size = 512;
+const size = 0x400;
 const map = createCanvas(size, false);
 export const mapTexture = createTexture(size);
 

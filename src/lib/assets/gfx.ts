@@ -1,5 +1,6 @@
 import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d";
 import {toRad} from "../utils/math";
+import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "../game/config";
 
 export const enum Img {
     box = 0,
@@ -8,6 +9,8 @@ export const enum Img {
     box_t2,
     box_l,
     circle_4,
+    circle_4_60p,
+    circle_4_70p,
     circle_16,
 
     avatar0,
@@ -38,6 +41,8 @@ export const enum Img {
     weapon6,
     weapon7,
     weapon8,
+    weapon9,
+    weapon10,
 
     barrel0,
     barrel1,
@@ -48,6 +53,9 @@ export const enum Img {
 
     tree0,
     tree1,
+
+    joy0,
+    joy1,
 
     // num_avatars = 18,
     num_avatars = 7,
@@ -61,9 +69,9 @@ export function createCanvas(size: number, alpha: boolean) {
     return canvas.getContext("2d", {alpha});
 }
 
-function createAtlas():void {
+function createAtlas(): void {
     const tempSize = 512;
-    const atlasSize = 256;
+    const atlasSize = 512;
     const texture = createTexture(atlasSize);
     const temp = createCanvas(tempSize, true);
     const atlas = createCanvas(atlasSize, true);
@@ -128,10 +136,12 @@ function createAtlas():void {
     const createCircle = (r: number) => {
         const s = r * 2;
         pushSprite(s, s);
+        atlas.translate(x + r, y + r);
         atlas.beginPath();
-        atlas.arc(x + r, y + r, r * 0.925, 0, Math.PI * 2);
+        atlas.arc(0, 0, r * 0.925, 0, Math.PI * 2);
         atlas.closePath();
         atlas.fill();
+        atlas.resetTransform();
         img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
     }
     // BOX
@@ -146,6 +156,11 @@ function createAtlas():void {
     );
     // CIRCLE
     createCircle(4);
+    img.push(
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.6, 0.5),
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.7, 0.5),
+    );
+
     createCircle(16);
 
     createEmoji2("💀", 198, 166, 17, 19, 16, 0, 1, 1, 128);
@@ -179,6 +194,9 @@ function createAtlas():void {
     createEmoji2("✏️️", 186, 216, 23, 8, 16, 44.5, -1, 1, 128);
     createEmoji2("🪥", 175, 261, 20, 8, 16, 45, 1, -1, 128);
     createEmoji2("⛏", 196, 216, 21, 17, 16, 135, 1, 1, 128);
+    createEmoji2("🔌", 188, 202, 22, 11, 16, 45, -1, 1, 128);
+    createEmoji2("🧵", 217, 192, 19, 19, 16, 90, 1, 1, 128);
+
     createEmoji2("🛢", 203, 144, 16, 23, 20, 0, 1, 1, 128);
     createEmoji2("📦", 193, 144, 18, 22, 20, 0, 1, 1, 128);
     createEmoji2("🪦", 176, 144, 23, 23, 20, 0, 1, 1, 128);
@@ -186,6 +204,36 @@ function createAtlas():void {
     createEmoji2("❤️", 208, 194, 15, 13, 12, 0, 1, 1, 128);
     createEmoji2("🌳", 156, 99, 28, 31, 28, 0, 1, 1, 136);
     createEmoji2("🌲", 162, 99, 26, 31, 28, 0, 1, 1, 136);
+
+    function renderJoy(r0: number, r1: number, text0: string, text1: string) {
+        const s = r1 * 2 + 32;
+        pushSprite(s, s);
+        atlas.font = "10px monospace";
+        atlas.textAlign = "center";
+        atlas.lineWidth = 2;
+        atlas.fillStyle = "#fff";
+        atlas.strokeStyle = "#fff";
+
+        atlas.translate(x + s / 2, y + s / 2);
+
+        atlas.beginPath();
+        atlas.arc(0, 0, r0, 0, Math.PI * 2);
+        atlas.moveTo(0, 0);
+        atlas.arc(0, 0, r1, 0, Math.PI * 2);
+        atlas.closePath();
+        atlas.stroke();
+
+        atlas.fillText(text0, 0, -r0 - 5);
+        atlas.fillText(text1, 0, -r1 - 5);
+
+        atlas.resetTransform();
+
+        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
+    }
+
+    renderJoy(PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1, "RUN", "JUMP");
+    renderJoy(PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, "AIM", "FIRE");
+    renderJoy(16, 16, "DROP", "");
 
     uploadTexture(texture.i, atlas.canvas);
 
@@ -206,11 +254,14 @@ export function loadAtlas() {
     "🔥,☁️,☠,🔨,⛏️,🗡,🔪,🔫,🚀,⭐,🌟";
     "★,☆,✢,✥,✦,✧,❂,❉,✯,✰,⋆,✪";
 
+
     createAtlas();
     img[Img.weapon1].x = 0.3;
     img[Img.weapon2].x = 0.3;
     img[Img.weapon3].x = 0.3;
     img[Img.weapon4].x = 0.3;
+    img[Img.weapon10].x = 0.3;
+    img[Img.weapon10].y = 0.4;
     img[Img.barrel0].y = 0.95;
     img[Img.barrel1].y = 0.85;
     img[Img.barrel2].y = 0.95;

@@ -127,7 +127,7 @@ export function initDraw2d() {
     textureLocation = getUniformLocation("x");
 }
 
-interface Camera {
+export interface Camera {
     atX_: number;
     atY_: number;
     toX_: number;
@@ -193,7 +193,9 @@ export function uploadTexture(glTexture: WebGLTexture, source: TexImageSource): 
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
 }
 
-export function beginRender(width: number, height: number) {
+export function beginRender() {
+    const width = gl.drawingBufferWidth;
+    const height = gl.drawingBufferHeight;
     const {atX_, atY_, toX_, toY_, angle_, scale_} = camera;
 
     const x = atX_ - width * toX_;
