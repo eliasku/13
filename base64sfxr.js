@@ -160,6 +160,22 @@ const sounds = [
     {
         name: ["shoot"],
         code: "7BMHBGCZFc5aXpRKETBQrCjuxUuwoF1F9ovqMuZrUQGBZoaxzcfaju2BmsHwoKoDn94PoU8TXMZbj3a1vHybBzAjLAg23LTxxKZ5Fg2hm8vkquRVUSZWcNdHy",
+    },
+    {
+        name: ["hurt"],
+        code: "7BMHBGLMAznxzJ78hkrpuCXM31jegR1XjMXwBKbBZUF2zxQQA9g8gijGoRwDQZGYXhV7kgdDVvWQZKFKgXNrJRYjs8aLhSZsqe3ozazwDoPWhAXU43yKwuEo1",
+    },
+    {
+        name: ["death"],
+        code: "7BMHBGGKpyvRwcXtGttesStu6m23jzcDvcG8bnqS4SgPBx5554BK1puNbNfMwRpdTKMycqqXeZv8VSkTVvqPpqAsxZ5Krr3ABqC7DMjBSM1fH9StqLonjPZ6o",
+    },
+    {
+        name:["step"],
+        code: "7xZZDfZUkmERHMZGxWZxTXMdzAy7KnWbSCg1L13bqeCPvUfXgDPFGnMgmUMunc92GcQfsduC7fd8AiaBBJkLxfPZRradR6M5sUw6L6f8eNiP8cktDj7frKQLM",
+    },
+    {
+        name: ["hit"],
+        code: "11111LdfTv5fuPjEPZxtWMy1KMWu8ftYhofNkw9BguFGjEtUk1kNM3RJnizPEyfhNfUwmmJZUYTNHEU8VAUKCmnyMgmYvW5UVkBL92Cmh2Hvrbor8sbFFdH"
     }
 ];
 

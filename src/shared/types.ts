@@ -50,7 +50,5 @@ export type Request = [
     Message[]
 ];
 
-export interface PostMessagesResponse {
-    // number of processed messages
-    a: number;
-}
+// number of processed messages
+export type PostMessagesResponse = number;

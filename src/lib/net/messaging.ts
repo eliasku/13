@@ -143,7 +143,7 @@ async function process(): Promise<void> {
             clientId!,
             messagesToPost
         ]);
-        messagesToPost = messagesToPost.slice(data.a);
+        messagesToPost = messagesToPost.slice(data);
     } catch (e) {
         console.warn("http-messaging error", e);
     }
@@ -310,9 +310,10 @@ function initPeerConnection(remoteClient: RemoteClient) {
         }
     };
 
-    pc.onicecandidateerror = (e: RTCPeerConnectionIceErrorEvent) => {
-        console.warn("ice candidate error: " + e.errorText);
-    };
+    // TODO: debug
+    // pc.onicecandidateerror = (e: RTCPeerConnectionIceErrorEvent) => {
+    //     console.warn("ice candidate error: " + e.errorText);
+    // };
 }
 
 function closePeerConnection(toRemoteClient: RemoteClient) {
@@ -329,12 +330,11 @@ function closePeerConnection(toRemoteClient: RemoteClient) {
 export async function connectToRemote(rc: RemoteClient) {
     initPeerConnection(rc);
     rc.pc_.oniceconnectionstatechange = (e) => {
-        if (rc.pc_) {
-            if (rc.pc_.iceConnectionState === "failed") {
-                sendOffer(rc, true);
-            } else if (rc.pc_.iceConnectionState === "disconnected") {
-                //disconnect();
-            }
+        if (rc.pc_?.iceConnectionState[0] == "f") {
+            sendOffer(rc, true);
+            // TODO: debug
+            // } else if (rc.pc_.iceConnectionState === "disconnected") {
+            //     //disconnect();
         }
     };
     await sendOffer(rc);
@@ -345,8 +345,9 @@ export async function connectToRemote(rc: RemoteClient) {
 
 function setupDataChannel(id: ClientID, channel: RTCDataChannel) {
     channel.binaryType = "arraybuffer";
-    channel.onopen = () => console.log("data channel opened");
-    channel.onerror = (e) => console.warn("data channel error", e);
+    // TODO: debug
+    // channel.onopen = () => console.log("data channel opened");
+    // channel.onerror = (e) => console.warn("data channel error", e);
     channel.onmessage = (msg) => channels_processMessage(id, msg);
 }
 
@@ -358,4 +359,8 @@ function requireRemoteClient(id_: ClientID): RemoteClient {
         remoteClients.set(id_, rc);
     }
     return rc;
+}
+
+export function isChannelOpen(rc?: RemoteClient): boolean {
+    return rc?.dc_?.readyState[0] == "o";
 }

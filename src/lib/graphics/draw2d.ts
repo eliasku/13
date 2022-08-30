@@ -1,6 +1,6 @@
 import {gl, GL, gl_instanced_arrays} from "./gl";
 
-const vertexShader = `attribute vec2 g;
+const shader = `attribute vec2 g;
 attribute vec2 a;
 attribute vec2 t;
 attribute float r;
@@ -8,33 +8,49 @@ attribute vec2 s;
 attribute vec4 u;
 attribute vec4 c;
 attribute vec4 o;
+uniform sampler2D x;
 uniform mat4 m;
 varying vec2 v;
 varying vec4 i;
 varying vec3 j;
-void main(){
-v=u.xy+g*u.zw;
-i=vec4(c.bgr*c.a,(1.0-o.a)*c.a);
-j=o.xyz;
-vec2 p=(g-a)*s;
-float q=cos(r);
-float w=sin(r);
-p=vec2(p.x*q-p.y*w,p.x*w+p.y*q);
-p+=a+t;
-gl_Position=m*vec4(p,0,1);}`;
 
-const fragmentShader = `precision mediump float;
-uniform sampler2D x;
-varying vec2 v;
-varying vec4 i;
-varying vec3 j;
-void main(){
-vec4 c=i*texture2D(x,v);
-gl_FragColor=c+vec4(j*c.a,0.0);
-}`;
+export void vertex() {
+  v = u.xy + g * u.zw;
+  i = vec4(c.bgr * c.a, (1.0 - o.a) * c.a);
+  j = o.bgr;
+  vec2 p = (g - a) * s;
+  float q = cos(r);
+  float w = sin(r);
+  p = vec2(p.x * q - p.y * w, p.x * w + p.y * q);
+  p += a + t;
+  gl_Position = m * vec4(p, 0, 1);
+}
+
+export void fragment() {
+  vec4 c = i * texture2D(x, v);
+  gl_FragColor = c + vec4(j * c.a, 0.0);
+}
+`;
+
+// shaders minified with https://evanw.github.io/glslx/
+export const GLSLX_SOURCE_VERTEX = "attribute float b;attribute vec2 e,f,o,j;attribute vec4 k,g,l;uniform mat4 p;varying vec2 c;varying vec4 d;varying vec3 h;void main(){c=k.xy+e*k.zw,d=vec4(g.bgr*g.a,(1.-l.a)*g.a),h=l.bgr;vec2 a=(e-f)*j;float i=cos(b),m=sin(b);a=vec2(a.x*i-a.y*m,a.x*m+a.y*i),a+=f+o,gl_Position=p*vec4(a,0,1);}"
+// still need to add `precision mediump float;` manually
+export const GLSLX_SOURCE_FRAGMENT = "precision mediump float;uniform sampler2D n;varying vec2 c;varying vec4 d;varying vec3 h;void main(){vec4 a=d*texture2D(n,c);gl_FragColor=a+vec4(h*a.a,0.);}"
+
+export const GLSLX_NAME_R = "b"
+export const GLSLX_NAME_G = "e"
+export const GLSLX_NAME_A = "f"
+export const GLSLX_NAME_C = "g"
+export const GLSLX_NAME_S = "j"
+export const GLSLX_NAME_U = "k"
+export const GLSLX_NAME_O = "l"
+export const GLSLX_NAME_X = "n"
+export const GLSLX_NAME_T = "o"
+export const GLSLX_NAME_M = "p"
 
 const maxBatch = 65535;
-const depth = 1e5;
+// const depth = 1e5;
+// const depth = 1;
 let count = 0;
 let currentTexture: WebGLTexture = null;
 
@@ -84,8 +100,8 @@ function getUniformLocation(name: string): WebGLUniformLocation | null {
 export function initDraw2d() {
     program = gl.createProgram();
 
-    gl.attachShader(program, compileShader(vertexShader, GL.VERTEX_SHADER));
-    gl.attachShader(program, compileShader(fragmentShader, GL.FRAGMENT_SHADER));
+    gl.attachShader(program, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
+    gl.attachShader(program, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
     gl.linkProgram(program);
 
     if (process.env.NODE_ENV === "development") {
@@ -103,28 +119,28 @@ export function initDraw2d() {
     createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
 
     // vertexLocation
-    bindAttrib("g", 2, 0, 0, 0, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_G, 2, 0, 0, 0, GL.FLOAT, false);
 
     // dynamicBuffer
     createBuffer(GL.ARRAY_BUFFER, arrayBuffer, GL.DYNAMIC_DRAW);
 
     // anchorLocation
-    bindAttrib("a", 2, byteSize, 1, 0, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_A, 2, byteSize, 1, 0, GL.FLOAT, false);
     // scaleLocation
-    bindAttrib("s", 2, byteSize, 1, 8, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_S, 2, byteSize, 1, 8, GL.FLOAT, false);
     // rotationLocation
-    bindAttrib("r", 1, byteSize, 1, 16, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_R, 1, byteSize, 1, 16, GL.FLOAT, false);
     // translationLocation
-    bindAttrib("t", 2, byteSize, 1, 20, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_T, 2, byteSize, 1, 20, GL.FLOAT, false);
     // uvsLocation
-    bindAttrib("u", 4, byteSize, 1, 28, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_U, 4, byteSize, 1, 28, GL.FLOAT, false);
     // colorLocation
-    bindAttrib("c", 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
+    bindAttrib(GLSLX_NAME_C, 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
     // colorOffsetLocation
-    bindAttrib("o", 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
+    bindAttrib(GLSLX_NAME_O, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
 
-    matrixLocation = getUniformLocation("m");
-    textureLocation = getUniformLocation("x");
+    matrixLocation = getUniformLocation(GLSLX_NAME_M);
+    textureLocation = getUniformLocation(GLSLX_NAME_X);
 }
 
 export interface Camera {
@@ -232,7 +248,7 @@ export function beginRender() {
     const projection = [
         c * w, s * h, 0, 0,
         -s * w, c * h, 0, 0,
-        0, 0, -1 / depth, 0,
+        0, 0, -1/* / depth*/, 0,
 
         (atX_ * (1 - c) + atY_ * s) * w - 2 * x / width - 1,
         (atY_ * (1 - c) - atX_ * s) * h + 2 * y / height + 1,

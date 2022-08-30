@@ -12,12 +12,12 @@ import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS
 // TODO: combine pad + keyboard
 
 export const enum ControlsFlag {
-    Move = 0x100,
-    Run = 0x200,
-    Jump = 0x400,
-    Shooting = 0x800,
-    Drop = 0x1000,
-    Spawn = 0x2000,
+    Move = 0x1,
+    Run = 0x2,
+    Jump = 0x4,
+    Shooting = 0x8,
+    Drop = 0x10,
+    Spawn = 0x20,
 }
 
 export const gameCamera: number[] = [0, 0, 1];
@@ -41,9 +41,9 @@ export function updateControls(player: Actor) {
     const px = player.x;
     const py = player.y - player.z - 10;
 
-    if (mouse.x_ >= 0 && mouse.x_ < W && mouse.y_ >= 0 && mouse.y_ < H) {
-        lookAtX = (mouse.x_ - W / 2) * gameCamera[2] + gameCamera[0];
-        lookAtY = (mouse.y_ - H / 2) * gameCamera[2] + gameCamera[1];
+    if (mouse.x >= 0 && mouse.x < W && mouse.y >= 0 && mouse.y < H) {
+        lookAtX = (mouse.x - W / 2) * gameCamera[2] + gameCamera[0];
+        lookAtY = (mouse.y - H / 2) * gameCamera[2] + gameCamera[1];
         viewX = lookAtX - px;
         viewY = lookAtY - py;
     } else {
@@ -72,33 +72,21 @@ export function updateControls(player: Actor) {
         if (touchPadActive) {
             {
                 const control = vpad[0];
-                let dx = 0;
-                let dy = 0;
                 const pp = control.pointer_;
-                if (pp) {
-                    dx = (pp.x_ - pp.startX_) * k;
-                    dy = (pp.y_ - pp.startY_) * k;
-                }
-                const len = Math.hypot(dx, dy);
-                moveX = dx;
-                moveY = dy;
+                moveX = pp ? (pp.x - pp.startX_) * k : 0;
+                moveY = pp ? (pp.y - pp.startY_) * k : 0;
+                const len = Math.hypot(moveX, moveY);
                 moveFast = +(len > control.r1_);
                 jumpButtonDown = +(len > control.r2_);
             }
             {
                 const control = vpad[1];
-                let dx = 0;
-                let dy = 0;
                 const pp = control.pointer_;
-                if (pp) {
-                    dx = (pp.x_ - pp.startX_) * k;
-                    dy = (pp.y_ - pp.startY_) * k;
-                }
-                const len = Math.hypot(dx, dy);
-                viewX = dx;
-                viewY = dy;
-                lookAtX = px + dx * 2;
-                lookAtY = py + dy * 2;
+                viewX = pp ? (pp.x - pp.startX_) * k : 0;
+                viewY = pp ? (pp.y - pp.startY_) * k : 0;
+                const len = Math.hypot(viewX, viewY);
+                lookAtX = px + viewX * 2;
+                lookAtY = py + viewY * 2;
                 shootButtonDown = +(len > control.r2_);
             }
             dropButton = vpad[2].pointer_ ? 1 : 0;
@@ -167,7 +155,7 @@ function updateVirtualPad() {
             let release = !p.active_;
             // out-of-zone mode
             if (control.flags_ & 1) {
-                release ||= !testZone(control, p.x_ / W, p.y_ / H);
+                release ||= !testZone(control, p.x / W, p.y / H);
             }
             if (release) {
                 // release
@@ -197,7 +185,7 @@ export function drawVirtualPad() {
         if (!(control.flags_ & 1) && pp) {
             cx = pp.startX_ * k;
             cy = pp.startY_ * k;
-            draw(img[Img.circle_16], pp.x_* k, pp.y_* k, 0, 1, 1, 0.5);
+            draw(img[Img.circle_16], pp.x * k, pp.y * k, 0, 1, 1, 0.5);
         }
         draw(img[Img.joy0 + i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
         ++i;

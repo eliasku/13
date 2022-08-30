@@ -19,21 +19,27 @@ export const enum EffectItemType {
     Health = 1,
 }
 
-export interface Actor {
-    type_: ActorType;
-    c: ClientID;
-    btn_?: number;
-    // position
+export interface Pos {
     x: number;
     y: number;
     z: number;
-    // velocity
+}
+
+export interface Vel {
     u: number;
     v: number;
     w: number;
+}
+
+export interface Actor extends Pos, Vel {
+    type_: ActorType;
+    c: ClientID;
+    btn_?: number;
     // stpq
     s?: number;
     t?: number;
+    p?: number;
+    q?: number;
 
     weapon_?:number;
     hp_?:number;
@@ -67,10 +73,7 @@ export interface ClientEvent {
 export interface InitData {
     mapSeed_: number;
     seed_: number;
-    players_: Actor[];
-    barrels_: Actor[];
-    bullets_: Actor[];
-    items_: Actor[];
+    actors_: Actor[][];
 }
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]

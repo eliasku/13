@@ -31,6 +31,11 @@ strict `boolean` to 0/1 conversion: `+(boolean expr)`
 
 strict `undefined|null|number|boolean` to 0/1: `(expr)|0`
 
+
+## Shaders
+
+Shaders are minified by [GLSLX - online minifier](https://evanw.github.io/glslx/)
+
 # TODO
 
 - [x] disable mobile safari select canvas on long touch

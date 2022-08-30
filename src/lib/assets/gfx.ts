@@ -20,17 +20,6 @@ export const enum Img {
     avatar4,
     avatar5,
     avatar6,
-    // avatar7,
-    // avatar8,
-    // avatar9,
-    // avatar10,
-    // avatar11,
-    // avatar12,
-    // avatar13,
-    // avatar14,
-    // avatar15,
-    // avatar16,
-    // avatar17,
 
     weapon0,
     weapon1,
@@ -42,7 +31,6 @@ export const enum Img {
     weapon7,
     weapon8,
     weapon9,
-    weapon10,
 
     barrel0,
     barrel1,
@@ -54,10 +42,14 @@ export const enum Img {
     tree0,
     tree1,
 
+    particle_shell,
+    particle_flesh0,
+    particle_flesh1,
+
     joy0,
     joy1,
+    joy2,
 
-    // num_avatars = 18,
     num_avatars = 7,
 }
 
@@ -66,7 +58,18 @@ export const img: Texture[] = [];
 export function createCanvas(size: number, alpha: boolean) {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = size;
-    return canvas.getContext("2d", {alpha});
+    const ctx = canvas.getContext("2d", {alpha});
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#fff";
+    return ctx;
+}
+
+function cutAlpha(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cut: number) {
+    const bmp = ctx.getImageData(x, y, w, h);
+    for (let i = 3; i < bmp.data.length; i += 4) {
+        bmp.data[i] = bmp.data[i] >= cut ? 0xFF : 0;
+    }
+    ctx.putImageData(bmp, x, y);
 }
 
 function createAtlas(): void {
@@ -75,7 +78,6 @@ function createAtlas(): void {
     const texture = createTexture(atlasSize);
     const temp = createCanvas(tempSize, true);
     const atlas = createCanvas(atlasSize, true);
-    atlas.fillStyle = "#FFF";
     let x = 1;
     let y = 1;
     let x1 = 1;
@@ -97,8 +99,8 @@ function createAtlas(): void {
     };
 
     const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number, a: number, sx: number, sy: number, cut: number) => {
-        const scaleUp = 8;
-        const emojiSize = (size * scaleUp) | 0;
+        const scale = 1 / 8;
+        const emojiSize = (size / scale) | 0;
         temp.clearRect(0, 0, tempSize, tempSize);
         temp.font = emojiSize + "px emoji";
         temp.textAlign = "center";
@@ -109,27 +111,14 @@ function createAtlas(): void {
         temp.fillText(emoji, 0, 0);
         temp.resetTransform();
         const alphaThreshold = cut;
-        const scale = 1 / scaleUp;
         pushSprite(w, h);
         // atlas.imageSmoothingEnabled = false;
+        atlas.translate(x + 1, y + 1);
         atlas.scale(scale, scale);
         atlas.translate(-ox, -oy);
-        atlas.drawImage(temp.canvas, (1 + x) / scale, (1 + y) / scale);
+        atlas.drawImage(temp.canvas, 0, 0);
         atlas.resetTransform();
-        // atlas.imageSmoothingEnabled = true;
-        const bmp = atlas.getImageData(x, y, w, h);
-        for (let i = 0; i < bmp.data.length; i += 4) {
-            let a = bmp.data[i + 3];
-            if (a >= alphaThreshold) {
-                bmp.data[i + 3] = 0xFF;
-            } else {
-                bmp.data[i] = 0;
-                bmp.data[i + 1] = 0;
-                bmp.data[i + 2] = 0;
-                bmp.data[i + 3] = 0;
-            }
-        }
-        atlas.putImageData(bmp, x, y);
+        cutAlpha(atlas, x, y, w, h, alphaThreshold);
         img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
     }
 
@@ -156,6 +145,7 @@ function createAtlas(): void {
     );
     // CIRCLE
     createCircle(4);
+    cutAlpha(atlas, x, y, sprWidth, sprHeight, 0x80);
     img.push(
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.6, 0.5),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.7, 0.5),
@@ -188,7 +178,7 @@ function createAtlas(): void {
     createEmoji2("🔪", 180, 234, 19, 7, 12, -50, 1, 1, 128);
     //createEmoji2("🔨", 193, 189, 20, 13, 16, 44.5, -1, 1, 128);
     createEmoji2("🪓", 198, 210, 20, 10, 16, 45, -1, 1, 128);
-    createEmoji2("🗡", 156, 204, 24, 12, 16, -45, -1, 1, 128);
+    //createEmoji2("🗡", 156, 204, 24, 12, 16, -45, -1, 1, 128);
     createEmoji2("🔫", 208, 198, 15, 12, 12, 0, -1, 1, 128);
     createEmoji2("🖊️", 157, 211, 24, 8, 16, -45, -1, 1, 128);
     createEmoji2("✏️️", 186, 216, 23, 8, 16, 44.5, -1, 1, 128);
@@ -205,14 +195,23 @@ function createAtlas(): void {
     createEmoji2("🌳", 156, 99, 28, 31, 28, 0, 1, 1, 136);
     createEmoji2("🌲", 162, 99, 26, 31, 28, 0, 1, 1, 136);
 
+    pushSprite(4, 2);
+    atlas.fillRect(x, y, 4, 2);
+    atlas.fillStyle = "#999";
+    atlas.fillRect(x, y, 1, 2);
+    atlas.fillStyle = null;
+    img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
+
+    createEmoji2("🥓", 163, 219, 22, 9, 16, -45, 1, 1, 128);
+    // createEmoji2("🩸", 170, 213, 18, 13, 16, -90, 1, 1, 128);
+    createEmoji2("🦴", 163, 213, 21, 9, 16, -45, 1, 1, 128);
+
     function renderJoy(r0: number, r1: number, text0: string, text1: string) {
         const s = r1 * 2 + 32;
         pushSprite(s, s);
         atlas.font = "10px monospace";
         atlas.textAlign = "center";
         atlas.lineWidth = 2;
-        atlas.fillStyle = "#fff";
-        atlas.strokeStyle = "#fff";
 
         atlas.translate(x + s / 2, y + s / 2);
 
@@ -259,9 +258,8 @@ export function loadAtlas() {
     img[Img.weapon1].x = 0.3;
     img[Img.weapon2].x = 0.3;
     img[Img.weapon3].x = 0.3;
-    img[Img.weapon4].x = 0.3;
-    img[Img.weapon10].x = 0.3;
-    img[Img.weapon10].y = 0.4;
+    img[Img.weapon9].x = 0.3;
+    img[Img.weapon9].y = 0.4;
     img[Img.barrel0].y = 0.95;
     img[Img.barrel1].y = 0.85;
     img[Img.barrel2].y = 0.95;

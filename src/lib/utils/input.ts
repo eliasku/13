@@ -4,10 +4,8 @@ export interface Pointer {
     id_: number;
     startX_: number;
     startY_: number;
-    // prevX_: number;
-    // prevY_: number;
-    x_: number;
-    y_: number;
+    x: number;
+    y: number;
     downEvent_: boolean;
     upEvent_: boolean;
     active_: boolean;
@@ -19,10 +17,8 @@ function newPointer(id_: number): Pointer {
         id_,
         startX_: 0,
         startY_: 0,
-        // prevX_: 0,
-        // prevY_: 0,
-        x_: 0,
-        y_: 0,
+        x: 0,
+        y: 0,
         downEvent_: false,
         upEvent_: false,
         active_: false,
@@ -45,10 +41,8 @@ export function getPointer(id: number): Pointer {
 }
 
 function handleDown(pointer: Pointer, x: number, y: number) {
-    pointer.x_ = x;
-    pointer.y_ = y;
-    // pointer.prevX_ = x;
-    // pointer.prevY_ = y;
+    pointer.x = x;
+    pointer.y = y;
     pointer.startX_ = x;
     pointer.startY_ = y;
     pointer.downEvent_ = true;
@@ -57,10 +51,8 @@ function handleDown(pointer: Pointer, x: number, y: number) {
 }
 
 function handleMove(pointer: Pointer, x: number, y: number) {
-    // pointer.prevX_ = pointer.x_;
-    // pointer.prevY_ = pointer.y_;
-    pointer.x_ = x;
-    pointer.y_ = y;
+    pointer.x = x;
+    pointer.y = y;
     // console.info("-move:", pointer.id_);
 }
 

@@ -130,9 +130,8 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
         }
         ++numProcessedMessages;
     }
-    res.writeHead(200, {"Content-Type": "application/json"});
-    const responseData: PostMessagesResponse = {a: numProcessedMessages};
-    res.end(JSON.stringify(responseData));
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify(numProcessedMessages));
 }
 
 const requestListener: RequestListener = async (req, res) => {

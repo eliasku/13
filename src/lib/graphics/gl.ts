@@ -106,8 +106,11 @@ export const gl: WebGLRenderingContext = c.getContext("webgl", {
     //stencil: false,
 });
 export const gl_instanced_arrays = gl.getExtension('ANGLE_instanced_arrays')!;
-if (!gl || !gl_instanced_arrays) {
-    alert("WebGL is required");
+
+if (process.env.NODE_ENV === "development") {
+    if (!gl || !gl_instanced_arrays) {
+        alert("WebGL is required");
+    }
 }
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);

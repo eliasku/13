@@ -1,5 +1,5 @@
 import {DebugLag} from "../game/config";
-import {RemoteClient} from "./messaging";
+import {isChannelOpen, RemoteClient} from "./messaging";
 
 function chance(prob: number): boolean {
     return Math.random() < prob;
@@ -26,7 +26,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
         } else {
             const delay = range(DebugLag.LagMin / 4, DebugLag.LagMax / 4);
             setTimeout(() => {
-                if (client.dc_?.readyState === "open") {
+                if (isChannelOpen(client)) {
                     try {
                         client.dc_.send(data);
                     } catch (e) {

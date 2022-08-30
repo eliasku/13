@@ -15,7 +15,7 @@ function temper(x: number /* u32 */): number /* u32 */ {
 }
 
 // simple PRNG from libc with u32 state
-let _state = (Math.random() * 0xFFFFFFFF) >>> 0;
+let _state = ~Date.now();
 
 /* @__PURE__ */
 export function getSeed() {

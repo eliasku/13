@@ -1,5 +1,5 @@
 import {execSync} from "child_process";
-import {copyFileSync, readFileSync, rmSync} from "fs";
+import {copyFileSync, readFileSync, rmSync, writeFileSync} from "fs";
 
 let report = [];
 const files = ["public/index.js", "public/server.js", "public/index.html"];
@@ -43,12 +43,15 @@ if (isProd) {
     esbuildArgs.push("--minify");
     esbuildArgs.push("--drop:console");
     esbuildArgs.push("--drop:debugger");
-    esbuildArgs.push("--mangle-props=" + manglePropsRegex);
+    // esbuildArgs.push("--mangle-props=" + manglePropsRegex);
     esbuildArgs.push("--analyze");
 }
 
 execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server0.js --metafile=dump/server-build.json`);
 execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index0.js --metafile=dump/index-build.json`);
+
+mangle_types("public/index0.js", "public/index1.js");
+mangle_types("public/server0.js", "public/server1.js");
 
 // debug.js
 execSync(`esbuild src/lib/index.ts --minify --mangle-props=${manglePropsRegex} --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
@@ -88,8 +91,8 @@ if (isProd) {
     compress.push("drop_console=true");
 }
 
-execSync(`terser public/server0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/server.js`);
-execSync(`terser public/index0.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/index.js`);
+execSync(`terser public/server1.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/server.js`);
+execSync(`terser public/index1.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/index.js`);
 // copyFileSync("public/index0.js", "public/index.js");
 // copyFileSync("public/server0.js", "public/server.js");
 report.push("TERSER: " + sz(...files));
@@ -112,7 +115,8 @@ if (process.argv.indexOf("--zip") > 0) {
         const mode = "--shrink-insane";
         // const mode = "--shrink-extra";
         // advzip --not-zip --shrink-insane --iter=1000 --add game.zip zip/index.js zip/server.js zip/index.html
-        execSync(`advzip --not-zip ${mode} --iter=1000 --add game.zip ${zipFolderFiles.join(" ")}`);
+        // --not-zip
+        execSync(`advzip ${mode} --iter=1000 --add game.zip ${zipFolderFiles.join(" ")}`);
         report.push("LZMA: " + sz("game.zip"));
     } catch {
         console.warn("please install `advancecomp`");
@@ -134,3 +138,198 @@ console.info(report.join("\n"));
 // TERSER: 37396
 // ROADROLL: 18413
 // LZMA: 13590
+
+
+function mangle_types(file, dest) {
+
+    const _rename = new Map();
+    let alphaSize = 0;
+
+    function addType(fields) {
+        const alphabet = [
+            "x", "y", "z",
+            "u", "v", "w",
+            "r", "s", "t", "q",
+            "a", "b", "c", "d", "e", "f", "g", "h",
+            "i", "j", "k", "l", "m", "n", "o", "p", "_", "$"];
+        const usedIds = new Set();
+        for (const f of fields) {
+            if (f.length === 1 || f[f.length - 1] !== "_") {
+                usedIds.add(f);
+            }
+        }
+        for (const f of fields) {
+            if (f.length === 1 || f[f.length - 1] !== "_") {
+                continue;
+            }
+            let renamed = _rename.get(f);
+            if (renamed) {
+                usedIds.add(renamed);
+            } else {
+                let idx = 0;
+                while (usedIds.has(alphabet[idx])) {
+                    idx++;
+                    if (idx >= alphabet.length) {
+                        console.error("not enough alphabet");
+                        process.exit();
+                    }
+                    if (alphaSize < idx) {
+                        alphaSize = idx;
+                    }
+                }
+                const id = alphabet[idx];
+                _rename.set(f, id);
+                // console.info("replace: " + f + " to " + id);
+                usedIds.add(id);
+            }
+        }
+    }
+
+    const archetypes = [
+        [
+            "id_",
+            "pc_",
+            "dc_",
+            "name_",
+            "debugPacketByteLength_",
+        ],
+        [
+            "rate_",
+            "launchTime_",
+            "relaunchSpeed_",
+            "spawnCount_",
+            "angleVar_",
+            "angleSpread_",
+            "kickBack_",
+            "offset_",
+            "offsetZ_",
+            "velocity_",
+            "velocityVar_",
+            "cameraShake_",
+            "detuneSpeed_",
+            "cameraFeedback_",
+            "cameraLookForward_",
+            "gfxRot_",
+            "gfxSx_",
+            "handsAnim_",
+            "bulletType_",
+            "bulletDamage_",
+            "bulletLifetime_",
+            "bulletHp_",
+        ],
+        [
+            "songData_",
+            "rowLen_",
+            "patternLen_",
+            "endPattern_",
+            "numChannels_",
+        ],
+        [
+            "l_",
+            "t_",
+            "r_",
+            "b_",
+            "flags_",
+            "pointer_",
+            "r1_",
+            "r2_",
+        ],
+        [
+            "x",
+            "y",
+            "z",
+            "u",
+            "v",
+            "w",
+            "a",
+            "r",
+            "scale_",
+            "color_",
+            "lifeTime_",
+            "lifeMax_",
+            "img_",
+            "splashSizeX_",
+            "splashSizeY_",
+            "splashEachJump_",
+            "splashScaleOnVelocity_",
+            "splashImg_",
+            "followVelocity_",
+            "followScale_",
+        ],
+        [
+            "x",
+            "y",
+            "z",
+            "u",
+            "v",
+            "w",
+            "type_",
+            "btn_",
+            "weapon_",
+            "hp_",
+            "anim0_",
+            "animHit_",
+            "c",
+            "s",
+            "t",
+            "p",
+            "q",
+        ],
+        [
+            "acknowledgedTic_",
+            "ready_",
+            "isPlaying_",
+            "c",
+            "t",
+        ],
+        [
+            "btn_",
+            "t",
+            "c"
+        ],
+        [
+            "mapSeed_",
+            "seed_",
+            "actors_",
+        ],
+        [
+            "c", "t", "e", "s",
+            "sync_",
+            "check_seed_",
+            "check_tic_",
+            "receivedOnSender_",
+        ],
+        [
+            "atX_",
+            "atY_",
+            "toX_",
+            "toY_",
+            "angle_",
+            "scale_",
+        ],
+        [
+            "id_",
+            "startX_",
+            "startY_",
+            "x",
+            "y",
+            "downEvent_",
+            "upEvent_",
+            "active_",
+        ]
+    ];
+
+    for (const arch of archetypes) {
+        addType(arch);
+    }
+
+    let src = readFileSync(file, "utf8");
+    for (const [from, to] of _rename) {
+        src = src.replaceAll(new RegExp("([^\\w_$])(" + from + ")([^\\w_$])", "gm"), (a, c1, c2, c3) => {
+            // console.info(a + " => " + c1 + to + c3);
+            return c1 + to + c3;
+        });
+    }
+    console.info("Total used dict: " + alphaSize);
+    writeFileSync(dest, src, "utf8");
+}

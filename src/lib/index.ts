@@ -26,7 +26,7 @@ const onStart = async () => {
     onbeforeunload = disconnect;
     await connect();
 
-    play(bgm[Bgm.main], 0.05, 0, true);
+    play(bgm[Bgm.main], 0.5, 0, true);
 
     initTestGame();
     state = StartState.Connected;

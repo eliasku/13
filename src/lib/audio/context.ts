@@ -23,7 +23,7 @@ export function play(audioBuffer: AudioBuffer, vol?: number, pan?: number, loop?
 }
 
 export function unlockAudio() {
-    if (audioContext.state === "suspended") {
+    if (audioContext.state[0] == "s") {
         // audioContext.resume().then(() => {
         //     console.info("AudioContext resumed");
         // }).catch((reason) => {

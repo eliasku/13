@@ -10,19 +10,22 @@ export const enum Const {
     // ~130 bytes
     RLE = 0,
 
-    AnglesRes = 16,
-    ViewAngleRes = 256,
+    AngleRes = 0x100,
+    MoveAngleBit = 8,
+    LookAngleBit = 16,
+
+    StartWeapon = 2,
 }
 
 export const enum DebugLag {
-    // LagMin = 20,
-    // LagMax = 200,
-    // PacketLoss = 0.05,
+    LagMin = 20,
+    LagMax = 200,
+    PacketLoss = 0.05,
 
     // Heart-Attack mode
-    LagMin = 500,
-    LagMax = 2000,
-    PacketLoss = 0.5,
+    // LagMin = 500,
+    // LagMax = 2000,
+    // PacketLoss = 0.5,
 }
 
 export const PAD_MOVE_RADIUS_0 = 16;
@@ -31,3 +34,5 @@ export const PAD_FIRE_RADIUS_0 = 16;
 export const PAD_FIRE_RADIUS_1 = 40;
 
 export const BASE_RESOLUTION = 256;
+
+

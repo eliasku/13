@@ -55,14 +55,10 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         const init: InitData = {
             mapSeed_: u32[ptr++],
             seed_: u32[ptr++],
-            players_: [],
-            barrels_: [],
-            bullets_: [],
-            items_: [],
+            actors_: [[],[],[],[]],
         };
         let count = u32[ptr++];
         const GAP = u32[ptr++];
-        let lists = [init.players_, init.barrels_, init.bullets_, init.items_];
         for (let i = 0; i < count; ++i) {
             const hdr = u32[ptr++];
             const c = u32[ptr++];
@@ -91,7 +87,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                 t: f64[(ptr >> 1) + 7],
             };
             ptr += 8 * 2;
-            lists[p.type_].push(p);
+            init.actors_[p.type_].push(p);
         }
         packet.s = init;
     }
@@ -158,7 +154,7 @@ export function pack(packet: Packet): ArrayBuffer {
     if (packet.s) {
         u32[ptr++] = packet.s.mapSeed_;
         u32[ptr++] = packet.s.seed_;
-        const list = packet.s.players_.concat(packet.s.barrels_, packet.s.bullets_, packet.s.items_);
+        const list = [].concat(...packet.s.actors_);
         u32[ptr++] = list.length;
         // GAP:
         u32[ptr++] = 0;
