@@ -12,6 +12,17 @@ export function reach(t0: number, t1: number, v: number): number {
 export function toRad(degrees: number): number {
     return degrees * Math.PI / 180;
 }
+
+/* @__PURE__ */
+export function lerp(a: number, b: number, t: number): number {
+    return (1 - t) * a + t * b;
+}
+
+/* @__PURE__ */
+export function getLumaColor32(luma: number): number {
+    return (luma << 16) | (luma << 8) | luma;
+}
+
 //
 // /* @__PURE__ */
 // export function max(a:number, b: number) {

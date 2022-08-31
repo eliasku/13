@@ -3,8 +3,8 @@ import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/inpu
 import {camera, draw} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img, Img} from "../assets/gfx";
-import {COLOR_WHITE} from "../assets/colors";
-import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./config";
+import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "../assets/params";
+import {COLOR_WHITE} from "./data/colors";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -64,7 +64,6 @@ export function updateControls(player: Actor) {
 
     jumpButtonDown = +keyboardState.has("Space");
     dropButton = +keyboardState.has("KeyE");
-
 
     {
         updateVirtualPad();

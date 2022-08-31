@@ -1,6 +1,6 @@
 import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d";
 import {toRad} from "../utils/math";
-import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "../game/config";
+import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./params";
 
 export const enum Img {
     box = 0,

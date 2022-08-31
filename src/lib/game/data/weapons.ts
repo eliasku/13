@@ -1,6 +1,6 @@
-import {toRad} from "../utils/math";
-import {Const} from "../game/config";
-import {Img} from "./gfx";
+import {toRad} from "../../utils/math";
+import {Const} from "../config";
+import {Img} from "../../assets/gfx";
 
 export const enum BulletType {
     Melee = 0,

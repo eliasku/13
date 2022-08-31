@@ -1,20 +1,20 @@
 import {rand} from "../utils/rnd";
 import {createCanvas} from "./gfx";
-import {createTexture, Texture, uploadTexture} from "../graphics/draw2d";
+import {createTexture, uploadTexture} from "../graphics/draw2d";
+import {BOUNDS_SIZE} from "./params";
 
-const size = 0x400;
-const map = createCanvas(size, false);
-export const mapTexture = createTexture(size);
+export const mapTexture = createTexture(BOUNDS_SIZE);
 
-export function generateMapBackground():void {
+export function generateMapBackground(): void {
+    const map = createCanvas(BOUNDS_SIZE, false);
     map.fillStyle = "#060";
-    map.fillRect(0, 0, size, size);
+    map.fillRect(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
 
     map.fillStyle = "#080";
     map.scale(1, .25);
     for (let i = 0; i < 128; ++i) {
         map.beginPath()
-        map.arc(rand(size), rand(size * 4), 4 + rand(16), 0, 2 * Math.PI);
+        map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE * 4), 4 + rand(16), 0, 2 * Math.PI);
         map.closePath();
         map.fill();
     }

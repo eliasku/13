@@ -1,8 +1,9 @@
 import {img, Img} from "../assets/gfx";
 import {draw} from "../graphics/draw2d";
 import {Actor, Vel} from "./types";
-import {addRadialVelocity, collideWithBounds, GRAVITY, OBJECT_HEIGHT_BY_TYPE, updateBody} from "./phy";
-import {getLumaColor32} from "../assets/colors";
+import {addRadialVelocity, collideWithBounds, updateBody} from "./phy";
+import {getLumaColor32} from "../utils/math";
+import {GRAVITY, OBJECT_HEIGHT_BY_TYPE} from "./data/world";
 
 export interface Particle {
     x: number;

@@ -3,46 +3,14 @@ import {rand, random} from "../utils/rnd";
 import {reach} from "../utils/math";
 import {ControlsFlag} from "./controls";
 import {Const} from "./config";
-
-export const GRAVITY = 0x100;
-export const GRAVITY_WEAK = 0x80;
-
-export const BOUNDS_SIZE = 0x400;
-export const OBJECT_RADIUS = 8;
-export const BULLET_RADIUS = 4;
-// Player = 0,
-//     Barrel = 1,
-//     Bullet = 2,
-//     Item = 3,
-//     // static game objects
-//     Tree = 4,
-export const OBJECT_RADIUS_BY_TYPE = [
-    OBJECT_RADIUS,
-    OBJECT_RADIUS,
-    BULLET_RADIUS,
-    OBJECT_RADIUS,
-    OBJECT_RADIUS + OBJECT_RADIUS / 2,
-];
-
-export const OBJECT_HEIGHT_BY_TYPE = [
-    OBJECT_RADIUS + OBJECT_RADIUS / 2,
-    OBJECT_RADIUS,
-    0,
-    0,
-    OBJECT_RADIUS * 2,
-];
-
-export const GROUND_BOUNCE_BY_TYPE = [
-    0, -0.5, 0, -0.5, 0,
-];
-
-export const GROUND_FRICTION_BY_TYPE = [
-    0, 512, 0, 512, 512,
-];
-
-export const WALL_BOUNCE_BY_TYPE = [
-    0.5, 0.5, 1, 0.5,
-];
+import {
+    GRAVITY,
+    GRAVITY_WEAK, GROUND_BOUNCE_BY_TYPE,
+    GROUND_FRICTION_BY_TYPE,
+    OBJECT_HEIGHT_BY_TYPE,
+    OBJECT_RADIUS, OBJECT_RADIUS_BY_TYPE, WALL_BOUNCE_BY_TYPE
+} from "./data/world";
+import {BOUNDS_SIZE} from "../assets/params";
 
 export function setRandomPosition(actor: Actor): Actor {
     actor.x = OBJECT_RADIUS + rand(BOUNDS_SIZE - OBJECT_RADIUS * 2);

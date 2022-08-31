@@ -4,14 +4,14 @@ import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
-import {getSeed, nextFloat, rand, seed, fxRand, fxRandElement} from "../utils/rnd";
+import {fxRandElement, getSeed, nextFloat, rand, seed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
-import {BASE_RESOLUTION, Const} from "./config";
+import {Const} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet, Vel} from "./types";
 import {pack, unpack} from "./packets";
-import {reach} from "../utils/math";
+import {getLumaColor32, lerp, reach} from "../utils/math";
 import {
     ControlsFlag,
     drawVirtualPad,
@@ -39,8 +39,7 @@ import {
     bulletSize,
     BulletType,
     weapons
-} from "../assets/weapons";
-import {COLOR_BODY, COLOR_WHITE, getLumaColor32} from "../assets/colors";
+} from "./data/weapons";
 import {
     drawParticles,
     newBoneParticle,
@@ -55,19 +54,24 @@ import {
     addVelFrom,
     addVelocityDir,
     applyGroundFriction,
-    BOUNDS_SIZE,
-    BULLET_RADIUS,
     collideWithBoundsA,
     copyPosFromActorCenter,
-    OBJECT_HEIGHT_BY_TYPE,
-    OBJECT_RADIUS,
-    OBJECT_RADIUS_BY_TYPE,
     reflectVelocity,
     setRandomPosition,
     updateActorPhysics,
     updateAnim,
     updateBody
 } from "./phy";
+import {BASE_RESOLUTION, BOUNDS_SIZE} from "../assets/params";
+import {
+    ANIM_HIT_MAX, ANIM_HIT_OVER,
+    BULLET_RADIUS, JUMP_VEL,
+    OBJECT_HEIGHT_BY_TYPE,
+    OBJECT_RADIUS,
+    OBJECT_RADIUS_BY_TYPE, PLAYER_HANDS_Z,
+    SHADOW_ADD_BY_TYPE, SHADOW_COLOR_BY_TYPE, SHADOW_SCALE_BY_TYPE
+} from "./data/world";
+import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
 
 const clients = new Map<ClientID, Client>()
 let localEvents: ClientEvent[] = [];
@@ -106,16 +110,8 @@ let lastState: InitData;
 
 let simulatedFrames = 0;
 
-const PlayerHandsZ = 10;
-const jumpVel = 0x50;
-
-
-const ANIM_HIT_OVER = 31;
-const ANIM_HIT_MAX = 15;
-
 let cameraShake = 0;
 let cameraFeedback = 0;
-
 
 // colors
 
@@ -410,12 +406,11 @@ function tryRunTicks(ts: number): number {
     prevTime += framesProcessed / Const.NetFq;
 
     // we played all available net-events
-    const k = 0.01;
-    const allowFramesToPredict = Const.InputDelay;
+    const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
     if (gameTic > netTick) {
         // slow down a bit in case if we predict a lot
-        if (ts - prevTime > allowFramesToPredict / Const.NetFq) {
-            prevTime = (1 - k) * prevTime + k * (ts - allowFramesToPredict / Const.NetFq);
+        if (ts - prevTime > Const.InputDelay / Const.NetFq) {
+            prevTime = nearPrevTime;
         }
     } else {
         // we got packets to go
@@ -423,15 +418,15 @@ function tryRunTicks(ts: number): number {
             // speed up
             // console.info("speed up");
             // prevTime -= Const.NetDt * dropRate;
-            prevTime = (1 - k) * prevTime + k * (ts - allowFramesToPredict / Const.NetFq);
-
+            prevTime = nearPrevTime;
             // prevTime = ts - Const.InputDelay * Const.NetDt;
         }
     }
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.t > lastTic);
-    localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
+    // localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
+    localEvents = localEvents.filter(v => v.t > ackMin);
     return framesProcessed;
 }
 
@@ -905,7 +900,7 @@ function updatePlayer(player: Actor, dt: number) {
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
             player.z = 1;
-            player.w = jumpVel;
+            player.w = JUMP_VEL;
             grounded = false;
             playAt(player, Snd.blip);
         }
@@ -964,7 +959,7 @@ function updatePlayer(player: Actor, dt: number) {
                 bullet.c = player.c;
                 copyPosFromActorCenter(bullet, player);
                 addPos(bullet, dx, dy, 0, weapon.offset_);
-                bullet.z += PlayerHandsZ - 12 + weapon.offsetZ_;
+                bullet.z += PLAYER_HANDS_Z - 12 + weapon.offsetZ_;
                 addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
                 bullet.weapon_ = weapon.bulletDamage_;
                 bullet.btn_ = weapon.bulletType_;
@@ -973,7 +968,7 @@ function updatePlayer(player: Actor, dt: number) {
                 pushActor(bullet);
             }
 
-            particles.push(newShellParticle(player, PlayerHandsZ + weapon.offsetZ_));
+            particles.push(newShellParticle(player, PLAYER_HANDS_Z + weapon.offsetZ_));
         }
     } else {
         player.t = reach(player.t, 0, dt * 16);
@@ -1035,10 +1030,6 @@ function endPrediction() {
 
 /*** DRAWING ***/
 
-function lerp(a: number, b: number, t: number): number {
-    return (1 - t) * a + t * b;
-}
-
 function drawGame() {
     camera.scale_ = 1 / gameCamera[2];
     camera.toX_ = camera.toY_ = 0.5;
@@ -1072,14 +1063,9 @@ function drawOverlay() {
 
 function drawShadows() {
     for (const actor of drawList) {
-        let shadowScale = (2 - actor.z / 64.0);
-        let additive = 0;
-        let color = 0;
-        if (actor.type_ === ActorType.Bullet) {
-            shadowScale *= 2;
-            additive = 1;
-            color = 0x333333;
-        }
+        const shadowScale = (2 - actor.z / 64.0) * SHADOW_SCALE_BY_TYPE[actor.type_];
+        const additive = SHADOW_ADD_BY_TYPE[actor.type_];
+        const color = SHADOW_COLOR_BY_TYPE[actor.type_];
         draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .4, color, additive);
     }
 }
@@ -1211,7 +1197,7 @@ function drawPlayer(p: Actor) {
     const weaponBaseScaleX = wpn.gfxSx_;
     const weaponBaseScaleY = 1;
     let weaponX = x;
-    let weaponY = y - PlayerHandsZ;
+    let weaponY = y - PLAYER_HANDS_Z;
     let weaponAngle = Math.atan2(
         y + 1000 * Math.sin(viewAngle) - weaponY,
         x + 1000 * Math.cos(viewAngle) - weaponX
@@ -1263,7 +1249,7 @@ function drawPlayer(p: Actor) {
     // DRAW HANDS
     const rArmX = x + 4;
     const lArmX = x - 4;
-    const armY = (y - PlayerHandsZ + base * 2);
+    const armY = (y - PLAYER_HANDS_Z + base * 2);
     const rArmRot = Math.atan2(weaponY - armY, weaponX - rArmX);
     const lArmRot = Math.atan2(weaponY - armY, weaponX - lArmX);
     const lArmLen = Math.hypot(weaponX - lArmX, weaponY - armY) - 1;
