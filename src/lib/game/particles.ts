@@ -62,7 +62,7 @@ export function updateParticle(p: Particle, dt: number): boolean {
     p.a += p.r * dt;
     p.lifeTime_ += dt;
 
-    if (updateBody(p, dt, GRAVITY, -0.5)) {
+    if (updateBody(p, dt, GRAVITY, 2)) {
         if (p.splashImg_) {
             const v = Math.hypot(p.u, p.v, p.w);
             if (v < 4 || p.splashEachJump_) {
@@ -78,7 +78,7 @@ export function updateParticle(p: Particle, dt: number): boolean {
         p.r = -p.r / 2;
     }
 
-    collideWithBounds(p, 4, 0.5);
+    collideWithBounds(p, 4, 2);
 
     return p.lifeTime_ < p.lifeMax_;
 }

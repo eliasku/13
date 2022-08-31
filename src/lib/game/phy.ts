@@ -5,10 +5,10 @@ import {ControlsFlag} from "./controls";
 import {Const} from "./config";
 import {
     GRAVITY,
-    GRAVITY_WEAK, GROUND_BOUNCE_BY_TYPE,
+    GRAVITY_WEAK, GROUND_LOSS_BY_TYPE,
     GROUND_FRICTION_BY_TYPE,
     OBJECT_HEIGHT_BY_TYPE,
-    OBJECT_RADIUS, OBJECT_RADIUS_BY_TYPE, WALL_BOUNCE_BY_TYPE
+    OBJECT_RADIUS, OBJECT_RADIUS_BY_TYPE, WALL_COLLIDE_LOSS_BY_TYPE
 } from "./data/world";
 import {BOUNDS_SIZE} from "../assets/params";
 
@@ -24,7 +24,7 @@ export function copyPosFromActorCenter(to: Pos, from: Actor) {
     to.z = from.z + OBJECT_HEIGHT_BY_TYPE[from.type_];
 }
 
-export function updateBody(body: Pos & Vel, dt: number, gravity: number, bounce: number) {
+export function updateBody(body: Pos & Vel, dt: number, gravity: number, loss: number) {
     body.x += body.u * dt;
     body.y += body.v * dt;
     body.z += body.w * dt;
@@ -33,7 +33,7 @@ export function updateBody(body: Pos & Vel, dt: number, gravity: number, bounce:
     } else {
         body.z = 0;
         if (body.w < 0) {
-            body.w = (body.w * bounce) | 0;
+            body.w = -(body.w / loss) | 0;
             return true;
         }
     }
@@ -49,7 +49,7 @@ export function updateAnim(actor: Actor, dt: number) {
 export function updateActorPhysics(a: Actor, dt: number) {
     if (a.type_ === ActorType.Bullet) return;
     const isWeakGravity = !a.type_ ? (a.btn_ & ControlsFlag.Jump) : 0;
-    updateBody(a, dt, isWeakGravity ? GRAVITY_WEAK : GRAVITY, GROUND_BOUNCE_BY_TYPE[a.type_]);
+    updateBody(a, dt, isWeakGravity ? GRAVITY_WEAK : GRAVITY, GROUND_LOSS_BY_TYPE[a.type_]);
     collideWithBoundsA(a);
     if (a.z <= 0) {
         applyGroundFriction(a, dt * GROUND_FRICTION_BY_TYPE[a.type_]);
@@ -58,30 +58,30 @@ export function updateActorPhysics(a: Actor, dt: number) {
 }
 
 export function collideWithBoundsA(body: Actor): number {
-    const bounce = WALL_BOUNCE_BY_TYPE[body.type_];
+    const loss = WALL_COLLIDE_LOSS_BY_TYPE[body.type_];
     const R = OBJECT_RADIUS_BY_TYPE[body.type_];
-    return collideWithBounds(body, R, bounce);
+    return collideWithBounds(body, R, loss);
 }
 
-export function collideWithBounds(body: Vel & Pos, radius: number, bounce: number): number {
+export function collideWithBounds(body: Vel & Pos, radius: number, loss: number): number {
     let has = 0;
     if (body.y > BOUNDS_SIZE - radius) {
         body.y = BOUNDS_SIZE - radius;
         has = 1;
-        reflectVelocity(body, 0, -1, bounce);
+        reflectVelocity(body, 0, -1, loss);
     } else if (body.y < radius) {
         body.y = radius;
         has = 1;
-        reflectVelocity(body, 0, 1, bounce);
+        reflectVelocity(body, 0, 1, loss);
     }
     if (body.x > BOUNDS_SIZE - radius) {
         body.x = BOUNDS_SIZE - radius;
         has = 1;
-        reflectVelocity(body, -1, 0, bounce);
+        reflectVelocity(body, -1, 0, loss);
     } else if (body.x < radius) {
         body.x = radius;
         has = 1;
-        reflectVelocity(body, 1, 0, bounce);
+        reflectVelocity(body, 1, 0, loss);
     }
     return has;
 }
@@ -91,11 +91,11 @@ export function addRadialVelocity(vel: Vel, velXYLen: number, velZ: number) {
     addVelocityDir(vel, velXYLen * Math.cos(a), velXYLen * Math.sin(a) / 2, velZ);
 }
 
-export function reflectVelocity(v: Vel, nx: number, ny: number, amount: number) {
+export function reflectVelocity(v: Vel, nx: number, ny: number, loss: number) {
     // r = d - 2(d⋅n)n
     const Z = 2 * (v.u * nx + v.v * ny);
-    v.u = ((v.u - Z * nx) * amount) | 0;
-    v.v = ((v.v - Z * ny) * amount) | 0;
+    v.u = ((v.u - Z * nx) / loss) | 0;
+    v.v = ((v.v - Z * ny) / loss) | 0;
 }
 
 export function applyGroundFriction(p: Actor, amount: number) {

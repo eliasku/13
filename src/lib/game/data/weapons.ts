@@ -192,7 +192,14 @@ weapons[i].bulletDamage_ = 3;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10 / Const.NetFq;
 
-
+export const enum BulletProp {
+    Color = 0,
+    Longing = 1,
+    LongingHighlight = 2,
+    Size = 3,
+    Pulse = 4,
+    Image = 5,
+}
 
 export const bulletColors = [
     [0xFFFFFF],
@@ -231,7 +238,7 @@ export const bulletPulse = [0, 0, 1, 0, 0];
 export const bulletImgs = [
     Img.circle_4_60p, Img.circle_4_70p, Img.box,
     Img.circle_4_60p, Img.circle_4_70p, Img.box,
-    Img.box_l, Img.box_l, Img.box_l,
     Img.circle_4_60p, Img.circle_4_70p, Img.box,
+    Img.box_l, Img.box_l, Img.box_l,
     Img.box_l, Img.box_l, Img.box_l,
 ];

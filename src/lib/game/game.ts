@@ -425,8 +425,8 @@ function tryRunTicks(ts: number): number {
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.t > lastTic);
-    // localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
-    localEvents = localEvents.filter(v => v.t > ackMin);
+    localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
+    // localEvents = localEvents.filter(v => v.t > ackMin);
     return framesProcessed;
 }
 
@@ -1144,7 +1144,7 @@ function drawBullet(actor: Actor) {
     const color = fxRandElement(bulletColors[actor.btn_]);
     const longing = bulletLonging[actor.btn_];
     const longing2 = bulletLongingHighlight[actor.btn_];
-    const sz = bulletSize[actor.btn_] + bulletPulse[actor.btn_] * Math.sin(32 * lastFrameTs + actor.anim0_);
+    const sz = bulletSize[actor.btn_] + bulletPulse[actor.btn_] * Math.sin(32 * lastFrameTs + actor.anim0_) / 2;
     let res = actor.btn_ * 3;
 
     draw(img[bulletImgs[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
@@ -1152,7 +1152,7 @@ function drawBullet(actor: Actor) {
     draw(img[bulletImgs[res++]], x, y, a, 2 * longing2, 2);
 }
 
-const drawerByType = [
+const DRAW_BY_TYPE = [
     drawPlayer,
     drawBarrel,
     drawBullet,
@@ -1166,7 +1166,7 @@ function drawObjects() {
     sortList(drawList);
     drawShadows();
     for (const actor of drawList) {
-        drawerByType[actor.type_](actor);
+        DRAW_BY_TYPE[actor.type_](actor);
     }
 }
 
