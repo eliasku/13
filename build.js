@@ -2,8 +2,8 @@ import {execSync} from "child_process";
 import {copyFileSync, readFileSync, rmSync, writeFileSync} from "fs";
 
 let report = [];
-const files = ["public/index.js", "public/server.js", "public/index.html"];
-const zipFolderFiles = ["zip/index.js", "zip/server.js", "zip/index.html"];
+const files = ["public/c.js", "public/s.js", "public/i.html"];
+const zipFolderFiles = ["zip/c.js", "zip/s.js", "zip/i.html"];//, "zip/r"];
 const isProd = process.argv.indexOf("--dev") < 0;
 const envDef = isProd ? "production" : "development";
 
@@ -33,7 +33,7 @@ del("game.zip");
 del(...files);
 del(...zipFolderFiles);
 
-execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
+execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/i.html html/index.html`);
 copyFileSync("html/debug.html", "public/debug.html");
 
 const manglePropsRegex = "._$";
@@ -47,16 +47,18 @@ if (isProd) {
     esbuildArgs.push("--analyze");
 }
 
-execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/server0.js --metafile=dump/server-build.json`);
-execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/index0.js --metafile=dump/index-build.json`);
+execSync(`esbuild server/src/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/s0.js --metafile=dump/server-build.json`);
+execSync(`esbuild src/lib/index.ts ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/c0.js --metafile=dump/client-build.json`);
 
-mangle_types("public/index0.js", "public/index1.js");
-mangle_types("public/server0.js", "public/server1.js");
+report.push("BUILD: " + sz("public/c0.js", "public/s0.js", "public/i.html"));
+
+mangle_types("public/c0.js", "public/c1.js");
+mangle_types("public/s0.js", "public/s1.js");
+
+report.push("MANGLE: " + sz("public/c1.js", "public/s1.js", "public/i.html"));
 
 // debug.js
 execSync(`esbuild src/lib/index.ts --minify --mangle-props=${manglePropsRegex} --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
-
-report.push("BUILD: " + sz("public/index0.js", "public/server0.js", "public/index.html"));
 
 const pureFunc = [
     'console.log',
@@ -84,17 +86,14 @@ const compress = [
     "pure_getters=true",
     `pure_funcs=[${pureFunc.map(x => `'${x}'`).join(",")}]`,
     "unsafe_methods=true",
+
+    // "hoist_funs=true",
     //"inline=2",
 ];//"unsafe=true",
 
-if (isProd) {
-    compress.push("drop_console=true");
-}
+execSync(`terser public/s1.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/s.js`);
+execSync(`terser public/c1.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/c.js`);
 
-execSync(`terser public/server1.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/server.js`);
-execSync(`terser public/index1.js --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/index.js`);
-// copyFileSync("public/index0.js", "public/index.js");
-// copyFileSync("public/server0.js", "public/server.js");
 report.push("TERSER: " + sz(...files));
 
 if (process.argv.indexOf("--zip") > 0) {
@@ -103,20 +102,20 @@ if (process.argv.indexOf("--zip") > 0) {
     // execSync(`zip -9 -X -D game.zip public/index.js public/server.js public/index.html`);
     // report.push("ZIP: " + sz("game.zip"));
 
-    execSync(`roadroller -D -O1 -- public/index.js -o zip/index.js`);
-    copyFileSync("public/server.js", "zip/server.js");
-    copyFileSync("public/index.html", "zip/index.html");
+    execSync(`roadroller -D -O1 -- public/c.js -o zip/c.js`);
+    copyFileSync("public/s.js", "zip/s.js");
+    copyFileSync("public/i.html", "zip/i.html");
+    copyFileSync("public/r", "zip/r");
 
     report.push("ROADROLL: " + sz(...zipFolderFiles));
 
     try {
         // https://linux.die.net/man/1/advzip
         // execSync(`advzip --not-zip --shrink-insane --recompress game.zip`);
-        const mode = "--shrink-insane";
-        // const mode = "--shrink-extra";
         // advzip --not-zip --shrink-insane --iter=1000 --add game.zip zip/index.js zip/server.js zip/index.html
         // --not-zip
-        execSync(`advzip ${mode} --iter=1000 --add game.zip ${zipFolderFiles.join(" ")}`);
+        execSync(`advzip --shrink-insane --iter=1000 --add game.zip ${zipFolderFiles.join(" ")}`);
+        execSync(`advzip --list game.zip`);
         report.push("LZMA: " + sz("game.zip"));
     } catch {
         console.warn("please install `advancecomp`");

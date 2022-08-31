@@ -1,4 +1,5 @@
 import {audioContext} from "./context";
+import {SongData} from "../../../tools/songs";
 
 export const enum SongField {
     n = 0,
@@ -93,7 +94,7 @@ function createNote(ii: number[], n: number, rowLen: number) {
 // Array of oscillator functions
 const oscillators = [
     //osc_sin,
-    (value: number): number => Math.sin(value * 6.283184),
+    (value: number): number => Math.sin(value * 2 * Math.PI),
     //osc_square,
     (value: number): number => (value % 1) < 0.5 ? 1 : -1,
     //osc_saw,
@@ -107,7 +108,8 @@ const oscillators = [
 // Generate audio data for a single track
 function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track: number): void {
     // Put performance critical items in local variables
-    const chnBuf = new Int32Array(mixL.length * 2);
+    const chnBufL = new Int32Array(mixL.length);
+    const chnBufR = new Int32Array(mixL.length);
     const instr = song[SongField.songData][track];
     const rowLen = song[SongField.rowLen];
     const patternLen = song[SongField.patternLen];
@@ -124,11 +126,11 @@ function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track
 
     // Patterns
     const lastRow = song[SongField.endPattern];
-    for (let p = 0; p <= lastRow; ++p) {
-        const ic = instr[SongField.c];
-        const ii = instr[SongField.i];
-        const cp = instr[SongField.p][p];
+    const ic = instr[SongField.c];
+    const ii = instr[SongField.i];
 
+    for (let p = 0; p <= lastRow; ++p) {
+        const cp = instr[SongField.p][p];
         // Pattern rows
         for (let row = 0; row < patternLen; ++row) {
             // Execute effect command.
@@ -145,17 +147,18 @@ function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track
             // Put performance critical instrument properties in local variables
             const oscLFO = oscillators[ii[16]];
             const lfoAmt = ii[17] / 512;
-            const lfoFreq = (2 ** (ii[18] - 9)) / rowLen;
+            const lfoFreq = 2 * (2 ** (ii[18] - 9)) / rowLen;
             const fxLFO = ii[19];
             const fxFilter = ii[20];
-            const fxFreq = ii[21] * 43.23529 * 3.141592 / 44100;
+            const fxFreq = ii[21] * 43.23529 * Math.PI / 44100;
             const q = 1 - ii[22] / 255;
             const dist = ii[23] * 1e-5;
             const drive = ii[24] / 32;
             const panAmt = ii[25] / 512;
-            const panFreq = 6.283184 * (2 ** (ii[26] - 9)) / rowLen;
+            const panFreq = 2 * 2 * Math.PI * (2 ** (ii[26] - 9)) / rowLen;
             const dlyAmt = ii[27] / 255;
-            const dly = ii[28] * rowLen & ~1;  // Must be an even number
+            // Must be an even number
+            const dly = (ii[28] * rowLen) >> 1;
 
             // Calculate start sample number for this row in the pattern
             const rowStartSample = (p * patternLen + row) * rowLen;
@@ -170,8 +173,8 @@ function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track
 
                     // Copy note from the note cache
                     const noteBuf = noteCache[n];
-                    for (let j = 0, i = rowStartSample * 2; j < noteBuf.length; ++j, i += 2) {
-                        chnBuf[i] += noteBuf[j];
+                    for (let j = 0, i = rowStartSample; j < noteBuf.length; ++j, ++i) {
+                        chnBufL[i] += noteBuf[j];
                     }
                 }
             }
@@ -179,8 +182,8 @@ function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track
             // Perform effects for this pattern row
             for (let j = 0; j < rowLen; ++j) {
                 // Dry mono-sample
-                const k = (rowStartSample + j) * 2;
-                rsample = chnBuf[k];
+                const k = rowStartSample + j;
+                rsample = chnBufL[k];
 
                 // We only do effects if we have some sound input
                 if (rsample || filterActive) {
@@ -206,7 +209,7 @@ function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track
                     rsample *= drive;
 
                     // Is the filter active (i.e. still audiable)?
-                    filterActive = rsample * rsample > 1e-5;
+                    filterActive = rsample ** 2 > 1e-5;
 
                     // Panning
                     const t = Math.sin(panFreq * k) * panAmt + 0.5;
@@ -219,19 +222,19 @@ function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track
                 // Delay is always done, since it does not need sound input
                 if (k >= dly) {
                     // Left channel = left + right[-p] * t
-                    lsample += chnBuf[k - dly + 1] * dlyAmt;
+                    lsample += chnBufR[k - dly] * dlyAmt;
 
                     // Right channel = right + left[-p] * t
-                    rsample += chnBuf[k - dly] * dlyAmt;
+                    rsample += chnBufL[k - dly] * dlyAmt;
                 }
 
                 // Store in stereo channel buffer (needed for the delay effect)
-                chnBuf[k] = lsample | 0;
-                chnBuf[k + 1] = rsample | 0;
+                chnBufL[k] = lsample | 0;
+                chnBufR[k] = rsample | 0;
 
                 // ...and add to stereo mix buffer
-                mixL[k >> 1] += lsample / 65536;
-                mixR[k >> 1] += rsample / 65536;
+                mixL[k] += lsample / 65536;
+                mixR[k] += rsample / 65536;
             }
         }
     }

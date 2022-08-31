@@ -4,13 +4,13 @@
   "description": "js13k test game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
-    "start": "node ./public/server.js",
-    "start-watch": "npx nodemon ./public/server.js",
+    "start": "node ./public/s.js",
+    "start-watch": "npx nodemon ./public/s.js",
     "build": "node build.js",
     "build-dev": "node build.js --dev",
     "zip": "node build.js --zip",
-    "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/index.js",
-    "server-watch": "esbuild server/src/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --platform=node --target=node16 --format=esm --outfile=public/server.js"
+    "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/c.js",
+    "server-watch": "esbuild server/src/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --platform=node --target=node16 --format=esm --outfile=public/s.js"
   },
   "author": "eliasku",
   "license": "ISC",

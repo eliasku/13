@@ -1,5 +1,6 @@
 import type {SongData2, SongDataColumn2, SongDataInstrument2} from "../src/lib/audio/soundbox2";
 import {writeFileSync} from "fs";
+import {SongField} from "../src/lib/audio/soundbox2";
 
 interface SongDataColumn {
     n: (number | undefined)[];
@@ -38,17 +39,18 @@ function compress(song: SongData): SongData2 {
     u8[ptr++] = song.numChannels;
     u8[ptr++] = song.endPattern;
     u8[ptr++] = song.patternLen;
-    u8[ptr++] = song.rowLen;
-    for (const inst of song.songData) {
+    u8[ptr++] = song.rowLen >>> 16;
+    u8[ptr++] = song.rowLen & 0xFF;
+    for (let track = 0; track < song.numChannels; ++track) {
+        const inst = song.songData[track];
         console.info("i.size: " + inst.i.length);
         console.info("p.size: " + inst.p.length);
         console.info("c.size: " + inst.c.length);
         for (const i of inst.i) {
             u8[ptr++] = i;
         }
-        u8[ptr++] = inst.p.length;
-        for (const p of inst.p) {
-            u8[ptr++] = p;
+        for (let p = 0; p <= SongField.endPattern; ++p) {
+            u8[ptr++] = inst.p[p];
         }
         u8[ptr++] = inst.c.length;
         for (const c of inst.c) {

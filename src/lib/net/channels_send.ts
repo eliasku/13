@@ -1,13 +1,6 @@
 import {DebugLag} from "../game/config";
 import {isChannelOpen, RemoteClient} from "./messaging";
-
-function chance(prob: number): boolean {
-    return Math.random() < prob;
-}
-
-function range(min: number, max: number): number {
-    return min + (max - min) * Math.random();
-}
+import {fx_chance, fx_range} from "../utils/rnd";
 
 function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
     client.debugPacketByteLength_ = data.byteLength;
@@ -15,7 +8,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
         console.warn("HUGE packet could not be delivered: " + data.byteLength);
         //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
     }
-    if (!chance(DebugLag.PacketLoss ** 2)) {
+    if (!fx_chance(DebugLag.PacketLoss ** 2)) {
         if (document.hidden) {
             // can't simulate lag when tab in background because of setTimeout stall
             try {
@@ -24,7 +17,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
                 console.warn("DataChannel send error:", e)
             }
         } else {
-            const delay = range(DebugLag.LagMin / 4, DebugLag.LagMax / 4);
+            const delay = fx_range(DebugLag.LagMin / 4, DebugLag.LagMax / 4);
             setTimeout(() => {
                 if (isChannelOpen(client)) {
                     try {
@@ -50,7 +43,7 @@ export function channels_sendObjectData(client: RemoteClient, data: ArrayBuffer)
     }
 }
 
-export function getChannelPacketSize(client: RemoteClient):number {
+export function getChannelPacketSize(client: RemoteClient): number {
     return process.env.NODE_ENV === "development" ?
         (client.debugPacketByteLength_ | 0) :
         (client.dc_.bufferedAmount);

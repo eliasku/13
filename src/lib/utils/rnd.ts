@@ -45,3 +45,20 @@ export function random(max: number): number /* u32 */ {
 export function nextFloat() {
     return unorm_f32_from_u32(nextInt());
 }
+
+
+export function fx_chance(prob: number): boolean {
+    return Math.random() < prob;
+}
+
+export function fx_range(min: number, max: number): number {
+    return min + (max - min) * Math.random();
+}
+
+export function fxRand(max: number): number {
+    return (Math.random() * max) | 0;
+}
+
+export function fxRandElement<T>(m: T[]): T {
+    return m[fxRand(m.length)];
+}

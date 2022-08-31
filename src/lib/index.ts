@@ -7,7 +7,7 @@ import {loadAtlas} from "./assets/gfx";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
 import {Bgm, bgm, loadMusic} from "./assets/bgm";
-import {loadSounds} from "./assets/sfx";
+import {loadSounds, loadSoundsInline} from "./assets/sfx";
 
 initInput();
 initDraw2d();
@@ -32,11 +32,11 @@ const onStart = async () => {
     state = StartState.Connected;
 };
 
-const font = new FontFace("emoji", `url(emoji.ttf)`);
-font.load().then(() => {
+new FontFace("e", `url(e.ttf)`).load().then(async(font)=> {
     document.fonts.add(font);
+    // await loadSounds();
+    loadSoundsInline();
     loadMusic();
-    loadSounds();
     loadAtlas();
     if (!getUserName()) {
         const defaultName = "guest";

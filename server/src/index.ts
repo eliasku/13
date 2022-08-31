@@ -1,15 +1,8 @@
-import * as http from "http";
-import {IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
-import * as fs from "fs";
-import * as url from 'url';
-import {
-    ClientID,
-    EventSourceUrl,
-    MessageField,
-    PostMessagesResponse,
-    Request,
-    ServerEventName
-} from "../../src/shared/types";
+import {createServer, IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
+import {readFile} from "fs";
+import {fileURLToPath} from "url";
+
+import {ClientID, EventSourceUrl, MessageField, Request, ServerEventName} from "../../src/shared/types";
 
 interface ClientState {
     id_: ClientID;
@@ -24,7 +17,7 @@ let nextClientId = 1;
 const clients = new Map<ClientID, ClientState>();
 
 setInterval(() => {
-    for (const client of clients.values()) {
+    for (const [, client] of clients) {
         if (!sendServerEvent(client, ServerEventName.Ping, "")) {
             removeClient(client);
         }
@@ -49,8 +42,8 @@ function sendServerEvent(client: ClientState, event: ServerEventName, data: stri
 }
 
 function broadcastServerEvent(from: ClientID, event: ServerEventName, data: string) {
-    for (const client of clients.values()) {
-        if (client.id_ !== from) {
+    for (const [id, client] of clients) {
+        if (id != from) {
             sendServerEvent(client, event, data);
         }
     }
@@ -145,9 +138,9 @@ const requestListener: RequestListener = async (req, res) => {
             res.end();
         }
     } else if (req.method === "GET") {
-        const publicDir = url.fileURLToPath(new URL('.', import.meta.url));
-        const filePath = publicDir + (req.url === '/' ? '/index.html' : req.url);
-        fs.readFile(filePath, (err, data) => {
+        const publicDir = fileURLToPath(new URL('.', import.meta.url));
+        const filePath = publicDir + (req.url === '/' ? '/i.html' : req.url);
+        readFile(filePath, (err, data) => {
             if (err) {
                 res.writeHead(404);
                 res.end();
@@ -159,7 +152,7 @@ const requestListener: RequestListener = async (req, res) => {
                 } else if (filePath.endsWith(".js")) {
                     // headers["content-type"] = "application/javascript";
                     headers["cache-control"] = "no-cache";
-                } else if (filePath.endsWith(".ttf")) {
+                } else if (filePath === ".ttf") {
                     // headers["content-type"] = "font/ttf";
                     headers["cache-control"] = "max-age=86400";
                 }
@@ -173,7 +166,7 @@ const requestListener: RequestListener = async (req, res) => {
     }
 };
 
-const server = http.createServer(requestListener);
+const server = createServer(requestListener);
 server.listen(+process.env.PORT || 8080);
 
 // console will be dropped for prod build

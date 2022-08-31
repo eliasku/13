@@ -1,5 +1,7 @@
 // http://stackoverflow.com/a/16001019
 
+import {writeFileSync} from "fs";
+
 function numberToFloat(bytes) {
     const sign = (bytes & 0x80000000) ? -1 : 1;
     let exponent = ((bytes >> 23) & 0xFF) - 127;
@@ -191,7 +193,9 @@ for (let i = 0; i < sounds.length; ++i) {
     }
 }
 
-let code = `export const enum Snd {
+let code = `import {createAudioBuffer} from "../audio/sfxr";
+
+export const enum Snd {
   ${enumerations.join("\n  ")}
 }
 
@@ -204,7 +208,17 @@ export function loadSounds() {
 }
 `;
 
-console.info(code);
+const floats = new Float32Array(1024 * 64);
+let ptr = 0;
+
+for(const sound of sounds) {
+    for(const prop of sound.props) {
+        floats[ptr++] = prop;
+    }
+}
+
+writeFileSync("public/sfx.bin", floats.subarray(0, ptr));
+writeFileSync("src/lib/assets/sfx.ts", code, "utf8");
 
 // shoot
 // const r = convert("7BMHBGCZFc5aXpRKETBQrCjuxUuwoF1F9ovqMuZrUQGBZoaxzcfaju2BmsHwoKoDn94PoU8TXMZbj3a1vHybBzAjLAg23LTxxKZ5Fg2hm8vkquRVUSZWcNdHy");

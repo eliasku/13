@@ -12,7 +12,7 @@ export function generateMapBackground():void {
 
     map.fillStyle = "#080";
     map.scale(1, .25);
-    for (let i = 0; i < 32; ++i) {
+    for (let i = 0; i < 128; ++i) {
         map.beginPath()
         map.arc(rand(size), rand(size * 4), 4 + rand(16), 0, 2 * Math.PI);
         map.closePath();
@@ -37,7 +37,7 @@ export function generateMapBackground():void {
 
     ///// LZMA: ~64
 
-    // ctx.font = "5px emoji";
+    // ctx.font = "5px e";
     // ctx.fillStyle = "#FFF";
     // ctx.scale(1, 0.5);
     // for (let i = 0; i < 128; ++i) {
@@ -45,7 +45,7 @@ export function generateMapBackground():void {
     // }
     // ctx.resetTransform();
     //
-    // ctx.font = "8px emoji";
+    // ctx.font = "8px e";
     // for (let i = 0; i < 32; ++i) {
     //     ctx.fillText("🌷,🌻,🥀,🌿".split(",")[rand(4)], rand(size), rand(size));
     // }

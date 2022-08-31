@@ -2,14 +2,14 @@ import {audioContext} from "./context";
 
 // Wave shapes
 
-const enum WaveShape {
+export const enum WaveShape {
     SQUARE = 0,
     SAWTOOTH = 1,
     SINE = 2,
     NOISE = 3,
 }
 
-const enum FParam {
+export const enum FParam {
     wave = 0,
     p_env_attack,
     p_env_sustain,
@@ -33,23 +33,29 @@ const enum FParam {
     p_lpf_resonance,
     p_hpf_freq,
     p_hpf_ramp,
+    length
 }
-
-// render volume
-const masterVolume = 1;
-const OVERSAMPLING = 8;
-// default sample parameters
-const base_sound_vol = 0.5;
-const gain = masterVolume * (Math.exp(base_sound_vol) - 1);
 
 // Sound generation parameters are on [0,1] unless noted SIGNED & thus
 // on [-1,1]
-function render(ps: number[]): Float32Array {
+export function createAudioBuffer(ps: number[]): AudioBuffer {
+    // render volume
+// default sample parameters
+    const OVERSAMPLING = 8;
+// const masterVolume = 1;
+// const base_sound_vol = 0.5;
+// const gain = masterVolume * (Math.exp(base_sound_vol) - 1);
+// const gainRounded = gain / OVERSAMPLING;
+    const gainRounded = 0.08;
+
+    const audioBuffer = audioContext.createBuffer(1, ps[FParam.length], 44100);
+    const mix: Float32Array = audioBuffer.getChannelData(0);
+
     let elapsedSinceRepeat = 0;
 
     const period0 = ps[FParam.p_base_freq];
-    const periodMax = Math.abs(ps[FParam.p_freq_limit]);
-    const enableFrequencyCutoff = ps[FParam.p_freq_limit] > 0;
+    const periodMax = ps[FParam.p_freq_limit];
+    // const enableFrequencyCutoff = ps[FParam.p_freq_limit] > 0;
     const periodMult0 = ps[FParam.p_freq_ramp];
     const periodMultSlide = ps[FParam.p_freq_dramp];
     const dutyCycle0 = ps[FParam.p_duty];
@@ -84,6 +90,7 @@ function render(ps: number[]): Float32Array {
         ps[FParam.p_env_attack],
         ps[FParam.p_env_sustain],
         ps[FParam.p_env_decay],
+        //0,
     ];
     const envelopePunch = ps[FParam.p_env_punch];
 
@@ -116,9 +123,7 @@ function render(ps: number[]): Float32Array {
         flanger_buffer[i] = 0;
     }
 
-    let normalized: number[] = [];
-
-    for (let t = 0; ; ++t) {
+    for (let t = 0; t < ps[FParam.length]; ++t) {
 
         // Repeats
         if (repeatTime !== 0 && ++elapsedSinceRepeat >= repeatTime) {
@@ -141,9 +146,9 @@ function render(ps: number[]): Float32Array {
         period *= periodMult;
         if (period > periodMax) {
             period = periodMax;
-            if (enableFrequencyCutoff) {
-                break;
-            }
+            // if (enableFrequencyCutoff) {
+            //     break;
+            // }
         }
 
         // Vibrato
@@ -227,7 +232,7 @@ function render(ps: number[]): Float32Array {
             } else if (waveShape === WaveShape.SINE) {
                 sub_sample = Math.sin(fp * 2 * Math.PI);
             } else if (waveShape === WaveShape.NOISE) {
-                sub_sample = noise_buffer[(phase * 32 / iperiod)|0];
+                sub_sample = noise_buffer[(phase * 32 / iperiod) | 0];
             } else {
                 // no-op; invalid wave shape
             }
@@ -265,16 +270,9 @@ function render(ps: number[]): Float32Array {
         }
 
         // store normalized floating point sample
-        normalized.push(sample * gain / OVERSAMPLING);
+        mix[t] = sample * gainRounded;
     }
 
-    return new Float32Array(normalized);
-}
-
-export function createAudioBuffer(params: number[]): AudioBuffer {
-    const samples = render(params);
-    const audioBuffer = audioContext.createBuffer(1, samples.length, 44100);
-    audioBuffer.copyToChannel(samples, 0, 0);
     return audioBuffer;
 }
 

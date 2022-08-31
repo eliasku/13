@@ -1,11 +1,12 @@
 import {toRad} from "../utils/math";
 import {Const} from "../game/config";
+import {Img} from "./gfx";
 
 export const enum BulletType {
     Melee = 0,
     Shell = 1,
-    Arrow = 2,
-    Plasma = 3,
+    Plasma = 2,
+    Arrow = 3,
     Ray = 4,
 }
 
@@ -190,3 +191,47 @@ weapons[i].cameraLookForward_ = 0.3;
 weapons[i].bulletDamage_ = 3;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10 / Const.NetFq;
+
+
+
+export const bulletColors = [
+    [0xFFFFFF],
+    [0xFFFF44],
+    [0x44FFFF],
+    [0x333333],
+    [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF],
+];
+
+export const bulletLonging = [
+    2,
+    2,
+    1,
+    8,
+    512
+];
+
+export const bulletLongingHighlight = [
+    1,
+    2,
+    2,
+    0,
+    512
+];
+
+export const bulletSize = [
+    2,
+    3 / 2,
+    2,
+    4,
+    12
+];
+
+export const bulletPulse = [0, 0, 1, 0, 0];
+
+export const bulletImgs = [
+    Img.circle_4_60p, Img.circle_4_70p, Img.box,
+    Img.circle_4_60p, Img.circle_4_70p, Img.box,
+    Img.box_l, Img.box_l, Img.box_l,
+    Img.circle_4_60p, Img.circle_4_70p, Img.box,
+    Img.box_l, Img.box_l, Img.box_l,
+];

@@ -4,7 +4,7 @@ import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
-import {getSeed, nextFloat, rand, seed} from "../utils/rnd";
+import {getSeed, nextFloat, rand, seed, fxRand, fxRandElement} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
 import {BASE_RESOLUTION, Const} from "./config";
@@ -30,7 +30,16 @@ import {
 } from "./controls";
 import {isAnyKeyDown, keyboardDown} from "../utils/input";
 import {Snd, snd} from "../assets/sfx";
-import {BulletType, weapons} from "../assets/weapons";
+import {
+    bulletColors,
+    bulletImgs,
+    bulletLonging,
+    bulletLongingHighlight,
+    bulletPulse,
+    bulletSize,
+    BulletType,
+    weapons
+} from "../assets/weapons";
 import {COLOR_BODY, COLOR_WHITE, getLumaColor32} from "../assets/colors";
 import {
     drawParticles,
@@ -1031,7 +1040,6 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 function drawGame() {
-    //const p0 = getMyPlayer();
     camera.scale_ = 1 / gameCamera[2];
     camera.toX_ = camera.toY_ = 0.5;
     camera.atX_ = gameCamera[0];
@@ -1142,57 +1150,6 @@ function drawItem(item: Actor) {
         draw(img[Img.item0 + idx], item.x, item.y - item.z - OBJECT_RADIUS - o, 0, s, s, 1, COLOR_WHITE, 0, colorOffset);
     }
 }
-
-function fxRand(max: number): number {
-    return (Math.random() * max) | 0;
-}
-
-
-function fxRandElement<T>(m: T[]): T {
-    return m[fxRand(m.length)];
-}
-
-const bulletColors = [
-    [0xFFFFFF],
-    [0xFFFF44],
-    [0x333333],
-    [0x44FFFF],
-    [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF],
-];
-
-const bulletLonging = [
-    2,
-    2,
-    8,
-    1,
-    512
-];
-
-const bulletLongingHighlight = [
-    1,
-    2,
-    0,
-    2,
-    512
-];
-
-const bulletSize = [
-    2,
-    3 / 2,
-    4,
-    2,
-    12
-];
-
-const bulletPulse = [0, 0, 0, 0.5, 0];
-
-const bulletImgs = [
-    Img.circle_4_60p, Img.circle_4_70p, Img.box,
-    Img.circle_4_60p, Img.circle_4_70p, Img.box,
-    Img.box_l, Img.box_l, Img.box_l,
-    Img.circle_4_60p, Img.circle_4_70p, Img.box,
-    Img.box_l, Img.box_l, Img.box_l,
-];
 
 function drawBullet(actor: Actor) {
     const x = actor.x;
@@ -1360,7 +1317,7 @@ function playAt(actor: Actor, id: Snd) {
     const v = 1 - Math.hypot(dx, dy);
     if (v > 0) {
         const pan = Math.max(-1, Math.min(1, dx));
-        play(snd[id], v, pan);
+        play(snd[id], v, pan, false);
     }
 }
 

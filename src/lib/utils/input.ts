@@ -105,7 +105,7 @@ export function initInput() {
         const scale = c.width / c.clientWidth;
         const bb = c.getBoundingClientRect();
         for (let i = 0; i < e.changedTouches.length; ++i) {
-            const touch = e.changedTouches.item(i)!;
+            const touch = e.changedTouches[i];
             fn(getPointer(touch.identifier),
                 ((touch.clientX - bb.x) * scale) | 0,
                 ((touch.clientY - bb.y) * scale) | 0);
@@ -123,7 +123,7 @@ export function initInput() {
     c.ontouchend = (e: TouchEvent) => {
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; ++i) {
-            const touch = e.changedTouches.item(i)!;
+            const touch = e.changedTouches[i];
             handleUp(getPointer(touch.identifier));
         }
         // console.info("ontouchend");

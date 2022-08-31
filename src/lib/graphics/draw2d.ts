@@ -86,9 +86,9 @@ function bindAttrib(name: string, size: number, stride: number, divisor: number,
 const floatSize = 2 + 2 + 1 + 2 + 4 + 1 + 1 + 1;
 const byteSize = floatSize * 4;
 // maxBatch * byteSize
-const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
-const floatView = new Float32Array(arrayBuffer);
-const uintView = new Uint32Array(arrayBuffer);
+// const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
+const floatView = new Float32Array(1 << 20);
+const uintView = new Uint32Array(floatView.buffer);
 let program: WebGLProgram | null = null;
 let matrixLocation: WebGLUniformLocation = null;
 let textureLocation: WebGLUniformLocation = null;
@@ -122,7 +122,7 @@ export function initDraw2d() {
     bindAttrib(GLSLX_NAME_G, 2, 0, 0, 0, GL.FLOAT, false);
 
     // dynamicBuffer
-    createBuffer(GL.ARRAY_BUFFER, arrayBuffer, GL.DYNAMIC_DRAW);
+    createBuffer(GL.ARRAY_BUFFER, floatView, GL.DYNAMIC_DRAW);
 
     // anchorLocation
     bindAttrib(GLSLX_NAME_A, 2, byteSize, 1, 0, GL.FLOAT, false);

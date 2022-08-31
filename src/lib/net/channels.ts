@@ -1,22 +1,17 @@
 import {ClientID} from "../../shared/types";
 import {DebugLag} from "../game/config";
 import {onRTCPacket} from "../game/game";
+import {fx_chance, fx_range} from "../utils/rnd";
 
-function chance(prob: number): boolean {
-    return Math.random() < prob;
-}
 
-function range(min: number, max: number): number {
-    return min + (max - min) * Math.random();
-}
 
 function channels_processMessageDebug(from: ClientID, data: ArrayBuffer) {
-    if (!chance(DebugLag.PacketLoss ** 2)) {
+    if (!fx_chance(DebugLag.PacketLoss ** 2)) {
         if (document.hidden) {
             // can't simulate lag when tab in background because of setTimeout stall
             onRTCPacket(from, data);
         } else {
-            const delay = range(DebugLag.LagMin / 4, DebugLag.LagMax / 4)
+            const delay = fx_range(DebugLag.LagMin / 4, DebugLag.LagMax / 4)
             setTimeout(() => onRTCPacket(from, data), delay);
         }
     }

@@ -102,7 +102,7 @@ function createAtlas(): void {
         const scale = 1 / 8;
         const emojiSize = (size / scale) | 0;
         temp.clearRect(0, 0, tempSize, tempSize);
-        temp.font = emojiSize + "px emoji";
+        temp.font = emojiSize + "px e";
         temp.textAlign = "center";
         temp.textBaseline = "middle";
         temp.translate(tempSize / 2, tempSize / 2);
