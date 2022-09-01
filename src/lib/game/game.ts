@@ -372,7 +372,7 @@ function checkJoinSync() {
 
 function calcNetTick() {
     netTick = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0;
-    ackMin = netTick;
+    ackMin = gameTic;
     for (const [id,] of remoteClients) {
         const client = clients.get(id);
         if (client) {
@@ -422,8 +422,8 @@ function tryRunTicks(ts: number): number {
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.t > lastTic);
-    localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
-    // localEvents = localEvents.filter(v => v.t > ackMin);
+    // localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
+    localEvents = localEvents.filter(v => v.t > ackMin);
     return framesProcessed;
 }
 

@@ -8,3 +8,5 @@ zip/*.js
 zip/*.html
 dump/
 game.zip
+build/
+
