@@ -60,7 +60,7 @@
         console.info(output);
     }
 
-    const font = new FontFace("emoji", `url(/emoji.ttf)`);
+    const font = new FontFace("e", `url(/e.ttf)`);
     font.load().then(() => {
         document.fonts.add(font);
         start();
@@ -80,7 +80,7 @@
         canvas.width = w_;
         canvas.height = h_;
         const ctx = canvas.getContext("2d", {alpha: true});
-        ctx.font = emojiSize + "px emoji";
+        ctx.font = emojiSize + "px e";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         const comp = 1 + (emojiSize / 5);
@@ -139,7 +139,7 @@
         canvas.height = h_;
         const ctx = canvas.getContext("2d", {alpha: true});
         // ctx.imageSmoothingEnabled = false;
-        ctx.font = emojiSize + "px emoji";
+        ctx.font = emojiSize + "px e";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.translate(w_ / 2, h_ / 2);

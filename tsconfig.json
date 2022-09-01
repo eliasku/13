@@ -4,9 +4,10 @@
     "target": "esnext",
     "moduleResolution": "node",
     "noImplicitAny": true,
-    "removeComments": true,
-    "preserveConstEnums": true,
-    "sourceMap": true
+    "removeComments": false,
+    "preserveConstEnums": false,
+    "sourceMap": true,
+    "outDir": "build/client"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]

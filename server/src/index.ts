@@ -1,8 +1,7 @@
-import {createServer, IncomingMessage, OutgoingHttpHeaders, RequestListener, ServerResponse} from "http";
+import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {readFile} from "fs";
-import {fileURLToPath} from "url";
 
-import {ClientID, EventSourceUrl, MessageField, Request, ServerEventName} from "../../src/shared/types";
+import {ClientID, MessageField, Request, ServerEventName} from "../../src/shared/types";
 
 interface ClientState {
     id_: ClientID;
@@ -11,6 +10,28 @@ interface ClientState {
     eventStream_: ServerResponse;
     nextEventId_: number;
 }
+
+const HDR: Record<string, OutgoingHttpHeaders> = {
+    _: {
+        "connection": "keep-alive",
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+    },
+    n: {
+        "content-type": "application/json"
+    },
+    l: {
+        "content-type": "text/html;charset=utf-8",
+        "cache-control": "no-cache",
+    },
+    s: {
+        "cache-control": "no-cache"
+    },
+    f: {
+        "content-type": "font/ttf",
+        "cache-control": "max-age=86400"
+    },
+};
 
 let nextClientId = 1;
 
@@ -26,14 +47,9 @@ setInterval(() => {
 
 function constructMessage(id: number, data: string) {
     return `id:${id}\ndata:${data}\n\n`;
+    // return "id:"+id+"\ndata:"+data+"\n\n";
 }
 
-function sendCloseServerEvent(client: ClientState) {
-    client.eventStream_.write(
-        constructMessage(-1, "")
-    );
-    client.eventStream_.end();
-}
 
 function sendServerEvent(client: ClientState, event: ServerEventName, data: string) {
     return client.eventStream_.write(
@@ -50,18 +66,19 @@ function broadcastServerEvent(from: ClientID, event: ServerEventName, data: stri
 }
 
 function removeClient(client: ClientState) {
-    sendCloseServerEvent(client);
+    //sendCloseServerEvent(client);
+    client.eventStream_.write(
+        constructMessage(-1, "")
+    );
+    client.eventStream_.end();
+
     clients.delete(client.id_);
     broadcastServerEvent(client.id_, ServerEventName.ClientListChange, "-" + client.id_);
     console.info("broadcast client " + client.id_ + " removed ");
 }
 
 function processServerEvents(req: IncomingMessage, res: ServerResponse) {
-    res.writeHead(200, {
-        "connection": "keep-alive",
-        "content-type": "text/event-stream",
-        "cache-control": "no-cache",
-    });
+    res.writeHead(200, HDR._);
 
     // create new client connection
     const clientIds = [...clients.keys()];
@@ -94,7 +111,7 @@ async function readJSON(req: IncomingMessage): Promise<Request | undefined> {
         const data = Buffer.concat(buffers).toString();
         return JSON.parse(data) as Request;
     } catch {
-        console.warn("error decode JSON from /0");
+        console.warn("error decode JSON from /_");
     }
 }
 
@@ -123,51 +140,41 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
         }
         ++numProcessedMessages;
     }
-    res.writeHead(200, {"content-type": "application/json"});
+    res.writeHead(200, HDR.n);
     res.end(JSON.stringify(numProcessedMessages));
 }
 
-const requestListener: RequestListener = async (req, res) => {
-    if (req.url === EventSourceUrl) {
-        if (req.method === "GET") {
-            processServerEvents(req, res);
-        } else if (req.method === "POST") {
-            await processIncomeMessages(req, res);
-        } else {
-            res.writeHead(500);
-            res.end();
+function serveStatic(file: string, res: ServerResponse, mime: OutgoingHttpHeaders) {
+    readFile(
+        "." + file,
+        (err, data) => {
+            res.writeHead(err ? 404 : 200, mime);
+            res.end(data);
         }
-    } else if (req.method === "GET") {
-        const publicDir = fileURLToPath(new URL('.', import.meta.url));
-        const filePath = publicDir + (req.url === '/' ? '/i.html' : req.url);
-        readFile(filePath, (err, data) => {
-            if (err) {
-                res.writeHead(404);
-                res.end();
-            } else {
-                let headers: OutgoingHttpHeaders = {};
-                if (filePath.endsWith(".html")) {
-                    headers["content-type"] = "text/html;charset=utf-8";
-                    headers["cache-control"] = "no-cache";
-                } else if (filePath.endsWith(".js")) {
-                    // headers["content-type"] = "application/javascript";
-                    headers["cache-control"] = "no-cache";
-                } else if (filePath === ".ttf") {
-                    // headers["content-type"] = "font/ttf";
-                    headers["cache-control"] = "max-age=86400";
-                }
-                res.writeHead(200, headers);
-                res.end(data);
-            }
-        });
-    } else {
-        res.writeHead(500);
-        res.end();
+    );
+}
+
+function error(req: IncomingMessage, res: ServerResponse) {
+    res.writeHead(500);
+    res.end();
+}
+
+const HANDLERS: any = {
+    G: {
+        "/": (req: IncomingMessage, res: ServerResponse) => serveStatic("/index.html", res, HDR.l),
+        _: processServerEvents,
+        l: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.l),
+        f: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.f),
+        s: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.s),
+    },
+    P: {
+        _: processIncomeMessages,
     }
 };
 
-const server = createServer(requestListener);
-server.listen(+process.env.PORT || 8080);
+createServer((req: IncomingMessage, res: ServerResponse) => {
+    (HANDLERS[req.method[0]][req.url.at(-1)] ?? error)(req, res);
+}).listen(+process.env.PORT || 8080);
 
 // console will be dropped for prod build
 console.log(`Local server http://localhost:8080`);

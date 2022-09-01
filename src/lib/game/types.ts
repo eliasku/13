@@ -1,4 +1,5 @@
 import {ClientID} from "../../shared/types";
+import {Img} from "../assets/gfx";
 
 export const enum ActorType {
     Player = 0,
@@ -70,10 +71,20 @@ export interface ClientEvent {
     c?: ClientID;
 }
 
-export interface InitData {
+export interface StateData {
     mapSeed_: number;
     seed_: number;
     actors_: Actor[][];
+    particles_: Particle[];
+}
+
+export function newStateData():StateData {
+    return {
+        mapSeed_: 0,
+        seed_: 0,
+        actors_: [[],[],[],[]],
+        particles_: []
+    };
 }
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
@@ -96,5 +107,34 @@ export interface Packet {
     e: ClientEvent[];
 
     // init state
-    s?: InitData;
+    s?: StateData;
+}
+
+
+export interface Particle {
+    x: number;
+    y: number;
+    z: number;
+    u: number;
+    v: number;
+    w: number;
+    // angle
+    a: number;
+    // rotation speed
+    r: number;
+
+    scale_: number;
+    color_: number;
+
+    lifeTime_: number;
+    lifeMax_: number;
+
+    img_: Img;
+    splashSizeX_: number;
+    splashSizeY_: number;
+    splashEachJump_: number;
+    splashScaleOnVelocity_: number;
+    splashImg_: number;
+    followVelocity_: number;
+    followScale_: number;
 }

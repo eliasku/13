@@ -1,15 +1,26 @@
 import {ClientID} from "../../shared/types";
 import {getClientId, getUserName, isChannelOpen, remoteClients} from "../net/messaging";
-import {GL, gl} from "../graphics/gl";
+import {GL,gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
-import {fxRandElement, getSeed, nextFloat, rand, seed} from "../utils/rnd";
+import {_SEED, fxRandElement, nextFloat, rand, setSeed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
 import {Const} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
-import {Actor, ActorType, Client, ClientEvent, EffectItemType, InitData, ItemCategory, Packet, Vel} from "./types";
+import {
+    Actor,
+    ActorType,
+    Client,
+    ClientEvent,
+    EffectItemType,
+    StateData,
+    ItemCategory,
+    newStateData,
+    Packet,
+    Vel
+} from "./types";
 import {pack, unpack} from "./packets";
 import {getLumaColor32, lerp, reach} from "../utils/math";
 import {
@@ -31,12 +42,6 @@ import {
 import {isAnyKeyDown, keyboardDown} from "../utils/input";
 import {Snd, snd} from "../assets/sfx";
 import {
-    bulletColors,
-    bulletImgs,
-    bulletLonging,
-    bulletLongingHighlight,
-    bulletPulse,
-    bulletSize,
     BulletType,
     weapons
 } from "./data/weapons";
@@ -45,7 +50,6 @@ import {
     newBoneParticle,
     newFleshParticle,
     newShellParticle,
-    Particle,
     updateParticles
 } from "./particles";
 import {
@@ -64,12 +68,13 @@ import {
 } from "./phy";
 import {BASE_RESOLUTION, BOUNDS_SIZE} from "../assets/params";
 import {
-    ANIM_HIT_MAX, ANIM_HIT_OVER,
-    BULLET_RADIUS, JUMP_VEL,
-    OBJECT_HEIGHT_BY_TYPE,
-    OBJECT_RADIUS,
-    OBJECT_RADIUS_BY_TYPE, PLAYER_HANDS_Z,
-    SHADOW_ADD_BY_TYPE, SHADOW_COLOR_BY_TYPE, SHADOW_SCALE_BY_TYPE
+    ANIM_HIT_MAX,
+    ANIM_HIT_OVER,
+    BULLET_RADIUS,
+    JUMP_VEL, OBJECT_HEIGHT,
+    OBJECT_RADIUS, OBJECT_RADIUS_BY_TYPE,
+    ObjectField,
+    PLAYER_HANDS_Z,
 } from "./data/world";
 import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
 
@@ -96,17 +101,9 @@ let lastInputCmd = 0;
 // static state
 let trees: Actor[] = [];
 
-let _particles: Particle[];
-let particles: Particle[] = [];
-
 // dynamic state
-let state: InitData = {
-    seed_: 0,
-    mapSeed_: 0,
-    actors_: [[], [], [], []],
-}
-
-let lastState: InitData;
+let state: StateData = newStateData();
+let lastState: StateData;
 
 let simulatedFrames = 0;
 
@@ -178,7 +175,7 @@ export function initTestGame() {
 
 function recreateMap() {
     // generate map
-    seed(state.mapSeed_);
+    setSeed(state.mapSeed_);
     generateMapBackground();
     trees.length = 0;
     for (let i = 0; i < 128; ++i) {
@@ -198,9 +195,9 @@ function createSeedGameState() {
     gameTic = 0;
     netTick = 0;
     startTime = prevTime = lastFrameTs;
-    state.mapSeed_ = getSeed();
+    state.mapSeed_ = _SEED;
     recreateMap();
-    state.seed_ = getSeed();
+    state.seed_ = _SEED;
     for (let i = 0; i < 32; ++i) {
         setRandomPosition(newItemRandomWeapon());
         setRandomPosition(newItemRandomEffect());
@@ -438,7 +435,7 @@ function trySendInput() {
             const cl = clients.get(id);
             if (cl) {
                 const packet: Packet = {
-                    check_seed_: getSeed(),
+                    check_seed_: _SEED,
                     check_tic_: lastTic,
                     c: getClientId(),
                     // t: lastTic + simTic + Const.InputDelay,
@@ -457,9 +454,9 @@ function trySendInput() {
                     channels_sendObjectData(rc, pack(packet));
                 }
             } else {
-                state.seed_ = getSeed();
+                state.seed_ = _SEED;
                 const init: Packet = {
-                    check_seed_: getSeed(),
+                    check_seed_: _SEED,
                     check_tic_: lastTic,
                     sync_: false,
                     c: getClientId(),
@@ -494,7 +491,7 @@ function processPacket(sender: Client, data: Packet) {
         state = data.s;
         netTick = 0;
         recreateMap();
-        seed(data.s.seed_);
+        setSeed(data.s.seed_);
 
         sender.t = data.t;
         sender.acknowledgedTic_ = data.receivedOnSender_;
@@ -509,9 +506,9 @@ function processPacket(sender: Client, data: Packet) {
     } else {
         if (process.env.NODE_ENV === "development") {
             if (data.check_tic_ === (gameTic - 1)) {
-                if (data.check_seed_ !== getSeed()) {
+                if (data.check_seed_ !== _SEED) {
                     console.warn("seed mismatch from client " + data.c + " at tic " + data.check_tic_);
-                    console.warn(data.check_seed_ + " != " + getSeed());
+                    console.warn(data.check_seed_ + " != " + _SEED);
                 }
             }
         }
@@ -638,13 +635,14 @@ function updateGameCamera(dt: number) {
 
 function simulateTic(dt: number) {
     updateGameCamera(dt);
-    for (const l of state.actors_) sortList(l);
-    for (const l of state.actors_) for (const a of l) updateActorPhysics(a, dt);
-
+    state.actors_.map(sortList);
     for (const a of state.actors_[ActorType.Player]) {
+        updateActorPhysics(a, dt);
         updatePlayer(a, dt);
     }
+    for (const a of state.actors_[ActorType.Barrel]) updateActorPhysics(a, dt);
     for (const a of state.actors_[ActorType.Item]) {
+        updateActorPhysics(a, dt);
         if (!a.animHit_) {
             for (const player of state.actors_[ActorType.Player]) {
                 if (testIntersection(a, player)) {
@@ -654,15 +652,14 @@ function simulateTic(dt: number) {
         }
     }
 
-    updateBulletCollision(state.actors_[ActorType.Player]);
-    updateBulletCollision(state.actors_[ActorType.Barrel]);
-    updateBulletCollision(trees);
-
     for (const bullet of state.actors_[ActorType.Bullet]) {
         updateBody(bullet, dt, 0, 0);
         if (bullet.hp_ && collideWithBoundsA(bullet)) {
             --bullet.hp_;
         }
+        updateBulletCollision(bullet, state.actors_[ActorType.Player]);
+        updateBulletCollision(bullet, state.actors_[ActorType.Barrel]);
+        updateBulletCollision(bullet, trees);
         if (bullet.btn_ === BulletType.Ray) {
             bullet.hp_ = -1;
         }
@@ -676,7 +673,7 @@ function simulateTic(dt: number) {
     for (const tree of trees) {
         updateAnim(tree, dt);
     }
-    updateParticles(particles, dt);
+    updateParticles(state.particles_, dt);
 
     for (let i = 0; i < state.actors_.length; ++i) {
         state.actors_[i] = state.actors_[i].filter(x => x.hp_);
@@ -699,18 +696,17 @@ function simulateTic(dt: number) {
         p.hp_ = 10;
         pushActor(p);
     }
-
 }
 
 function updateBodyInterCollisions2(list1: Actor[], list2: Actor[]) {
     for (let i = 0; i < list1.length; ++i) {
         const a = list1[i];
         const ra = OBJECT_RADIUS_BY_TYPE[a.type_];
-        const ha = OBJECT_HEIGHT_BY_TYPE[a.type_];
+        const ha = OBJECT_HEIGHT[a.type_];
         for (let j = 0; j < list2.length; ++j) {
             const b = list2[j];
             const rb = OBJECT_RADIUS_BY_TYPE[b.type_];
-            const hb = OBJECT_HEIGHT_BY_TYPE[b.type_];
+            const hb = OBJECT_HEIGHT[b.type_];
             let nx = a.x - b.x;
             let ny = (a.y - b.y) * 2;
             let nz = (a.z + ha) - (b.z + hb);
@@ -741,11 +737,11 @@ function updateBodyInterCollisions(list: Actor[]) {
     for (let i = 0; i < max; ++i) {
         const a = list[i];
         const ra = OBJECT_RADIUS_BY_TYPE[a.type_];
-        const ha = OBJECT_HEIGHT_BY_TYPE[a.type_];
+        const ha = OBJECT_HEIGHT[a.type_];
         for (let j = i + 1; j < max; ++j) {
             const b = list[j];
             const rb = OBJECT_RADIUS_BY_TYPE[b.type_];
-            const hb = OBJECT_HEIGHT_BY_TYPE[b.type_];
+            const hb = OBJECT_HEIGHT[b.type_];
             let nx = a.x - b.x;
             let ny = (a.y - b.y) * 2;
             let nz = (a.z + ha) - (b.z + hb);
@@ -777,7 +773,7 @@ function testRayWithSphere(from: Actor, target: Actor, dx: number, dy: number) {
     // dy /= dd;
     const R = OBJECT_RADIUS_BY_TYPE[target.type_];
     const fromZ = from.z;
-    const targetZ = target.z + OBJECT_HEIGHT_BY_TYPE[target.type_];
+    const targetZ = target.z + OBJECT_HEIGHT[target.type_];
     let Lx = target.x - from.x;
     let Ly = target.y - from.y;
     let Lz = targetZ - fromZ;
@@ -795,8 +791,8 @@ function testRayWithSphere(from: Actor, target: Actor, dx: number, dy: number) {
 function testIntersection(a: Actor, b: Actor): boolean {
     const ra = OBJECT_RADIUS_BY_TYPE[a.type_];
     const rb = OBJECT_RADIUS_BY_TYPE[b.type_];
-    const ha = OBJECT_HEIGHT_BY_TYPE[a.type_];
-    const hb = OBJECT_HEIGHT_BY_TYPE[b.type_];
+    const ha = OBJECT_HEIGHT[a.type_];
+    const hb = OBJECT_HEIGHT[b.type_];
     let nx = a.x - b.x;
     let ny = a.y - b.y;
     let nz = (a.z + ha) - (b.z + hb);
@@ -866,20 +862,18 @@ function hitWithBullet(actor: Actor, bullet: Actor) {
     }
 }
 
-function updateBulletCollision(list: Actor[]) {
-    for (const b of state.actors_[ActorType.Bullet]) {
-        if (b.hp_) {
-            for (const a of list) {
-                const owned = !(a.c - b.c);
-                if (!owned) {
-                    if (b.btn_ === BulletType.Ray && b.hp_ > 0) {
-                        if (testRayWithSphere(b, a, b.u, b.v)) {
-                            hitWithBullet(a, b);
-                        }
-                    } else {
-                        if (testIntersection(a, b)) {
-                            hitWithBullet(a, b);
-                        }
+function updateBulletCollision(b:Actor, list: Actor[]) {
+    if (b.hp_) {
+        for (const a of list) {
+            const owned = !(a.c - b.c);
+            if (!owned) {
+                if (b.btn_ === BulletType.Ray && b.hp_ > 0) {
+                    if (testRayWithSphere(b, a, b.u, b.v)) {
+                        hitWithBullet(a, b);
+                    }
+                } else {
+                    if (testIntersection(a, b)) {
+                        hitWithBullet(a, b);
                     }
                 }
             }
@@ -968,7 +962,7 @@ function updatePlayer(player: Actor, dt: number) {
                 pushActor(bullet);
             }
 
-            particles.push(newShellParticle(player, PLAYER_HANDS_Z + weapon.offsetZ_));
+            state.particles_.push(newShellParticle(player, PLAYER_HANDS_Z + weapon.offsetZ_));
         }
     } else {
         player.t = reach(player.t, 0, dt * 16);
@@ -978,13 +972,13 @@ function updatePlayer(player: Actor, dt: number) {
 
 export function spawnFleshParticles(actor: Actor, expl: number, amount: number, vel?: Vel) {
     for (let i = 0; i < amount; ++i) {
-        particles.push(newFleshParticle(actor, expl, vel));
+        state.particles_.push(newFleshParticle(actor, expl, vel));
     }
 }
 
 export function spawnBonesParticles(actor: Actor, vel?: Vel) {
     for (let i = 0; i < 32; ++i) {
-        particles.push(newBoneParticle(actor, vel));
+        state.particles_.push(newBoneParticle(actor, vel));
     }
 }
 
@@ -996,12 +990,8 @@ function getCommandsForTic(tic: number): ClientEvent[] {
 }
 
 function beginPrediction() {
-    // local state
-    _particles = particles;
-    particles = JSON.parse(JSON.stringify(particles));
-
     // global state
-    state.seed_ = getSeed();
+    state.seed_ = _SEED;
     lastState = state;
     simulatedFrames = 0;
     if (!Const.Prediction) return;
@@ -1022,10 +1012,7 @@ function beginPrediction() {
 function endPrediction() {
     // global state
     state = lastState;
-    seed(state.seed_);
-
-    // local state
-    particles = _particles;
+    setSeed(state.seed_);
 }
 
 /*** DRAWING ***/
@@ -1062,10 +1049,14 @@ function drawOverlay() {
 }
 
 function drawShadows() {
+    const SHADOW_SCALE =[1, 1, 2, 1];
+    const SHADOW_ADD =[0, 0, 1, 0];
+    const SHADOW_COLOR =[0, 0, 0x333333, 0];
+
     for (const actor of drawList) {
-        const shadowScale = (2 - actor.z / 64.0) * SHADOW_SCALE_BY_TYPE[actor.type_];
-        const additive = SHADOW_ADD_BY_TYPE[actor.type_];
-        const color = SHADOW_COLOR_BY_TYPE[actor.type_];
+        const shadowScale = (2 - actor.z / 64.0) * SHADOW_SCALE[actor.type_];
+        const additive = SHADOW_ADD[actor.type_];
+        const color = SHADOW_COLOR[actor.type_];
         draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .4, color, additive);
     }
 }
@@ -1138,18 +1129,39 @@ function drawItem(item: Actor) {
 }
 
 function drawBullet(actor: Actor) {
+    const BULLET_COLOR = [
+        [0xFFFFFF],
+        [0xFFFF44],
+        [0x44FFFF],
+        [0x333333],
+        [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF]
+    ];
+
+    const BULLET_LENGTH = [2, 2, 1, 8, 512];
+    const BULLET_LENGTH_LIGHT = [1, 2, 2, 0, 512];
+    const BULLET_SIZE = [2, 3 / 2, 2, 4, 12];
+    const BULLET_PULSE = [0, 0, 1, 0, 0];
+    const BULLET_IMAGE = [
+        Img.circle_4_60p, Img.circle_4_70p, Img.box,
+        Img.circle_4_60p, Img.circle_4_70p, Img.box,
+        Img.circle_4_60p, Img.circle_4_70p, Img.box,
+        Img.box_l, Img.box_l, Img.box_l,
+        Img.box_l, Img.box_l, Img.box_l,
+    ];
+
     const x = actor.x;
     const y = actor.y - actor.z;
     const a = Math.atan2(actor.v, actor.u);
-    const color = fxRandElement(bulletColors[actor.btn_]);
-    const longing = bulletLonging[actor.btn_];
-    const longing2 = bulletLongingHighlight[actor.btn_];
-    const sz = bulletSize[actor.btn_] + bulletPulse[actor.btn_] * Math.sin(32 * lastFrameTs + actor.anim0_) / 2;
+    const color = fxRandElement(BULLET_COLOR[actor.btn_] as number[]);
+    const longing = BULLET_LENGTH[actor.btn_];
+    const longing2 = BULLET_LENGTH_LIGHT[actor.btn_];
+    const sz = BULLET_SIZE[actor.btn_] +
+        BULLET_PULSE[actor.btn_] * Math.sin(32 * lastFrameTs + actor.anim0_) / 2;
     let res = actor.btn_ * 3;
 
-    draw(img[bulletImgs[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
-    draw(img[bulletImgs[res++]], x, y, a, sz * longing / 2, sz / 2, 1, color);
-    draw(img[bulletImgs[res++]], x, y, a, 2 * longing2, 2);
+    draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
+    draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing / 2, sz / 2, 1, color);
+    draw(img[BULLET_IMAGE[res++]], x, y, a, 2 * longing2, 2);
 }
 
 const DRAW_BY_TYPE = [
@@ -1161,7 +1173,7 @@ const DRAW_BY_TYPE = [
 ];
 
 function drawObjects() {
-    drawParticles(particles);
+    drawParticles(state.particles_);
     collectVisibleActors(trees, ...state.actors_);
     sortList(drawList);
     drawShadows();
@@ -1371,7 +1383,7 @@ function checkDebugInput() {
 
 function drawActorBoundingSphere(p: Actor) {
     const r = OBJECT_RADIUS_BY_TYPE[p.type_];
-    const h = OBJECT_HEIGHT_BY_TYPE[p.type_];
+    const h = OBJECT_HEIGHT[p.type_];
     const x = p.x;
     const y = p.y - p.z - h;
     const s = r / 16;

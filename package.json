@@ -4,8 +4,10 @@
   "description": "js13k test game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
-    "start": "node ./public/s.js",
+    "start": "cd public && node s.js",
     "start-watch": "npx nodemon ./public/s.js",
+    "build-ts-server": "tsc -p server/tsconfig.json",
+    "build-ts-client": "tsc -p tsconfig.json",
     "build": "node build.js",
     "build-dev": "node build.js --dev",
     "zip": "node build.js --zip",
@@ -15,6 +17,8 @@
   "author": "eliasku",
   "license": "ISC",
   "devDependencies": {
+    "rollup": "^2.79.0",
+    "typescript": "^4.8.2",
     "@types/node": "^18.7.1",
     "esbuild": "^0.15.0",
     "html-minifier": "^4.0.0",

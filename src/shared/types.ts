@@ -3,7 +3,7 @@ export type CallID = number;
 export type MessageData = any;
 export type MessageTypeID = number;
 
-export const EventSourceUrl = "/0";
+export const EventSourceUrl = "/_";
 export const VersionsId = 1;
 
 export const enum ServerEventName {

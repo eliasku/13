@@ -1,5 +1,4 @@
 import {audioContext} from "./context";
-import {SongData} from "../../../tools/songs";
 
 export const enum SongField {
     n = 0,
@@ -249,8 +248,10 @@ function generateAll(song: SongData2, mixL: Float32Array, mixR: Float32Array) {
 export function createAudioBufferFromSong(song: SongData2): AudioBuffer {
     const len = song[SongField.rowLen] * song[SongField.patternLen] * (song[SongField.endPattern] + 1);
     const buffer = audioContext.createBuffer(2, len, 44100);
-    const l = buffer.getChannelData(0);
-    const r = buffer.getChannelData(1);
-    generateAll(song, l, r);
+    generateAll(
+        song,
+        buffer.getChannelData(0),
+        buffer.getChannelData(1)
+    );
     return buffer;
 }

@@ -1,4 +1,4 @@
-import {Actor, ClientEvent, InitData, Packet} from "./types";
+import {Actor, ClientEvent, newStateData, Packet} from "./types";
 import {Const} from "./config";
 import {decodeRLE, encodeRLE} from "../utils/rle";
 
@@ -52,11 +52,9 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         packet.e.push(e);
     }
     if (flags0 & 2) {
-        const init: InitData = {
-            mapSeed_: u32[ptr++],
-            seed_: u32[ptr++],
-            actors_: [[],[],[],[]],
-        };
+        const init = newStateData();
+        init.mapSeed_ = u32[ptr++];
+        init.seed_ = u32[ptr++];
         let count = u32[ptr++];
         const GAP = u32[ptr++];
         for (let i = 0; i < count; ++i) {
@@ -158,8 +156,7 @@ export function pack(packet: Packet): ArrayBuffer {
         u32[ptr++] = list.length;
         // GAP:
         u32[ptr++] = 0;
-        for (let i = 0; i < list.length; ++i) {
-            const p = list[i];
+        for (const p of list) {
             u32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16);
             u32[ptr++] = p.c;
             u32[ptr++] = p.btn_;

@@ -118,7 +118,7 @@ let running = false;
 let messageUploading = false;
 let lastPostTime = 0;
 
-const processLoop = () => {
+setInterval(() => {
     if (running && !messageUploading) {
         if (messagesToPost.length) {
             process();
@@ -128,9 +128,7 @@ const processLoop = () => {
             _post([clientId!, []]);
         }
     }
-};
-
-setInterval(processLoop, 133);
+}, 100);
 
 async function process(): Promise<void> {
     if (!running || !messagesToPost.length) {
@@ -152,7 +150,7 @@ async function process(): Promise<void> {
 
 async function _post(req: Request): Promise<PostMessagesResponse> {
     const body = JSON.stringify(req);
-    const response = await fetch(/*EventSourceUrl*/"0", {
+    const response = await fetch(/*EventSourceUrl*/"_", {
         method: "POST",
         body
     });
@@ -168,7 +166,7 @@ function initSSE(): Promise<void> {
     console.log("initialize SSE");
     return new Promise((resolve, _) => {
         waitForConnectedEvent = resolve;
-        eventSource = new EventSource(/*EventSourceUrl*/ "0");
+        eventSource = new EventSource(/*EventSourceUrl*/ "_");
         eventSource.onerror = (e) => {
             console.warn("server-event error");
             termSSE();

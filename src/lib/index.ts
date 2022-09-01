@@ -7,7 +7,7 @@ import {loadAtlas} from "./assets/gfx";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
 import {Bgm, bgm, loadMusic} from "./assets/bgm";
-import {loadSounds, loadSoundsInline} from "./assets/sfx";
+import {loadSoundsInline, loadZZFX} from "./assets/sfx";
 
 initInput();
 initDraw2d();
@@ -32,10 +32,10 @@ const onStart = async () => {
     state = StartState.Connected;
 };
 
-new FontFace("e", `url(e.ttf)`).load().then(async(font)=> {
+new FontFace("e", `url(e.ttf)`).load().then((font)=> {
     document.fonts.add(font);
     // await loadSounds();
-    loadSoundsInline();
+    loadZZFX();
     loadMusic();
     loadAtlas();
     if (!getUserName()) {
@@ -45,11 +45,15 @@ new FontFace("e", `url(e.ttf)`).load().then(async(font)=> {
     state = StartState.TapToConnect;
 });
 
-const raf = (ts: DOMHighResTimeStamp) => {
+// let frame = 0;
+function raf(ts: DOMHighResTimeStamp) {
     doFrame(ts / 1000);
     updateInput();
+    // if(!(frame % 8)) updateMessageQueue();
+    // if(!(frame % 30)) resize();
+    // ++frame;
     requestAnimationFrame(raf);
-};
+}
 
 function doFrame(ts: number) {
     updateFpsMeter(ts);

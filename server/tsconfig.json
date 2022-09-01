@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "target": "es6",
+    "target": "esnext",
     "moduleResolution": "node",
     "noImplicitAny": true,
-    "removeComments": true,
-    "preserveConstEnums": true,
+    "removeComments": false,
+    "preserveConstEnums": false,
     "sourceMap": true,
-    "downlevelIteration": true,
-    "lib": ["ESNext", "DOM"]
+//    "downlevelIteration": true,
+    "outDir": "../build/server"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]

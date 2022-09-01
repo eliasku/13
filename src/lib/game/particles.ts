@@ -1,37 +1,9 @@
 import {img, Img} from "../assets/gfx";
 import {draw} from "../graphics/draw2d";
-import {Actor, Vel} from "./types";
+import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, collideWithBounds, updateBody} from "./phy";
 import {getLumaColor32} from "../utils/math";
-import {GRAVITY, OBJECT_HEIGHT_BY_TYPE} from "./data/world";
-
-export interface Particle {
-    x: number;
-    y: number;
-    z: number;
-    u: number;
-    v: number;
-    w: number;
-    // angle
-    a: number;
-    // rotation speed
-    r: number;
-
-    scale_: number;
-    color_: number;
-
-    lifeTime_: number;
-    lifeMax_: number;
-
-    img_: Img;
-    splashSizeX_: number;
-    splashSizeY_: number;
-    splashEachJump_: number;
-    splashScaleOnVelocity_: number;
-    splashImg_: number;
-    followVelocity_: number;
-    followScale_: number;
-}
+import {GRAVITY, OBJECT_HEIGHT} from "./data/world";
 
 export function newParticle(): Particle {
     return {
@@ -131,7 +103,7 @@ export function newFleshParticle(actor: Actor, explVel: number, vel?: Vel) {
     const particle = newParticle();
     particle.x = actor.x;
     particle.y = actor.y;
-    particle.z = actor.z + OBJECT_HEIGHT_BY_TYPE[actor.type_];
+    particle.z = actor.z + OBJECT_HEIGHT[actor.type_];
     if (vel) {
         const d = Math.random() / 2;
         particle.u = vel.u * d;
@@ -159,7 +131,7 @@ export function newBoneParticle(actor: Actor, vel: Vel) {
     const particle = newParticle();
     particle.x = actor.x;
     particle.y = actor.y;
-    particle.z = actor.z + OBJECT_HEIGHT_BY_TYPE[actor.type_];
+    particle.z = actor.z + OBJECT_HEIGHT[actor.type_];
     if (vel) {
         const d = Math.random() / 2;
         particle.u = vel.u * d;

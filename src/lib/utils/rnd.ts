@@ -15,21 +15,16 @@ function temper(x: number /* u32 */): number /* u32 */ {
 }
 
 // simple PRNG from libc with u32 state
-let _state = ~Date.now();
+export let _SEED = ~Date.now();
 
-/* @__PURE__ */
-export function getSeed() {
-    return _state;
-}
-
-export function seed(state: number) {
-    _state = state;
+export function setSeed(state: number) {
+    _SEED = state;
 }
 
 export function nextInt(): number /* u32 */ {
-    let x = _state;
+    let x = _SEED;
     x = (Math.imul(x, 1103515245) + 12345) >>> 0;
-    _state = x;
+    _SEED = x;
     return temper(x) >>> 1;
 }
 
@@ -41,11 +36,9 @@ export function random(max: number): number /* u32 */ {
     return nextFloat() * max;
 }
 
-
 export function nextFloat() {
     return unorm_f32_from_u32(nextInt());
 }
-
 
 export function fx_chance(prob: number): boolean {
     return Math.random() < prob;

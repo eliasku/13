@@ -1,4 +1,4 @@
-import {gl, GL, gl_instanced_arrays} from "./gl";
+import {GL, gl, gl_instanced_arrays} from "./gl";
 
 const shader = `attribute vec2 g;
 attribute vec2 a;

@@ -5,10 +5,13 @@ import {ControlsFlag} from "./controls";
 import {Const} from "./config";
 import {
     GRAVITY,
-    GRAVITY_WEAK, GROUND_LOSS_BY_TYPE,
-    GROUND_FRICTION_BY_TYPE,
-    OBJECT_HEIGHT_BY_TYPE,
-    OBJECT_RADIUS, OBJECT_RADIUS_BY_TYPE, WALL_COLLIDE_LOSS_BY_TYPE
+    GRAVITY_WEAK,
+    OBJECT_BOUNDS_LOSS,
+    OBJECT_GROUND_FRICTION,
+    OBJECT_GROUND_LOSS,
+    OBJECT_HEIGHT,
+    OBJECT_RADIUS,
+    OBJECT_RADIUS_BY_TYPE
 } from "./data/world";
 import {BOUNDS_SIZE} from "../assets/params";
 
@@ -21,7 +24,7 @@ export function setRandomPosition(actor: Actor): Actor {
 export function copyPosFromActorCenter(to: Pos, from: Actor) {
     to.x = from.x;
     to.y = from.y;
-    to.z = from.z + OBJECT_HEIGHT_BY_TYPE[from.type_];
+    to.z = from.z + OBJECT_HEIGHT[from.type_];
 }
 
 export function updateBody(body: Pos & Vel, dt: number, gravity: number, loss: number) {
@@ -47,18 +50,17 @@ export function updateAnim(actor: Actor, dt: number) {
 }
 
 export function updateActorPhysics(a: Actor, dt: number) {
-    if (a.type_ === ActorType.Bullet) return;
     const isWeakGravity = !a.type_ ? (a.btn_ & ControlsFlag.Jump) : 0;
-    updateBody(a, dt, isWeakGravity ? GRAVITY_WEAK : GRAVITY, GROUND_LOSS_BY_TYPE[a.type_]);
+    updateBody(a, dt, isWeakGravity ? GRAVITY_WEAK : GRAVITY, OBJECT_GROUND_LOSS[a.type_]);
     collideWithBoundsA(a);
     if (a.z <= 0) {
-        applyGroundFriction(a, dt * GROUND_FRICTION_BY_TYPE[a.type_]);
+        applyGroundFriction(a, dt * OBJECT_GROUND_FRICTION[a.type_]);
     }
     updateAnim(a, dt);
 }
 
 export function collideWithBoundsA(body: Actor): number {
-    const loss = WALL_COLLIDE_LOSS_BY_TYPE[body.type_];
+    const loss = OBJECT_BOUNDS_LOSS[body.type_];
     const R = OBJECT_RADIUS_BY_TYPE[body.type_];
     return collideWithBounds(body, R, loss);
 }
