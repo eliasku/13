@@ -635,7 +635,9 @@ function updateGameCamera(dt: number) {
 
 function simulateTic(dt: number) {
     updateGameCamera(dt);
-    state.actors_.map(sortList);
+    for(const a of state.actors_) {
+        sortList(a);
+    }
     for (const a of state.actors_[ActorType.Player]) {
         updateActorPhysics(a, dt);
         updatePlayer(a, dt);
