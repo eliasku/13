@@ -1,1 +1,1 @@
-web: node public/s.js
+web: cd public && node s.js
