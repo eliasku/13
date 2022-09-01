@@ -236,7 +236,7 @@ function mangle_types(file, dest) {
                     }
                     const id = alphabet[idx];
                     _rename.set(f, id);
-                    console.info("replace: " + f + " to " + id);
+                    //console.info("replace: " + f + " to " + id);
                     usedIds.add(id);
                 }
             }
@@ -394,7 +394,7 @@ function mangle_types(file, dest) {
 
     for (const [from, to] of _rename) {
         src = src.replaceAll(getIDRegex(from), (a, c1, c2, c3) => {
-            console.info(a + " => " + c1 + to + c3);
+            //console.info(a + " => " + c1 + to + c3);
             return c1 + to + c3;
         });
     }
