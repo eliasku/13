@@ -34,7 +34,7 @@ export interface Vel {
 
 export interface Actor extends Pos, Vel {
     type_: ActorType;
-    c: ClientID;
+    client_: ClientID;
     btn_?: number;
     // stpq
     s?: number;
@@ -51,11 +51,11 @@ export interface Actor extends Pos, Vel {
 }
 
 export interface Client {
-    c: ClientID;
+    id_: ClientID;
     // how many MY inputs are acknowledged by remote [remote-ack + 1 .. local tic]
     acknowledgedTic_: number;
     // completed inputs received from remote
-    t: number;
+    tic_: number;
 
     // client starts play my events
     ready_?: boolean;
@@ -65,10 +65,10 @@ export interface Client {
 }
 
 export interface ClientEvent {
-    t: number;
+    tic_: number;
     btn_?: number;
     // will be populated from packet info
-    c?: ClientID;
+    client_?: ClientID;
 }
 
 export interface StateData {
@@ -96,18 +96,16 @@ export interface Packet {
     check_tic_: number;
     /////
 
-    c: ClientID;
-    // seed for current tic
-    //_: number;
+    client_: ClientID;
     // confirm the last tic we received from Sender
     receivedOnSender_: number;
     // packet contains info tic and before
-    t: number;
+    tic_: number;
     // events are not confirmed
-    e: ClientEvent[];
+    events_: ClientEvent[];
 
     // init state
-    s?: StateData;
+    state_?: StateData;
 }
 
 

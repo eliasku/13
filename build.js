@@ -74,7 +74,7 @@ mangle_types("public/s0.js", "public/s1.js");
 report.push("MANGLE: " + sz("public/c1.js", "public/s1.js", "public/index.html"));
 
 // debug.js
-execSync(`esbuild src/lib/index.ts --minify --mangle-props=${manglePropsRegex} --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
+execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
 
 const pureFunc = [
     // 'console.log',
@@ -308,35 +308,37 @@ function mangle_types(file, dest) {
             "followScale_",
         ],
         [
-            "x",
-            "y",
-            "z",
-            "u",
-            "v",
-            "w",
             "type_",
             "btn_",
             "weapon_",
             "hp_",
             "anim0_",
             "animHit_",
-            "c",
+            "client_",
+            "x",
+            "y",
+            "z",
+            "u",
+            "v",
+            "w",
             "s",
             "t",
             "p",
             "q",
         ],
         [
+            // Client
+            "id_",
             "acknowledgedTic_",
+            "tic_",
             "ready_",
-            "isPlaying_",
-            "c",
-            "t",
+            "isPlaying_"
         ],
         [
+            // ClientEvent
+            "tic_",
             "btn_",
-            "t",
-            "c"
+            "client_",
         ],
         [
             "mapSeed_",
@@ -345,13 +347,18 @@ function mangle_types(file, dest) {
             "particles_",
         ],
         [
-            "c", "t", "e", "s",
+            // Packet
+            "client_",
+            "tic_",
+            "events_",
+            "state_",
             "sync_",
             "check_seed_",
             "check_tic_",
             "receivedOnSender_",
         ],
         [
+            // Camera
             "atX_",
             "atY_",
             "toX_",
@@ -360,6 +367,7 @@ function mangle_types(file, dest) {
             "scale_",
         ],
         [
+            // Pointer
             "id_",
             "startX_",
             "startY_",

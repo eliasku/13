@@ -8,6 +8,7 @@ export const enum Img {
     box_t,
     box_t2,
     box_l,
+    box_r,
     circle_4,
     circle_4_60p,
     circle_4_70p,
@@ -142,6 +143,7 @@ function createAtlas(): void {
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, -2),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0, 0.5),
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 1, 0.5),
     );
     // CIRCLE
     createCircle(4);

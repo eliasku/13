@@ -1,4 +1,4 @@
-import {Actor, ActorType, Pos, Vel} from "./types";
+import {Actor, Pos, Vel} from "./types";
 import {rand, random} from "../utils/rnd";
 import {reach} from "../utils/math";
 import {ControlsFlag} from "./controls";
@@ -123,4 +123,45 @@ export function addPos(to: Pos, x: number, y: number, z: number, scale: number =
     to.x += scale * x;
     to.y += scale * y;
     to.z += scale * z;
+}
+
+function sqrLength3(x: number, y: number, z: number) {
+    return x * x + y * y + z * z;
+}
+
+export function testIntersection(a: Actor, b: Actor): boolean {
+    const ta = a.type_;
+    const tb = b.type_;
+    const D = OBJECT_RADIUS_BY_TYPE[ta] + OBJECT_RADIUS_BY_TYPE[tb];
+    return sqrLength3(a.x - b.x, a.y - b.y, a.z + OBJECT_HEIGHT[ta] - b.z - OBJECT_HEIGHT[tb]) < D * D;
+}
+
+const OBJECT_IMASS = [1, 1, 1, 1, 0];
+
+export function updateBodyCollisions(a: Actor, list: Actor[], ioffset: number) {
+    const ra = OBJECT_RADIUS_BY_TYPE[a.type_];
+    const ha = OBJECT_HEIGHT[a.type_];
+    const ima = OBJECT_IMASS[a.type_];
+    for (let j = ioffset; j < list.length; ++j) {
+        const b = list[j];
+        const bt = b.type_;
+        let nx = a.x - b.x;
+        let ny = (a.y - b.y) * 2;
+        let nz = (a.z + ha) - (b.z + OBJECT_HEIGHT[bt]);
+        const sqrDist = sqrLength3(nx, ny, nz);
+        const D = ra + OBJECT_RADIUS_BY_TYPE[bt];
+        if (sqrDist < D * D && sqrDist > 0) {
+            const imb = OBJECT_IMASS[bt];
+            const pen = (D / Math.sqrt(sqrDist) - 1) / 2;
+            nx *= pen;
+            ny *= pen;
+            nz *= pen;
+            a.x += nx * ima;
+            a.y += ny * ima;
+            a.z = Math.max(a.z + nz * ima, 0);
+            b.x -= nx * imb;
+            b.y -= ny * imb;
+            b.z = Math.max(b.z - nz * imb, 0);
+        }
+    }
 }

@@ -15,17 +15,17 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
     let ptr = 0;
     const packetDwordsSize = u32[ptr++];
     if (packetDwordsSize * 4 > gotByteLength) {
-        return undefined;
+        return;
     }
     const flags0 = u32[ptr++];
     const packet: Packet = {
         sync_: !!(flags0 & 1),
-        c: u32[ptr++],
+        client_: u32[ptr++],
         receivedOnSender_: u32[ptr++],
-        t: u32[ptr++],
+        tic_: u32[ptr++],
         check_tic_: u32[ptr++],
         check_seed_: u32[ptr++],
-        e: []
+        events_: []
     };
     const eventsCount = u32[ptr++];
     let event_t = u32[ptr++];
@@ -33,7 +33,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
     // 10
     for (let i = 0; i < eventsCount; ++i) {
         const e: ClientEvent = {
-            t: event_t++,
+            tic_: event_t++,
         };
         const flags = u32[ptr++];
         const GAP = u32[ptr++];
@@ -44,12 +44,12 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
             const GAP = u32[ptr++];
         }
         if (hasClientID) {
-            e.c = u32[ptr++];
+            e.client_ = u32[ptr++];
             const GAP = u32[ptr++];
         } else {
-            e.c = packet.c;
+            e.client_ = packet.client_;
         }
-        packet.e.push(e);
+        packet.events_.push(e);
     }
     if (flags0 & 2) {
         const init = newStateData();
@@ -70,7 +70,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                 type_: hdr & 0xFF,
                 hp_: (hdr >> 8) & 0xFF,
                 weapon_: (hdr >> 16) & 0xFF,
-                c,
+                client_: c,
                 btn_,
                 anim0_,
                 animHit_: anim_,
@@ -87,7 +87,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
             ptr += 8 * 2;
             init.actors_[p.type_].push(p);
         }
-        packet.s = init;
+        packet.state_ = init;
     }
     return packet;
 }
@@ -101,20 +101,20 @@ export function pack(packet: Packet): ArrayBuffer {
         // 1 - sync
         // 2 - init-packet
         let flags0 = packet.sync_ ? 1 : 0;
-        if (!!packet.s) {
+        if (!!packet.state_) {
             flags0 |= 2;
         }
         u32[ptr++] = flags0;
     }
-    u32[ptr++] = packet.c;
+    u32[ptr++] = packet.client_;
     u32[ptr++] = packet.receivedOnSender_;
-    u32[ptr++] = packet.t;
+    u32[ptr++] = packet.tic_;
     u32[ptr++] = packet.check_tic_;
     u32[ptr++] = packet.check_seed_;
 
-    packet.e.sort((a, b) => a.t - b.t);
-    let event_t = packet.e.length > 0 ? packet.e[0].t : 0;
-    const event_end = packet.e.length > 0 ? packet.e[packet.e.length - 1].t : -1;
+    packet.events_.sort((a, b) => a.tic_ - b.tic_);
+    let event_t = packet.events_.length > 0 ? packet.events_[0].tic_ : 0;
+    const event_end = packet.events_.length > 0 ? packet.events_[packet.events_.length - 1].tic_ : -1;
     u32[ptr++] = event_end - event_t + 1;
     u32[ptr++] = event_t;
     // GAP:
@@ -122,9 +122,9 @@ export function pack(packet: Packet): ArrayBuffer {
 
     let i = 0;
     while (event_t <= event_end) {
-        const e = packet.e[i];
+        const e = packet.events_[i];
         const t = event_t++;
-        if (t < e.t) {
+        if (t < e.tic_) {
             u32[ptr++] = 0;
             // GAP:
             u32[ptr++] = 0;
@@ -133,7 +133,7 @@ export function pack(packet: Packet): ArrayBuffer {
         ++i;
         let flags = 0;
         if (e.btn_ !== undefined) flags |= 1;
-        if (!!e.c) flags |= 2;
+        if (!!e.client_) flags |= 2;
         u32[ptr++] = flags;
         // GAP:
         u32[ptr++] = 0;
@@ -143,22 +143,22 @@ export function pack(packet: Packet): ArrayBuffer {
             // GAP:
             u32[ptr++] = 0;
         }
-        if (!!e.c) {
-            u32[ptr++] = e.c;
+        if (!!e.client_) {
+            u32[ptr++] = e.client_;
             // GAP:
             u32[ptr++] = 0;
         }
     }
-    if (packet.s) {
-        u32[ptr++] = packet.s.mapSeed_;
-        u32[ptr++] = packet.s.seed_;
-        const list = [].concat(...packet.s.actors_);
+    if (packet.state_) {
+        u32[ptr++] = packet.state_.mapSeed_;
+        u32[ptr++] = packet.state_.seed_;
+        const list:Actor[] = [].concat(...packet.state_.actors_);
         u32[ptr++] = list.length;
         // GAP:
         u32[ptr++] = 0;
         for (const p of list) {
             u32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16);
-            u32[ptr++] = p.c;
+            u32[ptr++] = p.client_;
             u32[ptr++] = p.btn_;
             u32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
 

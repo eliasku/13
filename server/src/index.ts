@@ -141,7 +141,7 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
         ++numProcessedMessages;
     }
     res.writeHead(200, HDR.n);
-    res.end(JSON.stringify(numProcessedMessages));
+    res.end(""+numProcessedMessages);
 }
 
 function serveStatic(file: string, res: ServerResponse, mime: OutgoingHttpHeaders) {

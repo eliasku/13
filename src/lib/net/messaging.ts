@@ -200,7 +200,7 @@ const onSSE: ((data: string) => void)[] = [
         clientId = ids.shift();
         for (const id of ids) {
             console.info(`remote client ${id} observed`);
-            remoteClients.set(id, {id_: id});
+            requireRemoteClient(id);
             remoteSend(id, MessageType.Name, username);
         }
         waitForConnectedEvent();
@@ -217,16 +217,13 @@ const onSSE: ((data: string) => void)[] = [
     },
     // LIST CHANGE
     (data: string) => {
-        const id = Number.parseInt(data);
-        const rc: RemoteClient = id > 0 ? {id_: id} : remoteClients.get(-id);
+        const id = +data;
         if (id > 0) {
-            remoteClients.set(id, rc);
-            connectToRemote(rc);
+            connectToRemote(id);
             remoteSend(id, MessageType.Name, username);
             console.info(`remote client ${id} added`);
-        } else if (rc) {
-            closePeerConnection(rc);
-            remoteClients.delete(-id);
+        } else {
+            closePeerConnection(-id);
             console.info(`remote client ${-id} removed`);
         }
     }
@@ -245,13 +242,13 @@ export async function connect() {
 export function disconnect() {
     if (running) {
         running = false;
-        for (const [, rc] of remoteClients) {
-            closePeerConnection(rc);
+        for (const [id] of remoteClients) {
+            closePeerConnection(id);
         }
         termSSE();
         messagesToPost.length = 0;
         callbacks.length = 0;
-        remoteClients.clear();
+        //remoteClients.clear();
         clientId = undefined;
     } else if (connecting) {
         console.warn("currently connecting");
@@ -314,18 +311,15 @@ function initPeerConnection(remoteClient: RemoteClient) {
     // };
 }
 
-function closePeerConnection(toRemoteClient: RemoteClient) {
-    if (toRemoteClient.pc_) {
-        if (toRemoteClient.dc_) {
-            toRemoteClient.dc_.close();
-            toRemoteClient.dc_ = undefined;
-        }
-        toRemoteClient.pc_.close();
-        toRemoteClient.pc_ = undefined;
-    }
+export function closePeerConnection(id: ClientID) {
+    const rc = remoteClients.get(id);
+    rc?.dc_?.close();
+    rc?.pc_?.close();
+    remoteClients.delete(id);
 }
 
-export async function connectToRemote(rc: RemoteClient) {
+export async function connectToRemote(id: ClientID) {
+    const rc = requireRemoteClient(id);
     initPeerConnection(rc);
     rc.pc_.oniceconnectionstatechange = (e) => {
         if (rc.pc_?.iceConnectionState[0] == "f") {
@@ -352,7 +346,7 @@ function setupDataChannel(id: ClientID, channel: RTCDataChannel) {
 function requireRemoteClient(id_: ClientID): RemoteClient {
     let rc = remoteClients.get(id_);
     if (!rc) {
-        console.warn(`WARNING: required remote client ${id_} not found and created`);
+        //console.warn(`WARNING: required remote client ${id_} not found and created`);
         rc = {id_};
         remoteClients.set(id_, rc);
     }

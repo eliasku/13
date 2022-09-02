@@ -1,6 +1,11 @@
 import {ClientID} from "../../shared/types";
-import {getClientId, getUserName, isChannelOpen, remoteClients} from "../net/messaging";
-import {GL,gl} from "../graphics/gl";
+import {
+    getClientId,
+    getUserName,
+    isChannelOpen,
+    remoteClients
+} from "../net/messaging";
+import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
@@ -61,10 +66,10 @@ import {
     collideWithBoundsA,
     copyPosFromActorCenter,
     reflectVelocity,
-    setRandomPosition,
+    setRandomPosition, testIntersection,
     updateActorPhysics,
     updateAnim,
-    updateBody
+    updateBody, updateBodyCollisions
 } from "./phy";
 import {BASE_RESOLUTION, BOUNDS_SIZE} from "../assets/params";
 import {
@@ -73,12 +78,13 @@ import {
     BULLET_RADIUS,
     JUMP_VEL, OBJECT_HEIGHT,
     OBJECT_RADIUS, OBJECT_RADIUS_BY_TYPE,
-    ObjectField,
     PLAYER_HANDS_Z,
 } from "./data/world";
 import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
 
 const clients = new Map<ClientID, Client>()
+
+// TODO: check idea of storage events in map?
 let localEvents: ClientEvent[] = [];
 let receivedEvents: ClientEvent[] = [];
 
@@ -128,7 +134,7 @@ function newActorObject(type: ActorType): Actor {
         w: 0,
 
         btn_: 0,
-        c: 0,
+        client_: 0,
 
         s: 0,
         t: 0,
@@ -157,7 +163,7 @@ function newItemRandomEffect(): Actor {
 function requireClient(id: ClientID): Client {
     let client = clients.get(id);
     if (!client) {
-        client = {c: id, t: 0, acknowledgedTic_: 0};
+        client = {id_: id, tic_: 0, acknowledgedTic_: 0};
         clients.set(id, client);
     }
     return client;
@@ -181,6 +187,7 @@ function recreateMap() {
     for (let i = 0; i < 128; ++i) {
         const tree = newActorObject(ActorType.Tree);
         tree.btn_ = rand(2);
+        tree.hp_ = 0;
         setRandomPosition(tree);
         trees.push(tree);
     }
@@ -266,7 +273,7 @@ function getMyPlayer(): Actor | undefined {
 
 function getPlayerByClient(c: ClientID): Actor | undefined {
     for (const p of state.actors_[ActorType.Player]) {
-        if (p.c === c) {
+        if (p.client_ === c) {
             return p;
         }
     }
@@ -274,11 +281,11 @@ function getPlayerByClient(c: ClientID): Actor | undefined {
 
 function getLocalEvent(tic: number): ClientEvent {
     for (const e of localEvents) {
-        if (e.t === tic) {
+        if (e.tic_ === tic) {
             return e;
         }
     }
-    const e: ClientEvent = {t: tic};
+    const e: ClientEvent = {tic_: tic};
     localEvents.push(e);
     return e;
 }
@@ -343,6 +350,12 @@ function checkPlayerInput() {
     }
 
     if (lastInputCmd !== btn) {
+        // copy flag in case of rewriting local event for ONE-SHOT events
+        const g = getLocalEvent(inputTic);
+        if(g.btn_ & ControlsFlag.Spawn) {
+            btn |= ControlsFlag.Spawn;
+        }
+
         getLocalEvent(inputTic).btn_ = btn;
         lastInputCmd = btn;
     }
@@ -376,8 +389,8 @@ function calcNetTick() {
     for (const [id,] of remoteClients) {
         const client = clients.get(id);
         if (client) {
-            if (netTick > client.t) {
-                netTick = client.t;
+            if (netTick > client.tic_) {
+                netTick = client.tic_;
             }
             if (ackMin > client.acknowledgedTic_) {
                 ackMin = client.acknowledgedTic_;
@@ -421,9 +434,9 @@ function tryRunTicks(ts: number): number {
     }
 
     const lastTic = gameTic - 1;
-    receivedEvents = receivedEvents.filter(v => v.t > lastTic);
-    // localEvents = localEvents.filter(v => v.t > Math.min(ackMin, lastTic));
-    localEvents = localEvents.filter(v => v.t > ackMin);
+    receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
+    // localEvents = localEvents.filter(v => v.tic_ > Math.min(ackMin, lastTic));
+    localEvents = localEvents.filter(v => v.tic_ > ackMin);
     return framesProcessed;
 }
 
@@ -437,44 +450,45 @@ function trySendInput() {
                 const packet: Packet = {
                     check_seed_: _SEED,
                     check_tic_: lastTic,
-                    c: getClientId(),
+                    client_: getClientId(),
                     // t: lastTic + simTic + Const.InputDelay,
-                    t: lastTic + Math.max(Const.InputDelay, simTic),
+                    tic_: lastTic + Math.max(Const.InputDelay, simTic),
                     // send to Client info that we know already
-                    receivedOnSender_: cl.t,
-                    e: [],
+                    receivedOnSender_: cl.tic_,
+                    events_: [],
                     sync_: cl.isPlaying_,
                 };
-                if (packet.t > cl.acknowledgedTic_) {
+                if (packet.tic_ > cl.acknowledgedTic_) {
                     for (const e of localEvents) {
-                        if (e.t > cl.acknowledgedTic_ && e.t <= packet.t /* buffer all inbetween frames current tic events */) {
-                            packet.e.push(e);
+                        if (e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_ /* buffer all inbetween frames current tic events */) {
+                            packet.events_.push(e);
                         }
                     }
                     channels_sendObjectData(rc, pack(packet));
                 }
+            // } else if(joined) {
             } else {
                 state.seed_ = _SEED;
                 const init: Packet = {
                     check_seed_: _SEED,
                     check_tic_: lastTic,
                     sync_: false,
-                    c: getClientId(),
-                    t: lastTic,
+                    client_: getClientId(),
+                    tic_: lastTic,
                     // important to wait for ack on who is initializing
                     receivedOnSender_: lastTic,
-                    e: [],
-                    s: state,
+                    events_: [],
+                    state_: state,
                 };
                 for (const e of localEvents) {
                     // buffer all inbetween frames current tic events
-                    if (e.t > lastTic) {
-                        init.e.push(e);
+                    if (e.tic_ > lastTic) {
+                        init.events_.push(e);
                     }
                 }
                 for (const e of receivedEvents) {
-                    if (e.t > lastTic) {
-                        init.e.push(e);
+                    if (e.tic_ > lastTic) {
+                        init.events_.push(e);
                     }
                 }
                 channels_sendObjectData(rc, pack(init));
@@ -484,21 +498,21 @@ function trySendInput() {
 }
 
 function processPacket(sender: Client, data: Packet) {
-    if (startTick < 0 && data.s) {
-        startTick = data.t;
+    if (startTick < 0 && data.state_) {
+        startTick = data.tic_;
         startTime = prevTime = lastFrameTs;
-        gameTic = data.t + 1;
-        state = data.s;
+        gameTic = data.tic_ + 1;
+        state = data.state_;
         netTick = 0;
         recreateMap();
-        setSeed(data.s.seed_);
+        setSeed(state.seed_);
 
-        sender.t = data.t;
+        sender.tic_ = data.tic_;
         sender.acknowledgedTic_ = data.receivedOnSender_;
-        for (const e of data.e) {
-            const cld = requireClient(e.c);
-            if (cld.t < e.t) {
-                cld.t = e.t;
+        for (const e of data.events_) {
+            const cld = requireClient(e.client_);
+            if (cld.tic_ < e.tic_) {
+                cld.tic_ = e.tic_;
             }
             cld.acknowledgedTic_ = data.receivedOnSender_;
             receivedEvents.push(e);
@@ -507,7 +521,7 @@ function processPacket(sender: Client, data: Packet) {
         if (process.env.NODE_ENV === "development") {
             if (data.check_tic_ === (gameTic - 1)) {
                 if (data.check_seed_ !== _SEED) {
-                    console.warn("seed mismatch from client " + data.c + " at tic " + data.check_tic_);
+                    console.warn("seed mismatch from client " + data.client_ + " at tic " + data.check_tic_);
                     console.warn(data.check_seed_ + " != " + _SEED);
                 }
             }
@@ -515,14 +529,14 @@ function processPacket(sender: Client, data: Packet) {
 
         sender.ready_ = data.sync_;
         // ignore old packets
-        if (data.t > sender.t) {
+        if (data.tic_ > sender.tic_) {
             sender.isPlaying_ = true;
-            for (const e of data.e) {
-                if (e.t > sender.t /*alreadyReceivedTic*/) {
+            for (const e of data.events_) {
+                if (e.tic_ > sender.tic_ /*alreadyReceivedTic*/) {
                     receivedEvents.push(e);
                 }
             }
-            sender.t = data.t;
+            sender.tic_ = data.tic_;
         }
         // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
         // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
@@ -562,23 +576,19 @@ function cleaningUpClients() {
 
 function processTicCommands(commands: ClientEvent[]) {
     for (const cmd of commands) {
-        const source = cmd.c ?? getClientId();
+        const source = cmd.client_ ?? getClientId();
         if (cmd.btn_ !== undefined) {
             const player = getPlayerByClient(source);
             if (player) {
                 player.btn_ = cmd.btn_;
             } else if (cmd.btn_ & ControlsFlag.Spawn) {
-                // Replace player if already exists
-                let p = getPlayerByClient(cmd.c);
-                if (!p) {
-                    p = newActorObject(ActorType.Player);
-                    p.c = source;
-                    pushActor(p);
-                }
+                const p = newActorObject(ActorType.Player);
+                p.client_ = source;
                 setRandomPosition(p);
                 p.hp_ = 10;
                 p.btn_ = cmd.btn_;
                 p.weapon_ = Const.StartWeapon;
+                pushActor(p);
             }
         }
     }
@@ -634,8 +644,9 @@ function updateGameCamera(dt: number) {
 }
 
 function simulateTic(dt: number) {
+    //if(startTick < 0) return;
     updateGameCamera(dt);
-    for(const a of state.actors_) {
+    for (const a of state.actors_) {
         sortList(a);
     }
     for (const a of state.actors_[ActorType.Player]) {
@@ -702,74 +713,17 @@ function simulateTic(dt: number) {
 
 function updateBodyInterCollisions2(list1: Actor[], list2: Actor[]) {
     for (let i = 0; i < list1.length; ++i) {
-        const a = list1[i];
-        const ra = OBJECT_RADIUS_BY_TYPE[a.type_];
-        const ha = OBJECT_HEIGHT[a.type_];
-        for (let j = 0; j < list2.length; ++j) {
-            const b = list2[j];
-            const rb = OBJECT_RADIUS_BY_TYPE[b.type_];
-            const hb = OBJECT_HEIGHT[b.type_];
-            let nx = a.x - b.x;
-            let ny = (a.y - b.y) * 2;
-            let nz = (a.z + ha) - (b.z + hb);
-            const dist = Math.hypot(nx, ny, nz);
-            const D = ra + rb;
-            if (dist < D && dist > 0) {
-                const pen = (D - dist) / 2;
-                nx *= pen / dist;
-                ny *= pen / dist;
-                nz *= pen / dist;
-                if (a.type_ !== ActorType.Tree) {
-                    a.x += nx;
-                    a.y += ny;
-                    a.z = Math.max(a.z + nz, 0);
-                }
-                if (b.type_ !== ActorType.Tree) {
-                    b.x -= nx;
-                    b.y -= ny;
-                    a.z = Math.max(a.z - nz, 0);
-                }
-            }
-        }
+        updateBodyCollisions(list1[i], list2, 0);
     }
 }
 
 function updateBodyInterCollisions(list: Actor[]) {
-    const max = list.length;
-    for (let i = 0; i < max; ++i) {
-        const a = list[i];
-        const ra = OBJECT_RADIUS_BY_TYPE[a.type_];
-        const ha = OBJECT_HEIGHT[a.type_];
-        for (let j = i + 1; j < max; ++j) {
-            const b = list[j];
-            const rb = OBJECT_RADIUS_BY_TYPE[b.type_];
-            const hb = OBJECT_HEIGHT[b.type_];
-            let nx = a.x - b.x;
-            let ny = (a.y - b.y) * 2;
-            let nz = (a.z + ha) - (b.z + hb);
-            const dist = Math.hypot(nx, ny, nz);
-            const D = ra + rb;
-            if (dist < D && dist > 0) {
-                const pen = (D - dist) / 2;
-                nx *= pen / dist;
-                ny *= pen / dist;
-                nz *= pen / dist;
-                if (a.type_ !== ActorType.Tree) {
-                    a.x += nx;
-                    a.y += ny;
-                    a.z = Math.max(a.z + nz, 0);
-                }
-                if (b.type_ !== ActorType.Tree) {
-                    b.x -= nx;
-                    b.y -= ny;
-                    a.z = Math.max(a.z - nz, 0);
-                }
-            }
-        }
+    for (let i = 0; i < list.length; ++i) {
+        updateBodyCollisions(list[i], list, i + 1);
     }
 }
 
-function testRayWithSphere(from: Actor, target: Actor, dx: number, dy: number) {
+function testRayWithSphere(from: Actor, target: Actor, dx: number, dy: number): boolean {
     // const dd = Math.hypot(dx, dy);
     // dx /= dd;
     // dy /= dd;
@@ -789,19 +743,6 @@ function testRayWithSphere(from: Actor, target: Actor, dx: number, dy: number) {
     const rSq = R * R;
     return dSq <= rSq;
 }
-
-function testIntersection(a: Actor, b: Actor): boolean {
-    const ra = OBJECT_RADIUS_BY_TYPE[a.type_];
-    const rb = OBJECT_RADIUS_BY_TYPE[b.type_];
-    const ha = OBJECT_HEIGHT[a.type_];
-    const hb = OBJECT_HEIGHT[b.type_];
-    let nx = a.x - b.x;
-    let ny = a.y - b.y;
-    let nz = (a.z + ha) - (b.z + hb);
-    const D = ra + rb;
-    return nx * nx + ny * ny + nz * nz < D * D;
-}
-
 
 function kill(actor: Actor) {
     playAt(actor, Snd.death);
@@ -864,10 +805,10 @@ function hitWithBullet(actor: Actor, bullet: Actor) {
     }
 }
 
-function updateBulletCollision(b:Actor, list: Actor[]) {
+function updateBulletCollision(b: Actor, list: Actor[]) {
     if (b.hp_) {
         for (const a of list) {
-            const owned = !(a.c - b.c);
+            const owned = !(a.client_ - b.client_);
             if (!owned) {
                 if (b.btn_ === BulletType.Ray && b.hp_ > 0) {
                     if (testRayWithSphere(b, a, b.u, b.v)) {
@@ -952,7 +893,7 @@ function updatePlayer(player: Actor, dt: number) {
                 const dy = Math.sin(a);
                 const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (nextFloat() - 0.5);
                 const bullet = newActorObject(ActorType.Bullet);
-                bullet.c = player.c;
+                bullet.client_ = player.client_;
                 copyPosFromActorCenter(bullet, player);
                 addPos(bullet, dx, dy, 0, weapon.offset_);
                 bullet.z += PLAYER_HANDS_Z - 12 + weapon.offsetZ_;
@@ -985,9 +926,9 @@ export function spawnBonesParticles(actor: Actor, vel?: Vel) {
 }
 
 function getCommandsForTic(tic: number): ClientEvent[] {
-    const events = localEvents.filter(v => v.t === tic)
-        .concat(receivedEvents.filter(v => v.t === tic));
-    events.sort((a, b) => (a.c ?? getClientId()) - (b.c ?? getClientId()));
+    const events = localEvents.filter(v => v.tic_ === tic)
+        .concat(receivedEvents.filter(v => v.tic_ === tic));
+    events.sort((a, b) => (a.client_ ?? getClientId()) - (b.client_ ?? getClientId()));
     return events;
 }
 
@@ -1022,11 +963,10 @@ function endPrediction() {
 function drawGame() {
     camera.scale_ = 1 / gameCamera[2];
     camera.toX_ = camera.toY_ = 0.5;
-    camera.atX_ = gameCamera[0];
-    camera.atY_ = gameCamera[1];
-    camera.atX_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
-    camera.atY_ += ((Math.random() - 0.5) * cameraShake * 8) | 0;
+    camera.atX_ = gameCamera[0] + ((Math.random() - 0.5) * cameraShake * 8) | 0;
+    camera.atY_ = gameCamera[1] + ((Math.random() - 0.5) * cameraShake * 8) | 0;
     camera.angle_ = (Math.random() - 0.5) * cameraShake / 8;
+
     beginRender();
     gl.clearColor(0.4, 0.4, 0.4, 1.0);
     gl.clear(GL.COLOR_BUFFER_BIT);
@@ -1051,14 +991,15 @@ function drawOverlay() {
 }
 
 function drawShadows() {
-    const SHADOW_SCALE =[1, 1, 2, 1];
-    const SHADOW_ADD =[0, 0, 1, 0];
-    const SHADOW_COLOR =[0, 0, 0x333333, 0];
+    const SHADOW_SCALE = [1, 1, 2, 1];
+    const SHADOW_ADD = [0, 0, 1, 0];
+    const SHADOW_COLOR = [0, 0, 0x333333, 0];
 
     for (const actor of drawList) {
-        const shadowScale = (2 - actor.z / 64.0) * SHADOW_SCALE[actor.type_];
-        const additive = SHADOW_ADD[actor.type_];
-        const color = SHADOW_COLOR[actor.type_];
+        const type = actor.type_;
+        const shadowScale = (2 - actor.z / 64.0) * SHADOW_SCALE[type];
+        const additive = SHADOW_ADD[type];
+        const color = SHADOW_COLOR[type];
         draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .4, color, additive);
     }
 }
@@ -1140,26 +1081,27 @@ function drawBullet(actor: Actor) {
     ];
 
     const BULLET_LENGTH = [2, 2, 1, 8, 512];
-    const BULLET_LENGTH_LIGHT = [1, 2, 2, 0, 512];
+    const BULLET_LENGTH_LIGHT = [1, 2, 2, 2, 512];
     const BULLET_SIZE = [2, 3 / 2, 2, 4, 12];
     const BULLET_PULSE = [0, 0, 1, 0, 0];
     const BULLET_IMAGE = [
         Img.circle_4_60p, Img.circle_4_70p, Img.box,
         Img.circle_4_60p, Img.circle_4_70p, Img.box,
         Img.circle_4_60p, Img.circle_4_70p, Img.box,
-        Img.box_l, Img.box_l, Img.box_l,
+        Img.box_r, Img.box_r, Img.box_r,
         Img.box_l, Img.box_l, Img.box_l,
     ];
 
     const x = actor.x;
     const y = actor.y - actor.z;
     const a = Math.atan2(actor.v, actor.u);
-    const color = fxRandElement(BULLET_COLOR[actor.btn_] as number[]);
-    const longing = BULLET_LENGTH[actor.btn_];
-    const longing2 = BULLET_LENGTH_LIGHT[actor.btn_];
-    const sz = BULLET_SIZE[actor.btn_] +
-        BULLET_PULSE[actor.btn_] * Math.sin(32 * lastFrameTs + actor.anim0_) / 2;
-    let res = actor.btn_ * 3;
+    const type = actor.btn_;
+    const color = fxRandElement(BULLET_COLOR[type] as number[]);
+    const longing = BULLET_LENGTH[type];
+    const longing2 = BULLET_LENGTH_LIGHT[type];
+    const sz = BULLET_SIZE[type] +
+        BULLET_PULSE[type] * Math.sin(32 * lastFrameTs + actor.anim0_) / 2;
+    let res = type * 3;
 
     draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
     draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing / 2, sz / 2, 1, color);
@@ -1186,7 +1128,7 @@ function drawObjects() {
 
 function drawPlayer(p: Actor) {
     const co = getHitColorOffset(p.animHit_);
-    const imgHead = (debugCheckAvatar + (p.c || p.anim0_)) % Img.num_avatars;
+    const imgHead = (debugCheckAvatar + (p.client_ || p.anim0_)) % Img.num_avatars;
     const colorC = COLOR_BODY[p.anim0_ % COLOR_BODY.length];
     const colorArm = colorC;
     const colorBody = colorC;
@@ -1366,7 +1308,7 @@ function printDebugInfo() {
         text += pc ? (icons_iceState[pc.iceConnectionState] ?? "❓") : "🧿";
         text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
-            text += `+${cl.t - (gameTic - 1)}`;
+            text += `+${cl.tic_ - (gameTic - 1)}`;
             text += "| x" + getChannelPacketSize(remoteClient).toString(16);
         }
         text += "\n";

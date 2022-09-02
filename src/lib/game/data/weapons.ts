@@ -105,6 +105,8 @@ export const weapons: WeaponConfig[] = [
     createGunWeapon(),
     createGunWeapon(),
     createGunWeapon(),
+
+    // 10, 11, 12, 13
 ];
 
 let i = 0;
