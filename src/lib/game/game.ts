@@ -464,28 +464,12 @@ function trySendInput() {
                 packet.receivedOnSender_ = cl.tic_;
                 packet.sync_ = cl.isPlaying_;
                 if (packet.tic_ > cl.acknowledgedTic_) {
-                    // for (const e of localEvents) {
-                    //     if (e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_ /* buffer all inbetween frames current tic events */) {
-                    //         packet.events_.push(e);
-                    //     }
-                    // }
                     packet.events_ = localEvents.filter(e=>e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
                     channels_sendObjectData(rc, pack(packet));
                 }
             } else {
                 state.seed_ = _SEED;
                 packet.state_ = state;
-                // for (const e of localEvents) {
-                //     // buffer all inbetween frames current tic events
-                //     if (e.tic_ > lastTic) {
-                //         packet.events_.push(e);
-                //     }
-                // }
-                // for (const e of receivedEvents) {
-                //     if (e.tic_ > lastTic) {
-                //         packet.events_.push(e);
-                //     }
-                // }
                 packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
                 channels_sendObjectData(rc, pack(packet));
             }
