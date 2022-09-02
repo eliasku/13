@@ -40,6 +40,8 @@ export function nextFloat() {
     return unorm_f32_from_u32(nextInt());
 }
 
+// just visual random
+
 export function fx_chance(prob: number): boolean {
     return Math.random() < prob;
 }
@@ -54,4 +56,21 @@ export function fxRand(max: number): number {
 
 export function fxRandElement<T>(m: T[]): T {
     return m[fxRand(m.length)];
+}
+
+// replayable random for effects
+
+export let _SEED2 = ~Date.now();
+export function setSeed2(state: number) {
+    _SEED2 = state;
+}
+
+export function nextInt2(): number /* u32 */ {
+    let x = _SEED2;
+    x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+    _SEED2 = x;
+    return temper(x) >>> 1;
+}
+export function nextFloat2() {
+    return unorm_f32_from_u32(nextInt2());
 }

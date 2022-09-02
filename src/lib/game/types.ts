@@ -75,7 +75,6 @@ export interface StateData {
     mapSeed_: number;
     seed_: number;
     actors_: Actor[][];
-    particles_: Particle[];
 }
 
 export function newStateData(): StateData {
@@ -83,7 +82,6 @@ export function newStateData(): StateData {
         mapSeed_: 0,
         seed_: 0,
         actors_: [[], [], [], []],
-        particles_: []
     };
 }
 

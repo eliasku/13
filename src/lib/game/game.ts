@@ -42,7 +42,16 @@ import {
 import {isAnyKeyDown, keyboardDown} from "../utils/input";
 import {Snd, snd} from "../assets/sfx";
 import {BulletType, weapons} from "./data/weapons";
-import {drawParticles, newBoneParticle, newFleshParticle, newShellParticle, updateParticles} from "./particles";
+import {
+    addBoneParticles,
+    addFleshParticles,
+    addShellParticle,
+    drawParticles,
+    drawSplats,
+    restoreParticles,
+    saveParticles,
+    updateParticles
+} from "./particles";
 import {
     addPos,
     addRadialVelocity,
@@ -221,7 +230,7 @@ export function updateTestGame(ts: number) {
 
     if (startTic >= 0 && !document.hidden) {
         tryRunTicks(lastFrameTs);
-        beginPrediction();
+        const predicted = beginPrediction();
         {
             drawGame();
             // check input before overlay, or save camera settings
@@ -229,7 +238,7 @@ export function updateTestGame(ts: number) {
             checkJoinSync();
             drawOverlay();
         }
-        endPrediction();
+        if (predicted) endPrediction();
         trySendInput();
         cleaningUpClients();
     }
@@ -657,7 +666,7 @@ function simulateTic(dt: number) {
     for (const tree of trees) {
         updateAnim(tree, dt);
     }
-    updateParticles(state.particles_, dt);
+    updateParticles(dt);
 
     for (let i = 0; i < state.actors_.length; ++i) {
         state.actors_[i] = state.actors_[i].filter(x => x.hp_);
@@ -743,8 +752,8 @@ function kill(actor: Actor) {
         grave.btn_ = 2;
         pushActor(grave);
 
-        spawnFleshParticles(actor, 256, 32, grave);
-        spawnBonesParticles(actor, grave);
+        addFleshParticles(64, actor, 256, grave);
+        addBoneParticles(32, actor, grave);
     }
 }
 
@@ -755,7 +764,7 @@ function hitWithBullet(actor: Actor, bullet: Actor) {
     if (actor.hp_) {
         actor.hp_ -= bullet.weapon_;
         if (actor.type_ === ActorType.Player) {
-            spawnFleshParticles(actor, 64, 16, bullet);
+            addFleshParticles(16, actor, 64, bullet);
             playAt(actor, Snd.hurt);
         }
         if (actor.hp_ <= 0) {
@@ -851,7 +860,7 @@ function updatePlayer(player: Actor, dt: number) {
     }
 
     const weapon = weapons[player.weapon_];
-    if (player.btn_ & ControlsFlag.Shooting) {
+    if (player.btn_ & ControlsFlag.Shooting && player.weapon_) {
         player.s = reach(player.s, 0, weapon.rate_ * dt);
         if (!player.s) {
             cameraShake = Math.max(weapon.cameraShake_, cameraShake);
@@ -880,7 +889,9 @@ function updatePlayer(player: Actor, dt: number) {
                 pushActor(bullet);
             }
 
-            state.particles_.push(newShellParticle(player, PLAYER_HANDS_Z + weapon.offsetZ_));
+            if (weapon.bulletType_) {
+                addShellParticle(player, PLAYER_HANDS_Z + weapon.offsetZ_, weapon.bulletShellColor_);
+            }
         }
     } else {
         player.t = reach(player.t, 0, dt * 16);
@@ -889,15 +900,7 @@ function updatePlayer(player: Actor, dt: number) {
 }
 
 export function spawnFleshParticles(actor: Actor, expl: number, amount: number, vel?: Vel) {
-    for (let i = 0; i < amount; ++i) {
-        state.particles_.push(newFleshParticle(actor, expl, vel));
-    }
-}
-
-export function spawnBonesParticles(actor: Actor, vel?: Vel) {
-    for (let i = 0; i < 32; ++i) {
-        state.particles_.push(newBoneParticle(actor, vel));
-    }
+    addFleshParticles(amount, actor, expl, vel);
 }
 
 function getCommandsForTic(tic: number): ClientEvent[] {
@@ -907,30 +910,50 @@ function getCommandsForTic(tic: number): ClientEvent[] {
     return events;
 }
 
-function beginPrediction() {
+function cloneState(): StateData {
+    return {
+        seed_: state.seed_,
+        mapSeed_: state.mapSeed_,
+        actors_: state.actors_.map(list => list.map(a => {
+            return {...a};
+        }))
+    };
+}
+
+function beginPrediction(): boolean {
     // global state
+    let time = lastFrameTs - prevTime;
+    if (!Const.Prediction || time < 0.001) return false;
+
+    // save state
     state.seed_ = _SEED;
     lastState = state;
+    state = cloneState();
+
+    // save particles
+    saveParticles();
+
     simulatedFrames = 0;
-    if (!Const.Prediction) return;
-    state = JSON.parse(JSON.stringify(state));
-    let time = lastFrameTs - prevTime;
-    // let time = lastFrameTs - prevTime;
-    let tic = gameTic;
+    const savedGameTic = gameTic;
     while (time > 0) {
         const dt = Math.min(time, 1 / Const.NetFq);
-        processTicCommands(getCommandsForTic(tic));
+        processTicCommands(getCommandsForTic(gameTic));
         simulateTic(dt);
         time -= dt;
         simulatedFrames += dt * Const.NetFq;
-        ++tic;
+        ++gameTic;
     }
+    gameTic = savedGameTic;
+    return true;
 }
 
 function endPrediction() {
     // global state
     state = lastState;
     setSeed(state.seed_);
+
+    // restore particles
+    restoreParticles();
 }
 
 /*** DRAWING ***/
@@ -966,9 +989,9 @@ function drawOverlay() {
 }
 
 function drawShadows() {
-    const SHADOW_SCALE = [1, 1, 2, 1];
-    const SHADOW_ADD = [0, 0, 1, 0];
-    const SHADOW_COLOR = [0, 0, 0x333333, 0];
+    const SHADOW_SCALE = [1, 1, 2, 1, 1];
+    const SHADOW_ADD = [0, 0, 1, 0, 0];
+    const SHADOW_COLOR = [0, 0, 0x333333, 0, 0];
 
     for (const actor of drawList) {
         const type = actor.type_;
@@ -1092,7 +1115,8 @@ const DRAW_BY_TYPE = [
 ];
 
 function drawObjects() {
-    drawParticles(state.particles_);
+    drawSplats();
+    drawParticles();
     collectVisibleActors(trees, ...state.actors_);
     sortList(drawList);
     drawShadows();

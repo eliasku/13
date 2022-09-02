@@ -4,6 +4,7 @@ import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, collideWithBounds, updateBody} from "./phy";
 import {getLumaColor32} from "../utils/math";
 import {GRAVITY, OBJECT_HEIGHT} from "./data/world";
+import {_SEED2, nextFloat2, setSeed2} from "../utils/rnd";
 
 export function newParticle(): Particle {
     return {
@@ -39,7 +40,7 @@ export function updateParticle(p: Particle, dt: number): boolean {
             const v = Math.hypot(p.u, p.v, p.w);
             if (v < 4 || p.splashEachJump_) {
                 const d = 1 + p.splashScaleOnVelocity_ * v;
-                points.push(p.splashImg_, p.x, p.y, p.a, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
+                splats.push(p.splashImg_, p.x, p.y, p.a, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
             }
             if (v < 4) {
                 return false;
@@ -55,112 +56,140 @@ export function updateParticle(p: Particle, dt: number): boolean {
     return p.lifeTime_ < p.lifeMax_;
 }
 
-export function updateParticles(list: Particle[], dt: number) {
-    for (let i = 0; i < list.length;) {
-        const p = list[i];
+export function updateParticles(dt: number) {
+    for (let i = 0; i < particles.length;) {
+        const p = particles[i];
         if (updateParticle(p, dt)) {
             ++i;
         } else {
-            // if(p.splashImg_) {
-            //     points.push(p.splashImg_, p.x, p.y, p.a, p.splashSizeX_, p.splashSizeY_, p.color_);
-            // }
-            list.splice(i, 1);
+            particles.splice(i, 1);
         }
     }
 }
 
-export function drawParticles(list: Particle[]) {
-    for (let i = 0; i < points.length;) {
-        const res = points[i++];
-        const x = points[i++];
-        const y = points[i++];
-        const r = points[i++];
-        const scaleX = points[i++];
-        const scaleY = points[i++];
-        const color = points[i++];
-        draw(img[res],
-            x, y, r, scaleX, scaleY, 1, color, 0);
-    }
+let seed0: number;
+let particles0: Particle[];
+let particles: Particle[] = [];
+let splats0: number[];
+let splats: number[] = [];
 
-    for (const p of list) {
-        drawParticle(p);
+export function saveParticles() {
+    seed0 = _SEED2;
+    splats0 = splats.concat();
+    particles0 = particles.map(x => {
+        return {...x};
+    });
+}
+
+export function restoreParticles() {
+    setSeed2(seed0);
+    splats = splats0;
+    particles = particles0;
+}
+
+export function drawSplats() {
+    let i = 0;
+    while (i < splats.length) {
+        draw(
+            img[splats[i++]],
+            splats[i++],
+            splats[i++],
+            splats[i++],
+            splats[i++],
+            splats[i++],
+            1,
+            splats[i++]
+        );
     }
 }
 
-let points: number[] = [];
+export function drawParticles() {
+    for (const p of particles) {
+        drawParticle(p);
+    }
+}
 
 export function drawParticle(p: Particle) {
     const velocityScale = 1 - p.followVelocity_ + p.followScale_ * Math.hypot(p.u, p.v, p.w);
     const velocityAngle = p.followVelocity_ * Math.atan2(p.v, p.u - p.w);
     const scale = p.scale_;
     const angle = velocityAngle + p.a;
+    if (p.z > 1) {
+        const s = 0.5 - p.z / 256;
+        draw(img[Img.circle_4], p.x, p.y, 0, s, s / 4, 0.4, 0);
+    }
     draw(img[p.img_], p.x, p.y - p.z, angle, scale * velocityScale, scale, 1, p.color_);
 }
 
 //////
 
-export function newFleshParticle(actor: Actor, explVel: number, vel?: Vel) {
-    const particle = newParticle();
-    particle.x = actor.x;
-    particle.y = actor.y;
-    particle.z = actor.z + OBJECT_HEIGHT[actor.type_];
-    if (vel) {
-        const d = Math.random() / 2;
-        particle.u = vel.u * d;
-        particle.v = vel.v * d;
-        particle.w = vel.w * d;
+export function addFleshParticles(amount: number, actor: Actor, explVel: number, vel?: Vel) {
+    while (amount--) {
+        const particle = newParticle();
+        particle.x = actor.x;
+        particle.y = actor.y;
+        particle.z = actor.z + OBJECT_HEIGHT[actor.type_];
+        if (vel) {
+            const d = nextFloat2() / 2;
+            particle.u = vel.u * d;
+            particle.v = vel.v * d;
+            particle.w = vel.w * d;
+        }
+        particle.color_ = (0x60 + 0x30 * nextFloat2()) << 16;
+        addRadialVelocity(particle, (0.5 - nextFloat2()) * explVel, 0);
+        // particle.a = Math.random() * Math.PI * 2;
+        // particle.r = (0.5 - Math.random()) * Math.PI * 2 * 4;
+        // particle.img_ = Img.particle_flesh0 + fxRand(3);
+        particle.img_ = Img.particle_shell;
+        particle.splashImg_ = Img.circle_4;
+        particle.splashEachJump_ = 1;
+        particle.splashSizeX_ = 0.5;
+        particle.splashSizeY_ = 0.5 / 4;
+        particle.splashScaleOnVelocity_ = 0.01 + 0.01 * nextFloat2();
+        particle.scale_ = 0.5 + nextFloat2() * 0.5;
+        particle.followVelocity_ = 1;
+        particle.followScale_ = 0.02;
+        particles.push(particle);
     }
-    particle.color_ = (0x60 + 0x30 * Math.random()) << 16;
-    addRadialVelocity(particle, (0.5 - Math.random()) * explVel, 0);
-    // particle.a = Math.random() * Math.PI * 2;
-    // particle.r = (0.5 - Math.random()) * Math.PI * 2 * 4;
-    // particle.img_ = Img.particle_flesh0 + fxRand(3);
-    particle.img_ = Img.particle_shell;
-    particle.splashImg_ = Img.circle_4;
-    particle.splashEachJump_ = 1;
-    particle.splashSizeX_ = 0.5;
-    particle.splashSizeY_ = 0.5 / 4;
-    particle.splashScaleOnVelocity_ = 0.01 + 0.01 * Math.random();
-    particle.scale_ = 0.5 + 0.5 * Math.random();
-    particle.followVelocity_ = 1;
-    particle.followScale_ = 0.02;
-    return particle;
 }
 
-export function newBoneParticle(actor: Actor, vel: Vel) {
-    const particle = newParticle();
-    particle.x = actor.x;
-    particle.y = actor.y;
-    particle.z = actor.z + OBJECT_HEIGHT[actor.type_];
-    if (vel) {
-        const d = Math.random() / 2;
-        particle.u = vel.u * d;
-        particle.v = vel.v * d;
-        particle.w = vel.w * d;
+export function addBoneParticles(amount: number, actor: Actor, vel: Vel) {
+    while (amount--) {
+        const particle = newParticle();
+        particle.x = actor.x;
+        particle.y = actor.y;
+        particle.z = actor.z + OBJECT_HEIGHT[actor.type_];
+        if (vel) {
+            const d = nextFloat2() / 2;
+            particle.u = vel.u * d;
+            particle.v = vel.v * d;
+            particle.w = vel.w * d;
+        }
+        addRadialVelocity(particle, 64 - 128 * nextFloat2(), 128 * nextFloat2());
+        const i = nextFloat2() < 0.3 ? Img.particle_flesh0 : Img.particle_flesh1;
+        particle.img_ = i;
+        particle.splashImg_ = i;
+        particle.splashImg_ = i;
+        particle.scale_ = 0.5 + 0.25 * nextFloat2();
+        particle.splashSizeX_ = particle.scale_;
+        particle.splashSizeY_ = particle.scale_;
+        particle.color_ = getLumaColor32(0x80 + 0x20 * nextFloat2());
+        particle.r = (-0.5 + nextFloat2()) * Math.PI * 2;
+        particle.a = -0.5 + nextFloat2();
+        particles.push(particle);
     }
-    addRadialVelocity(particle, 64 - 128 * Math.random(), 128 * Math.random());
-    const i = Math.random() < 0.3 ? Img.particle_flesh0 : Img.particle_flesh1;
-    particle.img_ = i;
-    particle.splashImg_ = i;
-    particle.splashImg_ = i;
-    particle.scale_ = 0.5 + 0.25 * Math.random();
-    particle.splashSizeX_ = particle.scale_;
-    particle.splashSizeY_ = particle.scale_;
-    particle.color_ = getLumaColor32(0x80 + 0x20 * Math.random());
-    particle.r = (-0.5 + Math.random()) * Math.PI * 2;
-    particle.a = -0.5 + Math.random();
-    return particle;
 }
 
-export function newShellParticle(player: Actor, offsetZ: number,) {
+export function addShellParticle(player: Actor, offsetZ: number, color: number) {
     const particle = newParticle();
     particle.x = player.x;
     particle.y = player.y;
     particle.z = player.z + offsetZ;
     particle.img_ = Img.particle_shell;
     particle.splashImg_ = Img.particle_shell;
-    particle.r = (0.5 - Math.random()) * Math.PI * 8;
-    particle.a = Math.random() * Math.PI * 2;
-    addRadialVelocity(particle, 16 + 32 * Math.random(), 32);
-    return particle;
+    particle.color_ = color;
+    particle.r = (0.5 - nextFloat2()) * Math.PI * 8;
+    particle.a = nextFloat2() * Math.PI * 2;
+    addRadialVelocity(particle, 16 + 32 * nextFloat2(), 32);
+    particles.push(particle);
 }

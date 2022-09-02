@@ -101,8 +101,9 @@ export function reflectVelocity(v: Vel, nx: number, ny: number, loss: number) {
 }
 
 export function applyGroundFriction(p: Actor, amount: number) {
-    let v0 = Math.hypot(p.u, p.v);
+    let v0 = p.u * p.u + p.v * p.v;
     if (v0 > 0) {
+        v0 = Math.sqrt(v0);
         const k = reach(v0, 0, amount) / v0;
         p.u *= k;
         p.v *= k;

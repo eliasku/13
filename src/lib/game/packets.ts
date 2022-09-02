@@ -48,9 +48,9 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         packet.events_.push(e);
     }
     if (flags0 & 2) {
-        const init = newStateData();
-        init.mapSeed_ = i32[ptr++] >>> 0;
-        init.seed_ = i32[ptr++] >>> 0;
+        const state = newStateData();
+        state.mapSeed_ = i32[ptr++] >>> 0;
+        state.seed_ = i32[ptr++] >>> 0;
         let count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
             const hdr = i32[ptr++];
@@ -79,9 +79,9 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                 s: i32[ptr++] / 1000,
                 t: i32[ptr++] / 1000,
             };
-            init.actors_[p.type_].push(p);
+            state.actors_[p.type_].push(p);
         }
-        packet.state_ = init;
+        packet.state_ = state;
     }
     return packet;
 }

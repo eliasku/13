@@ -33,6 +33,7 @@ export interface WeaponConfig {
     bulletDamage_: number;
     bulletLifetime_: number;
     bulletHp_: number;
+    bulletShellColor_?: number;
 }
 
 function newWeapon(): WeaponConfig {
@@ -58,7 +59,7 @@ function newWeapon(): WeaponConfig {
         bulletType_: BulletType.Melee,
         bulletDamage_: 1,
         bulletLifetime_: 0,
-        bulletHp_: 1,
+        bulletHp_: 1
     };
 }
 
@@ -88,6 +89,7 @@ function createGunWeapon(): WeaponConfig {
     w.cameraFeedback_ = 0.02;
     w.cameraLookForward_ = 0.2;
     w.bulletType_ = BulletType.Shell;
+    w.bulletShellColor_ = 0xFFDD22;
     return w;
 }
 
@@ -160,6 +162,7 @@ weapons[i].velocityVar_ = 200;
 weapons[i].handsAnim_ = 1;
 weapons[i].angleVar_ = 0.5;
 weapons[i].bulletHp_ = 2;
+weapons[i].bulletShellColor_ = 0xAA0000;
 
 // CROSS BOW ⛏
 ++i;
@@ -170,6 +173,7 @@ weapons[i].velocity_ = 600 + 180;
 weapons[i].handsAnim_ = 1;
 weapons[i].bulletDamage_ = 3;
 weapons[i].bulletType_ = BulletType.Arrow;
+weapons[i].bulletShellColor_ = 0x00FF00;
 
 // 🔌 plasma shock
 ++i;
@@ -181,6 +185,7 @@ weapons[i].velocity_ = 300;
 weapons[i].bulletDamage_ = 1;
 weapons[i].bulletHp_ = 2;
 weapons[i].bulletType_ = BulletType.Plasma;
+weapons[i].bulletShellColor_ = 0x00FFFF;
 
 // 🧵 RAIL GUN
 ++i;
@@ -193,3 +198,4 @@ weapons[i].cameraLookForward_ = 0.3;
 weapons[i].bulletDamage_ = 3;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10 / Const.NetFq;
+weapons[i].bulletShellColor_ = 0x990099;
