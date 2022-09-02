@@ -33,6 +33,7 @@ export interface Vel {
 }
 
 export interface Actor extends Pos, Vel {
+    id_: number;
     type_: ActorType;
     client_: ClientID;
     btn_?: number;
@@ -75,6 +76,7 @@ export interface StateData {
     mapSeed_: number;
     seed_: number;
     actors_: Actor[][];
+    nextId_: number;
 }
 
 export function newStateData(): StateData {
@@ -82,6 +84,7 @@ export function newStateData(): StateData {
         mapSeed_: 0,
         seed_: 0,
         actors_: [[], [], [], []],
+        nextId_: 0,
     };
 }
 

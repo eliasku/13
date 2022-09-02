@@ -4,7 +4,7 @@ import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
-import {_SEED, fxRandElement, nextFloat, rand, setSeed} from "../utils/rnd";
+import {_SEED, fxRandElement, nextFloat, rand, random, setSeed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
 import {_debugLagK, Const, setDebugLagK} from "./config";
@@ -48,6 +48,7 @@ import {
     addShellParticle,
     drawParticles,
     drawSplats,
+    flushSplatsToMap,
     restoreParticles,
     saveParticles,
     updateParticles
@@ -124,6 +125,7 @@ function pickRandomWeaponId() {
 
 function newActorObject(type: ActorType): Actor {
     return {
+        id_: state.nextId_++,
         type_: type,
         x: 0,
         y: 0,
@@ -230,6 +232,8 @@ export function updateTestGame(ts: number) {
 
     if (startTic >= 0 && !document.hidden) {
         tryRunTicks(lastFrameTs);
+
+        flushSplatsToMap();
         const predicted = beginPrediction();
         {
             drawGame();
@@ -545,13 +549,13 @@ export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
     } else {
         console.warn("income packet data size mismatch");
     }
-    if (document.hidden) {
-        updateFrameTime(performance.now() / 1000);
-        if (tryRunTicks(lastFrameTs)) {
-            sendInput();
-            cleaningUpClients();
-        }
+    // if (document.hidden) {
+    updateFrameTime(performance.now() / 1000);
+    if (tryRunTicks(lastFrameTs)) {
+        sendInput();
+        cleaningUpClients();
     }
+    // }
 }
 
 function cleaningUpClients() {
@@ -584,12 +588,13 @@ function processTicCommands(commands: ClientEvent[]) {
     }
 }
 
-function comparerSortY(a: Actor, b: Actor) {
-    return a.y * BOUNDS_SIZE + a.x - b.y * BOUNDS_SIZE - b.x;
+function sortById(list: Actor[]) {
+    list.sort((a, b) => a.id_ - b.id_);
 }
 
+
 function sortList(list: Actor[]) {
-    list.sort(comparerSortY);
+    list.sort((a, b) => BOUNDS_SIZE * (a.y - b.y) + a.x - b.x);
 }
 
 function pickItem(item: Actor, player: Actor) {
@@ -637,7 +642,7 @@ function simulateTic(dt: number) {
     //if(startTick < 0) return;
     updateGameCamera(dt);
     for (const a of state.actors_) {
-        sortList(a);
+        sortById(a);
     }
     for (const a of state.actors_[ActorType.Player]) {
         updateActorPhysics(a, dt);
@@ -710,8 +715,8 @@ function simulateTic(dt: number) {
 }
 
 function updateBodyInterCollisions2(list1: Actor[], list2: Actor[]) {
-    for (let i = 0; i < list1.length; ++i) {
-        updateBodyCollisions(list1[i], list2, 0);
+    for (const a of list1) {
+        updateBodyCollisions(a, list2, 0);
     }
 }
 
@@ -750,7 +755,7 @@ function kill(actor: Actor) {
         copyPosFromActorCenter(item, actor);
         addVelFrom(item, actor);
         const v = 32 + rand(64);
-        addRadialVelocity(item, v, v);
+        addRadialVelocity(item, random(Math.PI * 2), v, v);
         item.animHit_ = ANIM_HIT_MAX;
         if (actor.weapon_) {
             item.btn_ = ItemCategory.Weapon | actor.weapon_;
@@ -926,6 +931,7 @@ function getCommandsForTic(tic: number): ClientEvent[] {
 
 function cloneState(): StateData {
     return {
+        nextId_: state.nextId_,
         seed_: state.seed_,
         mapSeed_: state.mapSeed_,
         actors_: state.actors_.map(list => list.map(a => {
@@ -980,7 +986,7 @@ function drawGame() {
     camera.angle_ = (Math.random() - 0.5) * cameraShake / 8;
 
     beginRender();
-    gl.clearColor(0.4, 0.4, 0.4, 1.0);
+    gl.clearColor(0.2, 0.2, 0.2, 1.0);
     gl.clear(GL.COLOR_BUFFER_BIT);
     drawMapBackground();
     drawObjects();
@@ -1261,7 +1267,7 @@ function drawTree(p: Actor) {
 let lastTickAudio = 0;
 
 function playAt(actor: Actor, id: Snd) {
-    if (gameTic <= lastTickAudio) {
+    if (gameTic < lastTickAudio) {
         return;
     }
     let lx = BOUNDS_SIZE / 2;
@@ -1315,10 +1321,15 @@ function printDebugInfo() {
     text += " r:" + (simulatedFrames | 0) + (fr > 0 ? "." : "") + "\n";
     text += "d " + (lastFrameTs - prevTime).toFixed(2) + "\n";
     text += "~ " + (gameTic / Const.NetFq).toFixed(2) + "\n";
-    text += "visible: " + drawList.length + "\n";
-    if(_debugLagK) {
+    if (_debugLagK) {
         text += "debug-lag K: " + _debugLagK + "\n";
     }
+    text += "visible: " + drawList.length + "\n";
+    text += "players: " + state.actors_[ActorType.Player].length + "\n";
+    text += "barrels: " + state.actors_[ActorType.Barrel].length + "\n";
+    text += "items: " + state.actors_[ActorType.Item].length + "\n";
+    text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
+    text += "trees: " + trees.length + "\n";
 
     text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTic}\n`;
     for (const [, remoteClient] of remoteClients) {

@@ -209,9 +209,10 @@ export function uploadTexture(glTexture: WebGLTexture, source: TexImageSource): 
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
 }
 
-export function beginRender() {
-    const width = gl.drawingBufferWidth;
-    const height = gl.drawingBufferHeight;
+export function beginRender(
+    width: number = gl.drawingBufferWidth,
+    height: number = gl.drawingBufferHeight
+) {
     const {atX_, atY_, toX_, toY_, angle_, scale_} = camera;
 
     const x = atX_ - width * toX_;
@@ -259,7 +260,7 @@ export function beginRender() {
     gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(program);
     gl.uniformMatrix4fv(matrixLocation, false, projection);
-    gl.viewport(0, 0, width, height);
+    gl.viewport(0, 0, width, Math.abs(height));
 }
 
 export function flush() {

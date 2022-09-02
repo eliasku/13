@@ -1,10 +1,13 @@
 import {img, Img} from "../assets/gfx";
-import {draw} from "../graphics/draw2d";
+import {beginRender, camera, draw, flush} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, collideWithBounds, updateBody} from "./phy";
 import {getLumaColor32} from "../utils/math";
 import {GRAVITY, OBJECT_HEIGHT} from "./data/world";
 import {_SEED2, nextFloat2, setSeed2} from "../utils/rnd";
+import {GL, gl} from "../graphics/gl";
+import {mapFramebuffer} from "../assets/map";
+import {BOUNDS_SIZE} from "../assets/params";
 
 export function newParticle(): Particle {
     return {
@@ -70,12 +73,10 @@ export function updateParticles(dt: number) {
 let seed0: number;
 let particles0: Particle[];
 let particles: Particle[] = [];
-let splats0: number[];
 let splats: number[] = [];
 
 export function saveParticles() {
     seed0 = _SEED2;
-    splats0 = splats.concat();
     particles0 = particles.map(x => {
         return {...x};
     });
@@ -83,8 +84,8 @@ export function saveParticles() {
 
 export function restoreParticles() {
     setSeed2(seed0);
-    splats = splats0;
     particles = particles0;
+    splats.length = 0;
 }
 
 export function drawSplats() {
@@ -136,10 +137,7 @@ export function addFleshParticles(amount: number, actor: Actor, explVel: number,
             particle.w = vel.w * d;
         }
         particle.color_ = (0x60 + 0x30 * nextFloat2()) << 16;
-        addRadialVelocity(particle, (0.5 - nextFloat2()) * explVel, 0);
-        // particle.a = Math.random() * Math.PI * 2;
-        // particle.r = (0.5 - Math.random()) * Math.PI * 2 * 4;
-        // particle.img_ = Img.particle_flesh0 + fxRand(3);
+        addRadialVelocity(particle, nextFloat2() * Math.PI * 2, (0.5 - nextFloat2()) * explVel, 0);
         particle.img_ = Img.particle_shell;
         particle.splashImg_ = Img.circle_4;
         particle.splashEachJump_ = 1;
@@ -165,7 +163,7 @@ export function addBoneParticles(amount: number, actor: Actor, vel: Vel) {
             particle.v = vel.v * d;
             particle.w = vel.w * d;
         }
-        addRadialVelocity(particle, 64 - 128 * nextFloat2(), 128 * nextFloat2());
+        addRadialVelocity(particle, nextFloat2() * Math.PI * 2, 64 - 128 * nextFloat2(), 128 * nextFloat2());
         const i = nextFloat2() < 0.3 ? Img.particle_flesh0 : Img.particle_flesh1;
         particle.img_ = i;
         particle.splashImg_ = i;
@@ -190,6 +188,21 @@ export function addShellParticle(player: Actor, offsetZ: number, color: number) 
     particle.color_ = color;
     particle.r = (0.5 - nextFloat2()) * Math.PI * 8;
     particle.a = nextFloat2() * Math.PI * 2;
-    addRadialVelocity(particle, 16 + 32 * nextFloat2(), 32);
+    addRadialVelocity(particle, nextFloat2() * Math.PI * 2, 16 + 32 * nextFloat2(), 32);
     particles.push(particle);
+}
+
+export function flushSplatsToMap() {
+    if(splats.length && mapFramebuffer) {
+        gl.bindFramebuffer(GL.FRAMEBUFFER, mapFramebuffer);
+        camera.scale_ = camera.toY_ = 1;
+        camera.angle_ = camera.toX_ = camera.atX_ = camera.atY_ = 0;
+        beginRender(BOUNDS_SIZE, -BOUNDS_SIZE);
+        gl.viewport(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
+        drawSplats();
+        splats.length = 0;
+        flush();
+        gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+        gl.bindTexture(GL.TEXTURE_2D, null);
+    }
 }

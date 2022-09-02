@@ -1,5 +1,5 @@
 import {Actor, Pos, Vel} from "./types";
-import {rand, random} from "../utils/rnd";
+import {rand} from "../utils/rnd";
 import {reach} from "../utils/math";
 import {ControlsFlag} from "./controls";
 import {Const} from "./config";
@@ -88,8 +88,7 @@ export function collideWithBounds(body: Vel & Pos, radius: number, loss: number)
     return has;
 }
 
-export function addRadialVelocity(vel: Vel, velXYLen: number, velZ: number) {
-    const a = random(Math.PI * 2);
+export function addRadialVelocity(vel: Vel, a: number, velXYLen: number, velZ: number) {
     addVelocityDir(vel, velXYLen * Math.cos(a), velXYLen * Math.sin(a) / 2, velZ);
 }
 

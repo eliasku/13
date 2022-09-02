@@ -5,10 +5,10 @@ export const enum Const {
     InputDelay = 8,
 
     // ~35 bytes
-    Prediction = 1,
+    Prediction = 0,
 
     // ~130 bytes
-    RLE = 1,
+    RLE = 0,
 
     AngleRes = 0x100,
     MoveAngleBit = 8,
@@ -18,6 +18,7 @@ export const enum Const {
 }
 
 export let _debugLagK = 0;
-export function setDebugLagK(a:number) {
+
+export function setDebugLagK(a: number) {
     _debugLagK = a;
 }

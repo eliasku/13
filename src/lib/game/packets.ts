@@ -64,6 +64,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
             const anim_ = (anim >> 8) & 0xFF;
 
             const p: Actor = {
+                id_: i32[ptr++],
                 type_: hdr & 0xFF,
                 hp_: (hdr >> 8) & 0xFF,
                 weapon_: (hdr >> 16) & 0xFF,
@@ -142,6 +143,7 @@ export function pack(packet: Packet): ArrayBuffer {
             i32[ptr++] = p.client_;
             i32[ptr++] = p.btn_;
             i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
+            i32[ptr++] = p.id_;
             i32[ptr++] = p.x * 1000;
             i32[ptr++] = p.y * 1000;
             i32[ptr++] = p.z * 1000;

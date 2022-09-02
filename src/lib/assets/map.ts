@@ -2,8 +2,14 @@ import {rand} from "../utils/rnd";
 import {createCanvas} from "./gfx";
 import {createTexture, uploadTexture} from "../graphics/draw2d";
 import {BOUNDS_SIZE} from "./params";
+import {GL, gl} from "../graphics/gl";
 
 export const mapTexture = createTexture(BOUNDS_SIZE);
+export let mapFramebuffer = gl.createFramebuffer();
+gl.bindFramebuffer(GL.FRAMEBUFFER, mapFramebuffer);
+gl.bindTexture(GL.TEXTURE_2D, mapTexture.i);
+gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, mapTexture.i, 0);
+gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 
 export function generateMapBackground(): void {
     const map = createCanvas(BOUNDS_SIZE, false);
@@ -54,4 +60,6 @@ export function generateMapBackground(): void {
 
     ///// LZMA: ~22
     // ctx.canvas.width = ctx.canvas.height = 0;
+
+
 }

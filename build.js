@@ -308,6 +308,8 @@ function mangle_types(file, dest) {
             "followScale_",
         ],
         [
+            // Actor
+            "id_",
             "type_",
             "btn_",
             "weapon_",
@@ -341,10 +343,11 @@ function mangle_types(file, dest) {
             "client_",
         ],
         [
+            // StateData
             "mapSeed_",
             "seed_",
             "actors_",
-            "particles_",
+            "nextId_",
         ],
         [
             // Packet

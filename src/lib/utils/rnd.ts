@@ -61,6 +61,7 @@ export function fxRandElement<T>(m: T[]): T {
 // replayable random for effects
 
 export let _SEED2 = ~Date.now();
+
 export function setSeed2(state: number) {
     _SEED2 = state;
 }
@@ -71,6 +72,7 @@ export function nextInt2(): number /* u32 */ {
     _SEED2 = x;
     return temper(x) >>> 1;
 }
+
 export function nextFloat2() {
     return unorm_f32_from_u32(nextInt2());
 }
