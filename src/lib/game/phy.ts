@@ -165,3 +165,16 @@ export function updateBodyCollisions(a: Actor, list: Actor[], ioffset: number) {
         }
     }
 }
+
+export function roundActors(list:Actor[]) {
+    for(const a of list) {
+        a.x = ((a.x * 1000) | 0) / 1000;
+        a.y = ((a.y * 1000) | 0) / 1000;
+        a.z = ((a.z * 1000) | 0) / 1000;
+        a.u = ((a.u * 1000) | 0) / 1000;
+        a.v = ((a.v * 1000) | 0) / 1000;
+        a.w = ((a.w * 1000) | 0) / 1000;
+        a.s = ((a.s * 1000) | 0) / 1000;
+        a.t = ((a.t * 1000) | 0) / 1000;
+    }
+}

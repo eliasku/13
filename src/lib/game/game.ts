@@ -1,10 +1,5 @@
 import {ClientID} from "../../shared/types";
-import {
-    getClientId,
-    getUserName,
-    isChannelOpen,
-    remoteClients
-} from "../net/messaging";
+import {getClientId, getUserName, isChannelOpen, remoteClients} from "../net/messaging";
 import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
@@ -20,10 +15,10 @@ import {
     Client,
     ClientEvent,
     EffectItemType,
-    StateData,
     ItemCategory,
     newStateData,
     Packet,
+    StateData,
     Vel
 } from "./types";
 import {pack, unpack} from "./packets";
@@ -46,17 +41,8 @@ import {
 } from "./controls";
 import {isAnyKeyDown, keyboardDown} from "../utils/input";
 import {Snd, snd} from "../assets/sfx";
-import {
-    BulletType,
-    weapons
-} from "./data/weapons";
-import {
-    drawParticles,
-    newBoneParticle,
-    newFleshParticle,
-    newShellParticle,
-    updateParticles
-} from "./particles";
+import {BulletType, weapons} from "./data/weapons";
+import {drawParticles, newBoneParticle, newFleshParticle, newShellParticle, updateParticles} from "./particles";
 import {
     addPos,
     addRadialVelocity,
@@ -66,18 +52,23 @@ import {
     collideWithBoundsA,
     copyPosFromActorCenter,
     reflectVelocity,
-    setRandomPosition, testIntersection,
+    roundActors,
+    setRandomPosition,
+    testIntersection,
     updateActorPhysics,
     updateAnim,
-    updateBody, updateBodyCollisions
+    updateBody,
+    updateBodyCollisions
 } from "./phy";
 import {BASE_RESOLUTION, BOUNDS_SIZE} from "../assets/params";
 import {
     ANIM_HIT_MAX,
     ANIM_HIT_OVER,
     BULLET_RADIUS,
-    JUMP_VEL, OBJECT_HEIGHT,
-    OBJECT_RADIUS, OBJECT_RADIUS_BY_TYPE,
+    JUMP_VEL,
+    OBJECT_HEIGHT,
+    OBJECT_RADIUS,
+    OBJECT_RADIUS_BY_TYPE,
     PLAYER_HANDS_Z,
 } from "./data/world";
 import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
@@ -352,7 +343,7 @@ function checkPlayerInput() {
     if (lastInputCmd !== btn) {
         // copy flag in case of rewriting local event for ONE-SHOT events
         const g = getLocalEvent(inputTic);
-        if(g.btn_ & ControlsFlag.Spawn) {
+        if (g.btn_ & ControlsFlag.Spawn) {
             btn |= ControlsFlag.Spawn;
         }
 
@@ -464,7 +455,7 @@ function trySendInput() {
                 packet.receivedOnSender_ = cl.tic_;
                 packet.sync_ = cl.isPlaying_;
                 if (packet.tic_ > cl.acknowledgedTic_) {
-                    packet.events_ = localEvents.filter(e=>e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
+                    packet.events_ = localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
                     channels_sendObjectData(rc, pack(packet));
                 }
             } else {
@@ -688,6 +679,10 @@ function simulateTic(dt: number) {
         setRandomPosition(p);
         p.hp_ = 10;
         pushActor(p);
+    }
+
+    for (const list of state.actors_) {
+        roundActors(list);
     }
 }
 

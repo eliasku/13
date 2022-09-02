@@ -39,11 +39,11 @@ export interface Actor extends Pos, Vel {
     // stpq
     s?: number;
     t?: number;
-    p?: number;
-    q?: number;
+    // p?: number;
+    // q?: number;
 
-    weapon_?:number;
-    hp_?:number;
+    weapon_?: number;
+    hp_?: number;
     // 1 byte: just generated anim start point
     anim0_?: number;
     // hit effect (4 bits: 0...15)
@@ -78,11 +78,11 @@ export interface StateData {
     particles_: Particle[];
 }
 
-export function newStateData():StateData {
+export function newStateData(): StateData {
     return {
         mapSeed_: 0,
         seed_: 0,
-        actors_: [[],[],[],[]],
+        actors_: [[], [], [], []],
         particles_: []
     };
 }
