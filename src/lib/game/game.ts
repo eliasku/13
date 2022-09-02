@@ -88,9 +88,9 @@ const clients = new Map<ClientID, Client>()
 let localEvents: ClientEvent[] = [];
 let receivedEvents: ClientEvent[] = [];
 
-// ticks received from all peers (min value), we could simulate to it
-let netTick = 0;
-let startTick = -1;
+// tics received from all peers (min value), we could simulate to it
+let netTic = 0;
+let startTic = -1;
 let gameTic = 0;
 let prevTime = 0;
 let startTime = 0;
@@ -198,9 +198,9 @@ function pushActor(a: Actor) {
 }
 
 function createSeedGameState() {
-    startTick = 0;
+    startTic = 0;
     gameTic = 0;
-    netTick = 0;
+    netTic = 0;
     startTime = prevTime = lastFrameTs;
     state.mapSeed_ = _SEED;
     recreateMap();
@@ -224,11 +224,11 @@ function updateFrameTime(ts: number) {
 export function updateTestGame(ts: number) {
     updateFrameTime(ts);
 
-    if (startTick < 0 && !remoteClients.size) {
+    if (startTic < 0 && !remoteClients.size) {
         createSeedGameState();
     }
 
-    if (startTick >= 0 && !document.hidden) {
+    if (startTic >= 0 && !document.hidden) {
         tryRunTicks(lastFrameTs);
         beginPrediction();
         {
@@ -362,7 +362,7 @@ function checkPlayerInput() {
 }
 
 function checkJoinSync() {
-    if (!joined && startTick >= 0) {
+    if (!joined && startTic >= 0) {
         for (const [id, rc] of remoteClients) {
             if (isChannelOpen(rc)) {
                 const cl = clients.get(id);
@@ -383,14 +383,14 @@ function checkJoinSync() {
     }
 }
 
-function calcNetTick() {
-    netTick = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0;
+function calcNetTic() {
+    netTic = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0;
     ackMin = gameTic;
     for (const [id,] of remoteClients) {
         const client = clients.get(id);
         if (client) {
-            if (netTick > client.tic_) {
-                netTick = client.tic_;
+            if (netTic > client.tic_) {
+                netTic = client.tic_;
             }
             if (ackMin > client.acknowledgedTic_) {
                 ackMin = client.acknowledgedTic_;
@@ -400,11 +400,11 @@ function calcNetTick() {
 }
 
 function tryRunTicks(ts: number): number {
-    calcNetTick();
+    calcNetTic();
     const framesPassed = ((ts - prevTime) * Const.NetFq) | 0;
     let frameN = framesPassed;
     let framesProcessed = 0;
-    while (gameTic <= netTick && frameN > 0) {
+    while (gameTic <= netTic && frameN > 0) {
         processTicCommands(getCommandsForTic(gameTic));
         simulateTic(1 / Const.NetFq);
         ++gameTic;
@@ -417,14 +417,14 @@ function tryRunTicks(ts: number): number {
 
     // we played all available net-events
     const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
-    if (gameTic > netTick) {
+    if (gameTic > netTic) {
         // slow down a bit in case if we predict a lot
         if (ts - prevTime > Const.InputDelay / Const.NetFq) {
             prevTime = nearPrevTime;
         }
     } else {
         // we got packets to go
-        if (gameTic + Const.InputDelay < netTick) {
+        if (gameTic + Const.InputDelay < netTic) {
             // speed up
             // console.info("speed up");
             // prevTime -= Const.NetDt * dropRate;
@@ -435,8 +435,10 @@ function tryRunTicks(ts: number): number {
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
-    // localEvents = localEvents.filter(v => v.tic_ > Math.min(ackMin, lastTic));
-    localEvents = localEvents.filter(v => v.tic_ > ackMin);
+    // if(ackMin > lastTic) {
+    //     ackMin = lastTic;
+    // }
+    localEvents = localEvents.filter(v => v.tic_ > Math.min(ackMin, lastTic));
     return framesProcessed;
 }
 
@@ -446,64 +448,58 @@ function trySendInput() {
     for (const [id, rc] of remoteClients) {
         if (isChannelOpen(rc)) {
             const cl = clients.get(id);
+            const packet: Packet = {
+                client_: getClientId(),
+                events_: [],
+                check_seed_: _SEED,
+                check_tic_: lastTic,
+                // t: lastTic + simTic + Const.InputDelay,
+                tic_: lastTic,
+                // send to Client info that we know already
+                receivedOnSender_: lastTic,
+                sync_: false,
+            };
             if (cl) {
-                const packet: Packet = {
-                    check_seed_: _SEED,
-                    check_tic_: lastTic,
-                    client_: getClientId(),
-                    // t: lastTic + simTic + Const.InputDelay,
-                    tic_: lastTic + Math.max(Const.InputDelay, simTic),
-                    // send to Client info that we know already
-                    receivedOnSender_: cl.tic_,
-                    events_: [],
-                    sync_: cl.isPlaying_,
-                };
+                packet.tic_ = lastTic + Math.max(Const.InputDelay, simTic);
+                packet.receivedOnSender_ = cl.tic_;
+                packet.sync_ = cl.isPlaying_;
                 if (packet.tic_ > cl.acknowledgedTic_) {
-                    for (const e of localEvents) {
-                        if (e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_ /* buffer all inbetween frames current tic events */) {
-                            packet.events_.push(e);
-                        }
-                    }
+                    // for (const e of localEvents) {
+                    //     if (e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_ /* buffer all inbetween frames current tic events */) {
+                    //         packet.events_.push(e);
+                    //     }
+                    // }
+                    packet.events_ = localEvents.filter(e=>e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
                     channels_sendObjectData(rc, pack(packet));
                 }
-            // } else if(joined) {
             } else {
                 state.seed_ = _SEED;
-                const init: Packet = {
-                    check_seed_: _SEED,
-                    check_tic_: lastTic,
-                    sync_: false,
-                    client_: getClientId(),
-                    tic_: lastTic,
-                    // important to wait for ack on who is initializing
-                    receivedOnSender_: lastTic,
-                    events_: [],
-                    state_: state,
-                };
-                for (const e of localEvents) {
-                    // buffer all inbetween frames current tic events
-                    if (e.tic_ > lastTic) {
-                        init.events_.push(e);
-                    }
-                }
-                for (const e of receivedEvents) {
-                    if (e.tic_ > lastTic) {
-                        init.events_.push(e);
-                    }
-                }
-                channels_sendObjectData(rc, pack(init));
+                packet.state_ = state;
+                // for (const e of localEvents) {
+                //     // buffer all inbetween frames current tic events
+                //     if (e.tic_ > lastTic) {
+                //         packet.events_.push(e);
+                //     }
+                // }
+                // for (const e of receivedEvents) {
+                //     if (e.tic_ > lastTic) {
+                //         packet.events_.push(e);
+                //     }
+                // }
+                packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
+                channels_sendObjectData(rc, pack(packet));
             }
         }
     }
 }
 
 function processPacket(sender: Client, data: Packet) {
-    if (startTick < 0 && data.state_) {
-        startTick = data.tic_;
+    if (startTic < 0 && data.state_) {
+        startTic = data.tic_;
         startTime = prevTime = lastFrameTs;
         gameTic = data.tic_ + 1;
         state = data.state_;
-        netTick = 0;
+        netTic = 0;
         recreateMap();
         setSeed(state.seed_);
 
@@ -842,7 +838,7 @@ function updatePlayer(player: Actor, dt: number) {
             playAt(player, Snd.blip);
         }
     }
-    let c = grounded ? 16 : 8;
+    const c = grounded ? 16 : 8;
     const lookAngle = unpackAngleByte(player.btn_ >> Const.LookAngleBit);
     const moveAngle = unpackAngleByte(player.btn_ >> Const.MoveAngleBit);
     const lookDirX = Math.cos(lookAngle);
@@ -1299,7 +1295,7 @@ function printDebugInfo() {
     text += "~ " + (gameTic / Const.NetFq).toFixed(2) + "\n";
     text += "visible: " + drawList.length + "\n";
 
-    text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTick}\n`;
+    text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTic}\n`;
     for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;
