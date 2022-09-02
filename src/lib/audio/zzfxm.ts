@@ -77,13 +77,13 @@ export const zzfxM = (instruments:number[][], patterns:[number, number, number][
             nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - (!notFirstBeat as any as number)) * beatLength;
             // for each beat in pattern, plus one extra if end of sequence
             isSequenceEnd = sequenceIndex == sequence.length - 1;
-            for (i = 2, k = outSampleOffset; i < patternChannel.length + isSequenceEnd; notFirstBeat = ++i) {
+            for (i = 2, k = outSampleOffset; i < patternChannel.length + (isSequenceEnd as any as number); notFirstBeat = ++i) {
 
                 // <channel-note>
                 note = patternChannel[i];
 
                 // stop if end, different instrument or new note
-                stop = i == patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
+                stop = i == patternChannel.length + (isSequenceEnd as any as number) - 1 && isSequenceEnd ||
                     instrument != ((patternChannel[0] || 0) | note | 0) as any as number;
 
                 // fill buffer with samples for previous beat, most cpu intensive part

@@ -12,6 +12,8 @@
     "build-dev": "node build.js --dev",
     "zip": "node build.js --zip",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/c.js",
+    "debug-watch": "esbuild src/lib/index.ts --tsconfig=tsconfig.json --watch --bundle --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/debug.js",
+    "typecheck": "tsc -p tsconfig.json --watch --noEmit",
     "server-watch": "esbuild server/src/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --platform=node --target=node16 --format=esm --outfile=public/s.js"
   },
   "author": "eliasku",
