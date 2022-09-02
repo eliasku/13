@@ -1,17 +1,23 @@
 import {ClientID} from "../../shared/types";
-import {DebugLag} from "../game/config";
+import {_debugLagK} from "../game/config";
 import {onRTCPacket} from "../game/game";
 import {fx_chance, fx_range} from "../utils/rnd";
 
-
-
 function channels_processMessageDebug(from: ClientID, data: ArrayBuffer) {
-    if (!fx_chance(DebugLag.PacketLoss ** 2)) {
+    if(!_debugLagK) {
+        onRTCPacket(from, data);
+        return;
+    }
+
+    const loss = 0.05 * (10 ** (_debugLagK - 1));
+    const lagMin = 20 * (10 ** (_debugLagK - 1));
+    const lagMax = 200 * (10 ** (_debugLagK - 1));
+    if (!fx_chance(loss ** 2)) {
         if (document.hidden) {
             // can't simulate lag when tab in background because of setTimeout stall
             onRTCPacket(from, data);
         } else {
-            const delay = fx_range(DebugLag.LagMin / 4, DebugLag.LagMax / 4)
+            const delay = fx_range(lagMin / 4, lagMax / 4)
             setTimeout(() => onRTCPacket(from, data), delay);
         }
     }

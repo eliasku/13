@@ -8,7 +8,7 @@ export const enum Const {
     Prediction = 1,
 
     // ~130 bytes
-    RLE = 0,
+    RLE = 1,
 
     AngleRes = 0x100,
     MoveAngleBit = 8,
@@ -17,16 +17,7 @@ export const enum Const {
     StartWeapon = 2,
 }
 
-export const enum DebugLag {
-    // LagMin = 20,
-    // LagMax = 200,
-    // PacketLoss = 0.05,
-
-    // Heart-Attack mode
-    LagMin = 500,
-    LagMax = 2000,
-    PacketLoss = 0.5,
+export let _debugLagK = 0;
+export function setDebugLagK(a:number) {
+    _debugLagK = a;
 }
-
-
-

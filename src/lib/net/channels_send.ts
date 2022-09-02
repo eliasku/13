@@ -1,4 +1,4 @@
-import {DebugLag} from "../game/config";
+import {_debugLagK} from "../game/config";
 import {isChannelOpen, RemoteClient} from "./messaging";
 import {fx_chance, fx_range} from "../utils/rnd";
 
@@ -8,7 +8,13 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
         console.warn("HUGE packet could not be delivered: " + data.byteLength);
         //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
     }
-    if (!fx_chance(DebugLag.PacketLoss ** 2)) {
+    if(!_debugLagK) {
+        client.dc_.send(data);
+    }
+    const loss = 0.05 * (10 ** (_debugLagK - 1));
+    const lagMin = 20 * (10 ** (_debugLagK - 1));
+    const lagMax = 200 * (10 ** (_debugLagK - 1));
+    if (!fx_chance(loss ** 2)) {
         if (document.hidden) {
             // can't simulate lag when tab in background because of setTimeout stall
             try {
@@ -17,7 +23,7 @@ function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
                 console.warn("DataChannel send error:", e)
             }
         } else {
-            const delay = fx_range(DebugLag.LagMin / 4, DebugLag.LagMax / 4);
+            const delay = fx_range(lagMin / 4, lagMax / 4);
             setTimeout(() => {
                 if (isChannelOpen(client)) {
                     try {

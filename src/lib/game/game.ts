@@ -7,7 +7,7 @@ import {beginRender, camera, draw, flush} from "../graphics/draw2d";
 import {_SEED, fxRandElement, nextFloat, rand, setSeed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {img, Img} from "../assets/gfx";
-import {Const} from "./config";
+import {_debugLagK, Const, setDebugLagK} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {
     Actor,
@@ -239,7 +239,7 @@ export function updateTestGame(ts: number) {
             drawOverlay();
         }
         if (predicted) endPrediction();
-        trySendInput();
+        sendInput();
         cleaningUpClients();
     }
     printStatus();
@@ -263,7 +263,17 @@ function printStatus() {
             termPrint("Tap to spawn!\n");
         }
     } else {
-        termPrint("Joining room...\n");
+        termPrint("Joining\n");
+    }
+
+    termPrint(getUserName() + "\n");
+    for (const [id, rc] of remoteClients) {
+        let status = "🔴";
+        if (isChannelOpen(rc)) {
+            const player = getPlayerByClient(id);
+            status = player ? "🟢" : "👀"; // 👁️
+        }
+        termPrint(status + " " + rc.name_ + "\n");
     }
 }
 
@@ -442,7 +452,7 @@ function tryRunTicks(ts: number): number {
     return framesProcessed;
 }
 
-function trySendInput() {
+function sendInput() {
     const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
     const lastTic = gameTic - 1;
     for (const [id, rc] of remoteClients) {
@@ -535,13 +545,13 @@ export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
     } else {
         console.warn("income packet data size mismatch");
     }
-    // if (!clientActive) {
-    updateFrameTime(performance.now() / 1000);
-    if (tryRunTicks(lastFrameTs)) {
-        trySendInput();
-        cleaningUpClients();
+    if (document.hidden) {
+        updateFrameTime(performance.now() / 1000);
+        if (tryRunTicks(lastFrameTs)) {
+            sendInput();
+            cleaningUpClients();
+        }
     }
-    // }
 }
 
 function cleaningUpClients() {
@@ -694,7 +704,7 @@ function simulateTic(dt: number) {
         roundActors(list);
     }
 
-    if (lastInputTic < gameTic) {
+    if (lastTickAudio < gameTic) {
         lastTickAudio = gameTic;
     }
 }
@@ -939,7 +949,7 @@ function beginPrediction(): boolean {
 
     simulatedFrames = 0;
     const savedGameTic = gameTic;
-    while (time > 0) {
+    while (time > 0 && simulatedFrames < Const.NetFq) {
         const dt = Math.min(time, 1 / Const.NetFq);
         processTicCommands(getCommandsForTic(gameTic));
         simulateTic(dt);
@@ -1306,6 +1316,9 @@ function printDebugInfo() {
     text += "d " + (lastFrameTs - prevTime).toFixed(2) + "\n";
     text += "~ " + (gameTic / Const.NetFq).toFixed(2) + "\n";
     text += "visible: " + drawList.length + "\n";
+    if(_debugLagK) {
+        text += "debug-lag K: " + _debugLagK + "\n";
+    }
 
     text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTic}\n`;
     for (const [, remoteClient] of remoteClients) {
@@ -1331,6 +1344,10 @@ function checkDebugInput() {
     if (keyboardDown.has("Digit2")) {
         drawCollisionEnabled = !drawCollisionEnabled;
     }
+    if (keyboardDown.has("Digit3")) {
+        setDebugLagK((_debugLagK + 1) % 3);
+    }
+
 }
 
 function drawActorBoundingSphere(p: Actor) {

@@ -1,20 +1,22 @@
 import {Actor, ClientEvent, newStateData, Packet} from "./types";
+import {Const} from "./config";
+import {decodeRLE, encodeRLE} from "../utils/rle";
 
-//const _packU8 = new Uint8Array(1024 * 64);
 const _packI32 = new Int32Array(1024 * 16);
+const _packU8 = new Uint8Array(_packI32.buffer);
 //const _packF64 = new Float64Array(_packU8.buffer);
-//const _rleBuffer = new Uint8Array(1024 * 64);
+const _rleBuffer = new Uint8Array(1024 * 16 * 4);
 
 export function unpack(data: ArrayBuffer): Packet | undefined {
-    const i32 = new Int32Array(data);
+    const i32 = Const.RLE ? _packI32 : new Int32Array(data);
     // const u32 = Const.RLE ? _packU32 : new Uint32Array(data);
     // const f64 = Const.RLE ? _packF64 : new Float64Array(data);
+    const gotByteLength = Const.RLE ? decodeRLE(new Uint8Array(data), data.byteLength, _packU8) : data.byteLength;
     // const gotByteLength = Const.RLE ? decodeRLE(new Uint8Array(data), data.byteLength, _packU8) : data.byteLength;
-    //const gotByteLength = Const.RLE ? decodeRLE(new Uint8Array(data), data.byteLength, _packU8) : data.byteLength;
 
     let ptr = 0;
     const packetDwordsSize = i32[ptr++];
-    if (packetDwordsSize * 4 > data.byteLength) {
+    if (packetDwordsSize * 4 > gotByteLength) {
         return;
     }
     const flags0 = i32[ptr++];
@@ -105,8 +107,8 @@ export function pack(packet: Packet): ArrayBuffer {
     i32[ptr++] = packet.check_seed_;
 
     packet.events_.sort((a, b) => a.tic_ - b.tic_);
-    let event_t = packet.events_.length > 0 ? packet.events_[0].tic_ : 0;
-    const event_end = packet.events_.length > 0 ? packet.events_[packet.events_.length - 1].tic_ : -1;
+    let event_t = packet.events_.length ? packet.events_[0].tic_ : 0;
+    const event_end = packet.events_.length ? packet.events_.at(-1).tic_ : -1;
     i32[ptr++] = event_end - event_t + 1;
     i32[ptr++] = event_t;
 
@@ -154,10 +156,10 @@ export function pack(packet: Packet): ArrayBuffer {
     // save packet dwords size to header
     i32[0] = ptr;
 
-    // if (Const.RLE) {
-    //     const size = encodeRLE(_packU8, ptr * 4, _rleBuffer);
-    //     return _rleBuffer.buffer.slice(0, size);
-    // } else {
-    return i32.buffer.slice(0, ptr * 4);
-    // }
+    if (Const.RLE) {
+        const size = encodeRLE(_packU8, ptr * 4, _rleBuffer);
+        return _rleBuffer.buffer.slice(0, size);
+    } else {
+        return i32.buffer.slice(0, ptr * 4);
+    }
 }
