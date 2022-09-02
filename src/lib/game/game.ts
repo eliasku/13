@@ -694,7 +694,9 @@ function simulateTic(dt: number) {
         roundActors(list);
     }
 
-    lastTickAudio = gameTic;
+    if (lastInputTic < gameTic) {
+        lastTickAudio = gameTic;
+    }
 }
 
 function updateBodyInterCollisions2(list1: Actor[], list2: Actor[]) {
@@ -1247,8 +1249,9 @@ function drawTree(p: Actor) {
 /// SOUND ENV ///
 
 let lastTickAudio = 0;
+
 function playAt(actor: Actor, id: Snd) {
-    if(gameTic <= lastTickAudio) {
+    if (gameTic <= lastTickAudio) {
         return;
     }
     let lx = BOUNDS_SIZE / 2;
