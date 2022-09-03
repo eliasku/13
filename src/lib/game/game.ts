@@ -943,7 +943,8 @@ function cloneState(): StateData {
 function beginPrediction(): boolean {
     // global state
     let time = lastFrameTs - prevTime;
-    if (!Const.Prediction || time < 0.001) return false;
+    //if (!Const.Prediction || time < 0.001) return false;
+    if (!Const.Prediction) return false;
 
     // save state
     state.seed_ = _SEED;
@@ -955,7 +956,8 @@ function beginPrediction(): boolean {
 
     simulatedFrames = 0;
     const savedGameTic = gameTic;
-    while (time > 0 && simulatedFrames < Const.NetFq) {
+    while (time > 0) {
+    // while (time > 0 && simulatedFrames < Const.NetFq) {
         const dt = Math.min(time, 1 / Const.NetFq);
         processTicCommands(getCommandsForTic(gameTic));
         simulateTic(dt);
