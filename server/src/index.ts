@@ -39,11 +39,12 @@ const clients = new Map<ClientID, ClientState>();
 
 setInterval(() => {
     for (const [, client] of clients) {
-        if (!sendServerEvent(client, ServerEventName.Ping, "")) {
-            removeClient(client);
-        }
+        // if (!sendServerEvent(client, ServerEventName.Ping, "")) {
+        //     removeClient(client);
+        // }
+        sendServerEvent(client, ServerEventName.Ping, "");
     }
-}, 5000);
+}, 1000);
 
 function constructMessage(id: number, data: string) {
     return `id:${id}\ndata:${data}\n\n`;
@@ -53,7 +54,9 @@ function constructMessage(id: number, data: string) {
 
 function sendServerEvent(client: ClientState, event: ServerEventName, data: string) {
     return client.eventStream_.write(
-        constructMessage(client.nextEventId_++, event + data)
+        constructMessage(client.nextEventId_++, event + data),
+        // REMOVE CLIENT IN CASE OF ANY ERRORS!
+        (err) => err && removeClient(client)
     );
 }
 
@@ -141,7 +144,7 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
         ++numProcessedMessages;
     }
     res.writeHead(200, HDR.n);
-    res.end(""+numProcessedMessages);
+    res.end("" + numProcessedMessages);
 }
 
 function serveStatic(file: string, res: ServerResponse, mime: OutgoingHttpHeaders) {
