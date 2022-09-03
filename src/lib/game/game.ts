@@ -6,7 +6,7 @@ import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
 import {_SEED, fxRandElement, nextFloat, rand, random, setSeed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
-import {img, Img} from "../assets/gfx";
+import {AVATARS, img, Img} from "../assets/gfx";
 import {_debugLagK, Const, setDebugLagK} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {
@@ -288,12 +288,16 @@ function printStatus() {
         termPrint("Joining\n");
     }
 
-    termPrint(getUserName() + "\n");
-    for (const [id, rc] of remoteClients) {
+    function getPlayerIcon(id?:ClientID) {
+        const player = getPlayerByClient(id);
+        return player ? AVATARS[(player.client_ || player.anim0_) % Img.num_avatars] : "👁️";
+    }
+
+    termPrint(getPlayerIcon(getClientId()) + " [" + getUserName() + "]\n");
+    for (const [, rc] of remoteClients) {
         let status = "🔴";
-        if (isChannelOpen(rc)) {
-            const player = getPlayerByClient(id);
-            status = player ? "🟢" : "👀"; // 👁️
+        if (isChannelOpen(rc) && rc?.pc_.iceConnectionState[2] == "n") {
+            status = getPlayerIcon(rc.id_);
         }
         termPrint(status + " " + rc.name_ + "\n");
     }
@@ -955,9 +959,7 @@ function cloneState(): StateData {
         nextId_: state.nextId_,
         seed_: state.seed_,
         mapSeed_: state.mapSeed_,
-        actors_: state.actors_.map(list => list.map(a => {
-            return {...a};
-        }))
+        actors_: state.actors_.map(list => list.map(a => ({...a}))),
     };
 }
 
@@ -1291,23 +1293,22 @@ function drawTree(p: Actor) {
 /// SOUND ENV ///
 
 function playAt(actor: Actor, id: Snd) {
-    if (gameTic < lastAudioTic) {
-        return;
-    }
-    let lx = BOUNDS_SIZE / 2;
-    let ly = BOUNDS_SIZE / 2;
-    const p0 = getMyPlayer();
-    if (p0) {
-        lx = p0.x;
-        ly = p0.y;
-    }
+    if (gameTic >= lastAudioTic) {
+        let lx = BOUNDS_SIZE / 2;
+        let ly = BOUNDS_SIZE / 2;
+        const p0 = getMyPlayer();
+        if (p0) {
+            lx = p0.x;
+            ly = p0.y;
+        }
 
-    const dx = (actor.x - lx) / 256;
-    const dy = (actor.y - ly) / 256;
-    const v = 1 - Math.hypot(dx, dy);
-    if (v > 0) {
-        const pan = Math.max(-1, Math.min(1, dx));
-        play(snd[id], v, pan, false);
+        const dx = (actor.x - lx) / 256;
+        const dy = (actor.y - ly) / 256;
+        const v = 1 - Math.hypot(dx, dy);
+        if (v > 0) {
+            const pan = Math.max(-1, Math.min(1, dx));
+            play(snd[id], v, pan, false);
+        }
     }
 }
 

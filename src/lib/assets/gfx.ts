@@ -54,6 +54,8 @@ export const enum Img {
     num_avatars = 7,
 }
 
+export const AVATARS: string[] = ["💀","👹","🤡","🤖","🎃","🦝","🐙"];
+
 export const img: Texture[] = [];
 
 export function createCanvas(size: number, alpha: boolean) {
