@@ -296,7 +296,7 @@ function printStatus() {
     termPrint(getPlayerIcon(getClientId()) + " [" + getUserName() + "]\n");
     for (const [, rc] of remoteClients) {
         let status = "🔴";
-        if (isChannelOpen(rc) && rc?.pc_.iceConnectionState[2] == "n") {
+        if (isChannelOpen(rc) && rc?.pc_.iceConnectionState[1] == "o") {
             status = getPlayerIcon(rc.id_);
         }
         termPrint(status + " " + rc.name_ + "\n");
