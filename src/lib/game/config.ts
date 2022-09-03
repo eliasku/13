@@ -5,7 +5,7 @@ export const enum Const {
     InputDelay = 8,
 
     // ~35 bytes
-    Prediction = 0,
+    Prediction = 1,
 
     // ~130 bytes
     RLE = 0,
