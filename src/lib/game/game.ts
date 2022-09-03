@@ -1,5 +1,5 @@
 import {ClientID} from "../../shared/types";
-import {getClientId, getUserName, isChannelOpen, remoteClients} from "../net/messaging";
+import {disconnect, getClientId, getUserName, isChannelOpen, remoteClients} from "../net/messaging";
 import {GL, gl} from "../graphics/gl";
 import {play} from "../audio/context";
 import {termPrint} from "../utils/log";
@@ -224,7 +224,6 @@ function createSeedGameState() {
     netTic = 0;
     state.mapSeed_ = _SEED;
     recreateMap();
-    state.seed_ = _SEED;
     for (let i = 0; i < 32; ++i) {
         setRandomPosition(newItemRandomWeapon());
         setRandomPosition(newItemRandomEffect());
@@ -233,6 +232,7 @@ function createSeedGameState() {
         actor.btn_ = rand(2);
         pushActor(setRandomPosition(actor));
     }
+    state.seed_ = _SEED;
 }
 
 function updateFrameTime(ts: number) {
@@ -288,7 +288,7 @@ function printStatus() {
         termPrint("Joining\n");
     }
 
-    function getPlayerIcon(id?:ClientID) {
+    function getPlayerIcon(id?: ClientID) {
         const player = getPlayerByClient(id);
         return player ? AVATARS[(player.client_ || player.anim0_) % Img.num_avatars] : "👁️";
     }
@@ -583,12 +583,25 @@ export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
     // }
 }
 
+let disconnectTimes = 0;
 function cleaningUpClients() {
     for (const [id,] of clients) {
-        if (!isChannelOpen(remoteClients.get(id))) {
+        //if (!isChannelOpen(remoteClients.get(id))) {
+        if (!remoteClients.has(id)) {
             clients.delete(id);
         }
     }
+
+    for(const [,rc] of remoteClients) {
+        if(rc.pc_?.iceConnectionState[1] != "o" || rc.dc_?.readyState[0] != "o") {
+            if(++disconnectTimes > 60 * 5) {
+                disconnect();
+                alert("Connection lost");
+            }
+            return;
+        }
+    }
+    disconnectTimes = 0;
 }
 
 /// Game logic
