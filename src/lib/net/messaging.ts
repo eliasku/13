@@ -122,7 +122,7 @@ setInterval(() => {
     if (running && !messageUploading) {
         if (messagesToPost.length) {
             process();
-        } else if (performance.now() - lastPostTime >= 10000) {
+        } else if (performance.now() - lastPostTime > 1000) {
             // ping
             lastPostTime = performance.now();
             _post([clientId!, []]);
@@ -242,13 +242,13 @@ export async function connect() {
 export function disconnect() {
     if (running) {
         running = false;
-        for (const [id] of remoteClients) {
-            closePeerConnection(id);
-        }
         termSSE();
         messagesToPost.length = 0;
         callbacks.length = 0;
         //remoteClients.clear();
+        for (const [id] of remoteClients) {
+            closePeerConnection(id);
+        }
         clientId = undefined;
     } else if (connecting) {
         console.warn("currently connecting");

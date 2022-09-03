@@ -39,16 +39,15 @@ const clients = new Map<ClientID, ClientState>();
 
 setInterval(() => {
     for (const [, client] of clients) {
-        // if (!sendServerEvent(client, ServerEventName.Ping, "")) {
-        //     removeClient(client);
-        // }
-        sendServerEvent(client, ServerEventName.Ping, "");
+        if (!sendServerEvent(client, ServerEventName.Ping, "")) {
+            removeClient(client);
+        }
+        // sendServerEvent(client, ServerEventName.Ping, "");
     }
 }, 1000);
 
 function constructMessage(id: number, data: string) {
     return `id:${id}\ndata:${data}\n\n`;
-    // return "id:"+id+"\ndata:"+data+"\n\n";
 }
 
 
@@ -69,11 +68,14 @@ function broadcastServerEvent(from: ClientID, event: ServerEventName, data: stri
 }
 
 function removeClient(client: ClientState) {
-    //sendCloseServerEvent(client);
-    client.eventStream_.write(
-        constructMessage(-1, "")
-    );
-    client.eventStream_.end();
+    try {
+        //sendCloseServerEvent(client);
+        client.eventStream_.write(
+            constructMessage(-1, "")
+        );
+        client.eventStream_.end();
+    }
+    catch {}
 
     clients.delete(client.id_);
     broadcastServerEvent(client.id_, ServerEventName.ClientListChange, "-" + client.id_);
