@@ -107,9 +107,10 @@ export function pack(packet: Packet): ArrayBuffer {
     i32[ptr++] = packet.check_tic_;
     i32[ptr++] = packet.check_seed_;
 
-    packet.events_.sort((a, b) => a.tic_ - b.tic_);
-    let event_t = packet.events_.length ? packet.events_[0].tic_ : 0;
-    const event_end = packet.events_.length ? packet.events_.at(-1).tic_ : -1;
+    const events = packet.events_;
+    events.sort((a, b) => a.tic_ - b.tic_);
+    let event_t = events.length ? events[0].tic_ : 0;
+    const event_end = events.length ? events[events.length - 1].tic_ : -1;
     i32[ptr++] = event_end - event_t + 1;
     i32[ptr++] = event_t;
 

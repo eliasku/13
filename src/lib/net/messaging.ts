@@ -115,42 +115,27 @@ function requestHandler(req: Message) {
 export let _sseState = 0;
 
 let messageUploading = false;
-// let lastPostTime = 0;
 
-setInterval(() => {
+setInterval(async () => {
     if (_sseState > 1 && !messageUploading && messagesToPost.length) {
-        process();
-        // else if (performance.now() - lastPostTime > 1000) {
-        //     ping
-        // lastPostTime = performance.now();
-        // _post([clientId!, []]);
-        // }
+        messageUploading = true;
+        try {
+            const data: PostMessagesResponse = await _post([
+                clientId!,
+                messagesToPost
+            ]);
+            messagesToPost = messagesToPost.slice(data);
+        } catch (e) {
+            console.warn("http-messaging error", e);
+        }
+        messageUploading = false;
     }
 }, 100);
 
-async function process(): Promise<void> {
-    if (_sseState < 2 || !messagesToPost.length) {
-        return;
-    }
-
-    messageUploading = true;
-    try {
-        const data: PostMessagesResponse = await _post([
-            clientId!,
-            messagesToPost
-        ]);
-        messagesToPost = messagesToPost.slice(data);
-    } catch (e) {
-        console.warn("http-messaging error", e);
-    }
-    messageUploading = false;
-}
-
 async function _post(req: Request): Promise<PostMessagesResponse> {
-    const body = JSON.stringify(req);
     const response = await fetch(/*EventSourceUrl*/"_", {
         method: "POST",
-        body
+        body: JSON.stringify(req)
     });
     if (response.ok) {
         return await response.json() as PostMessagesResponse;
