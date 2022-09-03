@@ -39,7 +39,8 @@ const clients = new Map<ClientID, ClientState>();
 
 setInterval(() => {
     for (const [, client] of clients) {
-        if (!sendServerEvent(client, ServerEventName.Ping, "")) {
+        if ((performance.now() - client.ts_ > 5000) ||
+            !sendServerEvent(client, ServerEventName.Ping, "")) {
             removeClient(client);
         }
         // sendServerEvent(client, ServerEventName.Ping, "");

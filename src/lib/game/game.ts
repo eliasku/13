@@ -104,6 +104,7 @@ let waitToSpawn = false;
 let lastFrameTs = 0;
 let lastInputTic = 0;
 let lastInputCmd = 0;
+let lastAudioTic = 0;
 
 // static state
 let trees: Actor[] = [];
@@ -171,8 +172,25 @@ function requireClient(id: ClientID): Client {
     return client;
 }
 
-export function initTestGame() {
-    console.log("init game");
+export function resetGame() {
+    clients.clear();
+
+    // netTic = 0;
+    startTic = -1;
+    // gameTic = 0;
+    // prevTime = 0;
+    // startTime = 0;
+    // ackMin = 0;
+    joined = false;
+
+    waitToAutoSpawn = false;
+    waitToSpawn = false;
+
+    lastFrameTs = 0;
+    lastInputTic = 0;
+    lastInputCmd = 0;
+    lastAudioTic = 0;
+    console.log("reset game");
     // document.addEventListener("visibilitychange", () => {
     //     const active = !document.hidden;
     //     if (clientActive !== active) {
@@ -709,8 +727,8 @@ function simulateTic(dt: number) {
         roundActors(list);
     }
 
-    if (lastTickAudio < gameTic) {
-        lastTickAudio = gameTic;
+    if (lastAudioTic < gameTic) {
+        lastAudioTic = gameTic;
     }
 }
 
@@ -1266,10 +1284,8 @@ function drawTree(p: Actor) {
 
 /// SOUND ENV ///
 
-let lastTickAudio = 0;
-
 function playAt(actor: Actor, id: Snd) {
-    if (gameTic < lastTickAudio) {
+    if (gameTic < lastAudioTic) {
         return;
     }
     let lx = BOUNDS_SIZE / 2;

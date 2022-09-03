@@ -112,26 +112,24 @@ function requestHandler(req: Message) {
     );
 }
 
-let connecting = false;
-let running = false;
+export let _sseState = 0;
 
 let messageUploading = false;
-let lastPostTime = 0;
+// let lastPostTime = 0;
 
 setInterval(() => {
-    if (running && !messageUploading) {
-        if (messagesToPost.length) {
-            process();
-        } else if (performance.now() - lastPostTime > 1000) {
-            // ping
-            lastPostTime = performance.now();
-            _post([clientId!, []]);
-        }
+    if (_sseState > 1 && !messageUploading && messagesToPost.length) {
+        process();
+        // else if (performance.now() - lastPostTime > 1000) {
+        //     ping
+            // lastPostTime = performance.now();
+            // _post([clientId!, []]);
+        // }
     }
 }, 100);
 
 async function process(): Promise<void> {
-    if (!running || !messagesToPost.length) {
+    if (_sseState < 2 || !messagesToPost.length) {
         return;
     }
 
@@ -190,8 +188,7 @@ const onSSE: ((data: string) => void)[] = [
     // CLOSE
     termSSE,
     // PING
-    () => {
-    },
+    () => _post([clientId!, []]),
     // INIT
     (data: string) => {
         console.info("[SSE] got init " + data);
@@ -230,29 +227,26 @@ const onSSE: ((data: string) => void)[] = [
 ];
 
 export async function connect() {
-    if (running || connecting) return;
-    connecting = true;
-    //await debugSleep(100);
-    await initSSE();
-    //await debugSleep(100);
-    connecting = false;
-    running = true;
+    if (!_sseState) {
+        _sseState = 1;
+        await initSSE();
+        _sseState = 2;
+    }
 }
 
 export function disconnect() {
-    if (running) {
-        running = false;
+    if (_sseState > 1) {
         termSSE();
         messagesToPost.length = 0;
         callbacks.length = 0;
-        //remoteClients.clear();
         for (const [id] of remoteClients) {
             closePeerConnection(id);
         }
         clientId = undefined;
-    } else if (connecting) {
+    } else if (_sseState == 1) {
         console.warn("currently connecting");
     }
+    _sseState = 0;
 }
 
 export function getClientId(): ClientID {
