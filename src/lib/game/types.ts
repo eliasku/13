@@ -97,6 +97,7 @@ export interface Packet {
     // DEBUG: check current tic seed
     checkSeed_: number;
     checkTic_: number;
+    checkNextId_: number;
     /////
 
     client_: ClientID;

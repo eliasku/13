@@ -27,6 +27,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         tic_: i32[ptr++],
         checkTic_: i32[ptr++],
         checkSeed_: i32[ptr++] >>> 0,
+        checkNextId_: i32[ptr++],
         events_: []
     };
     const eventsCount = i32[ptr++];
@@ -53,6 +54,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         const state = newStateData();
         state.mapSeed_ = i32[ptr++] >>> 0;
         state.seed_ = i32[ptr++] >>> 0;
+        state.nextId_ = i32[ptr++];
         let count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
             const hdr = i32[ptr++];
@@ -106,6 +108,7 @@ export function pack(packet: Packet): ArrayBuffer {
     i32[ptr++] = packet.tic_;
     i32[ptr++] = packet.checkTic_;
     i32[ptr++] = packet.checkSeed_;
+    i32[ptr++] = packet.checkNextId_;
 
     const events = packet.events_;
     events.sort((a, b) => a.tic_ - b.tic_);
@@ -115,11 +118,13 @@ export function pack(packet: Packet): ArrayBuffer {
     i32[ptr++] = event_t;
 
     let i = 0;
+    // const debug :number[] = [];
     while (event_t <= event_end) {
         const e = packet.events_[i];
         const t = event_t++;
         if (t < e.tic_) {
             i32[ptr++] = 0;
+            // debug.push(0);
             continue;
         }
         ++i;
@@ -127,16 +132,21 @@ export function pack(packet: Packet): ArrayBuffer {
         if (e.btn_ !== undefined) flags |= 1;
         if (!!e.client_) flags |= 2;
         i32[ptr++] = flags;
+        // debug.push(flags);
         if (e.btn_ !== undefined) {
             i32[ptr++] = e.btn_;
+            // debug.push(e.btn_);
         }
         if (!!e.client_) {
             i32[ptr++] = e.client_;
+            // debug.push(e.client_);
         }
     }
+    // console.info(JSON.stringify(debug));
     if (packet.state_) {
         i32[ptr++] = packet.state_.mapSeed_;
         i32[ptr++] = packet.state_.seed_;
+        i32[ptr++] = packet.state_.nextId_;
         const list: Actor[] = [].concat(...packet.state_.actors_);
         i32[ptr++] = list.length;
         for (const p of list) {

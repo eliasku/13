@@ -355,6 +355,7 @@ function mangle_types(file, dest) {
             "sync_",
             "checkSeed_",
             "checkTic_",
+            "checkNextId_",
             "client_",
             "receivedOnSender_",
             "tic_",

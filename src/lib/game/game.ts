@@ -205,6 +205,7 @@ function recreateMap() {
     setSeed(state.mapSeed_);
     generateMapBackground();
     trees.length = 0;
+    const nextId = state.nextId_;
     for (let i = 0; i < 128; ++i) {
         const tree = newActorObject(ActorType.Tree);
         tree.btn_ = rand(2);
@@ -212,6 +213,8 @@ function recreateMap() {
         setRandomPosition(tree);
         trees.push(tree);
     }
+    setSeed(state.seed_);
+    state.nextId_ = nextId;
 }
 
 function pushActor(a: Actor) {
@@ -223,6 +226,7 @@ function createSeedGameState() {
     gameTic = 0;
     netTic = 0;
     state.mapSeed_ = _SEED;
+    state.seed_ = _SEED;
     recreateMap();
     for (let i = 0; i < 32; ++i) {
         setRandomPosition(newItemRandomWeapon());
@@ -493,6 +497,7 @@ function sendInput() {
                 events_: [],
                 checkSeed_: state.seed_,
                 checkTic_: lastTic,
+                checkNextId_: state.nextId_,
                 // t: lastTic + simTic + Const.InputDelay,
                 tic_: lastTic,
                 // send to Client info that we know already
@@ -505,11 +510,12 @@ function sendInput() {
                 packet.sync_ = cl.isPlaying_;
                 if (packet.tic_ > cl.acknowledgedTic_) {
                     packet.events_ = localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
+                    // console.info(JSON.stringify(packet.events_));
                     channels_sendObjectData(rc, pack(packet));
                 }
             } else {
                 packet.state_ = state;
-                packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
+                // packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
                 channels_sendObjectData(rc, pack(packet));
             }
         }
@@ -521,10 +527,9 @@ function processPacket(sender: Client, data: Packet) {
         startTic = data.tic_;
         prevTime = lastFrameTs;
         gameTic = data.tic_ + 1;
-        state = data.state_;
         netTic = 0;
+        state = data.state_;
         recreateMap();
-        setSeed(state.seed_);
 
         sender.tic_ = data.tic_;
         sender.acknowledgedTic_ = data.receivedOnSender_;
@@ -542,6 +547,10 @@ function processPacket(sender: Client, data: Packet) {
                 if (data.checkSeed_ !== _SEED) {
                     console.warn("seed mismatch from client " + data.client_ + " at tic " + data.checkTic_);
                     console.warn(data.checkSeed_ + " != " + _SEED);
+                }
+                if (data.checkNextId_ !== state.nextId_) {
+                    console.warn("gen id mismatch from client " + data.client_ + " at tic " + data.checkTic_);
+                    console.warn(data.checkNextId_ + " != " + state.nextId_);
                 }
             }
         }
@@ -584,6 +593,7 @@ export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
 }
 
 let disconnectTimes = 0;
+
 function cleaningUpClients() {
     for (const [id,] of clients) {
         //if (!isChannelOpen(remoteClients.get(id))) {
@@ -592,9 +602,9 @@ function cleaningUpClients() {
         }
     }
 
-    for(const [,rc] of remoteClients) {
-        if(rc.pc_?.iceConnectionState[1] != "o" || rc.dc_?.readyState[0] != "o") {
-            if(++disconnectTimes > 60 * 5) {
+    for (const [, rc] of remoteClients) {
+        if (rc.pc_?.iceConnectionState[1] != "o" || rc.dc_?.readyState[0] != "o") {
+            if (++disconnectTimes > 60 * 5) {
                 disconnect();
                 alert("Connection lost");
             }

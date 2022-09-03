@@ -15,7 +15,7 @@ function temper(x: number /* u32 */): number /* u32 */ {
 }
 
 // simple PRNG from libc with u32 state
-export let _SEED = ~Date.now();
+export let _SEED = Date.now() >>> 0;
 
 export function setSeed(state: number) {
     _SEED = state;
