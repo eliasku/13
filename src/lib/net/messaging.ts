@@ -122,8 +122,8 @@ setInterval(() => {
         process();
         // else if (performance.now() - lastPostTime > 1000) {
         //     ping
-            // lastPostTime = performance.now();
-            // _post([clientId!, []]);
+        // lastPostTime = performance.now();
+        // _post([clientId!, []]);
         // }
     }
 }, 100);
@@ -319,8 +319,9 @@ export async function connectToRemote(id: ClientID) {
         if (rc.pc_?.iceConnectionState[0] == "f") {
             sendOffer(rc, true);
             // TODO: debug
-            // } else if (rc.pc_.iceConnectionState === "disconnected") {
-            //     //disconnect();
+        } else if (rc.pc_.iceConnectionState[0] === "d") {
+            sendOffer(rc, true);
+            // disconnect();
         }
     };
     await sendOffer(rc);
