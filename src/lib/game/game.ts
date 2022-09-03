@@ -437,8 +437,11 @@ function tryRunTicks(ts: number): number {
     let frameN = framesPassed;
     let framesProcessed = 0;
     while (gameTic <= netTic && frameN > 0) {
-        processTicCommands(getCommandsForTic(gameTic));
-        simulateTic(1 / Const.NetFq);
+        {
+            processTicCommands(getCommandsForTic(gameTic));
+            simulateTic(1 / Const.NetFq);
+            state.seed_ = _SEED;
+        }
         ++gameTic;
         --frameN;
         ++framesProcessed;
@@ -471,6 +474,7 @@ function tryRunTicks(ts: number): number {
     //     ackMin = lastTic;
     // }
     localEvents = localEvents.filter(v => v.tic_ > Math.min(ackMin, lastTic));
+
     return framesProcessed;
 }
 
@@ -483,7 +487,7 @@ function sendInput() {
             const packet: Packet = {
                 client_: getClientId(),
                 events_: [],
-                check_seed_: _SEED,
+                check_seed_: state.seed_,
                 check_tic_: lastTic,
                 // t: lastTic + simTic + Const.InputDelay,
                 tic_: lastTic,
@@ -500,7 +504,6 @@ function sendInput() {
                     channels_sendObjectData(rc, pack(packet));
                 }
             } else {
-                state.seed_ = _SEED;
                 packet.state_ = state;
                 packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
                 channels_sendObjectData(rc, pack(packet));
@@ -965,7 +968,6 @@ function beginPrediction(): boolean {
     // if (!Const.Prediction) return false;
 
     // save state
-    state.seed_ = _SEED;
     lastState = state;
     state = cloneState();
 
@@ -977,8 +979,12 @@ function beginPrediction(): boolean {
     // while (time > 0) {
     while (time > 0 && simulatedFrames < Const.NetFq) {
         const dt = Math.min(time, 1 / Const.NetFq);
-        processTicCommands(getCommandsForTic(gameTic));
-        simulateTic(dt);
+        {
+            processTicCommands(getCommandsForTic(gameTic));
+            simulateTic(dt);
+            state.seed_ = _SEED;
+        }
+
         time -= dt;
         simulatedFrames += dt * Const.NetFq;
         ++gameTic;
