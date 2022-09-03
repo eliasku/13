@@ -25,8 +25,8 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         client_: i32[ptr++],
         receivedOnSender_: i32[ptr++],
         tic_: i32[ptr++],
-        check_tic_: i32[ptr++],
-        check_seed_: i32[ptr++] >>> 0,
+        checkTic_: i32[ptr++],
+        checkSeed_: i32[ptr++] >>> 0,
         events_: []
     };
     const eventsCount = i32[ptr++];
@@ -104,8 +104,8 @@ export function pack(packet: Packet): ArrayBuffer {
     i32[ptr++] = packet.client_;
     i32[ptr++] = packet.receivedOnSender_;
     i32[ptr++] = packet.tic_;
-    i32[ptr++] = packet.check_tic_;
-    i32[ptr++] = packet.check_seed_;
+    i32[ptr++] = packet.checkTic_;
+    i32[ptr++] = packet.checkSeed_;
 
     const events = packet.events_;
     events.sort((a, b) => a.tic_ - b.tic_);

@@ -178,7 +178,7 @@ console.info(report.join("\n"));
 function mangle_types(file, dest) {
 
     let src = readFileSync(file, "utf8");
-    const getIDRegex = (from) => new RegExp("([^\\w_$]|^)(" + from + ")([^\\w_$])", "gm");
+    const getIDRegex = (from) => new RegExp("([^\\w_$]|^)(" + from + ")([^\\w_$]|$)", "gm");
     const _rename = new Map();
     let alphaSize = 0;
 
@@ -194,7 +194,7 @@ function mangle_types(file, dest) {
     ];
 
     for (let i = 0; i < alphabet.length; ++i) {
-        alphabet[i] = "$" + alphabet[i] + "_";
+        alphabet[i] = "$" + i + "_";
     }
 
     function isRenamable(id) {
@@ -214,6 +214,7 @@ function mangle_types(file, dest) {
             if (isRenamable(f)) {
                 const renamed = _rename.get(f);
                 if (renamed) {
+                    console.info(f + " is used: " + renamed);
                     usedIds.add(renamed);
                 }
             }
@@ -236,7 +237,7 @@ function mangle_types(file, dest) {
                     }
                     const id = alphabet[idx];
                     _rename.set(f, id);
-                    //console.info("replace: " + f + " to " + id);
+                    console.info("replace: " + f + " to " + id);
                     usedIds.add(id);
                 }
             }
@@ -252,6 +253,7 @@ function mangle_types(file, dest) {
             "debugPacketByteLength_",
         ],
         [
+            // WeaponConfig
             "rate_",
             "launchTime_",
             "relaunchSpeed_",
@@ -274,6 +276,7 @@ function mangle_types(file, dest) {
             "bulletDamage_",
             "bulletLifetime_",
             "bulletHp_",
+            "bulletShellColor_",
         ],
         [
             "l_",
@@ -311,12 +314,12 @@ function mangle_types(file, dest) {
             // Actor
             "id_",
             "type_",
+            "client_",
             "btn_",
             "weapon_",
             "hp_",
             "anim0_",
             "animHit_",
-            "client_",
             "x",
             "y",
             "z",
@@ -325,8 +328,6 @@ function mangle_types(file, dest) {
             "w",
             "s",
             "t",
-            "p",
-            "q",
         ],
         [
             // Client
@@ -351,14 +352,14 @@ function mangle_types(file, dest) {
         ],
         [
             // Packet
+            "sync_",
+            "checkSeed_",
+            "checkTic_",
             "client_",
+            "receivedOnSender_",
             "tic_",
             "events_",
             "state_",
-            "sync_",
-            "check_seed_",
-            "check_tic_",
-            "receivedOnSender_",
         ],
         [
             // Camera
@@ -389,23 +390,38 @@ function mangle_types(file, dest) {
             "nextEventId_",
         ],
     ];
-
     for (let i = 0; i < archetypes.length; ++i) {
-        archetypes[i] = archetypes[i].filter(a => isRenamable(a) && findIdCount(a) > 0);
+        archetypes[i] = archetypes[i].filter(a => findIdCount(a) > 0);
         archetypes[i].sort((a, b) => findIdCount(b) - findIdCount(a));
     }
     archetypes = archetypes.filter(a => a.length > 0);
+    // solve unique fields
+    const unique = new Set();
+    const ntype = [];
+    for(let i = 0; i < archetypes.length; ++i) {
+        for(let j = 0; j < archetypes[i].length; ++j) {
+            const id = archetypes[i][j];
+            if(unique.has(id)) {
+                ntype.push(id);
+            }
+            else {
+                unique.add(id);
+            }
+        }
+    }
+    archetypes.unshift(ntype);
+
     for (const arch of archetypes) {
         addType(arch);
     }
 
     function findIdCount(id) {
-        return isRenamable(id) ? (getIDRegex(id).exec(src)?.length | 0) : 0;
+        return isRenamable(id) ? (getIDRegex(id).exec(src)?.length ?? 0) : 0;
     }
 
     for (const [from, to] of _rename) {
         src = src.replaceAll(getIDRegex(from), (a, c1, c2, c3) => {
-            //console.info(a + " => " + c1 + to + c3);
+            // console.info(a + " => " + c1 + to + c3);
             return c1 + to + c3;
         });
     }

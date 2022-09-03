@@ -53,8 +53,10 @@ export interface Actor extends Pos, Vel {
 
 export interface Client {
     id_: ClientID;
+
     // how many MY inputs are acknowledged by remote [remote-ack + 1 .. local tic]
     acknowledgedTic_: number;
+
     // completed inputs received from remote
     tic_: number;
 
@@ -93,8 +95,8 @@ export interface Packet {
     sync_: boolean;
 
     // DEBUG: check current tic seed
-    check_seed_: number;
-    check_tic_: number;
+    checkSeed_: number;
+    checkTic_: number;
     /////
 
     client_: ClientID;

@@ -94,7 +94,6 @@ let netTic = 0;
 let startTic = -1;
 let gameTic = 0;
 let prevTime = 0;
-let startTime = 0;
 let ackMin = 0;
 let joined = false;
 
@@ -174,6 +173,8 @@ function requireClient(id: ClientID): Client {
 
 export function resetGame() {
     clients.clear();
+    localEvents.length = 0;
+    receivedEvents.length = 0;
 
     // netTic = 0;
     startTic = -1;
@@ -221,7 +222,6 @@ function createSeedGameState() {
     startTic = 0;
     gameTic = 0;
     netTic = 0;
-    startTime = prevTime = lastFrameTs;
     state.mapSeed_ = _SEED;
     recreateMap();
     state.seed_ = _SEED;
@@ -491,8 +491,8 @@ function sendInput() {
             const packet: Packet = {
                 client_: getClientId(),
                 events_: [],
-                check_seed_: state.seed_,
-                check_tic_: lastTic,
+                checkSeed_: state.seed_,
+                checkTic_: lastTic,
                 // t: lastTic + simTic + Const.InputDelay,
                 tic_: lastTic,
                 // send to Client info that we know already
@@ -519,7 +519,7 @@ function sendInput() {
 function processPacket(sender: Client, data: Packet) {
     if (startTic < 0 && data.state_) {
         startTic = data.tic_;
-        startTime = prevTime = lastFrameTs;
+        prevTime = lastFrameTs;
         gameTic = data.tic_ + 1;
         state = data.state_;
         netTic = 0;
@@ -538,10 +538,10 @@ function processPacket(sender: Client, data: Packet) {
         }
     } else {
         if (process.env.NODE_ENV === "development") {
-            if (data.check_tic_ === (gameTic - 1)) {
-                if (data.check_seed_ !== _SEED) {
-                    console.warn("seed mismatch from client " + data.client_ + " at tic " + data.check_tic_);
-                    console.warn(data.check_seed_ + " != " + _SEED);
+            if (data.checkTic_ === (gameTic - 1)) {
+                if (data.checkSeed_ !== _SEED) {
+                    console.warn("seed mismatch from client " + data.client_ + " at tic " + data.checkTic_);
+                    console.warn(data.checkSeed_ + " != " + _SEED);
                 }
             }
         }
@@ -966,8 +966,8 @@ function cloneState(): StateData {
 function beginPrediction(): boolean {
     // global state
     let time = lastFrameTs - prevTime;
-    if (!Const.Prediction || time < 0.001) return false;
-    // if (!Const.Prediction) return false;
+    // if (!Const.Prediction || time < 0.001) return false;
+    if (!Const.Prediction) return false;
 
     // save state
     lastState = state;

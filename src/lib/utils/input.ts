@@ -63,7 +63,7 @@ function handleUp(pointer: Pointer) {
 }
 
 export function initInput() {
-    //oncontextmenu = e => e.preventDefault();
+    oncontextmenu = e => e.preventDefault();
     const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
         const scale = c.width / c.clientWidth;
         const bb = c.getBoundingClientRect();
@@ -123,14 +123,13 @@ export function initInput() {
     c.ontouchend = (e: TouchEvent) => {
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; ++i) {
-            const touch = e.changedTouches[i];
-            handleUp(getPointer(touch.identifier));
+            handleUp(getPointer(e.changedTouches[i].identifier));
         }
         // console.info("ontouchend");
     };
 
     /*document.*/onkeydown = (e: KeyboardEvent) => {
-        e.preventDefault();
+        // e.preventDefault();
         if (!keyboardState.has(e.code) && !e.repeat) {
             keyboardDown.add(e.code);
             keyboardState.add(e.code);

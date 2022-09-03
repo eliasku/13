@@ -20,14 +20,13 @@ const enum StartState {
 }
 
 let state = StartState.Loading;
+let music:AudioBufferSourceNode;
 const onStart = async () => {
     if (state !== StartState.TapToConnect) return;
     state = StartState.Connecting;
     //onbeforeunload = disconnect;
     await connect();
-
-    play(bgm[Bgm.main], 0.5, 0, true);
-
+    music = play(bgm[Bgm.main], 0.5, 0, true);
     resetGame();
     state = StartState.Connected;
 };
@@ -72,6 +71,9 @@ function doFrame(ts: number) {
             if (_sseState) {
                 updateTestGame(ts);
             } else {
+                if(music) {
+                    music.stop();
+                }
                 state = StartState.TapToConnect;
             }
             break;
