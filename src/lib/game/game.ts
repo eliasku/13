@@ -65,6 +65,7 @@ import {
     roundActors,
     setRandomPosition,
     testIntersection,
+    testRayWithSphere,
     updateActorPhysics,
     updateAnim,
     updateBody,
@@ -325,14 +326,15 @@ function getLocalEvent(tic: number): ClientEvent {
             return e;
         }
     }
-    const e: ClientEvent = {tic_: tic};
+    const e: ClientEvent = {tic_: tic, client_: getClientId()};
     localEvents.push(e);
     return e;
 }
 
-function getNextInputTic() {
+function getNextInputTic(tic: number) {
     const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
-    return gameTic + Math.max(Const.InputDelay, simTic);
+    return tic + Math.max(Const.InputDelay, simTic);
+    // return tic + Const.InputDelay;
 }
 
 function checkPlayerInput() {
@@ -345,18 +347,19 @@ function checkPlayerInput() {
         updateControls(player);
     }
 
-    const inputTic = getNextInputTic();
+    let inputTic = getNextInputTic(gameTic);
     // if (lastInputTic >= inputTic) {
-    if (lastInputTic > inputTic) {
-        return;
-    }
-    lastInputTic = inputTic;
+
+    // if (inputTic < lastInputTic) {
+    //     return;
+    // }
+    // lastInputTic = inputTic;
+
+
     // localEvents = localEvents.filter((x) => x.t < inputTic || x.spawn);
 
     let btn = 0;
     if (player) {
-        updateControls(player);
-
         if (moveX || moveY) {
             btn |= (packAngleByte(moveY, moveX) << 8) | ControlsFlag.Move;
             if (moveFast) {
@@ -389,7 +392,13 @@ function checkPlayerInput() {
         }
     }
 
+    // const lastInputBtn = getLastLocalBtn(inputTic);
+    // if (lastInputCmd !== btn) {
     if (lastInputCmd !== btn) {
+        if (inputTic <= lastInputTic) {
+            inputTic = lastInputTic + 1;
+        }
+        lastInputTic = inputTic;
         // copy flag in case of rewriting local event for ONE-SHOT events
         const g = getLocalEvent(inputTic);
         if (g.btn_ & ControlsFlag.Spawn) {
@@ -440,13 +449,20 @@ function calcNetTic() {
 }
 
 function tryRunTicks(ts: number): number {
+    if (startTic < 0) {
+        return;
+    }
     calcNetTic();
     const framesPassed = ((ts - prevTime) * Const.NetFq) | 0;
     let frameN = framesPassed;
     let framesProcessed = 0;
     while (gameTic <= netTic && frameN > 0) {
         {
-            processTicCommands(getCommandsForTic(gameTic));
+            for (const a of state.actors_) {
+                sortById(a);
+                roundActors(a);
+            }
+            processTicCommands(getTicCommands(gameTic));
             simulateTic(1 / Const.NetFq);
             state.seed_ = _SEED;
         }
@@ -478,20 +494,16 @@ function tryRunTicks(ts: number): number {
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
-    // if(ackMin > lastTic) {
-    //     ackMin = lastTic;
-    // }
     localEvents = localEvents.filter(v => v.tic_ > Math.min(ackMin, lastTic));
 
     return framesProcessed;
 }
 
 function sendInput() {
-    const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
     const lastTic = gameTic - 1;
     for (const [id, rc] of remoteClients) {
         if (isChannelOpen(rc)) {
-            const cl = clients.get(id);
+            const cl = requireClient(id);
             const packet: Packet = {
                 client_: getClientId(),
                 events_: [],
@@ -504,92 +516,130 @@ function sendInput() {
                 receivedOnSender_: lastTic,
                 sync_: false,
             };
-            if (cl) {
-                packet.tic_ = lastTic + Math.max(Const.InputDelay, simTic);
-                packet.receivedOnSender_ = cl.tic_;
-                packet.sync_ = cl.isPlaying_;
-                if (packet.tic_ > cl.acknowledgedTic_) {
-                    packet.events_ = localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
-                    // console.info(JSON.stringify(packet.events_));
-                    channels_sendObjectData(rc, pack(packet));
+            //if () {
+            packet.tic_ = getNextInputTic(lastTic);
+            packet.receivedOnSender_ = cl.tic_;
+            packet.sync_ = cl.isPlaying_;
+            if (packet.tic_ > cl.acknowledgedTic_) {
+                packet.events_ = localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
+                if (!cl.ready_) {
+                    packet.state_ = state;
+                } else if (cl.isPlaying_) {
+                    if(debugStateEnabled) {
+                        packet.state_ = state;
+                        packet.checkState_ = debugState;
+                    }
                 }
-            } else {
-                packet.state_ = state;
-                // packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
+                // if(packet.events_.length) {
+                //     console.info("SEND: " + JSON.stringify(packet.events_));
+                // }
                 channels_sendObjectData(rc, pack(packet));
             }
+            // if(!cl.isPlaying_) {
+            //     packet.state_ = state;
+            //     // packet.events_ = localEvents;
+            //     //packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
+            //     channels_sendObjectData(rc, pack(packet));
+            // }
         }
     }
 }
 
-function processPacket(sender: Client, data: Packet) {
-    if (startTic < 0 && data.state_) {
-        startTic = data.tic_;
-        prevTime = lastFrameTs;
-        gameTic = data.tic_ + 1;
-        netTic = 0;
-        state = data.state_;
-        recreateMap();
-
-        sender.tic_ = data.tic_;
-        sender.acknowledgedTic_ = data.receivedOnSender_;
-        for (const e of data.events_) {
-            const cld = requireClient(e.client_);
-            if (cld.tic_ < e.tic_) {
-                cld.tic_ = e.tic_;
-            }
-            cld.acknowledgedTic_ = data.receivedOnSender_;
-            receivedEvents.push(e);
-        }
-    } else {
-        if (process.env.NODE_ENV === "development") {
-            if (data.checkTic_ === (gameTic - 1)) {
-                if (data.checkSeed_ !== _SEED) {
-                    console.warn("seed mismatch from client " + data.client_ + " at tic " + data.checkTic_);
-                    console.warn(data.checkSeed_ + " != " + _SEED);
-                }
-                if (data.checkNextId_ !== state.nextId_) {
-                    console.warn("gen id mismatch from client " + data.client_ + " at tic " + data.checkTic_);
-                    console.warn(data.checkNextId_ + " != " + state.nextId_);
-                }
-            }
-        }
-
-        sender.ready_ = data.sync_;
-        // ignore old packets
-        if (data.tic_ > sender.tic_) {
-            sender.isPlaying_ = true;
-            for (const e of data.events_) {
-                if (e.tic_ > sender.tic_ /*alreadyReceivedTic*/) {
-                    receivedEvents.push(e);
-                }
-            }
-            sender.tic_ = data.tic_;
-        }
-        // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
-        // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
-        // then we will send only events from [acknowledgedTic + 1] index
-        if (sender.acknowledgedTic_ < data.receivedOnSender_) {
-            // update ack
-            sender.acknowledgedTic_ = data.receivedOnSender_;
+function getMinTic() {
+    let minTic = 0xFFFFFFFF;
+    for (const [, cl] of clients) {
+        if (minTic > cl.tic_) {
+            minTic = cl.tic_;
         }
     }
+    return minTic;
+}
+
+function processPacket(sender: Client, data: Packet) {
+    if (startTic < 0 && data.state_) {
+        if (data.checkTic_ > getMinTic()) {
+            startTic = data.checkTic_;
+            prevTime = lastFrameTs - 1 / Const.NetFq;
+            gameTic = data.checkTic_ + 1;
+            netTic = 0;
+            state = data.state_;
+            recreateMap();
+        }
+
+        // sender.tic_ = data.tic_;
+        // sender.acknowledgedTic_ = data.receivedOnSender_;
+        // for (const e of data.events_) {
+        //     const cld = requireClient(e.client_);
+        //     if (cld.tic_ < e.tic_) {
+        //         cld.tic_ = e.tic_;
+        //     }
+        //     cld.acknowledgedTic_ = data.receivedOnSender_;
+        //     receivedEvents.push(e);
+        // }
+        for (const cl of clients) {
+
+        }
+    }
+    // } else {
+    if (startTic > 0 && process.env.NODE_ENV === "development") {
+        if (data.checkTic_ === (gameTic - 1)) {
+            if (data.checkSeed_ !== _SEED) {
+                console.warn("seed mismatch from client " + data.client_ + " at tic " + data.checkTic_);
+                console.warn(data.checkSeed_ + " != " + _SEED);
+            }
+            if (data.checkNextId_ !== state.nextId_) {
+                console.warn("gen id mismatch from client " + data.client_ + " at tic " + data.checkTic_);
+                console.warn(data.checkNextId_ + " != " + state.nextId_);
+            }
+            if(debugStateEnabled) {
+                if (data.checkState_ && debugState) {
+                    assertStateEquality("[DEBUG] ", debugState, data.checkState_);
+                }
+                if (data.state_) {
+                    assertStateEquality("[FINAL] ", state, data.state_);
+                }
+            }
+        }
+    }
+
+    sender.ready_ = data.sync_;
+    // ignore old packets
+    if (data.tic_ > sender.tic_) {
+        sender.isPlaying_ = true;
+        // const debug = [];
+        for (const e of data.events_) {
+            if (e.tic_ > sender.tic_ /*alreadyReceivedTic*/) {
+                receivedEvents.push(e);
+                // debug.push(e);
+            }
+        }
+        // if(debug.length) {
+        //     console.info("R: " + JSON.stringify(debug));
+        // }
+        sender.tic_ = data.tic_;
+    }
+    // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
+    // just update last ack, now we know that Remote got `acknowledgedTic` amount of our tics,
+    // then we will send only events from [acknowledgedTic + 1] index
+    if (sender.acknowledgedTic_ < data.receivedOnSender_) {
+        // update ack
+        sender.acknowledgedTic_ = data.receivedOnSender_;
+    }
+    // }
 }
 
 export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
     const data = unpack(buffer);
     if (data) {
         processPacket(requireClient(from), data);
-    } else {
-        console.warn("income packet data size mismatch");
     }
-    // if (document.hidden) {
-    updateFrameTime(performance.now() / 1000);
-    if (tryRunTicks(lastFrameTs)) {
-        sendInput();
-        cleaningUpClients();
+    if (document.hidden) {
+        updateFrameTime(performance.now() / 1000);
+        if (tryRunTicks(lastFrameTs)) {
+            sendInput();
+            cleaningUpClients();
+        }
     }
-    // }
 }
 
 let disconnectTimes = 0;
@@ -618,7 +668,7 @@ function cleaningUpClients() {
 
 function processTicCommands(commands: ClientEvent[]) {
     for (const cmd of commands) {
-        const source = cmd.client_ ?? getClientId();
+        const source = cmd.client_;
         if (cmd.btn_ !== undefined) {
             const player = getPlayerByClient(source);
             if (player) {
@@ -627,6 +677,8 @@ function processTicCommands(commands: ClientEvent[]) {
                 const p = newActorObject(ActorType.Player);
                 p.client_ = source;
                 setRandomPosition(p);
+                p.x /= 10;
+                p.y /= 10;
                 p.hp_ = 10;
                 p.btn_ = cmd.btn_;
                 p.weapon_ = Const.StartWeapon;
@@ -639,7 +691,6 @@ function processTicCommands(commands: ClientEvent[]) {
 function sortById(list: Actor[]) {
     list.sort((a, b) => a.id_ - b.id_);
 }
-
 
 function sortList(list: Actor[]) {
     list.sort((a, b) => BOUNDS_SIZE * (a.y - b.y) + a.x - b.x);
@@ -689,13 +740,21 @@ function updateGameCamera(dt: number) {
 function simulateTic(dt: number) {
     //if(startTick < 0) return;
     updateGameCamera(dt);
-    for (const a of state.actors_) {
-        sortById(a);
-    }
+
     for (const a of state.actors_[ActorType.Player]) {
-        updateActorPhysics(a, dt);
         updatePlayer(a, dt);
     }
+
+    if(debugStateEnabled) {
+        debugState = cloneState();
+        debugState.seed_ = _SEED;
+        for (const a of debugState.actors_) roundActors(a);
+    }
+
+    for (const a of state.actors_[ActorType.Player]) {
+        updateActorPhysics(a, dt);
+    }
+
     for (const a of state.actors_[ActorType.Barrel]) updateActorPhysics(a, dt);
     for (const a of state.actors_[ActorType.Item]) {
         updateActorPhysics(a, dt);
@@ -753,12 +812,13 @@ function simulateTic(dt: number) {
         pushActor(p);
     }
 
-    for (const list of state.actors_) {
-        roundActors(list);
-    }
-
     if (lastAudioTic < gameTic) {
         lastAudioTic = gameTic;
+    }
+
+    for (const a of state.actors_) {
+        sortById(a);
+        roundActors(a);
     }
 }
 
@@ -774,26 +834,6 @@ function updateBodyInterCollisions(list: Actor[]) {
     }
 }
 
-function testRayWithSphere(from: Actor, target: Actor, dx: number, dy: number): boolean {
-    // const dd = Math.hypot(dx, dy);
-    // dx /= dd;
-    // dy /= dd;
-    const R = OBJECT_RADIUS_BY_TYPE[target.type_];
-    const fromZ = from.z;
-    const targetZ = target.z + OBJECT_HEIGHT[target.type_];
-    let Lx = target.x - from.x;
-    let Ly = target.y - from.y;
-    let Lz = targetZ - fromZ;
-    const len = Lx * dx + Ly * dy;
-    if (len < 0) return false;
-
-    Lx = from.x + dx * len;
-    Ly = from.y + dy * len;
-    Lz = fromZ;
-    const dSq = ((target.x - Lx) ** 2) + ((target.y - Ly) ** 2) + ((targetZ - Lz) ** 2);
-    const rSq = R * R;
-    return dSq <= rSq;
-}
 
 function kill(actor: Actor) {
     playAt(actor, Snd.death);
@@ -845,13 +885,15 @@ function hitWithBullet(actor: Actor, bullet: Actor) {
         if (bullet.hp_) {
             let nx = bullet.x - actor.x;
             let ny = bullet.y - actor.y;
-            const dist = Math.hypot(nx, ny);
-            const pen = OBJECT_RADIUS_BY_TYPE[actor.type_] + BULLET_RADIUS + 1;
-            nx /= dist;
-            ny /= dist;
-            reflectVelocity(bullet, nx, ny, 1);
-            bullet.x = actor.x + pen * nx;
-            bullet.y = actor.y + pen * ny;
+            const dist = Math.sqrt(nx * nx + ny * ny);
+            if (dist > 0) {
+                nx /= dist;
+                ny /= dist;
+                reflectVelocity(bullet, nx, ny, 1);
+                const pen = OBJECT_RADIUS_BY_TYPE[actor.type_] + BULLET_RADIUS + 1;
+                bullet.x = actor.x + pen * nx;
+                bullet.y = actor.y + pen * ny;
+            }
         }
     }
 }
@@ -876,11 +918,11 @@ function updateBulletCollision(b: Actor, list: Actor[]) {
 }
 
 function unpackAngleByte(angleByte: number) {
-    return 2 * Math.PI * (angleByte & 0xFF) / Const.AngleRes - Math.PI;
+    return 2 * Math.PI * (angleByte & 0x7F) / Const.AngleRes - Math.PI;
 }
 
 function packAngleByte(y: number, x: number) {
-    return (Const.AngleRes * (Math.PI + Math.atan2(y, x)) / (2 * Math.PI)) & 0xFF;
+    return (Const.AngleRes * (Math.PI + Math.atan2(y, x)) / (2 * Math.PI)) & 0x7F;
 }
 
 function updatePlayer(player: Actor, dt: number) {
@@ -970,10 +1012,11 @@ export function spawnFleshParticles(actor: Actor, expl: number, amount: number, 
     addFleshParticles(amount, actor, expl, vel);
 }
 
-function getCommandsForTic(tic: number): ClientEvent[] {
-    const events = localEvents.filter(v => v.tic_ === tic)
-        .concat(receivedEvents.filter(v => v.tic_ === tic));
-    events.sort((a, b) => (a.client_ ?? getClientId()) - (b.client_ ?? getClientId()));
+function getTicCommands(tic: number): ClientEvent[] {
+    const locEvents = localEvents.filter(v => v.tic_ === tic);
+    const recEvents = receivedEvents.filter(v => v.tic_ === tic);
+    const events = locEvents.concat(recEvents);
+    events.sort((a, b) => a.client_ - b.client_);
     return events;
 }
 
@@ -1001,11 +1044,12 @@ function beginPrediction(): boolean {
 
     simulatedFrames = 0;
     const savedGameTic = gameTic;
-    // while (time > 0) {
+
+    // && gameTic <= lastInputTic
     while (time > 0 && simulatedFrames < Const.NetFq) {
         const dt = Math.min(time, 1 / Const.NetFq);
         {
-            processTicCommands(getCommandsForTic(gameTic));
+            processTicCommands(getTicCommands(gameTic));
             simulateTic(dt);
             state.seed_ = _SEED;
         }
@@ -1337,6 +1381,8 @@ function playAt(actor: Actor, id: Snd) {
 
 //// DEBUG UTILITIES ////
 
+let debugState: StateData;
+let debugStateEnabled = false;
 let drawCollisionEnabled = false;
 let debugCheckAvatar = 0;
 let prevRenderTic = 0;
@@ -1406,7 +1452,9 @@ function checkDebugInput() {
     if (keyboardDown.has("Digit3")) {
         setDebugLagK((_debugLagK + 1) % 3);
     }
-
+    if (keyboardDown.has("Digit4")) {
+        debugStateEnabled = !debugStateEnabled;
+    }
 }
 
 function drawActorBoundingSphere(p: Actor) {
@@ -1423,6 +1471,56 @@ function drawCollisions() {
     if (drawCollisionEnabled) {
         for (const p of drawList) {
             drawActorBoundingSphere(p);
+        }
+    }
+}
+
+function assertStateEquality(label: string, a: StateData, b: StateData) {
+
+    if (a.nextId_ != b.nextId_) {
+        console.warn(label + "NEXT ID MISMATCH", a.nextId_, b.nextId_);
+    }
+    if (a.seed_ != b.seed_) {
+        console.warn(label + "SEED MISMATCH", a.seed_, b.seed_);
+    }
+    if (a.mapSeed_ != b.mapSeed_) {
+        console.warn(label + "MAP SEED MISMATCH", a.mapSeed_, b.mapSeed_);
+    }
+    for (let i = 0; i < a.actors_.length; ++i) {
+        const listA = a.actors_[i];
+        const listB = b.actors_[i];
+        if (listA.length == listB.length) {
+            for (let j = 0; j < listA.length; ++j) {
+                const actorA = listA[j];
+                const actorB = listB[j];
+                const fields = [
+                    "x",
+                    "y",
+                    "z",
+                    "u",
+                    "v",
+                    "w",
+                    "s",
+                    "t",
+                    "id_",
+                    "type_",
+                    "client_",
+                    "btn_",
+                    "weapon_",
+                    "hp_",
+                    "anim0_",
+                    "animHit_",
+                ];
+                for (const f of fields) {
+                    if ((actorA as any)[f] !== (actorB as any)[f]) {
+                        console.warn(label + "ACTOR DATA mismatch, field: " + f);
+                        console.warn("    MY: " + f + " = " + (actorA as any)[f]);
+                        console.warn("REMOTE: " + f + " = " + (actorB as any)[f]);
+                    }
+                }
+            }
+        } else {
+            console.warn(label + "ACTOR LIST " + i + " SIZE MISMATCH", listA.length, listB.length);
         }
     }
 }

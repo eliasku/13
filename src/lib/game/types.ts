@@ -36,7 +36,7 @@ export interface Actor extends Pos, Vel {
     id_: number;
     type_: ActorType;
     client_: ClientID;
-    btn_?: number;
+    btn_: number;
     // stpq
     s?: number;
     t?: number;
@@ -71,7 +71,7 @@ export interface ClientEvent {
     tic_: number;
     btn_?: number;
     // will be populated from packet info
-    client_?: ClientID;
+    client_: ClientID;
 }
 
 export interface StateData {
@@ -98,6 +98,7 @@ export interface Packet {
     checkSeed_: number;
     checkTic_: number;
     checkNextId_: number;
+    checkState_?: StateData;
     /////
 
     client_: ClientID;

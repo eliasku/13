@@ -9,14 +9,12 @@ const _rleBuffer = new Uint8Array(1024 * 16 * 4);
 
 export function unpack(data: ArrayBuffer): Packet | undefined {
     const i32 = Const.RLE ? _packI32 : new Int32Array(data);
-    // const u32 = Const.RLE ? _packU32 : new Uint32Array(data);
-    // const f64 = Const.RLE ? _packF64 : new Float64Array(data);
     const gotByteLength = Const.RLE ? decodeRLE(new Uint8Array(data), data.byteLength, _packU8) : data.byteLength;
-    // const gotByteLength = Const.RLE ? decodeRLE(new Uint8Array(data), data.byteLength, _packU8) : data.byteLength;
 
     let ptr = 0;
     const packetDwordsSize = i32[ptr++];
     if (packetDwordsSize * 4 > gotByteLength) {
+        console.warn("income packet size mismatch: ", packetDwordsSize * 4, " expected, actual: ", gotByteLength);
         return;
     }
     const flags0 = i32[ptr++];
@@ -34,21 +32,14 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
     let event_t = i32[ptr++];
     // 10
     for (let i = 0; i < eventsCount; ++i) {
-        const e: ClientEvent = {
-            tic_: event_t++,
-        };
-        const flags = i32[ptr++];
-        const hasBtn = flags & 1;
-        const hasClientID = flags & 2;
-        if (hasBtn) {
-            e.btn_ = i32[ptr++];
+        const btn = i32[ptr++];
+        if (btn != -1) {
+            packet.events_.push({
+                tic_: event_t + i,
+                client_: packet.client_,
+                btn_: btn,
+            });
         }
-        if (hasClientID) {
-            e.client_ = i32[ptr++];
-        } else {
-            e.client_ = packet.client_;
-        }
-        packet.events_.push(e);
     }
     if (flags0 & 2) {
         const state = newStateData();
@@ -75,18 +66,56 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                 anim0_,
                 animHit_: anim_,
 
-                x: i32[ptr++] / 1000,
-                y: i32[ptr++] / 1000,
-                z: i32[ptr++] / 1000,
-                u: i32[ptr++] / 1000,
-                v: i32[ptr++] / 1000,
-                w: i32[ptr++] / 1000,
-                s: i32[ptr++] / 1000,
-                t: i32[ptr++] / 1000,
+                x: i32[ptr++] / Const.NetPrecision,
+                y: i32[ptr++] / Const.NetPrecision,
+                z: i32[ptr++] / Const.NetPrecision,
+                u: i32[ptr++] / Const.NetPrecision,
+                v: i32[ptr++] / Const.NetPrecision,
+                w: i32[ptr++] / Const.NetPrecision,
+                s: i32[ptr++] / Const.NetPrecision,
+                t: i32[ptr++] / Const.NetPrecision,
             };
             state.actors_[p.type_].push(p);
         }
         packet.state_ = state;
+    }
+    if (flags0 & 4) {
+        const state = newStateData();
+        state.mapSeed_ = i32[ptr++] >>> 0;
+        state.seed_ = i32[ptr++] >>> 0;
+        state.nextId_ = i32[ptr++];
+        let count = i32[ptr++];
+        for (let i = 0; i < count; ++i) {
+            const hdr = i32[ptr++];
+            const c = i32[ptr++];
+            const btn_ = i32[ptr++];
+
+            const anim = i32[ptr++];
+            const anim0_ = anim & 0xFF;
+            const anim_ = (anim >> 8) & 0xFF;
+
+            const p: Actor = {
+                id_: i32[ptr++],
+                type_: hdr & 0xFF,
+                hp_: (hdr >> 8) & 0xFF,
+                weapon_: (hdr >> 16) & 0xFF,
+                client_: c,
+                btn_,
+                anim0_,
+                animHit_: anim_,
+
+                x: i32[ptr++] / Const.NetPrecision,
+                y: i32[ptr++] / Const.NetPrecision,
+                z: i32[ptr++] / Const.NetPrecision,
+                u: i32[ptr++] / Const.NetPrecision,
+                v: i32[ptr++] / Const.NetPrecision,
+                w: i32[ptr++] / Const.NetPrecision,
+                s: i32[ptr++] / Const.NetPrecision,
+                t: i32[ptr++] / Const.NetPrecision,
+            };
+            state.actors_[p.type_].push(p);
+        }
+        packet.checkState_ = state;
     }
     return packet;
 }
@@ -100,6 +129,9 @@ export function pack(packet: Packet): ArrayBuffer {
         let flags0 = packet.sync_ ? 1 : 0;
         if (!!packet.state_) {
             flags0 |= 2;
+        }
+        if( !! packet.checkState_) {
+            flags0 |= 4;
         }
         i32[ptr++] = flags0;
     }
@@ -121,26 +153,14 @@ export function pack(packet: Packet): ArrayBuffer {
     // const debug :number[] = [];
     while (event_t <= event_end) {
         const e = packet.events_[i];
-        const t = event_t++;
-        if (t < e.tic_) {
-            i32[ptr++] = 0;
-            // debug.push(0);
-            continue;
+        if (event_t++ == e.tic_) {
+            ++i;
+            i32[ptr++] = e.btn_ ?? -1;
         }
-        ++i;
-        let flags = 0;
-        if (e.btn_ !== undefined) flags |= 1;
-        if (!!e.client_) flags |= 2;
-        i32[ptr++] = flags;
-        // debug.push(flags);
-        if (e.btn_ !== undefined) {
-            i32[ptr++] = e.btn_;
-            // debug.push(e.btn_);
+        else {
+            i32[ptr++] = -1;
         }
-        if (!!e.client_) {
-            i32[ptr++] = e.client_;
-            // debug.push(e.client_);
-        }
+        // debug.push(e.btn_);
     }
     // console.info(JSON.stringify(debug));
     if (packet.state_) {
@@ -150,22 +170,43 @@ export function pack(packet: Packet): ArrayBuffer {
         const list: Actor[] = [].concat(...packet.state_.actors_);
         i32[ptr++] = list.length;
         for (const p of list) {
-            i32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16);
+            i32[ptr++] = p.type_ | ((p.hp_ & 0xFF) << 8) | ((p.weapon_ & 0xFF) << 16);
             i32[ptr++] = p.client_;
             i32[ptr++] = p.btn_;
             i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
             i32[ptr++] = p.id_;
-            i32[ptr++] = p.x * 1000;
-            i32[ptr++] = p.y * 1000;
-            i32[ptr++] = p.z * 1000;
-            i32[ptr++] = p.u * 1000;
-            i32[ptr++] = p.v * 1000;
-            i32[ptr++] = p.w * 1000;
-            i32[ptr++] = p.s * 1000;
-            i32[ptr++] = p.t * 1000;
+            i32[ptr++] = p.x * Const.NetPrecision;
+            i32[ptr++] = p.y * Const.NetPrecision;
+            i32[ptr++] = p.z * Const.NetPrecision;
+            i32[ptr++] = p.u * Const.NetPrecision;
+            i32[ptr++] = p.v * Const.NetPrecision;
+            i32[ptr++] = p.w * Const.NetPrecision;
+            i32[ptr++] = p.s * Const.NetPrecision;
+            i32[ptr++] = p.t * Const.NetPrecision;
         }
     }
-
+    if (packet.checkState_) {
+        i32[ptr++] = packet.checkState_.mapSeed_;
+        i32[ptr++] = packet.checkState_.seed_;
+        i32[ptr++] = packet.checkState_.nextId_;
+        const list: Actor[] = [].concat(...packet.checkState_.actors_);
+        i32[ptr++] = list.length;
+        for (const p of list) {
+            i32[ptr++] = p.type_ | ((p.hp_ & 0xFF) << 8) | ((p.weapon_ & 0xFF) << 16);
+            i32[ptr++] = p.client_;
+            i32[ptr++] = p.btn_;
+            i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
+            i32[ptr++] = p.id_;
+            i32[ptr++] = p.x * Const.NetPrecision;
+            i32[ptr++] = p.y * Const.NetPrecision;
+            i32[ptr++] = p.z * Const.NetPrecision;
+            i32[ptr++] = p.u * Const.NetPrecision;
+            i32[ptr++] = p.v * Const.NetPrecision;
+            i32[ptr++] = p.w * Const.NetPrecision;
+            i32[ptr++] = p.s * Const.NetPrecision;
+            i32[ptr++] = p.t * Const.NetPrecision;
+        }
+    }
     // save packet dwords size to header
     i32[0] = ptr;
 

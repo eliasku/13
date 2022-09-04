@@ -5,7 +5,7 @@ import {fx_chance, fx_range} from "../utils/rnd";
 function sendWithDebugLag(client: RemoteClient, data: ArrayBuffer) {
     client.debugPacketByteLength_ = data.byteLength;
     if (data.byteLength >= 1200 / 2) {
-        console.warn("HUGE packet could not be delivered: " + data.byteLength);
+        //console.warn("HUGE packet could not be delivered: " + data.byteLength);
         //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
     }
     if(!_debugLagK) {

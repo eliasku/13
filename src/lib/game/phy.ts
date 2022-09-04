@@ -166,15 +166,39 @@ export function updateBodyCollisions(a: Actor, list: Actor[], ioffset: number) {
     }
 }
 
+export function testRayWithSphere(from: Actor, target: Actor, dx: number, dy: number): boolean {
+    const R = OBJECT_RADIUS_BY_TYPE[target.type_];
+    const fromZ = from.z;
+    const targetZ = target.z + OBJECT_HEIGHT[target.type_];
+    let Lx = target.x - from.x;
+    let Ly = target.y - from.y;
+    let Lz = targetZ - fromZ;
+    const len = Lx * dx + Ly * dy;
+    if (len < 0) return false;
+
+    Lx = from.x + dx * len;
+    Ly = from.y + dy * len;
+    Lz = fromZ;
+    const dSq = sqrLength3(target.x - Lx, target.y - Ly, targetZ - Lz);
+    const rSq = R * R;
+    return dSq <= rSq;
+}
+
+const __I32 = new Int32Array(1);
+function roundI32(f:number):number {
+    __I32[0] = f * Const.NetPrecision;
+    return __I32[0] / Const.NetPrecision;
+}
+
 export function roundActors(list:Actor[]) {
     for(const a of list) {
-        a.x = ((a.x * 1000) | 0) / 1000;
-        a.y = ((a.y * 1000) | 0) / 1000;
-        a.z = ((a.z * 1000) | 0) / 1000;
-        a.u = ((a.u * 1000) | 0) / 1000;
-        a.v = ((a.v * 1000) | 0) / 1000;
-        a.w = ((a.w * 1000) | 0) / 1000;
-        a.s = ((a.s * 1000) | 0) / 1000;
-        a.t = ((a.t * 1000) | 0) / 1000;
+        a.x = roundI32(a.x);
+        a.y = roundI32(a.y);
+        a.z = roundI32(a.z);
+        a.u = roundI32(a.u);
+        a.v = roundI32(a.v);
+        a.w = roundI32(a.w);
+        a.s = roundI32(a.s);
+        a.t = roundI32(a.t);
     }
 }
