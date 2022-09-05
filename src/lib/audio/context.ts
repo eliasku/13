@@ -1,9 +1,7 @@
 export const audioContext = new AudioContext();
 
-// const channels: AudioBufferSourceNode[] = [];
-
-export function play(audioBuffer: AudioBuffer, vol: number, pan: number, loop: boolean): AudioBufferSourceNode {
-    const testMasterVol = 0.05;
+export const play = (audioBuffer: AudioBuffer, vol: number, pan: number, loop: boolean): AudioBufferSourceNode => {
+    const testMasterVol = 0.8;
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
 
@@ -18,11 +16,10 @@ export function play(audioBuffer: AudioBuffer, vol: number, pan: number, loop: b
     source.connect(panNode);
     source.loop = loop;
     source.start();
-    //channels.push(source);
     return source;
 }
 
-export function unlockAudio() {
+export const unlockAudio = () => {
     if (audioContext.state[0] == "s") {
         // audioContext.resume().then(() => {
         //     console.info("AudioContext resumed");

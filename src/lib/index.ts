@@ -1,16 +1,13 @@
 import {_sseState, connect, getUserName, setUserName} from "./net/messaging";
-import {initInput, isAnyKeyDown, updateInput} from "./utils/input";
+import {isAnyKeyDown, updateInput} from "./utils/input";
 import {termClear, termFlush, termPrint} from "./utils/log";
 import {resetGame, updateTestGame} from "./game/game";
-import {initDraw2d} from "./graphics/draw2d";
 import {loadAtlas} from "./assets/gfx";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
-import {Bgm, bgm, loadMusic} from "./assets/bgm";
-import {loadZZFX} from "./assets/sfx";
+import {Bgm, bgm} from "./assets/bgm";
 
-initInput();
-initDraw2d();
+// initDraw2d();
 
 const enum StartState {
     Loading = 0,
@@ -20,7 +17,7 @@ const enum StartState {
 }
 
 let state = StartState.Loading;
-let music:AudioBufferSourceNode;
+let music: AudioBufferSourceNode;
 const onStart = async () => {
     if (state !== StartState.TapToConnect) return;
     state = StartState.Connecting;
@@ -33,8 +30,8 @@ const onStart = async () => {
 
 new FontFace("e", `url(e.ttf)`).load().then((font) => {
     document.fonts.add(font);
-    loadZZFX();
-    loadMusic();
+    // loadZZFX();
+    // loadMusic();
     loadAtlas();
     if (!getUserName()) {
         const defaultName = "guest";
@@ -43,13 +40,13 @@ new FontFace("e", `url(e.ttf)`).load().then((font) => {
     state = StartState.TapToConnect;
 });
 
-function raf(ts: DOMHighResTimeStamp) {
+const raf = (ts: DOMHighResTimeStamp) => {
     doFrame(ts / 1000);
     updateInput();
     requestAnimationFrame(raf);
 }
 
-function doFrame(ts: number) {
+const doFrame = (ts: number) => {
     updateFpsMeter(ts);
     termClear();
     termPrint(`FPS: ${fps}\n`);
@@ -71,7 +68,7 @@ function doFrame(ts: number) {
             if (_sseState) {
                 updateTestGame(ts);
             } else {
-                if(music) {
+                if (music) {
                     music.stop();
                 }
                 state = StartState.TapToConnect;

@@ -1,6 +1,6 @@
 // https://github.com/MichaelDipperstein/rle/blob/master/rle.c
 
-export function decodeRLE(src: Uint8Array, size: number, dest: Uint8Array): number {
+export const decodeRLE = (src: Uint8Array, size: number, dest: Uint8Array): number => {
     let i = 0;
     let ptr = 0;
     const EOF = 0x100;
@@ -22,7 +22,7 @@ export function decodeRLE(src: Uint8Array, size: number, dest: Uint8Array): numb
     return ptr;
 }
 
-export function encodeRLE(src: Uint8Array, size: number, dest: Uint8Array): number {
+export const encodeRLE = (src: Uint8Array, size: number, dest: Uint8Array): number => {
     const EOF = 0x100;
     let ptr = 0;
     let prevChar = EOF;

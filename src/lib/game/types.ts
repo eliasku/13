@@ -21,15 +21,15 @@ export const enum EffectItemType {
 }
 
 export interface Pos {
-    x: number;
-    y: number;
-    z: number;
+    x_: number;
+    y_: number;
+    z_: number;
 }
 
 export interface Vel {
-    u: number;
-    v: number;
-    w: number;
+    u_: number;
+    v_: number;
+    w_: number;
 }
 
 export interface Actor extends Pos, Vel {
@@ -38,8 +38,8 @@ export interface Actor extends Pos, Vel {
     client_: ClientID;
     btn_: number;
     // stpq
-    s?: number;
-    t?: number;
+    s_?: number;
+    t_?: number;
     // p?: number;
     // q?: number;
 
@@ -79,16 +79,16 @@ export interface StateData {
     seed_: number;
     actors_: Actor[][];
     nextId_: number;
+    scores_: Record<number, number>;
 }
 
-export function newStateData(): StateData {
-    return {
-        mapSeed_: 0,
-        seed_: 0,
-        actors_: [[], [], [], []],
-        nextId_: 0,
-    };
-}
+export const newStateData = (): StateData => ({
+    mapSeed_: 0,
+    seed_: 0,
+    actors_: [[], [], [], []],
+    nextId_: 0,
+    scores_: {},
+});
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
 export interface Packet {
@@ -113,18 +113,11 @@ export interface Packet {
     state_?: StateData;
 }
 
-
-export interface Particle {
-    x: number;
-    y: number;
-    z: number;
-    u: number;
-    v: number;
-    w: number;
+export interface Particle extends Pos, Vel {
     // angle
-    a: number;
+    a_: number;
     // rotation speed
-    r: number;
+    r_: number;
 
     scale_: number;
     color_: number;

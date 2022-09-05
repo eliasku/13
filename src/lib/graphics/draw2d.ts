@@ -54,7 +54,7 @@ const maxBatch = 65535;
 let count = 0;
 let currentTexture: WebGLTexture = null;
 
-function compileShader(source: string, type: GLenum): WebGLShader {
+const compileShader = (source: string, type: GLenum): WebGLShader => {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
@@ -69,12 +69,12 @@ function compileShader(source: string, type: GLenum): WebGLShader {
     return shader;
 }
 
-function createBuffer(type: GLenum, src: ArrayBufferLike, usage: GLenum) {
+const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
     gl.bindBuffer(type, gl.createBuffer());
     gl.bufferData(type, src, usage);
 }
 
-function bindAttrib(name: string, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) {
+const bindAttrib = (name: string, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
     const location = gl.getAttribLocation(program, name);
     gl.enableVertexAttribArray(location);
     gl.vertexAttribPointer(location, size, type, norm, stride, offset);
@@ -93,11 +93,11 @@ let program: WebGLProgram | null = null;
 let matrixLocation: WebGLUniformLocation = null;
 let textureLocation: WebGLUniformLocation = null;
 
-function getUniformLocation(name: string): WebGLUniformLocation | null {
+const getUniformLocation = (name: string): WebGLUniformLocation | null => {
     return gl.getUniformLocation(program, name);
 }
 
-export function initDraw2d() {
+// export const initDraw2d = () => {
     program = gl.createProgram();
 
     gl.attachShader(program, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
@@ -141,7 +141,6 @@ export function initDraw2d() {
 
     matrixLocation = getUniformLocation(GLSLX_NAME_M);
     textureLocation = getUniformLocation(GLSLX_NAME_X);
-}
 
 export interface Camera {
     atX_: number;
@@ -162,57 +161,57 @@ export let camera: Camera = {
 };
 
 export interface Texture {
-    i?: WebGLTexture;
-    w: number;
-    h: number;
+    texture_?: WebGLTexture;
+    w_: number;
+    h_: number;
     // anchor
-    x: number;
-    y: number;
+    x_: number;
+    y_: number;
     // uv rect (stpq)
-    s: number;
-    t: number;
-    p: number;
-    q: number;
+    u0_: number;
+    v0_: number;
+    u1_: number;
+    v1_: number;
 }
 
-export function getSubTexture(src: Texture, x: number, y: number, w: number, h: number, ax: number, ay: number): Texture {
+export const getSubTexture = (src: Texture, x: number, y: number, w: number, h: number, ax: number, ay: number): Texture => {
     return {
-        i: src.i,
-        w, h,
-        x: ax,
-        y: ay,
-        s: x / src.w,
-        t: y / src.h,
-        p: w / src.w,
-        q: h / src.h,
+        texture_: src.texture_,
+        w_: w, h_: h,
+        x_: ax,
+        y_: ay,
+        u0_: x / src.w_,
+        v0_: y / src.h_,
+        u1_: w / src.w_,
+        v1_: h / src.h_,
     };
 }
 
-export function createTexture(size: number): Texture {
+export const createTexture = (size: number): Texture => {
     return {
-        i: gl.createTexture(),
-        w: size,
-        h: size,
-        x: 0,
-        y: 0,
-        s: 0,
-        t: 0,
-        p: 1,
-        q: 1
+        texture_: gl.createTexture(),
+        w_: size,
+        h_: size,
+        x_: 0,
+        y_: 0,
+        u0_: 0,
+        v0_: 0,
+        u1_: 1,
+        v1_: 1
     };
 }
 
-export function uploadTexture(glTexture: WebGLTexture, source: TexImageSource): void {
+export const uploadTexture = (glTexture: WebGLTexture, source: TexImageSource): void => {
     gl.bindTexture(GL.TEXTURE_2D, glTexture);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
 }
 
-export function beginRender(
+export const beginRender = (
     width: number = gl.drawingBufferWidth,
     height: number = gl.drawingBufferHeight
-) {
+) => {
     const {atX_, atY_, toX_, toY_, angle_, scale_} = camera;
 
     const x = atX_ - width * toX_;
@@ -263,7 +262,7 @@ export function beginRender(
     gl.viewport(0, 0, width, Math.abs(height));
 }
 
-export function flush() {
+export const flush = () => {
     if (count) {
         gl.bindTexture(GL.TEXTURE_2D, currentTexture);
         gl.uniform1i(textureLocation, 0);
@@ -273,25 +272,25 @@ export function flush() {
     }
 }
 
-export function draw(texture: Texture, x: number, y: number, r: number, sx: number, sy: number, alpha?: number, color?: number, additive?: number, offset?: number) {
-    if (currentTexture !== texture.i || count === maxBatch) {
+export const draw = (texture: Texture, x: number, y: number, r: number, sx: number, sy: number, alpha?: number, color?: number, additive?: number, offset?: number) => {
+    if (currentTexture !== texture.texture_ || count === maxBatch) {
         flush();
-        currentTexture = texture.i;
+        currentTexture = texture.texture_;
     }
 
     let i = count * floatSize;
 
-    floatView[i++] = texture.x;
-    floatView[i++] = texture.y;
-    floatView[i++] = sx * texture.w;
-    floatView[i++] = sy * texture.h;
+    floatView[i++] = texture.x_;
+    floatView[i++] = texture.y_;
+    floatView[i++] = sx * texture.w_;
+    floatView[i++] = sy * texture.h_;
     floatView[i++] = r;
     floatView[i++] = x;
     floatView[i++] = y;
-    floatView[i++] = texture.s;
-    floatView[i++] = texture.t;
-    floatView[i++] = texture.p;
-    floatView[i++] = texture.q;
+    floatView[i++] = texture.u0_;
+    floatView[i++] = texture.v0_;
+    floatView[i++] = texture.u1_;
+    floatView[i++] = texture.v1_;
     uintView[i++] = ((((alpha ?? 1) * 0xFF) << 24) | ((color ?? 0xFFFFFF) & 0xFFFFFF)) >>> 0;
     uintView[i++] = (((additive * 0xFF) << 24) | (offset & 0xFFFFFF)) >>> 0;
 

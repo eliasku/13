@@ -14,6 +14,17 @@ export const enum Img {
     circle_4_70p,
     circle_16,
 
+    weapon0,
+    weapon1,
+    weapon2,
+    weapon3,
+    weapon4,
+    weapon5,
+    weapon6,
+    weapon7,
+    weapon8,
+    weapon9,
+
     avatar0,
     avatar1,
     avatar2,
@@ -27,17 +38,6 @@ export const enum Img {
     npc1,
     npc2,
 
-    weapon0,
-    weapon1,
-    weapon2,
-    weapon3,
-    weapon4,
-    weapon5,
-    weapon6,
-    weapon7,
-    weapon8,
-    weapon9,
-
     barrel0,
     barrel1,
     barrel2,
@@ -48,9 +48,9 @@ export const enum Img {
     tree0,
     tree1,
 
-    particle_shell,
     particle_flesh0,
     particle_flesh1,
+    particle_shell,
 
     joy0,
     joy1,
@@ -60,17 +60,17 @@ export const enum Img {
     num_npc = 3,
 }
 
-export const AVATARS: string[] = ["💀", "👹", "🤡", "🤖", "🎃", "🦝", "🐙", "🐰"];
-export const NPC: string[] = [
-    "🍅",
-    "😐",
-    "🐷",
-];
-export const WEAPONS: string[] = [,"🔪", "🪓", "🔫", "🖊️", "✏️️", "🪥", "⛏", "🔌", "🧵"];
+export const EMOJI: Record<number, string> = [];
+
+type EmojiDecl = [string, number, number, number, number,
+    number?,
+    number?, number?, number?,
+    number?,
+    number?, number?];
 
 export const img: Texture[] = [];
 
-export function createCanvas(size: number, alpha: boolean) {
+export const createCanvas = (size: number, alpha: boolean) => {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = size;
     const ctx = canvas.getContext("2d", {alpha});
@@ -79,7 +79,7 @@ export function createCanvas(size: number, alpha: boolean) {
     return ctx;
 }
 
-function cutAlpha(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cut: number) {
+const cutAlpha = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cut: number) => {
     const bmp = ctx.getImageData(x, y, w, h);
     for (let i = 3; i < bmp.data.length; i += 4) {
         bmp.data[i] = bmp.data[i] >= cut ? 0xFF : 0;
@@ -87,7 +87,7 @@ function cutAlpha(ctx: CanvasRenderingContext2D, x: number, y: number, w: number
     ctx.putImageData(bmp, x, y);
 }
 
-function createAtlas(): void {
+export const loadAtlas = (): void => {
     const tempSize = 512;
     const atlasSize = 512;
     const texture = createTexture(atlasSize);
@@ -113,9 +113,10 @@ function createAtlas(): void {
         sprHeight = h;
     };
 
-    const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number, a: number, sx: number, sy: number, cut: number) => {
+    const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number = 0, a: number = 0, sx: number = 1, sy: number = 1, cut: number = 0x80, ax: number = 0.5, ay: number = 0.5) => {
+        // const emoji = String.fromCodePoint(...emojiCode);
         const scale = 1 / 8;
-        const emojiSize = (size / scale) | 0;
+        const emojiSize = ((16 + size) / scale) | 0;
         temp.clearRect(0, 0, tempSize, tempSize);
         temp.font = emojiSize + "px e";
         temp.textAlign = "center";
@@ -134,7 +135,8 @@ function createAtlas(): void {
         atlas.drawImage(temp.canvas, 0, 0);
         atlas.resetTransform();
         cutAlpha(atlas, x, y, w, h, alphaThreshold);
-        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
+        EMOJI[img.length] = emoji;
+        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, ax, ay));
     }
 
     const createCircle = (r: number) => {
@@ -146,6 +148,7 @@ function createAtlas(): void {
         atlas.closePath();
         atlas.fill();
         atlas.resetTransform();
+        cutAlpha(atlas, x, y, sprWidth, sprHeight, 0x80);
         img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
     }
     // BOX
@@ -161,79 +164,65 @@ function createAtlas(): void {
     );
     // CIRCLE
     createCircle(4);
-    cutAlpha(atlas, x, y, sprWidth, sprHeight, 0x80);
     img.push(
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.6, 0.5),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.7, 0.5),
     );
-
     createCircle(16);
-
-    createEmoji2("💀", 198, 166, 17, 19, 16, 0, 1, 1, 128);
-    createEmoji2("👹", 192, 166, 19, 18, 16, 0, 1, 1, 128);
-    // createEmoji2("😵", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("🌚", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("😷", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🤡", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("👨", 203, 166, 16, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🤖", 192, 166, 19, 18, 16, 0, 1, 1, 128);
-    // createEmoji2("💩", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🎃", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("🤓", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("😡", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("🤢", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🦝", 192, 172, 19, 17, 16, 0, 1, 1, 128);
-    createEmoji2("🐙", 192, 166, 19, 18, 16, 0, 1, 1, 128);
-    createEmoji2("🐰", 186, 144, 20, 23, 20, 0, 1, 1, 128);
-    img[Img.avatar7].y = 0.65;
-    // createEmoji2("🦑", 201, 166, 16, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("🍏", 203, 166, 16, 19, 16, 0, 1, 1, 128);
-    // createEmoji2("😾", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-
-    createEmoji2("🍅", 195, 166, 18, 19, 16, 0, 1, 1, 128);
-    createEmoji2("😐", 192, 166, 19, 19, 16, 0, 1, 1, 128);
-    createEmoji2("🐷", 192, 170, 19, 17, 16, 0, 1, 1, 128);
 
     // none weapon gfx index
     img.push(undefined);
 
-    createEmoji2("🔪", 180, 234, 19, 7, 12, -50, 1, 1, 128);
-    createEmoji2("🪓", 198, 210, 20, 10, 16, 45, -1, 1, 128);
-    createEmoji2("🔫", 208, 198, 15, 12, 12, 0, -1, 1, 128);
-    createEmoji2("🖊️", 157, 211, 24, 8, 16, -45, -1, 1, 128);
-    createEmoji2("✏️️", 186, 216, 23, 8, 16, 44.5, -1, 1, 128);
-    createEmoji2("🪥", 175, 261, 20, 8, 16, 45, 1, -1, 128);
-    createEmoji2("⛏", 196, 216, 21, 17, 16, 135, 1, 1, 128);
-    createEmoji2("🔌", 188, 202, 22, 11, 16, 45, -1, 1, 128);
-    createEmoji2("🧵", 217, 192, 19, 19, 16, 90, 1, 1, 128);
-
-    createEmoji2("🛢", 203, 144, 16, 23, 20, 0, 1, 1, 128);
-    createEmoji2("📦", 193, 144, 18, 22, 20, 0, 1, 1, 128);
-    createEmoji2("🪦", 176, 144, 23, 23, 20, 0, 1, 1, 128);
-    createEmoji2("💊", 216, 200, 13, 13, 10, 0, 1, 1, 128);
-    createEmoji2("❤️", 208, 194, 15, 13, 12, 0, 1, 1, 128);
-    createEmoji2("🌳", 156, 99, 28, 31, 28, 0, 1, 1, 136);
-    createEmoji2("🌲", 162, 99, 26, 31, 28, 0, 1, 1, 136);
+    const DATA = [
+        /* 🔪 */ ["🔪", 180, 234, 19, 7, -4, -50, , , , 0.3,],
+        /* 🪓 */ ["🪓", 198, 210, 20, 10, , 45, -1, , , 0.3,],
+        /* 🔫 */ ["🔫", 208, 198, 15, 12, -4, , -1, , , 0.3,],
+        /* 🖊️ */ ["🖊️", 157, 211, 24, 8, , -45, -1, , , ,],
+        /* ✏️️ */ ["✏️️", 186, 216, 23, 8, , 44.5, -1, , , ,],
+        /* 🪥 */ ["🪥", 175, 261, 20, 8, , 45, , -1, , ,],
+        /* ⛏ */ ["⛏", 196, 216, 21, 17, , 135, , , , ,],
+        /* 🔌 */ ["🔌", 188, 202, 22, 11, , 45, -1, , , ,],
+        /* 🧵 */ ["🧵", 217, 192, 19, 19, , 90, , , , 0.3, 0.4],
+        /* 💀 */ ["💀", 198, 166, 17, 19, , , , , , ,],
+        /* 👹 */ ["👹", 192, 166, 19, 18, , , , , , ,],
+        /* 🤡 */ ["🤡", 192, 166, 19, 19, , , , , , ,],
+        /* 🤖 */ ["🤖", 192, 166, 19, 18, , , , , , ,],
+        /* 🎃 */ ["🎃", 192, 166, 19, 19, , , , , , ,],
+        /* 🦝 */ ["🦝", 192, 172, 19, 17, , , , , , ,],
+        /* 🐙 */ ["🐙", 192, 166, 19, 18, , , , , , ,],
+        /* 🐰 */ ["🐰", 186, 144, 20, 23, 4, , , , , , 0.65],
+        /* 🍅 */ ["🍅", 195, 166, 18, 19, , , , , , ,],
+        /* 😐 */ ["😐", 192, 166, 19, 19, , , , , , ,],
+        /* 🐷 */ ["🐷", 192, 170, 19, 17, , , , , , ,],
+        /* 🛢 */ ["🛢", 203, 144, 16, 23, 4, , , , , , 0.95],
+        /* 📦 */ ["📦", 193, 144, 18, 22, 4, , , , , , 0.85],
+        /* 🪦 */ ["🪦", 176, 144, 23, 23, 4, , , , , , 0.95],
+        /* 💊 */ ["💊", 216, 200, 13, 13, -6, , , , , ,],
+        /* ❤️ */ ["❤️", 208, 194, 15, 13, -4, , , , , ,],
+        /* 🌳 */ ["🌳", 156, 99, 28, 31, 12, , , , 136, , 0.95],
+        /* 🌲 */ ["🌲", 162, 99, 26, 31, 12, , , , 136, , 0.95],
+        /* 🥓 */ ["🥓", 163, 219, 22, 9, , -45, , , , ,],
+        /* 🦴 */ ["🦴", 163, 213, 21, 9, , -45, , , , ,],
+    ];
+    for (const a of DATA) {
+        // @ts-ignore
+        createEmoji2(...a);
+    }
 
     pushSprite(4, 2);
     atlas.fillRect(x, y, 4, 2);
     atlas.fillStyle = "#999";
     atlas.fillRect(x, y, 1, 2);
-    atlas.fillStyle = null;
     img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
 
-    createEmoji2("🥓", 163, 219, 22, 9, 16, -45, 1, 1, 128);
-    // createEmoji2("🩸", 170, 213, 18, 13, 16, -90, 1, 1, 128);
-    createEmoji2("🦴", 163, 213, 21, 9, 16, -45, 1, 1, 128);
-
-    function strokeCircle(r:number) {
+    const strokeCircle = (r: number) => {
         atlas.beginPath();
         atlas.arc(0, 0, r, 0, PI2);
         atlas.closePath();
         atlas.stroke();
     }
 
-    function renderJoy(r0: number, r1: number, text0: string, text1: string) {
+    const renderJoy = (r0: number, r1: number, text0: string, text1: string) => {
         const s = r1 * 2 + 32;
         pushSprite(s, s);
         atlas.font = "10px monospace";
@@ -257,7 +246,7 @@ function createAtlas(): void {
     renderJoy(PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, "AIM", "FIRE");
     renderJoy(16, 16, "DROP", "");
 
-    uploadTexture(texture.i, atlas.canvas);
+    uploadTexture(texture.texture_, atlas.canvas);
 
     // TODO: dispose
     atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
@@ -266,26 +255,4 @@ function createAtlas(): void {
     // atlas.canvas.style.position = "fixed";
     // atlas.canvas.style.top = "0";
     // atlas.canvas.style.left = "0";
-}
-
-export function loadAtlas() {
-    "💊,💔,🤍,❤️,🖤,💟,💙,💛,🧡,🤎,💜,💗,💖,💕,♡,♥,💕,❤";
-    "🩸🧻";
-    // 🧱 looks like ammo particle
-    // 📏 also good shell alternative yellow color
-    "🔥,☁️,☠,🔨,⛏️,🗡,🔪,🔫,🚀,⭐,🌟";
-    "★,☆,✢,✥,✦,✧,❂,❉,✯,✰,⋆,✪";
-
-
-    createAtlas();
-    img[Img.weapon1].x = 0.3;
-    img[Img.weapon2].x = 0.3;
-    img[Img.weapon3].x = 0.3;
-    img[Img.weapon9].x = 0.3;
-    img[Img.weapon9].y = 0.4;
-    img[Img.barrel0].y = 0.95;
-    img[Img.barrel1].y = 0.85;
-    img[Img.barrel2].y = 0.95;
-    img[Img.tree0].y = 0.95;
-    img[Img.tree1].y = 0.95;
 }

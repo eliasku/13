@@ -137,7 +137,7 @@ if (process.argv.indexOf("--zip") > 0) {
     // execSync(`zip -9 -X -D game.zip public/index.js public/server.js public/index.html`);
     // report.push("ZIP: " + sz("game.zip"));
 
-    execSync(`roadroller -D -O1 -- public/c.js -o zip/c.js`);
+    execSync(`roadroller -D -O2 -- public/c.js -o zip/c.js`);
     copyFileSync("public/s.js", "zip/s.js");
     copyFileSync("public/index.html", "zip/index.html");
 
@@ -214,7 +214,7 @@ function mangle_types(file, dest) {
             if (isRenamable(f)) {
                 const renamed = _rename.get(f);
                 if (renamed) {
-                    console.info(f + " is used: " + renamed);
+                    //console.info(f + " is used: " + renamed);
                     usedIds.add(renamed);
                 }
             }
@@ -237,7 +237,7 @@ function mangle_types(file, dest) {
                     }
                     const id = alphabet[idx];
                     _rename.set(f, id);
-                    console.info("replace: " + f + " to " + id);
+                    //console.info("replace: " + f + " to " + id);
                     usedIds.add(id);
                 }
             }
@@ -290,14 +290,14 @@ function mangle_types(file, dest) {
             "r2_",
         ],
         [
-            "x",
-            "y",
-            "z",
-            "u",
-            "v",
-            "w",
-            "a",
-            "r",
+            "x_",
+            "y_",
+            "z_",
+            "u_",
+            "v_",
+            "w_",
+            "a_",
+            "r_",
             "scale_",
             "color_",
             "lifeTime_",
@@ -321,14 +321,14 @@ function mangle_types(file, dest) {
             "hp_",
             "anim0_",
             "animHit_",
-            "x",
-            "y",
-            "z",
-            "u",
-            "v",
-            "w",
-            "s",
-            "t",
+            "x_",
+            "y_",
+            "z_",
+            "u_",
+            "v_",
+            "w_",
+            "s_",
+            "t_",
         ],
         [
             // Client
@@ -378,11 +378,24 @@ function mangle_types(file, dest) {
             "id_",
             "startX_",
             "startY_",
-            "x",
-            "y",
+            "x_",
+            "y_",
             "downEvent_",
             "upEvent_",
             "active_",
+        ],
+
+        [
+            // Texture
+            "texture_",
+            "w_",
+            "h_",
+            "x_",
+            "y_",
+            "u0_",
+            "v0_",
+            "u1_",
+            "v1_",
         ],
 
         // SERVER CONNECTION
@@ -401,13 +414,12 @@ function mangle_types(file, dest) {
     // solve unique fields
     const unique = new Set();
     const ntype = [];
-    for(let i = 0; i < archetypes.length; ++i) {
-        for(let j = 0; j < archetypes[i].length; ++j) {
+    for (let i = 0; i < archetypes.length; ++i) {
+        for (let j = 0; j < archetypes[i].length; ++j) {
             const id = archetypes[i][j];
-            if(unique.has(id)) {
+            if (unique.has(id)) {
                 ntype.push(id);
-            }
-            else {
+            } else {
                 unique.add(id);
             }
         }

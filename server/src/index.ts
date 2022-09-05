@@ -47,20 +47,18 @@ setInterval(() => {
     }
 }, 1000);
 
-function constructMessage(id: number, data: string) {
-    return `id:${id}\ndata:${data}\n\n`;
-}
+const constructMessage = (id: number, data: string) =>
+    `id:${id}\ndata:${data}\n\n`;
 
 
-function sendServerEvent(client: ClientState, event: ServerEventName, data: string) {
-    return client.eventStream_.write(
+const sendServerEvent = (client: ClientState, event: ServerEventName, data: string) =>
+    client.eventStream_.write(
         constructMessage(client.nextEventId_++, event + data),
         // REMOVE CLIENT IN CASE OF ANY ERRORS!
         (err) => err && removeClient(client)
     );
-}
 
-function broadcastServerEvent(from: ClientID, event: ServerEventName, data: string) {
+const broadcastServerEvent = (from: ClientID, event: ServerEventName, data: string) => {
     for (const [id, client] of clients) {
         if (id != from) {
             sendServerEvent(client, event, data);
@@ -68,22 +66,22 @@ function broadcastServerEvent(from: ClientID, event: ServerEventName, data: stri
     }
 }
 
-function removeClient(client: ClientState) {
+const removeClient = (client: ClientState) => {
     try {
         //sendCloseServerEvent(client);
         client.eventStream_.write(
             constructMessage(-1, "")
         );
         client.eventStream_.end();
+    } catch {
     }
-    catch {}
 
     clients.delete(client.id_);
     broadcastServerEvent(client.id_, ServerEventName.ClientListChange, "-" + client.id_);
     console.info("broadcast client " + client.id_ + " removed ");
 }
 
-function processServerEvents(req: IncomingMessage, res: ServerResponse) {
+const processServerEvents = (req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, HDR._);
 
     // create new client connection
@@ -108,7 +106,7 @@ function processServerEvents(req: IncomingMessage, res: ServerResponse) {
     broadcastServerEvent(id, ServerEventName.ClientListChange, "" + id);
 }
 
-async function readJSON(req: IncomingMessage): Promise<Request | undefined> {
+const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
     try {
         const buffers = [];
         for await (const chunk of req) {
@@ -121,7 +119,7 @@ async function readJSON(req: IncomingMessage): Promise<Request | undefined> {
     }
 }
 
-async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) {
+ const processIncomeMessages = async (req: IncomingMessage, res: ServerResponse) => {
     const reqData = await readJSON(req);
     if (!reqData) {
         res.writeHead(500);
@@ -150,7 +148,7 @@ async function processIncomeMessages(req: IncomingMessage, res: ServerResponse) 
     res.end("" + numProcessedMessages);
 }
 
-function serveStatic(file: string, res: ServerResponse, mime: OutgoingHttpHeaders) {
+const serveStatic = (file: string, res: ServerResponse, mime: OutgoingHttpHeaders) =>
     readFile(
         "." + file,
         (err, data) => {
@@ -158,9 +156,8 @@ function serveStatic(file: string, res: ServerResponse, mime: OutgoingHttpHeader
             res.end(data);
         }
     );
-}
 
-function error(req: IncomingMessage, res: ServerResponse) {
+const error = (req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(500);
     res.end();
 }

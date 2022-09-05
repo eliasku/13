@@ -3,7 +3,7 @@ import {_debugLagK} from "../game/config";
 import {onRTCPacket} from "../game/game";
 import {fx_chance, fx_range} from "../utils/rnd";
 
-function channels_processMessageDebug(from: ClientID, data: ArrayBuffer) {
+const channels_processMessageDebug = (from: ClientID, data: ArrayBuffer) => {
     if(!_debugLagK) {
         onRTCPacket(from, data);
         return;
@@ -23,7 +23,7 @@ function channels_processMessageDebug(from: ClientID, data: ArrayBuffer) {
     }
 }
 
-export function channels_processMessage(from: ClientID, msg: MessageEvent<ArrayBuffer>) {
+export const channels_processMessage = (from: ClientID, msg: MessageEvent<ArrayBuffer>) => {
     if (process.env.NODE_ENV === "development") {
         channels_processMessageDebug(from, msg.data);
     } else {

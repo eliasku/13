@@ -36,52 +36,50 @@ export interface WeaponConfig {
     bulletShellColor_?: number;
 }
 
-function newWeapon(): WeaponConfig {
-    return {
-        rate_: 1,
-        launchTime_: 0,
-        relaunchSpeed_: 2,
-        spawnCount_: 1,
-        angleVar_: 0,
-        angleSpread_: 0,
-        kickBack_: 0,
-        offset_: 0,
-        offsetZ_: 0,
-        velocity_: 0,
-        velocityVar_: 0,
-        cameraShake_: 0,
-        detuneSpeed_: 0,
-        cameraFeedback_: 0,
-        cameraLookForward_: 0,
-        cameraScale_: 1,
-        gfxRot_: 0,
-        gfxSx_: 1,
-        handsAnim_: 0,
-        bulletType_: BulletType.Melee,
-        bulletDamage_: 1,
-        bulletLifetime_: 0,
-        bulletHp_: 1
-    };
-}
+const newWeapon = (): WeaponConfig => ({
+    rate_: 1,
+    launchTime_: 0,
+    relaunchSpeed_: 2,
+    spawnCount_: 1,
+    angleVar_: 0,
+    angleSpread_: 0,
+    kickBack_: 0,
+    offset_: 0,
+    offsetZ_: 0,
+    velocity_: 0,
+    velocityVar_: 0,
+    cameraShake_: 0,
+    detuneSpeed_: 0,
+    cameraFeedback_: 0,
+    cameraLookForward_: 0,
+    cameraScale_: 1,
+    gfxRot_: 0,
+    gfxSx_: 1,
+    handsAnim_: 0,
+    bulletType_: BulletType.Melee,
+    bulletDamage_: 1,
+    bulletLifetime_: 0,
+    bulletHp_: 1
+});
 
-function createArmWeapon(): WeaponConfig {
+const createArmWeapon = (): WeaponConfig => {
     const w = newWeapon();
     w.angleSpread_ = 0.5;
     w.launchTime_ = 0.5;
-    w.kickBack_ = 40;
-    w.offset_ = 0;
+    w.kickBack_ = 10;
+    w.offset_ = 8;
     w.offsetZ_ = 0;
-    w.velocity_ = 120;
+    w.velocity_ = 300;
     w.detuneSpeed_ = 16;
     w.cameraFeedback_ = 0.02;
     w.cameraLookForward_ = 0.1;
     w.handsAnim_ = 12;
     w.bulletDamage_ = 2;
-    w.bulletLifetime_ = 10 / Const.NetFq;
+    w.bulletLifetime_ = 2 / Const.NetFq;
     return w;
-}
+};
 
-function createGunWeapon(): WeaponConfig {
+const createGunWeapon = (): WeaponConfig => {
     const w = newWeapon();
     w.kickBack_ = 32;
     w.offset_ = 16;
@@ -92,7 +90,7 @@ function createGunWeapon(): WeaponConfig {
     w.bulletType_ = BulletType.Shell;
     w.bulletShellColor_ = 0xFFDD22;
     return w;
-}
+};
 
 export const weapons: WeaponConfig[] = [
     // HANDS FREE

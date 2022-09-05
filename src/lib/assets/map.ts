@@ -8,11 +8,11 @@ import {PI2} from "../utils/math";
 export const mapTexture = createTexture(BOUNDS_SIZE);
 export let mapFramebuffer = gl.createFramebuffer();
 gl.bindFramebuffer(GL.FRAMEBUFFER, mapFramebuffer);
-gl.bindTexture(GL.TEXTURE_2D, mapTexture.i);
-gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, mapTexture.i, 0);
+gl.bindTexture(GL.TEXTURE_2D, mapTexture.texture_);
+gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, mapTexture.texture_, 0);
 gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 
-export function generateMapBackground(): void {
+export const generateMapBackground = (): void => {
     const map = createCanvas(BOUNDS_SIZE, false);
     const detailsColor = ["#080", "#572"];
     map.fillStyle = "#060";
@@ -20,13 +20,16 @@ export function generateMapBackground(): void {
 
     // map.fillStyle = "#080";
     map.scale(1,.25);
-    for (let i = 0; i < BOUNDS_SIZE; ++i) {
+    for (let i = 0; i < BOUNDS_SIZE * 10; ++i) {
         map.fillStyle = detailsColor[rand(2)];
-        // map.globalAlpha = i / (BOUNDS_SIZE * 2);
+        map.globalAlpha = i / (BOUNDS_SIZE * 20);
         map.beginPath()
-        map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE * 4), 4 + rand(16), 0, PI2);
+        map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * 4, 4 + rand(16), 0, PI2);
         map.closePath();
         map.fill();
+        //map.fillStyle = "#572";
+        map.globalAlpha = 1;
+        map.fillRect(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * 4, 1, 4 + rand(8));
     }
 
     ///// LZMA: ~111
@@ -38,11 +41,6 @@ export function generateMapBackground(): void {
     //     ctx.arc(rand(size), rand(size), 2, 0, PI, true);
     //     ctx.closePath();
     //     ctx.fill();
-    // }
-    //
-    // ctx.fillStyle = "#572";
-    // for (let i = 0; i < 2048; ++i) {
-    //     ctx.fillRect(rand(size), rand(size), 1, 2 + rand(4));
     // }
 
     ///// LZMA: ~64
@@ -60,7 +58,7 @@ export function generateMapBackground(): void {
     //     ctx.fillText("🌷,🌻,🥀,🌿".split(",")[rand(4)], rand(size), rand(size));
     // }
 
-    uploadTexture(mapTexture.i, map.canvas);
+    uploadTexture(mapTexture.texture_, map.canvas);
 
     ///// LZMA: ~22
     // ctx.canvas.width = ctx.canvas.height = 0;

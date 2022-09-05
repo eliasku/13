@@ -9,8 +9,20 @@
 <body style="margin:0;height:100vh;overflow:hidden;background:#AAA">
 <script>
     let output = "";
+
     function start() {
-        const avatars = {
+        const config = {
+            // WEAPONS
+            "🔪": {size: 12, a: -50, x: 0.3},
+            "🪓": {size: 16, sx: -1, a: 45, x: 0.3},
+            "🔫": {size: 12, sx: -1, x: 0.3},
+            "🖊️": {size: 16, sx: -1, a: 45 - 90},
+            "✏️️": {size: 16, sx: -1, a: 44.5},
+            "🪥": {size: 16, sy: -1, a: 45},
+            "⛏": {size: 16, a: 90 + 45},
+            "🔌": {size: 16, sx: -1, a: 45},
+            "🧵": {size: 16, a: 90, x: 0.3, y: 0.4},
+            // avatars
             "💀": {},
             "👹": {},
             "🤡": {},
@@ -18,53 +30,29 @@
             "🎃": {},
             "🦝": {},
             "🐙": {},
-            "🐰": {size: 20},
-        };
-        const npc = {
+            "🐰": {size: 20, y: 0.65},
+            // NPC
             "🍅": {},
             "😐": {},
             "🐷": {},
+
+            // barrels
+            "🛢":{size: 20, y: 0.95},
+            "📦":{size: 20, y: 0.85},
+            "🪦":{size: 20, y: 0.95},
+            // items
+            "💊":{size: 10},
+            "❤️":{size: 12},
+            // trees
+            "🌳":{size: 28, cut: 0x88, y: 0.95},
+            "🌲":{size: 28, cut: 0x88, y: 0.95},
+            // particles
+            "🥓":{size: 16, a: -45},
+            "🦴":{size: 16, a: -45},
         };
-        for(const avatar in avatars) {
-            const opts = avatars[avatar];
-            preview2(avatar, {
-                size: opts?.size ?? 16
-            });
+        for (const img in config) {
+            preview2(img, config[img]);
         }
-        for(const avatar in npc) {
-            const opts = npc[avatar];
-            preview2(avatar, {
-                size: opts?.size ?? 16
-            });
-        }
-        // weapons
-        preview2("🔪", {size: 12, a: -50});
-        preview2("🔨", {size: 16, sx: -1, a: 44.5});
-        preview2("🪓", {size: 16, sx: -1, a: 45});
-        preview2("🗡", {size: 16, sx: -1, a: 45 - 90});
-        preview2("🔫", {size: 12, sx: -1});
-        preview2("🖊️", {size: 16, sx: -1, a: 45 - 90});
-        preview2("✏️️", {size: 16, sx: -1, a: 44.5});
-        preview2("🪥", {size: 16, sy: -1, a: 45});
-        preview2("⛏", {size: 16, a: 90 + 45});
-        preview2("🔌", {size: 16, sx: -1, a: 45});
-        preview2("🧵", {size: 16, a: 90});
-        // preview2("🖌️", {size: 16, a: 45});
-
-        preview2("🛢", {size: 20});
-        preview2("📦", {size: 20});
-        preview2("🪦", {size: 20});
-
-        preview2("💊", {size: 10});
-        preview2("❤️", {size: 12});
-
-        preview2("🌳", {size: 28, cut: 0x88});
-        preview2("🌲", {size: 28, cut: 0x88});
-
-        preview2("🥓", {size: 16, a: -45});
-        preview2("🩸", {size: 16, a: -90});
-        preview2("🦴", {size: 16, a: -45});
-
         console.info(output);
     }
 
@@ -74,13 +62,10 @@
         start();
     });
 
-    let anchorX = 0.5;
-    let anchorY = 0.5;
-
     function preview(emoji, opts) {
         let x = 0;
         let y = 0;
-        const emojiSize = opts.size;
+        const emojiSize = opts.size ?? 16;
         const w_ = emojiSize + 4; // 14->16
         const h_ = emojiSize + 6; // 14 -> 20
         const canvas = document.createElement("canvas");
@@ -102,7 +87,7 @@
 
         ctx.resetTransform();
         ctx.fillStyle = "rgba(255,0,0,0.5)";
-        ctx.fillRect(x + w_ * anchorX, y + h_ * anchorY, 1, 1);
+        ctx.fillRect(x + w_ * (opts.x ?? 0.5), y + h_ * (opts.y ?? 0.5), 1, 1);
 
         const bmp = ctx.getImageData(x, y, w_, h_);
         for (let i = 0; i < bmp.data.length; i += 4) {
@@ -110,9 +95,6 @@
             if (a > 0x7F) {
                 bmp.data[i + 3] = 0xFF;
             } else {
-                bmp.data[i] = 0;
-                bmp.data[i + 1] = 0;
-                bmp.data[i + 2] = 0;
                 bmp.data[i + 3] = 0;
             }
         }
@@ -138,7 +120,7 @@
         let x = 0;
         let y = 0;
         const scaleUp = 8;
-        const emojiSize = (opts.size * scaleUp)|0;
+        const emojiSize = ((opts.size ?? 16) * scaleUp) | 0;
         const maxSize = 512;
         const w_ = maxSize; // 14->16
         const h_ = maxSize; // 14 -> 20
@@ -177,15 +159,12 @@
                 if (a >= cut2) {
                     bmp.data[i + 3] = 0xFF;
                 } else {
-                    bmp.data[i] = 0;
-                    bmp.data[i + 1] = 0;
-                    bmp.data[i + 2] = 0;
                     bmp.data[i + 3] = 0;
                 }
             }
             ctx2.putImageData(bmp, x, y);
             ctx2.fillStyle = "rgba(255,0,0,0.5)";
-            ctx2.fillRect((lc.width * anchorX)|0, (lc.height * anchorY)|0, 1, 1);
+            ctx2.fillRect((lc.width * (opts.x ?? 0.5)) | 0, (lc.height * (opts.y ?? 0.5)) | 0, 1, 1);
             // document.body.appendChild(lc);
             {
                 const previewCanvas = document.createElement("canvas");
@@ -199,8 +178,10 @@
                 document.body.appendChild(previewCanvas);
             }
 
-            output += `createEmoji2("${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${opts.size}, ${opts.a ?? 0}, ${opts.sx ?? 1}, ${opts.sy ?? 1}, ${opts.cut ?? 0x80});\n`;
-            return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut];
+            const rsize = (opts.size ?? 16) - 16;
+            // output += `/* ${emoji} */ [[${[...emoji].map(x=>x.codePointAt(0)).join(",")}], ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${rsize || ""}, ${opts.a ?? ""}, ${opts.sx ?? ""}, ${opts.sy ?? ""}, ${opts.cut ?? ""}, ${opts.x ?? ""}, ${opts.y ?? ""}],\n`;
+            output += `/* ${emoji} */ ["${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${rsize || ""}, ${opts.a ?? ""}, ${opts.sx ?? ""}, ${opts.sy ?? ""}, ${opts.cut ?? ""}, ${opts.x ?? ""}, ${opts.y ?? ""}],\n`;
+            return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut, opts.x ?? 0.5, opts.y ?? 0.5];
         }
     }
 
@@ -269,7 +250,7 @@
         };
     }
 
-    setInterval(()=>{
+    setInterval(() => {
         const c = (Math.random() * 0x80) | 0;
         document.body.style.background = `rgba(${c},${c},${c},1)`;
     }, 500);

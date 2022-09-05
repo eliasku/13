@@ -6,7 +6,7 @@ import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
 import {_SEED, fxRandElement, nextFloat, rand, random, setSeed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
-import {AVATARS, img, Img, WEAPONS} from "../assets/gfx";
+import {EMOJI, img, Img} from "../assets/gfx";
 import {_debugLagK, Const, setDebugLagK} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {
@@ -119,51 +119,38 @@ let cameraShake = 0;
 let cameraFeedback = 0;
 
 // colors
-
-function pickRandomWeaponId() {
-    return 1 + rand(weapons.length - 1);
-}
-
-function newActorObject(type: ActorType): Actor {
-    return {
+const newActorObject = (type: ActorType): Actor =>
+    ({
         id_: state.nextId_++,
         type_: type,
-        x: 0,
-        y: 0,
-        z: 0,
+        x_: 0,
+        y_: 0,
+        z_: 0,
 
-        u: 0,
-        v: 0,
-        w: 0,
+        u_: 0,
+        v_: 0,
+        w_: 0,
 
         btn_: 0,
         client_: 0,
 
-        s: 0,
-        t: 0,
+        s_: 0,
+        t_: 0,
 
         weapon_: 0,
         anim0_: rand(0x100),
         animHit_: 31,
         hp_: 1,
-    };
-}
+    });
 
-function newItemRandomWeapon(): Actor {
-    const item = newActorObject(ActorType.Item);
-    item.btn_ = ItemCategory.Weapon | pickRandomWeaponId();
-    pushActor(item);
-    return item;
-}
-
-function newItemRandomEffect(): Actor {
+const newItemRandomEffect = (): Actor => {
     const item = newActorObject(ActorType.Item);
     item.btn_ = ItemCategory.Effect | rand(2);
     pushActor(item);
     return item;
 }
 
-function requireClient(id: ClientID): Client {
+const requireClient = (id: ClientID): Client => {
     let client = clients.get(id);
     if (!client) {
         client = {id_: id, tic_: 0, acknowledgedTic_: 0};
@@ -172,7 +159,7 @@ function requireClient(id: ClientID): Client {
     return client;
 }
 
-export function resetGame() {
+export const resetGame = () => {
     clients.clear();
     localEvents.length = 0;
     receivedEvents.length = 0;
@@ -201,7 +188,7 @@ export function resetGame() {
     // });
 }
 
-function recreateMap() {
+const recreateMap = () => {
     // generate map
     setSeed(state.mapSeed_);
     generateMapBackground();
@@ -218,11 +205,11 @@ function recreateMap() {
     state.nextId_ = nextId;
 }
 
-function pushActor(a: Actor) {
+const pushActor = (a: Actor) => {
     state.actors_[a.type_].push(a);
 }
 
-function createSeedGameState() {
+const createSeedGameState = () => {
     startTic = 0;
     gameTic = 0;
     netTic = 0;
@@ -235,19 +222,20 @@ function createSeedGameState() {
         const actor = newActorObject(ActorType.Barrel);
         actor.hp_ = 3 + rand(4);
         actor.btn_ = rand(2);
-        actor.weapon_ = rand(WEAPONS.length);
-        pushActor(setRandomPosition(actor));
+        actor.weapon_ = rand(weapons.length);
+        setRandomPosition(actor)
+        pushActor(actor);
     }
     state.seed_ = _SEED;
 }
 
-function updateFrameTime(ts: number) {
+const updateFrameTime = (ts: number) => {
     if (ts > lastFrameTs) {
         lastFrameTs = ts;
     }
 }
 
-export function updateTestGame(ts: number) {
+export const updateTestGame = (ts: number) => {
     updateFrameTime(ts);
 
     if (startTic < 0 && !remoteClients.size) {
@@ -276,7 +264,7 @@ export function updateTestGame(ts: number) {
     }
 }
 
-function printStatus() {
+const printStatus = () => {
     if (joined) {
         const p0 = getMyPlayer();
         if (p0) {
@@ -288,7 +276,7 @@ function printStatus() {
             }
             termPrint(str + "\n");
             if (p0.weapon_) {
-                termPrint(WEAPONS[p0.weapon_] + "" + "\n");
+                termPrint(EMOJI[Img.weapon0 + p0.weapon_] + "\n");
             }
         } else {
             termPrint("Tap to spawn!\n");
@@ -297,26 +285,25 @@ function printStatus() {
         termPrint("Joining\n");
     }
 
-    function getPlayerIcon(id?: ClientID) {
+    const getPlayerIcon = (id?: ClientID) => {
         const player = getPlayerByClient(id);
-        return player ? AVATARS[(player.client_ || player.anim0_) % Img.num_avatars] : "👁️";
+        return player ? EMOJI[Img.avatar0 + (player.client_ || player.anim0_) % Img.num_avatars] : "👁️";
     }
 
-    termPrint(getPlayerIcon(getClientId()) + " [" + getUserName() + "]\n");
-    for (const [, rc] of remoteClients) {
+    termPrint(getPlayerIcon(getClientId()) + " " + getUserName() + " | ☠️" + (state.scores_[getClientId()] | 0) + "\n");
+    for (const [id, rc] of remoteClients) {
         let status = "🔴";
         if (isChannelOpen(rc) && rc?.pc_.iceConnectionState[1] == "o") {
             status = getPlayerIcon(rc.id_);
         }
-        termPrint(status + " " + rc.name_ + "\n");
+        termPrint(status + " " + rc.name_ + " | ☠️" + (state.scores_[id] | 0) + "\n");
     }
 }
 
-function getMyPlayer(): Actor | undefined {
-    return getPlayerByClient(getClientId());
-}
+const getMyPlayer = (): Actor | undefined =>
+    getPlayerByClient(getClientId());
 
-function getPlayerByClient(c: ClientID): Actor | undefined {
+const getPlayerByClient = (c: ClientID): Actor | undefined => {
     for (const p of state.actors_[ActorType.Player]) {
         if (p.client_ === c) {
             return p;
@@ -324,7 +311,7 @@ function getPlayerByClient(c: ClientID): Actor | undefined {
     }
 }
 
-function getLocalEvent(tic: number): ClientEvent {
+const getLocalEvent = (tic: number): ClientEvent => {
     for (const e of localEvents) {
         if (e.tic_ === tic) {
             return e;
@@ -335,13 +322,13 @@ function getLocalEvent(tic: number): ClientEvent {
     return e;
 }
 
-function getNextInputTic(tic: number) {
+const getNextInputTic = (tic: number) => {
     const simTic = ((lastFrameTs - prevTime) * Const.NetFq) | 0;
     return tic + Math.max(Const.InputDelay, simTic);
     // return tic + Const.InputDelay;
 }
 
-function checkPlayerInput() {
+const checkPlayerInput = () => {
     if (process.env.NODE_ENV === "development") {
         checkDebugInput();
     }
@@ -414,7 +401,7 @@ function checkPlayerInput() {
     }
 }
 
-function checkJoinSync() {
+const checkJoinSync = () => {
     if (!joined && startTic >= 0) {
         for (const [id, rc] of remoteClients) {
             if (isChannelOpen(rc)) {
@@ -436,7 +423,7 @@ function checkJoinSync() {
     }
 }
 
-function calcNetTic() {
+const calcNetTic = () => {
     netTic = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0;
     ackMin = gameTic;
     for (const [id,] of remoteClients) {
@@ -452,7 +439,7 @@ function calcNetTic() {
     }
 }
 
-function tryRunTicks(ts: number): number {
+const tryRunTicks = (ts: number): number => {
     if (startTic < 0) {
         return;
     }
@@ -503,7 +490,7 @@ function tryRunTicks(ts: number): number {
     return framesProcessed;
 }
 
-function sendInput() {
+const sendInput = () => {
     const lastTic = gameTic - 1;
     for (const [id, rc] of remoteClients) {
         if (isChannelOpen(rc)) {
@@ -549,7 +536,7 @@ function sendInput() {
     }
 }
 
-function getMinTic() {
+const getMinTic = () => {
     let minTic = 0xFFFFFFFF;
     for (const [, cl] of clients) {
         if (minTic > cl.tic_) {
@@ -559,7 +546,7 @@ function getMinTic() {
     return minTic;
 }
 
-function processPacket(sender: Client, data: Packet) {
+const processPacket = (sender: Client, data: Packet) => {
     if (startTic < 0 && data.state_) {
         if (data.checkTic_ > getMinTic()) {
             startTic = data.checkTic_;
@@ -632,7 +619,7 @@ function processPacket(sender: Client, data: Packet) {
     // }
 }
 
-export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
+export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
     const data = unpack(buffer);
     if (data) {
         processPacket(requireClient(from), data);
@@ -648,7 +635,7 @@ export function onRTCPacket(from: ClientID, buffer: ArrayBuffer) {
 
 let disconnectTimes = 0;
 
-function cleaningUpClients() {
+const cleaningUpClients = () => {
     for (const [id,] of clients) {
         //if (!isChannelOpen(remoteClients.get(id))) {
         if (!remoteClients.has(id)) {
@@ -656,13 +643,16 @@ function cleaningUpClients() {
         }
     }
 
-    for (const [, rc] of remoteClients) {
-        if (rc.pc_?.iceConnectionState[1] != "o" || rc.dc_?.readyState[0] != "o") {
-            if (++disconnectTimes > 60 * 5) {
-                disconnect();
-                alert("Connection lost");
+    if (joined) {
+        for (const [id, rc] of remoteClients) {
+            if (clients.get(id)?.isPlaying_ &&
+                (rc.pc_?.iceConnectionState[1] != "o" || rc.dc_?.readyState[0] != "o")) {
+                if (++disconnectTimes > 60 * 5) {
+                    disconnect();
+                    alert("Connection lost");
+                }
+                return;
             }
-            return;
         }
     }
     disconnectTimes = 0;
@@ -670,7 +660,7 @@ function cleaningUpClients() {
 
 /// Game logic
 
-function processTicCommands(commands: ClientEvent[]) {
+const processTicCommands = (commands: ClientEvent[]) => {
     for (const cmd of commands) {
         const source = cmd.client_;
         if (cmd.btn_ !== undefined) {
@@ -681,8 +671,8 @@ function processTicCommands(commands: ClientEvent[]) {
                 const p = newActorObject(ActorType.Player);
                 p.client_ = source;
                 setRandomPosition(p);
-                p.x /= 10;
-                p.y /= 10;
+                p.x_ /= 10;
+                p.y_ /= 10;
                 p.hp_ = 10;
                 p.btn_ = cmd.btn_;
                 p.weapon_ = 1 + rand(3);//Const.StartWeapon;
@@ -692,15 +682,13 @@ function processTicCommands(commands: ClientEvent[]) {
     }
 }
 
-function sortById(list: Actor[]) {
+const sortById = (list: Actor[]) =>
     list.sort((a, b) => a.id_ - b.id_);
-}
 
-function sortList(list: Actor[]) {
-    list.sort((a, b) => BOUNDS_SIZE * (a.y - b.y) + a.x - b.x);
-}
+const sortList = (list: Actor[]) =>
+    list.sort((a, b) => BOUNDS_SIZE * (a.y_ - b.y_) + a.x_ - b.x_);
 
-function pickItem(item: Actor, player: Actor) {
+const pickItem = (item: Actor, player: Actor) => {
     // isWeapon
     const itemId = item.btn_ & 0xFF;
     const itemCat = item.btn_ & 0x300;
@@ -726,15 +714,15 @@ function pickItem(item: Actor, player: Actor) {
     }
 }
 
-function updateGameCamera(dt: number) {
+const updateGameCamera = (dt: number) => {
     let cameraScale = BASE_RESOLUTION / Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight);
     let cameraX = BOUNDS_SIZE >> 1;
     let cameraY = BOUNDS_SIZE >> 1;
     const p0 = getMyPlayer();
     if (p0) {
         const wpn = weapons[p0.weapon_];
-        cameraX = p0.x + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x);
-        cameraY = p0.y + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y);
+        cameraX = p0.x_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x_);
+        cameraY = p0.y_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y_);
         cameraScale *= wpn.cameraScale_;
     }
     gameCamera[0] = lerp(gameCamera[0], cameraX, 4 * dt);
@@ -742,7 +730,7 @@ function updateGameCamera(dt: number) {
     gameCamera[2] = lerp(gameCamera[2], cameraScale, 2 * dt);
 }
 
-function simulateTic(dt: number) {
+const simulateTic = (dt: number) => {
     //if(startTick < 0) return;
     updateGameCamera(dt);
 
@@ -783,9 +771,9 @@ function simulateTic(dt: number) {
         if (bullet.btn_ === BulletType.Ray) {
             bullet.hp_ = -1;
         }
-        if (bullet.s > 0) {
-            bullet.s -= dt;
-            if (bullet.s <= 0) {
+        if (bullet.s_ > 0) {
+            bullet.s_ -= dt;
+            if (bullet.s_ <= 0) {
                 bullet.hp_ = 0;
             }
         }
@@ -827,20 +815,20 @@ function simulateTic(dt: number) {
     }
 }
 
-function updateBodyInterCollisions2(list1: Actor[], list2: Actor[]) {
+const updateBodyInterCollisions2 = (list1: Actor[], list2: Actor[]) => {
     for (const a of list1) {
         updateBodyCollisions(a, list2, 0);
     }
 }
 
-function updateBodyInterCollisions(list: Actor[]) {
+const updateBodyInterCollisions = (list: Actor[]) => {
     for (let i = 0; i < list.length; ++i) {
         updateBodyCollisions(list[i], list, i + 1);
     }
 }
 
 
-function kill(actor: Actor) {
+const kill = (actor: Actor) => {
     playAt(actor, Snd.death);
     const amount = 1 + rand(3);
     for (let i = 0; i < amount; ++i) {
@@ -859,7 +847,7 @@ function kill(actor: Actor) {
         const grave = newActorObject(ActorType.Barrel);
         copyPosFromActorCenter(grave, actor);
         addVelFrom(grave, actor);
-        grave.w += 32;
+        grave.w_ += 32;
         grave.hp_ = 20;
         grave.btn_ = 2;
         pushActor(grave);
@@ -869,7 +857,7 @@ function kill(actor: Actor) {
     }
 }
 
-function hitWithBullet(actor: Actor, bullet: Actor) {
+const hitWithBullet = (actor: Actor, bullet: Actor) => {
     addVelFrom(actor, bullet, 0.1);
     actor.animHit_ = ANIM_HIT_MAX;
     playAt(actor, Snd.hit);
@@ -883,33 +871,39 @@ function hitWithBullet(actor: Actor, bullet: Actor) {
             // could be effect if damage is big
             actor.hp_ = 0;
             kill(actor);
+
+            const killerID = bullet.client_;
+            if (killerID) {
+                state.scores_[killerID] = (state.scores_[killerID] ?? 0) +
+                    (actor.client_ ? 10 : 1);
+            }
         }
     }
     if (bullet.hp_ && bullet.btn_ !== BulletType.Ray) {
         --bullet.hp_;
         if (bullet.hp_) {
-            let nx = bullet.x - actor.x;
-            let ny = bullet.y - actor.y;
+            let nx = bullet.x_ - actor.x_;
+            let ny = bullet.y_ - actor.y_;
             const dist = Math.sqrt(nx * nx + ny * ny);
             if (dist > 0) {
                 nx /= dist;
                 ny /= dist;
                 reflectVelocity(bullet, nx, ny, 1);
                 const pen = OBJECT_RADIUS_BY_TYPE[actor.type_] + BULLET_RADIUS + 1;
-                bullet.x = actor.x + pen * nx;
-                bullet.y = actor.y + pen * ny;
+                bullet.x_ = actor.x_ + pen * nx;
+                bullet.y_ = actor.y_ + pen * ny;
             }
         }
     }
 }
 
-function updateBulletCollision(b: Actor, list: Actor[]) {
+const updateBulletCollision = (b: Actor, list: Actor[]) => {
     if (b.hp_) {
         for (const a of list) {
             const owned = !(a.client_ - b.client_);
             if (!owned) {
                 if (b.btn_ === BulletType.Ray && b.hp_ > 0) {
-                    if (testRayWithSphere(b, a, b.u, b.v)) {
+                    if (testRayWithSphere(b, a, b.u_, b.v_)) {
                         hitWithBullet(a, b);
                     }
                 } else {
@@ -922,15 +916,13 @@ function updateBulletCollision(b: Actor, list: Actor[]) {
     }
 }
 
-function unpackAngleByte(angleByte: number, res: number) {
-    return PI2 * (angleByte & (res - 1)) / res - PI;
-}
+const unpackAngleByte = (angleByte: number, res: number) =>
+    PI2 * (angleByte & (res - 1)) / res - PI;
 
-function packAngleByte(y: number, x: number, res: number) {
-    return (res * (PI + Math.atan2(y, x)) / PI2) & (res - 1);
-}
+const packAngleByte = (y: number, x: number, res: number) =>
+    (res * (PI + Math.atan2(y, x)) / PI2) & (res - 1);
 
-function updateAI(player: Actor) {
+const updateAI = (player: Actor) => {
     const md = rand(ControlsFlag.MoveAngleMax);
     player.btn_ = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
     if (player.hp_ < 10) {
@@ -939,13 +931,13 @@ function updateAI(player: Actor) {
     if (!rand(20) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
 }
 
-function updatePlayer(player: Actor, dt: number) {
+const updatePlayer = (player: Actor, dt: number) => {
     if (!player.client_) updateAI(player);
-    let grounded = player.z === 0 && player.w === 0;
+    let grounded = player.z_ === 0 && player.w_ === 0;
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
-            player.z = 1;
-            player.w = JUMP_VEL;
+            player.z_ = 1;
+            player.w_ = JUMP_VEL;
             grounded = false;
             playAt(player, Snd.blip);
         }
@@ -960,8 +952,8 @@ function updatePlayer(player: Actor, dt: number) {
     if (player.btn_ & ControlsFlag.Move) {
         const speed = (player.btn_ & ControlsFlag.Run) ? 2 : 1;
         const vel = speed * 60;
-        player.u = reach(player.u, vel * moveDirX, vel * dt * c);
-        player.v = reach(player.v, vel * moveDirY, vel * dt * c);
+        player.u_ = reach(player.u_, vel * moveDirX, vel * dt * c);
+        player.v_ = reach(player.v_, vel * moveDirY, vel * dt * c);
         if (grounded && !(gameTic % (20 / speed))) {
             playAt(player, Snd.step);
         }
@@ -985,18 +977,18 @@ function updatePlayer(player: Actor, dt: number) {
 
     const weapon = weapons[player.weapon_];
     if (player.btn_ & ControlsFlag.Shooting && player.weapon_) {
-        player.s = reach(player.s, 0, weapon.rate_ * dt);
-        if (!player.s) {
+        player.s_ = reach(player.s_, 0, weapon.rate_ * dt);
+        if (!player.s_) {
             cameraShake = Math.max(weapon.cameraShake_, cameraShake);
-            player.s = 1;
+            player.s_ = 1;
             cameraFeedback = 1;
-            player.t = reach(player.t, 1, dt * weapon.detuneSpeed_);
-            addVelocityDir(player, lookDirX, lookDirY, -1, player.w > 0 ? 0 : -weapon.kickBack_);
+            player.t_ = reach(player.t_, 1, dt * weapon.detuneSpeed_);
+            addVelocityDir(player, lookDirX, lookDirY, -1, player.w_ > 0 ? 0 : -weapon.kickBack_);
             playAt(player, Snd.shoot);
             for (let i = 0; i < weapon.spawnCount_; ++i) {
                 const a = lookAngle +
                     weapon.angleVar_ * (nextFloat() - 0.5) +
-                    weapon.angleSpread_ * Math.min(1, player.t) * (nextFloat() - 0.5);
+                    weapon.angleSpread_ * Math.min(1, player.t_) * (nextFloat() - 0.5);
                 const dx = Math.cos(a);
                 const dy = Math.sin(a);
                 const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (nextFloat() - 0.5);
@@ -1004,12 +996,12 @@ function updatePlayer(player: Actor, dt: number) {
                 bullet.client_ = player.client_;
                 copyPosFromActorCenter(bullet, player);
                 addPos(bullet, dx, dy, 0, weapon.offset_);
-                bullet.z += PLAYER_HANDS_Z - 12 + weapon.offsetZ_;
+                bullet.z_ += PLAYER_HANDS_Z - 12 + weapon.offsetZ_;
                 addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
                 bullet.weapon_ = weapon.bulletDamage_;
                 bullet.btn_ = weapon.bulletType_;
                 bullet.hp_ = weapon.bulletHp_;
-                bullet.s = weapon.bulletLifetime_;
+                bullet.s_ = weapon.bulletLifetime_;
                 pushActor(bullet);
             }
 
@@ -1018,16 +1010,16 @@ function updatePlayer(player: Actor, dt: number) {
             }
         }
     } else {
-        player.t = reach(player.t, 0, dt * 16);
-        player.s = reach(player.s, weapon.launchTime_, dt * weapon.relaunchSpeed_);
+        player.t_ = reach(player.t_, 0, dt * 16);
+        player.s_ = reach(player.s_, weapon.launchTime_, dt * weapon.relaunchSpeed_);
     }
 }
 
-export function spawnFleshParticles(actor: Actor, expl: number, amount: number, vel?: Vel) {
+export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, vel?: Vel) => {
     addFleshParticles(amount, actor, expl, vel);
 }
 
-function getTicCommands(tic: number): ClientEvent[] {
+const getTicCommands = (tic: number): ClientEvent[] => {
     const locEvents = localEvents.filter(v => v.tic_ === tic);
     const recEvents = receivedEvents.filter(v => v.tic_ === tic);
     const events = locEvents.concat(recEvents);
@@ -1035,16 +1027,15 @@ function getTicCommands(tic: number): ClientEvent[] {
     return events;
 }
 
-function cloneState(): StateData {
-    return {
-        nextId_: state.nextId_,
-        seed_: state.seed_,
-        mapSeed_: state.mapSeed_,
-        actors_: state.actors_.map(list => list.map(a => ({...a}))),
-    };
-}
+const cloneState = (): StateData => ({
+    nextId_: state.nextId_,
+    seed_: state.seed_,
+    mapSeed_: state.mapSeed_,
+    actors_: state.actors_.map(list => list.map(a => ({...a}))),
+    scores_: {...state.scores_}
+});
 
-function beginPrediction(): boolean {
+const beginPrediction = (): boolean => {
     // global state
     let time = lastFrameTs - prevTime;
     // if (!Const.Prediction || time < 0.001) return false;
@@ -1077,7 +1068,7 @@ function beginPrediction(): boolean {
     return true;
 }
 
-function endPrediction() {
+const endPrediction = () => {
     // global state
     state = lastState;
     setSeed(state.seed_);
@@ -1088,7 +1079,7 @@ function endPrediction() {
 
 /*** DRAWING ***/
 
-function drawGame() {
+const drawGame = () => {
     camera.scale_ = 1 / gameCamera[2];
     camera.toX_ = camera.toY_ = 0.5;
     camera.atX_ = gameCamera[0] + ((Math.random() - 0.5) * cameraShake * 8) | 0;
@@ -1110,7 +1101,7 @@ function drawGame() {
     flush();
 }
 
-function drawOverlay() {
+const drawOverlay = () => {
     camera.scale_ = Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
     camera.toX_ = camera.toY_ = camera.atX_ = camera.atY_ = camera.angle_ = 0;
     beginRender();
@@ -1118,23 +1109,23 @@ function drawOverlay() {
     flush()
 }
 
-function drawShadows() {
+const drawShadows = () => {
     const SHADOW_SCALE = [1, 1, 2, 1, 1];
     const SHADOW_ADD = [0, 0, 1, 0, 0];
     const SHADOW_COLOR = [0, 0, 0x333333, 0, 0];
 
     for (const actor of drawList) {
         const type = actor.type_;
-        const shadowScale = (2 - actor.z / 64.0) * SHADOW_SCALE[type];
+        const shadowScale = (2 - actor.z_ / 64.0) * SHADOW_SCALE[type];
         const additive = SHADOW_ADD[type];
         const color = SHADOW_COLOR[type];
-        draw(img[Img.circle_4], actor.x, actor.y, 0, shadowScale, shadowScale / 4, .4, color, additive);
+        draw(img[Img.circle_4], actor.x_, actor.y_, 0, shadowScale, shadowScale / 4, .4, color, additive);
     }
 }
 
 const drawList: Actor[] = [];
 
-function collectVisibleActors(...lists: Actor[][]) {
+const collectVisibleActors = (...lists: Actor[][]) => {
     drawList.length = 0;
     const pad = OBJECT_RADIUS * 2;
     const W = gl.drawingBufferWidth;
@@ -1145,29 +1136,30 @@ function collectVisibleActors(...lists: Actor[][]) {
     const b = (H - H / 2) / camera.scale_ + camera.atY_ + pad + 128;
     for (const list of lists) {
         for (const a of list) {
-            if (a.x > l && a.x < r && a.y > t && a.y < b) {
+            if ((a.x_ > l && a.x_ < r && a.y_ > t && a.y_ < b) ||
+                (a.type_ == ActorType.Bullet && a.btn_ == BulletType.Ray)) {
                 drawList.push(a);
             }
         }
     }
 }
 
-function drawMapBackground() {
+const drawMapBackground = () => {
     draw(mapTexture, 0, 0, 0, 1, 1);
     // draw(img[Img.box_lt], 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
     draw(img[Img.box_lt], 0, -OBJECT_RADIUS * 3, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4, 0.5, 0);
 }
 
-function drawMapOverlay() {
+const drawMapOverlay = () => {
     draw(img[Img.box_lt], 0, BOUNDS_SIZE - OBJECT_RADIUS * 2, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4, 1, 0x666666);
     // draw(img[Img.box_lt], -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
     // draw(img[Img.box_lt], boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
 }
 
-function drawCrosshair() {
+const drawCrosshair = () => {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
-        const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t) + 4 * Math.min(1, p0.s);
+        const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t_) + 4 * Math.min(1, p0.s_);
         let a = 0.1 * lastFrameTs;
         for (let i = 0; i < 4; ++i) {
             draw(img[Img.box_t1], lookAtX, lookAtY, a, 2, len, 0.5);
@@ -1176,30 +1168,30 @@ function drawCrosshair() {
     }
 }
 
-function drawItem(item: Actor) {
+const drawItem = (item: Actor) => {
     const colorOffset = getHitColorOffset(item.animHit_);
     const cat = item.btn_ & 0x300;
     const idx = item.btn_ & 0xFF;
     if (cat === ItemCategory.Weapon) {
         const weapon = img[Img.weapon0 + idx];
         if (weapon) {
-            const px = weapon.x;
-            const py = weapon.y;
-            weapon.x = 0.5;
-            weapon.y = 0.7;
-            draw(weapon, item.x, item.y - item.z, 0, 0.8, 0.8, 1, COLOR_WHITE, 0, colorOffset);
-            weapon.x = px;
-            weapon.y = py;
+            const px = weapon.x_;
+            const py = weapon.y_;
+            weapon.x_ = 0.5;
+            weapon.y_ = 0.7;
+            draw(weapon, item.x_, item.y_ - item.z_, 0, 0.8, 0.8, 1, COLOR_WHITE, 0, colorOffset);
+            weapon.x_ = px;
+            weapon.y_ = py;
         }
     } else /*if (cat === ItemCategory.Effect)*/ {
         const anim = item.anim0_ / 0xFF;
         const s = 1 + 0.1 * Math.sin(16 * (lastFrameTs + anim * 10));
         const o = 2 * Math.cos(lastFrameTs + anim * 10);
-        draw(img[Img.item0 + idx], item.x, item.y - item.z - OBJECT_RADIUS - o, 0, s, s, 1, COLOR_WHITE, 0, colorOffset);
+        draw(img[Img.item0 + idx], item.x_, item.y_ - item.z_ - OBJECT_RADIUS - o, 0, s, s, 1, COLOR_WHITE, 0, colorOffset);
     }
 }
 
-function drawBullet(actor: Actor) {
+const drawBullet = (actor: Actor) => {
     const BULLET_COLOR = [
         [0xFFFFFF],
         [0xFFFF44],
@@ -1220,9 +1212,9 @@ function drawBullet(actor: Actor) {
         Img.box_l, Img.box_l, Img.box_l,
     ];
 
-    const x = actor.x;
-    const y = actor.y - actor.z;
-    const a = Math.atan2(actor.v, actor.u);
+    const x = actor.x_;
+    const y = actor.y_ - actor.z_;
+    const a = Math.atan2(actor.v_, actor.u_);
     const type = actor.btn_;
     const color = fxRandElement(BULLET_COLOR[type] as number[]);
     const longing = BULLET_LENGTH[type];
@@ -1236,34 +1228,15 @@ function drawBullet(actor: Actor) {
     draw(img[BULLET_IMAGE[res++]], x, y, a, 2 * longing2, 2);
 }
 
-const DRAW_BY_TYPE = [
-    drawPlayer,
-    drawBarrel,
-    drawBullet,
-    drawItem,
-    drawTree,
-];
-
-function drawObjects() {
-    drawSplats();
-    drawParticles();
-    collectVisibleActors(trees, ...state.actors_);
-    sortList(drawList);
-    drawShadows();
-    for (const actor of drawList) {
-        DRAW_BY_TYPE[actor.type_](actor);
-    }
-}
-
-function drawPlayer(p: Actor) {
+const drawPlayer = (p: Actor): void => {
     const co = getHitColorOffset(p.animHit_);
     const imgHead = p.client_ ? (Img.avatar0 + (debugCheckAvatar + (p.anim0_)) % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
     const colorC = COLOR_BODY[p.anim0_ % COLOR_BODY.length];
     const colorArm = colorC;
     const colorBody = colorC;
-    const x = p.x;
-    const y = p.y - p.z;
-    const speed = Math.hypot(p.u, p.v, p.w);
+    const x = p.x_;
+    const y = p.y_ - p.z_;
+    const speed = Math.hypot(p.u_, p.v_, p.w_);
     const runK = (p.btn_ & ControlsFlag.Run) ? 1 : 0.8;
     const walk = Math.min(1, speed / 100);
     let base = -0.5 * walk * 0.5 * (1.0 + Math.sin(40 * runK * lastFrameTs));
@@ -1301,7 +1274,7 @@ function drawPlayer(p: Actor) {
     if (wpn.handsAnim_) {
         // const t = Math.max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
-        const t = Math.min(1, wpn.launchTime_ > 0 ? (p.s / wpn.launchTime_) : Math.max(0, (p.s - 0.5) * 2));
+        const t = Math.min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : Math.max(0, (p.s_ - 0.5) * 2));
         wd += Math.sin(t * PI) * wpn.handsAnim_;
         weaponAngle -= -wx * PI * 0.25 * Math.sin((1 - (1 - t) ** 2) * PI2);
     }
@@ -1324,8 +1297,8 @@ function drawPlayer(p: Actor) {
     draw(img[Img.box], x, y - 7 + base, 0, 8, 6, 1, colorBody, 0, co);
 
     {
-        const s = p.w * 0.002;
-        const a = 0.002 * p.u;
+        const s = p.w_ * 0.002;
+        const a = 0.002 * p.u_;
         draw(img[imgHead], x, y - 16 + base * 2, a, 1 - s, 1 + s, 1, COLOR_WHITE, 0, co);
     }
 
@@ -1359,39 +1332,51 @@ function drawPlayer(p: Actor) {
     }
 }
 
-function getHitColorOffset(anim: number) {
-    return getLumaColor32(0xFF * Math.min(1, 2 * anim / ANIM_HIT_MAX));
-}
+const getHitColorOffset = (anim: number) =>
+    getLumaColor32(0xFF * Math.min(1, 2 * anim / ANIM_HIT_MAX));
 
-function drawObject(p: Actor, id: Img) {
-    const x = p.x;
-    const y = p.y - p.z;
+const drawObject = (p: Actor, id: Img) => {
+    const x = p.x_;
+    const y = p.y_ - p.z_;
     const co = getHitColorOffset(p.animHit_);
     draw(img[id], x, y, 0, 1, 1, 1, COLOR_WHITE, 0, co);
 }
 
-function drawBarrel(p: Actor) {
-    drawObject(p, p.btn_ + Img.barrel0);
-}
+const drawBarrel = (p: Actor): void => drawObject(p, p.btn_ + Img.barrel0);
+const drawTree = (p: Actor): void => drawObject(p, p.btn_ + Img.tree0);
 
-function drawTree(p: Actor) {
-    drawObject(p, p.btn_ + Img.tree0);
-}
+const DRAW_BY_TYPE: ((p: Actor) => void)[] = [
+    drawPlayer,
+    drawBarrel,
+    drawBullet,
+    drawItem,
+    drawTree,
+];
 
+const drawObjects = () => {
+    drawSplats();
+    drawParticles();
+    collectVisibleActors(trees, ...state.actors_);
+    sortList(drawList);
+    drawShadows();
+    for (const actor of drawList) {
+        DRAW_BY_TYPE[actor.type_](actor);
+    }
+}
 /// SOUND ENV ///
 
-function playAt(actor: Actor, id: Snd) {
+const playAt = (actor: Actor, id: Snd) => {
     if (gameTic >= lastAudioTic) {
         let lx = BOUNDS_SIZE / 2;
         let ly = BOUNDS_SIZE / 2;
         const p0 = getMyPlayer();
         if (p0) {
-            lx = p0.x;
-            ly = p0.y;
+            lx = p0.x_;
+            ly = p0.y_;
         }
 
-        const dx = (actor.x - lx) / 256;
-        const dy = (actor.y - ly) / 256;
+        const dx = (actor.x_ - lx) / 256;
+        const dy = (actor.y_ - ly) / 256;
         const v = 1 - Math.hypot(dx, dy);
         if (v > 0) {
             const pan = Math.max(-1, Math.min(1, dx));
@@ -1425,7 +1410,7 @@ const icons_channelState = {
     "closing": "❌",
 };
 
-function printDebugInfo() {
+const printDebugInfo = () => {
     let text = "🌐";
     if (prevRenderTic === gameTic) text = "🥶";
     const fr = simulatedFrames - (simulatedFrames | 0);
@@ -1463,7 +1448,7 @@ function printDebugInfo() {
     termPrint(text + "\n");
 }
 
-function checkDebugInput() {
+const checkDebugInput = () => {
     if (keyboardDown.has("Digit1")) {
         ++debugCheckAvatar;
     }
@@ -1478,17 +1463,17 @@ function checkDebugInput() {
     }
 }
 
-function drawActorBoundingSphere(p: Actor) {
+const drawActorBoundingSphere = (p: Actor) => {
     const r = OBJECT_RADIUS_BY_TYPE[p.type_];
     const h = OBJECT_HEIGHT[p.type_];
-    const x = p.x;
-    const y = p.y - p.z - h;
+    const x = p.x_;
+    const y = p.y_ - p.z_ - h;
     const s = r / 16;
-    draw(img[Img.box_t], x, y, 0, 1, p.z + h);
+    draw(img[Img.box_t], x, y, 0, 1, p.z_ + h);
     draw(img[Img.circle_16], x, y, 0, s, s, 0.5, 0xFF0000);
 }
 
-function drawCollisions() {
+const drawCollisions = () => {
     if (drawCollisionEnabled) {
         for (const p of drawList) {
             drawActorBoundingSphere(p);
@@ -1496,7 +1481,7 @@ function drawCollisions() {
     }
 }
 
-function assertStateEquality(label: string, a: StateData, b: StateData) {
+const assertStateEquality = (label: string, a: StateData, b: StateData) => {
 
     if (a.nextId_ != b.nextId_) {
         console.warn(label + "NEXT ID MISMATCH", a.nextId_, b.nextId_);

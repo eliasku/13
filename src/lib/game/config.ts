@@ -17,6 +17,4 @@ export const enum Const {
 
 export let _debugLagK = 2;
 
-export function setDebugLagK(a: number) {
-    _debugLagK = a;
-}
+export const setDebugLagK = (a: number) => _debugLagK = a;

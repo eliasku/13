@@ -2,26 +2,23 @@ import {DEBUG_TERM} from "../game/config";
 
 let textTerminalBuffer = "";
 
-export function termPrint(text: string) {
+export const termPrint = (text: string) => {
     if (DEBUG_TERM) {
         textTerminalBuffer += text;
     }
 }
 
-export function termFlush() {
+export const termFlush = () => {
     if (DEBUG_TERM) {
         l.innerText = textTerminalBuffer;
     }
 }
 
-export function termClear() {
+export const termClear = () => {
     if (DEBUG_TERM) {
         textTerminalBuffer = "";
     }
 }
 
-export function debugSleep(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-        setTimeout(() => resolve(), ms);
-    });
-}
+export const debugSleep = (ms: number): Promise<void> =>
+    new Promise(resolve => setTimeout(() => resolve(), ms));

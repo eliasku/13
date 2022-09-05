@@ -27,18 +27,15 @@ let messageUploading = false;
 let nextCallId = 1;
 const callbacks: ((msg: Message) => void)[] = [];
 
-export function setUserName(name: string) {
+export const setUserName = (name: string) => {
     localStorage.setItem("name", name);
     username = name;
 }
 
-export function getUserName() {
-    return username;
-}
+export const getUserName = () => username;
 
-export function remoteCall(to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> {
-    console.log(`call to ${to} type ${type}`);
-    return new Promise((resolve, reject) => {
+export const remoteCall = (to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> =>
+    new Promise((resolve, reject) => {
         const call = nextCallId++;
         callbacks[call] = (res) => {
             callbacks[call] = undefined;
@@ -46,12 +43,9 @@ export function remoteCall(to: ClientID, type: MessageType, data: MessageData): 
         };
         messagesToPost.push([clientId, to, type, call, data]);
     });
-}
 
-export function remoteSend(to: ClientID, type: MessageType, data: MessageData): void {
-    console.log(`send to ${to} type ${type}`);
+export const remoteSend = (to: ClientID, type: MessageType, data: MessageData): number =>
     messagesToPost.push([clientId, to, type, 0, data]);
-}
 
 type Handler = ((req: Message) => Promise<MessageData>) |
     ((req: Message) => void);
@@ -96,7 +90,7 @@ const handlers: Handler[] = [
     }
 ];
 
-function requestHandler(req: Message) {
+const requestHandler = (req: Message) =>
     (handlers[req[MessageField.Type]](req) as undefined | Promise<MessageData>)?.then(
         // respond to remote client if we have result in call handler
         (data) => messagesToPost.push([
@@ -107,7 +101,6 @@ function requestHandler(req: Message) {
             data
         ])
     );
-}
 
 setInterval(async () => {
     if (_sseState > 1 && !messageUploading && messagesToPost.length) {
@@ -125,7 +118,7 @@ setInterval(async () => {
     }
 }, 100);
 
-async function _post(req: Request): Promise<PostMessagesResponse> {
+const _post = async (req: Request): Promise<PostMessagesResponse> => {
     const response = await fetch(/*EventSourceUrl*/"_", {
         method: "POST",
         body: JSON.stringify(req)
@@ -138,9 +131,8 @@ async function _post(req: Request): Promise<PostMessagesResponse> {
 
 let waitForConnectedEvent: () => void | null = null;
 
-function initSSE(): Promise<void> {
-    console.log("initialize SSE");
-    return new Promise((resolve, _) => {
+const initSSE = (): Promise<void> =>
+    new Promise((resolve, _) => {
         waitForConnectedEvent = resolve;
         eventSource = new EventSource(/*EventSourceUrl*/ "_");
         eventSource.onerror = (e) => {
@@ -149,9 +141,8 @@ function initSSE(): Promise<void> {
         };
         eventSource.onmessage = (e) => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
     });
-}
 
-function termSSE() {
+const termSSE = () => {
     if (eventSource) {
         console.log("terminate SSE");
         eventSource.onerror = null;
@@ -204,7 +195,7 @@ const onSSE: ((data: string) => void)[] = [
     }
 ];
 
-export async function connect() {
+export const connect = async () => {
     if (!_sseState) {
         _sseState = 1;
         await initSSE();
@@ -212,7 +203,7 @@ export async function connect() {
     }
 }
 
-export function disconnect() {
+export const disconnect = () => {
     if (_sseState > 1) {
         termSSE();
         messagesToPost.length = 0;
@@ -227,13 +218,11 @@ export function disconnect() {
     _sseState = 0;
 }
 
-export function getClientId(): ClientID {
-    return clientId;
-}
+export const getClientId = (): ClientID => clientId;
 
 // RTC
 
-async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negotiation?: boolean) {
+const sendOffer = async (remoteClient: RemoteClient, iceRestart?: boolean, negotiation?: boolean) => {
     try {
         const pc = remoteClient.pc_;
         const offer = await pc.createOffer({iceRestart});
@@ -247,7 +236,7 @@ async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negot
     }
 }
 
-function initPeerConnection(remoteClient: RemoteClient) {
+const initPeerConnection = (remoteClient: RemoteClient) => {
     const id = remoteClient.id_;
     const pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
     remoteClient.pc_ = pc;
@@ -277,14 +266,14 @@ function initPeerConnection(remoteClient: RemoteClient) {
     // };
 }
 
-export function closePeerConnection(id: ClientID) {
+export const closePeerConnection = (id: ClientID) => {
     const rc = remoteClients.get(id);
     rc?.dc_?.close();
     rc?.pc_?.close();
     remoteClients.delete(id);
 }
 
-export async function connectToRemote(id: ClientID) {
+export const connectToRemote = async (id: ClientID) => {
     const rc = requireRemoteClient(id);
     initPeerConnection(rc);
     rc.pc_.oniceconnectionstatechange = (e) => {
@@ -302,7 +291,7 @@ export async function connectToRemote(id: ClientID) {
     setupDataChannel(rc.id_, rc.dc_);
 }
 
-function setupDataChannel(id: ClientID, channel: RTCDataChannel) {
+const setupDataChannel = (id: ClientID, channel: RTCDataChannel) => {
     channel.binaryType = "arraybuffer";
     // TODO: debug
     // channel.onopen = () => console.log("data channel opened");
@@ -310,7 +299,7 @@ function setupDataChannel(id: ClientID, channel: RTCDataChannel) {
     channel.onmessage = (msg) => channels_processMessage(id, msg);
 }
 
-function requireRemoteClient(id_: ClientID): RemoteClient {
+const requireRemoteClient = (id_: ClientID): RemoteClient => {
     let rc = remoteClients.get(id_);
     if (!rc) {
         //console.warn(`WARNING: required remote client ${id_} not found and created`);
@@ -320,6 +309,5 @@ function requireRemoteClient(id_: ClientID): RemoteClient {
     return rc;
 }
 
-export function isChannelOpen(rc?: RemoteClient): boolean {
-    return rc?.dc_?.readyState[0] == "o";
-}
+export const isChannelOpen = (rc?: RemoteClient): boolean =>
+    rc?.dc_?.readyState[0] == "o";

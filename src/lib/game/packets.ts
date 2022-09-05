@@ -7,7 +7,7 @@ const _packU8 = new Uint8Array(_packI32.buffer);
 //const _packF64 = new Float64Array(_packU8.buffer);
 const _rleBuffer = new Uint8Array(1024 * 16 * 4);
 
-export function unpack(data: ArrayBuffer): Packet | undefined {
+export const unpack = (data: ArrayBuffer): Packet | undefined => {
     const i32 = Const.RLE ? _packI32 : new Int32Array(data);
     const gotByteLength = Const.RLE ? decodeRLE(new Uint8Array(data), data.byteLength, _packU8) : data.byteLength;
 
@@ -66,16 +66,20 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                 anim0_,
                 animHit_: anim_,
 
-                x: i32[ptr++] / Const.NetPrecision,
-                y: i32[ptr++] / Const.NetPrecision,
-                z: i32[ptr++] / Const.NetPrecision,
-                u: i32[ptr++] / Const.NetPrecision,
-                v: i32[ptr++] / Const.NetPrecision,
-                w: i32[ptr++] / Const.NetPrecision,
-                s: i32[ptr++] / Const.NetPrecision,
-                t: i32[ptr++] / Const.NetPrecision,
+                x_: i32[ptr++] / Const.NetPrecision,
+                y_: i32[ptr++] / Const.NetPrecision,
+                z_: i32[ptr++] / Const.NetPrecision,
+                u_: i32[ptr++] / Const.NetPrecision,
+                v_: i32[ptr++] / Const.NetPrecision,
+                w_: i32[ptr++] / Const.NetPrecision,
+                s_: i32[ptr++] / Const.NetPrecision,
+                t_: i32[ptr++] / Const.NetPrecision,
             };
             state.actors_[p.type_].push(p);
+        }
+        const scoreCount = i32[ptr++];
+        for(let i = 0; i < scoreCount; ++i) {
+            state.scores_[i32[ptr++]] = i32[ptr++];
         }
         packet.state_ = state;
     }
@@ -105,14 +109,14 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
                     anim0_,
                     animHit_: anim_,
 
-                    x: i32[ptr++] / Const.NetPrecision,
-                    y: i32[ptr++] / Const.NetPrecision,
-                    z: i32[ptr++] / Const.NetPrecision,
-                    u: i32[ptr++] / Const.NetPrecision,
-                    v: i32[ptr++] / Const.NetPrecision,
-                    w: i32[ptr++] / Const.NetPrecision,
-                    s: i32[ptr++] / Const.NetPrecision,
-                    t: i32[ptr++] / Const.NetPrecision,
+                    x_: i32[ptr++] / Const.NetPrecision,
+                    y_: i32[ptr++] / Const.NetPrecision,
+                    z_: i32[ptr++] / Const.NetPrecision,
+                    u_: i32[ptr++] / Const.NetPrecision,
+                    v_: i32[ptr++] / Const.NetPrecision,
+                    w_: i32[ptr++] / Const.NetPrecision,
+                    s_: i32[ptr++] / Const.NetPrecision,
+                    t_: i32[ptr++] / Const.NetPrecision,
                 };
                 state.actors_[p.type_].push(p);
             }
@@ -122,7 +126,7 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
     return packet;
 }
 
-export function pack(packet: Packet): ArrayBuffer {
+export const pack = (packet: Packet): ArrayBuffer => {
     const i32 = _packI32;
     let ptr = 1;
     {
@@ -178,14 +182,19 @@ export function pack(packet: Packet): ArrayBuffer {
             i32[ptr++] = p.btn_;
             i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
             i32[ptr++] = p.id_;
-            i32[ptr++] = p.x * Const.NetPrecision;
-            i32[ptr++] = p.y * Const.NetPrecision;
-            i32[ptr++] = p.z * Const.NetPrecision;
-            i32[ptr++] = p.u * Const.NetPrecision;
-            i32[ptr++] = p.v * Const.NetPrecision;
-            i32[ptr++] = p.w * Const.NetPrecision;
-            i32[ptr++] = p.s * Const.NetPrecision;
-            i32[ptr++] = p.t * Const.NetPrecision;
+            i32[ptr++] = p.x_ * Const.NetPrecision;
+            i32[ptr++] = p.y_ * Const.NetPrecision;
+            i32[ptr++] = p.z_ * Const.NetPrecision;
+            i32[ptr++] = p.u_ * Const.NetPrecision;
+            i32[ptr++] = p.v_ * Const.NetPrecision;
+            i32[ptr++] = p.w_ * Const.NetPrecision;
+            i32[ptr++] = p.s_ * Const.NetPrecision;
+            i32[ptr++] = p.t_ * Const.NetPrecision;
+        }
+        i32[ptr++] = Object.keys(packet.state_.scores_).length;
+        for(const id in packet.state_.scores_) {
+            i32[ptr++] = +id;
+            i32[ptr++] = packet.state_.scores_[id];
         }
     }
     if (process.env.NODE_ENV === "development") {
@@ -201,14 +210,14 @@ export function pack(packet: Packet): ArrayBuffer {
                 i32[ptr++] = p.btn_;
                 i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
                 i32[ptr++] = p.id_;
-                i32[ptr++] = p.x * Const.NetPrecision;
-                i32[ptr++] = p.y * Const.NetPrecision;
-                i32[ptr++] = p.z * Const.NetPrecision;
-                i32[ptr++] = p.u * Const.NetPrecision;
-                i32[ptr++] = p.v * Const.NetPrecision;
-                i32[ptr++] = p.w * Const.NetPrecision;
-                i32[ptr++] = p.s * Const.NetPrecision;
-                i32[ptr++] = p.t * Const.NetPrecision;
+                i32[ptr++] = p.x_ * Const.NetPrecision;
+                i32[ptr++] = p.y_ * Const.NetPrecision;
+                i32[ptr++] = p.z_ * Const.NetPrecision;
+                i32[ptr++] = p.u_ * Const.NetPrecision;
+                i32[ptr++] = p.v_ * Const.NetPrecision;
+                i32[ptr++] = p.w_ * Const.NetPrecision;
+                i32[ptr++] = p.s_ * Const.NetPrecision;
+                i32[ptr++] = p.t_ * Const.NetPrecision;
             }
         }
     }

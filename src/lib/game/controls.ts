@@ -37,18 +37,18 @@ export let moveY = 0;
 export let moveFast = 0;
 export let dropButton = 0;
 
-export function updateControls(player: Actor) {
+export const updateControls = (player: Actor) => {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
 
     const mouse = mousePointer;
 
-    const px = player.x;
-    const py = player.y - player.z - 10;
+    const px = player.x_;
+    const py = player.y_ - player.z_ - 10;
 
-    if (mouse.x >= 0 && mouse.x < W && mouse.y >= 0 && mouse.y < H) {
-        lookAtX = (mouse.x - W / 2) * gameCamera[2] + gameCamera[0];
-        lookAtY = (mouse.y - H / 2) * gameCamera[2] + gameCamera[1];
+    if (mouse.x_ >= 0 && mouse.x_ < W && mouse.y_ >= 0 && mouse.y_ < H) {
+        lookAtX = (mouse.x_ - W / 2) * gameCamera[2] + gameCamera[0];
+        lookAtY = (mouse.y_ - H / 2) * gameCamera[2] + gameCamera[1];
         viewX = lookAtX - px;
         viewY = lookAtY - py;
     } else {
@@ -77,8 +77,8 @@ export function updateControls(player: Actor) {
             {
                 const control = vpad[0];
                 const pp = control.pointer_;
-                moveX = pp ? (pp.x - pp.startX_) * k : 0;
-                moveY = pp ? (pp.y - pp.startY_) * k : 0;
+                moveX = pp ? (pp.x_ - pp.startX_) * k : 0;
+                moveY = pp ? (pp.y_ - pp.startY_) * k : 0;
                 const len = Math.hypot(moveX, moveY);
                 moveFast = +(len > control.r1_);
                 jumpButtonDown = +(len > control.r2_);
@@ -86,8 +86,8 @@ export function updateControls(player: Actor) {
             {
                 const control = vpad[1];
                 const pp = control.pointer_;
-                viewX = pp ? (pp.x - pp.startX_) * k : 0;
-                viewY = pp ? (pp.y - pp.startY_) * k : 0;
+                viewX = pp ? (pp.x_ - pp.startX_) * k : 0;
+                viewY = pp ? (pp.y_ - pp.startY_) * k : 0;
                 const len = Math.hypot(viewX, viewY);
                 lookAtX = px + viewX * 2;
                 lookAtY = py + viewY * 2;
@@ -124,20 +124,21 @@ const vpad: VPadControl[] = [
 ];
 let touchPadActive = false;
 
-function checkPointerIsAvailableForCapturing(pointer: Pointer) {
-    for (const control of vpad) {
-        if (control.pointer_ === pointer) {
-            return false;
-        }
-    }
-    return true;
-}
+const checkPointerIsAvailableForCapturing = (pointer: Pointer) =>
+    !vpad.some(c => c.pointer_ == pointer);
+// {
+//     for (const control of vpad) {
+//         if (control.pointer_ === pointer) {
+//             return false;
+//         }
+//     }
+//     return true;
+// }
 
-function testZone(control: VPadControl, rx: number, ry: number) {
-    return rx > control.l_ && rx < control.r_ && ry > control.t_ && ry < control.b_;
-}
+const testZone = (control: VPadControl, rx: number, ry: number) =>
+    rx > control.l_ && rx < control.r_ && ry > control.t_ && ry < control.b_;
 
-function updateVirtualPad() {
+const updateVirtualPad = () => {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
 
@@ -159,7 +160,7 @@ function updateVirtualPad() {
             let release = !p.active_;
             // out-of-zone mode
             if (control.flags_ & 1) {
-                release ||= !testZone(control, p.x / W, p.y / H);
+                release ||= !testZone(control, p.x_ / W, p.y_ / H);
             }
             if (release) {
                 // release
@@ -171,7 +172,7 @@ function updateVirtualPad() {
     }
 }
 
-export function drawVirtualPad() {
+export const drawVirtualPad = () => {
     if (!touchPadActive) {
         return;
     }
@@ -189,7 +190,7 @@ export function drawVirtualPad() {
         if (!(control.flags_ & 1) && pp) {
             cx = pp.startX_ * k;
             cy = pp.startY_ * k;
-            draw(img[Img.circle_16], pp.x * k, pp.y * k, 0, 1, 1, 0.5);
+            draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
         }
         draw(img[Img.joy0 + i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
         ++i;
