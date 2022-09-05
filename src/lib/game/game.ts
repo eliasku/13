@@ -940,7 +940,7 @@ const updatePlayer = (player: Actor, dt: number) => {
             player.z_ = 1;
             player.w_ = JUMP_VEL;
             grounded = false;
-            playAt(player, Snd.blip);
+            playAt(player, Snd.jump);
         }
     }
     const c = grounded ? 16 : 8;
