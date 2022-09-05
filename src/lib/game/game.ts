@@ -287,7 +287,7 @@ const printStatus = () => {
 
     const getPlayerIcon = (id?: ClientID) => {
         const player = getPlayerByClient(id);
-        return player ? EMOJI[Img.avatar0 + (player.client_ || player.anim0_) % Img.num_avatars] : "👁️";
+        return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
     }
 
     termPrint(getPlayerIcon(getClientId()) + " " + getUserName() + " | ☠️" + (state.scores_[getClientId()] | 0) + "\n");
@@ -1231,7 +1231,7 @@ const drawBullet = (actor: Actor) => {
 
 const drawPlayer = (p: Actor): void => {
     const co = getHitColorOffset(p.animHit_);
-    const imgHead = p.client_ ? (Img.avatar0 + (debugCheckAvatar + (p.anim0_)) % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
+    const imgHead = p.client_ ? (Img.avatar0 + (debugCheckAvatar + p.anim0_) % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
     const colorC = COLOR_BODY[p.anim0_ % COLOR_BODY.length];
     const colorArm = colorC;
     const colorBody = colorC;
