@@ -671,8 +671,8 @@ const processTicCommands = (commands: ClientEvent[]) => {
                 const p = newActorObject(ActorType.Player);
                 p.client_ = source;
                 setRandomPosition(p);
-                p.x_ /= 10;
-                p.y_ /= 10;
+                // p.x_ /= 10;
+                // p.y_ /= 10;
                 p.hp_ = 10;
                 p.btn_ = cmd.btn_;
                 p.weapon_ = 1 + rand(3);//Const.StartWeapon;
@@ -802,6 +802,7 @@ const simulateTic = (dt: number) => {
         const p = newActorObject(ActorType.Player);
         setRandomPosition(p);
         p.hp_ = 10;
+        p.weapon_ = rand(weapons.length);
         pushActor(p);
     }
 
