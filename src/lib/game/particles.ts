@@ -1,9 +1,9 @@
 import {img, Img} from "../assets/gfx";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
-import {addRadialVelocity, collideWithBounds, updateBody} from "./phy";
+import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
 import {getLumaColor32, PI2} from "../utils/math";
-import {GRAVITY, OBJECT_HEIGHT} from "./data/world";
+import {GRAVITY} from "./data/world";
 import {_SEED2, nextFloat2, setSeed2} from "../utils/rnd";
 import {GL, gl} from "../graphics/gl";
 import {mapFramebuffer} from "../assets/map";
@@ -21,7 +21,7 @@ export const newParticle = (): Particle => ({
     color_: 0xFFFFFF,
     scale_: 1,
     lifeTime_: 0,
-    lifeMax_: 10,
+    lifeMax_: 600,
     img_: Img.particle_flesh0,
     followVelocity_: 0,
     followScale_: 0,
@@ -32,11 +32,11 @@ export const newParticle = (): Particle => ({
     splashScaleOnVelocity_: 0,
 });
 
-export const updateParticle = (p: Particle, dt: number): boolean => {
-    p.a_ += p.r_ * dt;
-    p.lifeTime_ += dt;
+export const updateParticle = (p: Particle): boolean => {
+    p.a_ += p.r_;
+    ++p.lifeTime_;
 
-    if (updateBody(p, dt, GRAVITY, 2)) {
+    if (updateBody(p, GRAVITY, 2)) {
         if (p.splashImg_) {
             const v = Math.hypot(p.u_, p.v_, p.w_);
             if (v < 4 || p.splashEachJump_) {
@@ -57,10 +57,10 @@ export const updateParticle = (p: Particle, dt: number): boolean => {
     return p.lifeTime_ < p.lifeMax_;
 }
 
-export const updateParticles = (dt: number) => {
+export const updateParticles = () => {
     for (let i = 0; i < particles.length;) {
         const p = particles[i];
-        if (updateParticle(p, dt)) {
+        if (updateParticle(p)) {
             ++i;
         } else {
             particles.splice(i, 1);
@@ -75,9 +75,7 @@ let splats: number[] = [];
 
 export const saveParticles = () => {
     seed0 = _SEED2;
-    particles0 = particles.map(x => {
-        return {...x};
-    });
+    particles0 = particles.map(x => ({...x}));
 }
 
 export const restoreParticles = () => {
@@ -125,24 +123,19 @@ export const drawParticle = (p: Particle) => {
 export const addFleshParticles = (amount: number, actor: Actor, explVel: number, vel?: Vel) => {
     while (amount--) {
         const particle = newParticle();
-        particle.x_ = actor.x_;
-        particle.y_ = actor.y_;
-        particle.z_ = actor.z_ + OBJECT_HEIGHT[actor.type_];
+        copyPosFromActorCenter(particle, actor);
         if (vel) {
-            const d = nextFloat2() / 2;
-            particle.u_ = vel.u_ * d;
-            particle.v_ = vel.v_ * d;
-            particle.w_ = vel.w_ * d;
+            addVelFrom(particle, vel, nextFloat2() / 2);
         }
-        particle.color_ = (0x60 + 0x30 * nextFloat2()) << 16;
         addRadialVelocity(particle, nextFloat2() * PI2, (0.5 - nextFloat2()) * explVel, 0);
+        particle.color_ = (0x60 + 0x30 * nextFloat2()) << 16;
         particle.img_ = Img.particle_shell;
         particle.splashImg_ = Img.circle_4;
         particle.splashEachJump_ = 1;
         particle.splashSizeX_ = 0.5;
         particle.splashSizeY_ = 0.5 / 4;
-        particle.splashScaleOnVelocity_ = 0.01 + 0.01 * nextFloat2();
-        particle.scale_ = 0.5 + nextFloat2() * 0.5;
+        particle.splashScaleOnVelocity_ = (1 + nextFloat2()) / 100;
+        particle.scale_ = (1 + nextFloat2()) / 2;
         particle.followVelocity_ = 1;
         particle.followScale_ = 0.02;
         particles.push(particle);
@@ -152,16 +145,11 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
 export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
     while (amount--) {
         const particle = newParticle();
-        particle.x_ = actor.x_;
-        particle.y_ = actor.y_;
-        particle.z_ = actor.z_ + OBJECT_HEIGHT[actor.type_];
+        copyPosFromActorCenter(particle, actor);
         if (vel) {
-            const d = nextFloat2() / 2;
-            particle.u_ = vel.u_ * d;
-            particle.v_ = vel.v_ * d;
-            particle.w_ = vel.w_ * d;
+            addVelFrom(particle, vel, nextFloat2() / 2);
         }
-        addRadialVelocity(particle, nextFloat2() * PI2, 64 - 128 * nextFloat2(), 128 * nextFloat2());
+        addRadialVelocity(particle, nextFloat2() * PI2, (0.5 - nextFloat2()) * 128, nextFloat2() * 128);
         const i = nextFloat2() < 0.3 ? Img.particle_flesh0 : Img.particle_flesh1;
         particle.img_ = i;
         particle.splashImg_ = i;
@@ -170,8 +158,8 @@ export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
         particle.splashSizeX_ = particle.scale_;
         particle.splashSizeY_ = particle.scale_;
         particle.color_ = getLumaColor32(0x80 + 0x20 * nextFloat2());
-        particle.r_ = (-0.5 + nextFloat2()) * PI2;
-        particle.a_ = -0.5 + nextFloat2();
+        particle.r_ = (0.5 - nextFloat2()) * 0.1;
+        particle.a_ = 0.5 - nextFloat2();
         particles.push(particle);
     }
 }
@@ -184,7 +172,7 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
     particle.img_ = Img.particle_shell;
     particle.splashImg_ = Img.particle_shell;
     particle.color_ = color;
-    particle.r_ = (0.5 - nextFloat2()) * PI2 * 4;
+    particle.r_ = (0.5 - nextFloat2()) * 0.5;
     particle.a_ = nextFloat2() * PI2;
     addRadialVelocity(particle, nextFloat2() * PI2, 16 + 32 * nextFloat2(), 32);
     particles.push(particle);

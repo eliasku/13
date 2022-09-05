@@ -160,20 +160,21 @@ if (process.argv.indexOf("--zip") > 0) {
 
 console.info(report.join("\n"));
 
-// Before:
-// BUILD: 103525
-// C2LET: 102717
-// TERSER: 37641
-// ROADROLL: 18455
-// LZMA: 13620
+// before:
+// BUILD: 60023
+// MANGLE: 57707
+// TERSER: 36629
+// ROADROLL: 18127
+// LZMA: 13467
+// rem: -155
 
-// After:
-// BUILD: 102866
-// C2LET: 102072
-// TERSER: 37396
-// ROADROLL: 18413
-// LZMA: 13590
-
+// after:
+// BUILD: 59543
+// MANGLE: 57207
+// TERSER: 36382
+// ROADROLL: 17984
+// LZMA: 13364
+// rem: -52
 
 function mangle_types(file, dest) {
 

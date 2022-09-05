@@ -26,10 +26,10 @@ export const copyPosFromActorCenter = (to: Pos, from: Actor) => {
     to.z_ = from.z_ + OBJECT_HEIGHT[from.type_];
 }
 
-export const updateBody = (body: Pos & Vel, dt: number, gravity: number, loss: number) => {
-    addPos(body, body.u_, body.v_, body.w_, dt);
+export const updateBody = (body: Pos & Vel, gravity: number, loss: number) => {
+    addPos(body, body.u_, body.v_, body.w_, 1 / Const.NetFq);
     if (body.z_ > 0) {
-        body.w_ -= gravity * dt;
+        body.w_ -= gravity;
     } else {
         body.z_ = 0;
         if (body.w_ < 0) {
@@ -40,17 +40,17 @@ export const updateBody = (body: Pos & Vel, dt: number, gravity: number, loss: n
     return false;
 }
 
-export const updateAnim = (actor: Actor, dt: number) =>
-    actor.animHit_ = Math.max(0, actor.animHit_ - 2 * dt * Const.NetFq);
+export const updateAnim = (actor: Actor) =>
+    actor.animHit_ = Math.max(0, actor.animHit_ - 2);
 
-export const updateActorPhysics = (a: Actor, dt: number) => {
-    const isWeakGravity = !a.type_ ? (a.btn_ & ControlsFlag.Jump) : 0;
-    updateBody(a, dt, isWeakGravity ? GRAVITY_WEAK : GRAVITY, OBJECT_GROUND_LOSS[a.type_]);
+export const updateActorPhysics = (a: Actor) => {
+    const isWeakGravity = a.type_ ? 0 : (a.btn_ & ControlsFlag.Jump);
+    updateBody(a, isWeakGravity ? GRAVITY_WEAK : GRAVITY, OBJECT_GROUND_LOSS[a.type_]);
     collideWithBoundsA(a);
     if (a.z_ <= 0) {
-        applyGroundFriction(a, dt * OBJECT_GROUND_FRICTION[a.type_]);
+        applyGroundFriction(a, OBJECT_GROUND_FRICTION[a.type_]);
     }
-    updateAnim(a, dt);
+    updateAnim(a);
 }
 
 export const collideWithBoundsA = (body: Actor): number =>

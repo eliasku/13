@@ -1,5 +1,4 @@
 import {toRad} from "../../utils/math";
-import {Const} from "../config";
 
 export const enum BulletType {
     Melee = 0,
@@ -67,7 +66,7 @@ const createArmWeapon = (): WeaponConfig => {
     w.angleSpread_ = 0.5;
     w.launchTime_ = 0.5;
     w.kickBack_ = 10;
-    w.offset_ = 8;
+    w.offset_ = 6;
     w.offsetZ_ = 0;
     w.velocity_ = 300;
     w.detuneSpeed_ = 16;
@@ -75,7 +74,8 @@ const createArmWeapon = (): WeaponConfig => {
     w.cameraLookForward_ = 0.1;
     w.handsAnim_ = 12;
     w.bulletDamage_ = 2;
-    w.bulletLifetime_ = 2 / Const.NetFq;
+    // w.bulletLifetime_ = 2;
+    w.bulletLifetime_ = 3;
     return w;
 };
 
@@ -113,8 +113,8 @@ export const weapons: WeaponConfig[] = [
 let i = 1;
 
 // 🔪
-weapons[i].rate_ = 8;
-weapons[i].bulletDamage_ = 4;
+weapons[i].rate_ = 6;
+weapons[i].bulletDamage_ = 2;
 weapons[i].gfxRot_ = toRad(-45);
 
 // AXE
@@ -201,5 +201,5 @@ weapons[i].cameraLookForward_ = 0.4;
 weapons[i].cameraScale_ = 1.5;
 weapons[i].bulletDamage_ = 5;
 weapons[i].bulletType_ = BulletType.Ray;
-weapons[i].bulletLifetime_ = 10 / Const.NetFq;
+weapons[i].bulletLifetime_ = 10;
 weapons[i].bulletShellColor_ = 0x990099;

@@ -113,8 +113,6 @@ let trees: Actor[] = [];
 let state: StateData = newStateData();
 let lastState: StateData;
 
-let simulatedFrames = 0;
-
 let cameraShake = 0;
 let cameraFeedback = 0;
 
@@ -441,29 +439,19 @@ const calcNetTic = () => {
 
 const tryRunTicks = (ts: number): number => {
     if (startTic < 0) {
-        return;
+        return 0;
     }
     calcNetTic();
-    const framesPassed = ((ts - prevTime) * Const.NetFq) | 0;
-    let frameN = framesPassed;
-    let framesProcessed = 0;
-    while (gameTic <= netTic && frameN > 0) {
-        {
-            for (const a of state.actors_) {
-                sortById(a);
-                roundActors(a);
-            }
-            processTicCommands(getTicCommands(gameTic));
-            simulateTic(1 / Const.NetFq);
-            state.seed_ = _SEED;
-        }
-        ++gameTic;
-        --frameN;
-        ++framesProcessed;
+    let frames = (ts - prevTime) * Const.NetFq | 0;
+    let framesSimulated = 0;
+    while (gameTic <= netTic && frames--) {
+        simulateTic();
+        ++framesSimulated;
+
+        // compensate
+        // we must try to keep netTic >= gameTic + Const.InputDelay
+        prevTime += 1 / Const.NetFq;
     }
-    // compensate
-    // we must try to keep netTic >= gameTic + Const.InputDelay
-    prevTime += framesProcessed / Const.NetFq;
 
     // we played all available net-events
     const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
@@ -487,7 +475,7 @@ const tryRunTicks = (ts: number): number => {
     receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
     localEvents = localEvents.filter(v => v.tic_ > Math.min(ackMin, lastTic));
 
-    return framesProcessed;
+    return framesSimulated;
 }
 
 const sendInput = () => {
@@ -714,7 +702,7 @@ const pickItem = (item: Actor, player: Actor) => {
     }
 }
 
-const updateGameCamera = (dt: number) => {
+const updateGameCamera = () => {
     let cameraScale = BASE_RESOLUTION / Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight);
     let cameraX = BOUNDS_SIZE >> 1;
     let cameraY = BOUNDS_SIZE >> 1;
@@ -725,17 +713,24 @@ const updateGameCamera = (dt: number) => {
         cameraY = p0.y_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y_);
         cameraScale *= wpn.cameraScale_;
     }
-    gameCamera[0] = lerp(gameCamera[0], cameraX, 4 * dt);
-    gameCamera[1] = lerp(gameCamera[1], cameraY, 4 * dt);
-    gameCamera[2] = lerp(gameCamera[2], cameraScale, 2 * dt);
+    gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
+    gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
+    gameCamera[2] = lerp(gameCamera[2], cameraScale, 0.05);
 }
 
-const simulateTic = (dt: number) => {
+const simulateTic = () => {
+    for (const a of state.actors_) {
+        sortById(a);
+        roundActors(a);
+    }
+
+    processTicCommands(getTicCommands(gameTic));
+
     //if(startTick < 0) return;
-    updateGameCamera(dt);
+    updateGameCamera();
 
     for (const a of state.actors_[ActorType.Player]) {
-        updatePlayer(a, dt);
+        updatePlayer(a);
     }
 
     if (debugStateEnabled) {
@@ -745,12 +740,12 @@ const simulateTic = (dt: number) => {
     }
 
     for (const a of state.actors_[ActorType.Player]) {
-        updateActorPhysics(a, dt);
+        updateActorPhysics(a);
     }
 
-    for (const a of state.actors_[ActorType.Barrel]) updateActorPhysics(a, dt);
+    for (const a of state.actors_[ActorType.Barrel]) updateActorPhysics(a);
     for (const a of state.actors_[ActorType.Item]) {
-        updateActorPhysics(a, dt);
+        updateActorPhysics(a);
         if (!a.animHit_) {
             for (const player of state.actors_[ActorType.Player]) {
                 if (testIntersection(a, player)) {
@@ -761,7 +756,7 @@ const simulateTic = (dt: number) => {
     }
 
     for (const bullet of state.actors_[ActorType.Bullet]) {
-        updateBody(bullet, dt, 0, 0);
+        updateBody(bullet, 0, 0);
         if (bullet.hp_ && collideWithBoundsA(bullet)) {
             --bullet.hp_;
         }
@@ -771,17 +766,14 @@ const simulateTic = (dt: number) => {
         if (bullet.btn_ === BulletType.Ray) {
             bullet.hp_ = -1;
         }
-        if (bullet.s_ > 0) {
-            bullet.s_ -= dt;
-            if (bullet.s_ <= 0) {
-                bullet.hp_ = 0;
-            }
+        if (bullet.s_ && !--bullet.s_) {
+            bullet.hp_ = 0;
         }
     }
     for (const tree of trees) {
-        updateAnim(tree, dt);
+        updateAnim(tree);
     }
-    updateParticles(dt);
+    updateParticles();
 
     for (let i = 0; i < state.actors_.length; ++i) {
         state.actors_[i] = state.actors_[i].filter(x => x.hp_);
@@ -795,8 +787,8 @@ const simulateTic = (dt: number) => {
     if (waitToSpawn && getMyPlayer()) {
         waitToSpawn = false;
     }
-    cameraShake = reach(cameraShake, 0, dt);
-    cameraFeedback = reach(cameraFeedback, 0, 12 * dt);
+    cameraShake = reach(cameraShake, 0, 0.02);
+    cameraFeedback = reach(cameraFeedback, 0, 0.2);
 
     if (gameTic % 500 === 0) {
         const p = newActorObject(ActorType.Player);
@@ -814,6 +806,9 @@ const simulateTic = (dt: number) => {
         sortById(a);
         roundActors(a);
     }
+
+    state.seed_ = _SEED;
+    ++gameTic;
 }
 
 const updateBodyInterCollisions2 = (list1: Actor[], list2: Actor[]) => {
@@ -932,9 +927,9 @@ const updateAI = (player: Actor) => {
     if (!rand(20) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
 }
 
-const updatePlayer = (player: Actor, dt: number) => {
+const updatePlayer = (player: Actor) => {
     if (!player.client_) updateAI(player);
-    let grounded = player.z_ === 0 && player.w_ === 0;
+    let grounded = player.z_ == 0 && player.w_ == 0;
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
             player.z_ = 1;
@@ -943,7 +938,7 @@ const updatePlayer = (player: Actor, dt: number) => {
             playAt(player, Snd.jump);
         }
     }
-    const c = grounded ? 16 : 8;
+    const c = (grounded ? 16 : 8) / Const.NetFq;
     const moveAngle = unpackAngleByte(player.btn_ >> ControlsFlag.MoveAngleBit, ControlsFlag.MoveAngleMax);
     const lookAngle = unpackAngleByte(player.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const moveDirX = Math.cos(moveAngle);
@@ -953,13 +948,13 @@ const updatePlayer = (player: Actor, dt: number) => {
     if (player.btn_ & ControlsFlag.Move) {
         const speed = (player.btn_ & ControlsFlag.Run) ? 2 : 1;
         const vel = speed * 60;
-        player.u_ = reach(player.u_, vel * moveDirX, vel * dt * c);
-        player.v_ = reach(player.v_, vel * moveDirY, vel * dt * c);
+        player.u_ = reach(player.u_, vel * moveDirX, vel * c);
+        player.v_ = reach(player.v_, vel * moveDirY, vel * c);
         if (grounded && !(gameTic % (20 / speed))) {
             playAt(player, Snd.step);
         }
     } else {
-        applyGroundFriction(player, 32 * c * dt);
+        applyGroundFriction(player, 32 * c);
     }
 
     if (player.btn_ & ControlsFlag.Drop) {
@@ -978,12 +973,12 @@ const updatePlayer = (player: Actor, dt: number) => {
 
     const weapon = weapons[player.weapon_];
     if (player.btn_ & ControlsFlag.Shooting && player.weapon_) {
-        player.s_ = reach(player.s_, 0, weapon.rate_ * dt);
+        player.s_ = reach(player.s_, 0, weapon.rate_ / Const.NetFq);
         if (!player.s_) {
             cameraShake = Math.max(weapon.cameraShake_, cameraShake);
             player.s_ = 1;
             cameraFeedback = 1;
-            player.t_ = reach(player.t_, 1, dt * weapon.detuneSpeed_);
+            player.t_ = reach(player.t_, 1, weapon.detuneSpeed_ / Const.NetFq);
             addVelocityDir(player, lookDirX, lookDirY, -1, player.w_ > 0 ? 0 : -weapon.kickBack_);
             playAt(player, Snd.shoot);
             for (let i = 0; i < weapon.spawnCount_; ++i) {
@@ -1011,8 +1006,8 @@ const updatePlayer = (player: Actor, dt: number) => {
             }
         }
     } else {
-        player.t_ = reach(player.t_, 0, dt * 16);
-        player.s_ = reach(player.s_, weapon.launchTime_, dt * weapon.relaunchSpeed_);
+        player.t_ = reach(player.t_, 0, 0.3);
+        player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_ / Const.NetFq);
     }
 }
 
@@ -1037,34 +1032,26 @@ const cloneState = (): StateData => ({
 });
 
 const beginPrediction = (): boolean => {
-    // global state
-    let time = lastFrameTs - prevTime;
     // if (!Const.Prediction || time < 0.001) return false;
     if (!Const.Prediction) return false;
 
-    // save state
-    lastState = state;
-    state = cloneState();
+    // global state
+    let frames = Math.min(1, lastFrameTs - prevTime) * Const.NetFq | 0;
+    if (!frames) return false;
 
     // save particles
     saveParticles();
 
-    simulatedFrames = 0;
+    // save state
+    lastState = state;
+    state = cloneState();
     const savedGameTic = gameTic;
 
     // && gameTic <= lastInputTic
-    while (time > 0 && simulatedFrames < Const.NetFq) {
-        const dt = Math.min(time, 1 / Const.NetFq);
-        {
-            processTicCommands(getTicCommands(gameTic));
-            simulateTic(dt);
-            state.seed_ = _SEED;
-        }
-
-        time -= dt;
-        simulatedFrames += dt * Const.NetFq;
-        ++gameTic;
+    while (frames--) {
+        simulateTic();
     }
+
     gameTic = savedGameTic;
     return true;
 }
@@ -1201,9 +1188,9 @@ const drawBullet = (actor: Actor) => {
         [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF]
     ];
 
-    const BULLET_LENGTH = [2, 2, 1, 8, 512];
-    const BULLET_LENGTH_LIGHT = [1, 2, 2, 2, 512];
-    const BULLET_SIZE = [2, 3 / 2, 2, 4, 12];
+    const BULLET_LENGTH = [0.2, 2, 1, 8, 512];
+    const BULLET_LENGTH_LIGHT = [0.1, 2, 2, 2, 512];
+    const BULLET_SIZE = [6, 3 / 2, 2, 4, 12];
     const BULLET_PULSE = [0, 0, 1, 0, 0];
     const BULLET_IMAGE = [
         Img.circle_4_60p, Img.circle_4_70p, Img.box,
@@ -1392,7 +1379,7 @@ let debugState: StateData;
 let debugStateEnabled = false;
 let drawCollisionEnabled = false;
 let debugCheckAvatar = 0;
-let prevRenderTic = 0;
+let prevSimulatedTic = 0;
 
 const icons_iceState = {
     "disconnected": "⭕",
@@ -1412,16 +1399,13 @@ const icons_channelState = {
 };
 
 const printDebugInfo = () => {
-    let text = "🌐";
-    if (prevRenderTic === gameTic) text = "🥶";
-    const fr = simulatedFrames - (simulatedFrames | 0);
-    if (fr > 0) text = "✨";
-    if ((simulatedFrames | 0) > 0) text = "🔮";
-    prevRenderTic = gameTic;
-    text += ` b:${(((lastFrameTs - prevTime) * Const.NetFq) | 0)}`;
-    text += " r:" + (simulatedFrames | 0) + (fr > 0 ? "." : "") + "\n";
-    text += "d " + (lastFrameTs - prevTime).toFixed(2) + "\n";
-    text += "~ " + (gameTic / Const.NetFq).toFixed(2) + "\n";
+    let text = gameTic > prevSimulatedTic ? "🌐" : "🥶";
+    const ticsAhead = (lastFrameTs - prevTime) * Const.NetFq | 0;
+    const ticsPrediction = Math.min(Const.NetFq, ticsAhead);
+    if (ticsPrediction) text += "🔮";
+    text += `~ ${ticsPrediction} of ${ticsAhead}\n`;
+    prevSimulatedTic = gameTic;
+
     if (_debugLagK) {
         text += "debug-lag K: " + _debugLagK + "\n";
     }
