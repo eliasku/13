@@ -8,6 +8,7 @@
     "start-watch": "npx nodemon ./public/s.js",
     "build-ts-server": "tsc -p server/tsconfig.json",
     "build-ts-client": "tsc -p tsconfig.json",
+    "rollup-client": "rollup build/client/lib/index.js --file build/client-bundle.js",
     "build": "node build.js",
     "build-dev": "node build.js --dev",
     "zip": "node build.js --zip",

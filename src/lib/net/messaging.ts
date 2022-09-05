@@ -17,7 +17,15 @@ export interface RemoteClient {
     debugPacketByteLength_?: number;
 }
 
+export let _sseState = 0;
+export const remoteClients = new Map<ClientID, RemoteClient>();
+let eventSource: EventSource | null = null;
+let clientId: undefined | ClientID = undefined;
 let username: string = localStorage.getItem("name");
+let messagesToPost: Message[] = [];
+let messageUploading = false;
+let nextCallId = 1;
+const callbacks: ((msg: Message) => void)[] = [];
 
 export function setUserName(name: string) {
     localStorage.setItem("name", name);
@@ -27,14 +35,6 @@ export function setUserName(name: string) {
 export function getUserName() {
     return username;
 }
-
-let clientId: undefined | ClientID = undefined;
-export const remoteClients = new Map<ClientID, RemoteClient>();
-
-let messagesToPost: Message[] = [];
-const callbacks: ((msg: Message) => void)[] = [];
-let nextCallId = 1;
-let eventSource: EventSource | null = null;
 
 export function remoteCall(to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> {
     console.log(`call to ${to} type ${type}`);
@@ -96,25 +96,18 @@ const handlers: Handler[] = [
     }
 ];
 
-function respond(req: Message, data: MessageData) {
-    messagesToPost.push([
-        clientId,
-        req[MessageField.Source],
-        req[MessageField.Type],
-        req[MessageField.Call],
-        data
-    ]);
-}
-
 function requestHandler(req: Message) {
     (handlers[req[MessageField.Type]](req) as undefined | Promise<MessageData>)?.then(
-        (resultMessage) => respond(req, resultMessage)
+        // respond to remote client if we have result in call handler
+        (data) => messagesToPost.push([
+            clientId,
+            req[MessageField.Source],
+            req[MessageField.Type],
+            req[MessageField.Call],
+            data
+        ])
     );
 }
-
-export let _sseState = 0;
-
-let messageUploading = false;
 
 setInterval(async () => {
     if (_sseState > 1 && !messageUploading && messagesToPost.length) {
@@ -240,12 +233,6 @@ export function getClientId(): ClientID {
 
 // RTC
 
-const rtcConfiguration: RTCConfiguration = {
-    iceServers: [
-        {urls: 'stun:stun.l.google.com:19302'},
-    ],
-};
-
 async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negotiation?: boolean) {
     try {
         const pc = remoteClient.pc_;
@@ -262,7 +249,7 @@ async function sendOffer(remoteClient: RemoteClient, iceRestart?: boolean, negot
 
 function initPeerConnection(remoteClient: RemoteClient) {
     const id = remoteClient.id_;
-    const pc = new RTCPeerConnection(rtcConfiguration);
+    const pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
     remoteClient.pc_ = pc;
     pc.onicecandidate = (e) => {
         const candidate = e.candidate;

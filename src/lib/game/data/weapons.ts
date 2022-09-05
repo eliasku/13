@@ -25,6 +25,7 @@ export interface WeaponConfig {
     detuneSpeed_: number;
     cameraFeedback_: number;
     cameraLookForward_: number;
+    cameraScale_: number;
     gfxRot_: number;
     gfxSx_: number;
     handsAnim_: number;
@@ -52,6 +53,7 @@ function newWeapon(): WeaponConfig {
         detuneSpeed_: 0,
         cameraFeedback_: 0,
         cameraLookForward_: 0,
+        cameraScale_: 1,
         gfxRot_: 0,
         gfxSx_: 1,
         handsAnim_: 0,
@@ -168,9 +170,10 @@ weapons[i].bulletShellColor_ = 0xAA0000;
 
 // CROSS BOW ⛏
 ++i;
-weapons[i].detuneSpeed_ = 4;
+weapons[i].detuneSpeed_ = 1;
 weapons[i].cameraFeedback_ = 0.1;
 weapons[i].cameraLookForward_ = 0.4;
+weapons[i].cameraScale_ = 1.5;
 weapons[i].velocity_ = 960;
 weapons[i].handsAnim_ = 1;
 weapons[i].bulletDamage_ = 5;
@@ -197,6 +200,7 @@ weapons[i].cameraShake_ = 0.5;
 weapons[i].velocity_ = 1;
 weapons[i].cameraFeedback_ = 0.1;
 weapons[i].cameraLookForward_ = 0.4;
+weapons[i].cameraScale_ = 1.5;
 weapons[i].bulletDamage_ = 5;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10 / Const.NetFq;

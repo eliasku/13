@@ -1,4 +1,4 @@
-import {Actor, ClientEvent, newStateData, Packet} from "./types";
+import {Actor, newStateData, Packet} from "./types";
 import {Const} from "./config";
 import {decodeRLE, encodeRLE} from "../utils/rle";
 
@@ -79,43 +79,45 @@ export function unpack(data: ArrayBuffer): Packet | undefined {
         }
         packet.state_ = state;
     }
-    if (flags0 & 4) {
-        const state = newStateData();
-        state.mapSeed_ = i32[ptr++] >>> 0;
-        state.seed_ = i32[ptr++] >>> 0;
-        state.nextId_ = i32[ptr++];
-        let count = i32[ptr++];
-        for (let i = 0; i < count; ++i) {
-            const hdr = i32[ptr++];
-            const c = i32[ptr++];
-            const btn_ = i32[ptr++];
+    if (process.env.NODE_ENV === "development") {
+        if (flags0 & 4) {
+            const state = newStateData();
+            state.mapSeed_ = i32[ptr++] >>> 0;
+            state.seed_ = i32[ptr++] >>> 0;
+            state.nextId_ = i32[ptr++];
+            let count = i32[ptr++];
+            for (let i = 0; i < count; ++i) {
+                const hdr = i32[ptr++];
+                const c = i32[ptr++];
+                const btn_ = i32[ptr++];
 
-            const anim = i32[ptr++];
-            const anim0_ = anim & 0xFF;
-            const anim_ = (anim >> 8) & 0xFF;
+                const anim = i32[ptr++];
+                const anim0_ = anim & 0xFF;
+                const anim_ = (anim >> 8) & 0xFF;
 
-            const p: Actor = {
-                id_: i32[ptr++],
-                type_: hdr & 0xFF,
-                hp_: (hdr >> 8) & 0xFF,
-                weapon_: (hdr >> 16) & 0xFF,
-                client_: c,
-                btn_,
-                anim0_,
-                animHit_: anim_,
+                const p: Actor = {
+                    id_: i32[ptr++],
+                    type_: hdr & 0xFF,
+                    hp_: (hdr >> 8) & 0xFF,
+                    weapon_: (hdr >> 16) & 0xFF,
+                    client_: c,
+                    btn_,
+                    anim0_,
+                    animHit_: anim_,
 
-                x: i32[ptr++] / Const.NetPrecision,
-                y: i32[ptr++] / Const.NetPrecision,
-                z: i32[ptr++] / Const.NetPrecision,
-                u: i32[ptr++] / Const.NetPrecision,
-                v: i32[ptr++] / Const.NetPrecision,
-                w: i32[ptr++] / Const.NetPrecision,
-                s: i32[ptr++] / Const.NetPrecision,
-                t: i32[ptr++] / Const.NetPrecision,
-            };
-            state.actors_[p.type_].push(p);
+                    x: i32[ptr++] / Const.NetPrecision,
+                    y: i32[ptr++] / Const.NetPrecision,
+                    z: i32[ptr++] / Const.NetPrecision,
+                    u: i32[ptr++] / Const.NetPrecision,
+                    v: i32[ptr++] / Const.NetPrecision,
+                    w: i32[ptr++] / Const.NetPrecision,
+                    s: i32[ptr++] / Const.NetPrecision,
+                    t: i32[ptr++] / Const.NetPrecision,
+                };
+                state.actors_[p.type_].push(p);
+            }
+            packet.checkState_ = state;
         }
-        packet.checkState_ = state;
     }
     return packet;
 }
@@ -130,8 +132,10 @@ export function pack(packet: Packet): ArrayBuffer {
         if (!!packet.state_) {
             flags0 |= 2;
         }
-        if( !! packet.checkState_) {
-            flags0 |= 4;
+        if(process.env.NODE_ENV === "development") {
+            if (!!packet.checkState_) {
+                flags0 |= 4;
+            }
         }
         i32[ptr++] = flags0;
     }
@@ -156,8 +160,7 @@ export function pack(packet: Packet): ArrayBuffer {
         if (event_t++ == e.tic_) {
             ++i;
             i32[ptr++] = e.btn_ ?? -1;
-        }
-        else {
+        } else {
             i32[ptr++] = -1;
         }
         // debug.push(e.btn_);
@@ -185,26 +188,28 @@ export function pack(packet: Packet): ArrayBuffer {
             i32[ptr++] = p.t * Const.NetPrecision;
         }
     }
-    if (packet.checkState_) {
-        i32[ptr++] = packet.checkState_.mapSeed_;
-        i32[ptr++] = packet.checkState_.seed_;
-        i32[ptr++] = packet.checkState_.nextId_;
-        const list: Actor[] = [].concat(...packet.checkState_.actors_);
-        i32[ptr++] = list.length;
-        for (const p of list) {
-            i32[ptr++] = p.type_ | ((p.hp_ & 0xFF) << 8) | ((p.weapon_ & 0xFF) << 16);
-            i32[ptr++] = p.client_;
-            i32[ptr++] = p.btn_;
-            i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
-            i32[ptr++] = p.id_;
-            i32[ptr++] = p.x * Const.NetPrecision;
-            i32[ptr++] = p.y * Const.NetPrecision;
-            i32[ptr++] = p.z * Const.NetPrecision;
-            i32[ptr++] = p.u * Const.NetPrecision;
-            i32[ptr++] = p.v * Const.NetPrecision;
-            i32[ptr++] = p.w * Const.NetPrecision;
-            i32[ptr++] = p.s * Const.NetPrecision;
-            i32[ptr++] = p.t * Const.NetPrecision;
+    if (process.env.NODE_ENV === "development") {
+        if (packet.checkState_) {
+            i32[ptr++] = packet.checkState_.mapSeed_;
+            i32[ptr++] = packet.checkState_.seed_;
+            i32[ptr++] = packet.checkState_.nextId_;
+            const list: Actor[] = [].concat(...packet.checkState_.actors_);
+            i32[ptr++] = list.length;
+            for (const p of list) {
+                i32[ptr++] = p.type_ | ((p.hp_ & 0xFF) << 8) | ((p.weapon_ & 0xFF) << 16);
+                i32[ptr++] = p.client_;
+                i32[ptr++] = p.btn_;
+                i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
+                i32[ptr++] = p.id_;
+                i32[ptr++] = p.x * Const.NetPrecision;
+                i32[ptr++] = p.y * Const.NetPrecision;
+                i32[ptr++] = p.z * Const.NetPrecision;
+                i32[ptr++] = p.u * Const.NetPrecision;
+                i32[ptr++] = p.v * Const.NetPrecision;
+                i32[ptr++] = p.w * Const.NetPrecision;
+                i32[ptr++] = p.s * Const.NetPrecision;
+                i32[ptr++] = p.t * Const.NetPrecision;
+            }
         }
     }
     // save packet dwords size to header

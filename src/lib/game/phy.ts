@@ -28,9 +28,10 @@ export function copyPosFromActorCenter(to: Pos, from: Actor) {
 }
 
 export function updateBody(body: Pos & Vel, dt: number, gravity: number, loss: number) {
-    body.x += body.u * dt;
-    body.y += body.v * dt;
-    body.z += body.w * dt;
+    addPos(body, body.u, body.v, body.w, dt);
+    // body.x += body.u * dt;
+    // body.y += body.v * dt;
+    // body.z += body.w * dt;
     if (body.z > 0) {
         body.w -= gravity * dt;
     } else {
@@ -151,17 +152,9 @@ export function updateBodyCollisions(a: Actor, list: Actor[], ioffset: number) {
         const sqrDist = sqrLength3(nx, ny, nz);
         const D = ra + OBJECT_RADIUS_BY_TYPE[bt];
         if (sqrDist < D * D && sqrDist > 0) {
-            const imb = OBJECT_IMASS[bt];
             const pen = (D / Math.sqrt(sqrDist) - 1) / 2;
-            nx *= pen;
-            ny *= pen;
-            nz *= pen;
-            a.x += nx * ima;
-            a.y += ny * ima;
-            a.z = Math.max(a.z + nz * ima, 0);
-            b.x -= nx * imb;
-            b.y -= ny * imb;
-            b.z = Math.max(b.z - nz * imb, 0);
+            addPos(a, nx, ny, nz, ima * pen);
+            addPos(b, nx, ny, nz, -OBJECT_IMASS[bt] * pen);
         }
     }
 }

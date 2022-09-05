@@ -1,12 +1,12 @@
 import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d";
-import {toRad} from "../utils/math";
+import {PI2, toRad} from "../utils/math";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./params";
 
 export const enum Img {
     box = 0,
     box_lt,
     box_t,
-    box_t2,
+    box_t1,
     box_l,
     box_r,
     circle_4,
@@ -21,6 +21,11 @@ export const enum Img {
     avatar4,
     avatar5,
     avatar6,
+    avatar7,
+
+    npc0,
+    npc1,
+    npc2,
 
     weapon0,
     weapon1,
@@ -51,10 +56,17 @@ export const enum Img {
     joy1,
     joy2,
 
-    num_avatars = 7,
+    num_avatars = 8,
+    num_npc = 3,
 }
 
-export const AVATARS: string[] = ["💀","👹","🤡","🤖","🎃","🦝","🐙"];
+export const AVATARS: string[] = ["💀", "👹", "🤡", "🤖", "🎃", "🦝", "🐙", "🐰"];
+export const NPC: string[] = [
+    "🍅",
+    "😐",
+    "🐷",
+];
+export const WEAPONS: string[] = [,"🔪", "🪓", "🔫", "🖊️", "✏️️", "🪥", "⛏", "🔌", "🧵"];
 
 export const img: Texture[] = [];
 
@@ -130,7 +142,7 @@ function createAtlas(): void {
         pushSprite(s, s);
         atlas.translate(x + r, y + r);
         atlas.beginPath();
-        atlas.arc(0, 0, r * 0.925, 0, Math.PI * 2);
+        atlas.arc(0, 0, r * 0.925, 0, PI2);
         atlas.closePath();
         atlas.fill();
         atlas.resetTransform();
@@ -143,7 +155,7 @@ function createAtlas(): void {
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0, 0),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, -2),
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, -1),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0, 0.5),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 1, 0.5),
     );
@@ -172,17 +184,21 @@ function createAtlas(): void {
     // createEmoji2("🤢", 192, 166, 19, 19, 16, 0, 1, 1, 128);
     createEmoji2("🦝", 192, 172, 19, 17, 16, 0, 1, 1, 128);
     createEmoji2("🐙", 192, 166, 19, 18, 16, 0, 1, 1, 128);
+    createEmoji2("🐰", 186, 144, 20, 23, 20, 0, 1, 1, 128);
+    img[Img.avatar7].y = 0.65;
     // createEmoji2("🦑", 201, 166, 16, 19, 16, 0, 1, 1, 128);
     // createEmoji2("🍏", 203, 166, 16, 19, 16, 0, 1, 1, 128);
     // createEmoji2("😾", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+
+    createEmoji2("🍅", 195, 166, 18, 19, 16, 0, 1, 1, 128);
+    createEmoji2("😐", 192, 166, 19, 19, 16, 0, 1, 1, 128);
+    createEmoji2("🐷", 192, 170, 19, 17, 16, 0, 1, 1, 128);
 
     // none weapon gfx index
     img.push(undefined);
 
     createEmoji2("🔪", 180, 234, 19, 7, 12, -50, 1, 1, 128);
-    //createEmoji2("🔨", 193, 189, 20, 13, 16, 44.5, -1, 1, 128);
     createEmoji2("🪓", 198, 210, 20, 10, 16, 45, -1, 1, 128);
-    //createEmoji2("🗡", 156, 204, 24, 12, 16, -45, -1, 1, 128);
     createEmoji2("🔫", 208, 198, 15, 12, 12, 0, -1, 1, 128);
     createEmoji2("🖊️", 157, 211, 24, 8, 16, -45, -1, 1, 128);
     createEmoji2("✏️️", 186, 216, 23, 8, 16, 44.5, -1, 1, 128);
@@ -210,6 +226,13 @@ function createAtlas(): void {
     // createEmoji2("🩸", 170, 213, 18, 13, 16, -90, 1, 1, 128);
     createEmoji2("🦴", 163, 213, 21, 9, 16, -45, 1, 1, 128);
 
+    function strokeCircle(r:number) {
+        atlas.beginPath();
+        atlas.arc(0, 0, r, 0, PI2);
+        atlas.closePath();
+        atlas.stroke();
+    }
+
     function renderJoy(r0: number, r1: number, text0: string, text1: string) {
         const s = r1 * 2 + 32;
         pushSprite(s, s);
@@ -219,12 +242,8 @@ function createAtlas(): void {
 
         atlas.translate(x + s / 2, y + s / 2);
 
-        atlas.beginPath();
-        atlas.arc(0, 0, r0, 0, Math.PI * 2);
-        atlas.moveTo(0, 0);
-        atlas.arc(0, 0, r1, 0, Math.PI * 2);
-        atlas.closePath();
-        atlas.stroke();
+        strokeCircle(r0);
+        strokeCircle(r1);
 
         atlas.fillText(text0, 0, -r0 - 5);
         atlas.fillText(text1, 0, -r1 - 5);

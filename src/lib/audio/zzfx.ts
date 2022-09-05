@@ -1,4 +1,5 @@
 import {audioContext} from "./context";
+import {PI2, sign} from "../utils/math";
 
 const zzfxV = .3;    // volume
 export const zzfxR = 44100; // sample rate
@@ -19,9 +20,7 @@ export const zzfxG = // generate samples
         bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0
     ) => {
         // init parameters
-        let PI2 = Math.PI * 2,
-            sign = (v: number) => v > 0 ? 1 : -1,
-            startSlide = slide *= 500 * PI2 / zzfxR / zzfxR,
+        let startSlide = slide *= 500 * PI2 / zzfxR / zzfxR,
             startFrequency = frequency *= (1 + randomness * 2 * Math.random() - randomness)
                 * PI2 / zzfxR,
             b = [], t = 0, tm = 0, i = 0, j = 1, r = 0, c = 0, s = 0, f, length;

@@ -1,4 +1,5 @@
 import {audioContext} from "./context";
+import {PI2} from "../utils/math";
 
 // Wave shapes
 
@@ -230,7 +231,7 @@ export function createAudioBuffer(ps: number[]): AudioBuffer {
                     sub_sample = 1 - 2 * (fp - dutyCycle) / (1 - dutyCycle);
                 }
             } else if (waveShape === WaveShape.SINE) {
-                sub_sample = Math.sin(fp * 2 * Math.PI);
+                sub_sample = Math.sin(fp * PI2);
             } else if (waveShape === WaveShape.NOISE) {
                 sub_sample = noise_buffer[(phase * 32 / iperiod) | 0];
             } else {

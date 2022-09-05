@@ -10,25 +10,33 @@
 <script>
     let output = "";
     function start() {
-
-        preview2("💀", {size: 16});
-        preview2("👹", {size: 16});
-        preview2("😵", {size: 16});
-        preview2("🌚", {size: 16});
-        preview2("😷", {size: 16});
-        preview2("🤡", {size: 16});
-        preview2("👨", {size: 16});
-        preview2("🤖", {size: 16});
-        preview2("💩", {size: 16});
-        preview2("🎃", {size: 16});
-        preview2("🤓", {size: 16});
-        preview2("😡", {size: 16});
-        preview2("🤢", {size: 16});
-        preview2("🦝", {size: 16});
-        preview2("🐙", {size: 16});
-        preview2("🦑", {size: 16});
-        preview2("🍏", {size: 16});
-        preview2("😾", {size: 16});
+        const avatars = {
+            "💀": {},
+            "👹": {},
+            "🤡": {},
+            "🤖": {},
+            "🎃": {},
+            "🦝": {},
+            "🐙": {},
+            "🐰": {size: 20},
+        };
+        const npc = {
+            "🍅": {},
+            "😐": {},
+            "🐷": {},
+        };
+        for(const avatar in avatars) {
+            const opts = avatars[avatar];
+            preview2(avatar, {
+                size: opts?.size ?? 16
+            });
+        }
+        for(const avatar in npc) {
+            const opts = npc[avatar];
+            preview2(avatar, {
+                size: opts?.size ?? 16
+            });
+        }
         // weapons
         preview2("🔪", {size: 12, a: -50});
         preview2("🔨", {size: 16, sx: -1, a: 44.5});
@@ -40,8 +48,8 @@
         preview2("🪥", {size: 16, sy: -1, a: 45});
         preview2("⛏", {size: 16, a: 90 + 45});
         preview2("🔌", {size: 16, sx: -1, a: 45});
-        // preview2("🖌️", {size: 16, a: 45});
         preview2("🧵", {size: 16, a: 90});
+        // preview2("🖌️", {size: 16, a: 45});
 
         preview2("🛢", {size: 20});
         preview2("📦", {size: 20});

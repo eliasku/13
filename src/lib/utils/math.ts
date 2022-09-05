@@ -10,7 +10,7 @@ export function reach(t0: number, t1: number, v: number): number {
 
 /* @__PURE__ */
 export function toRad(degrees: number): number {
-    return degrees * Math.PI / 180;
+    return degrees * PI / 180;
 }
 
 /* @__PURE__ */
@@ -38,3 +38,10 @@ export function getLumaColor32(luma: number): number {
 // export function abs(a:number) {
 //     return a < 0 ? -a : a;
 // }
+
+export function sign(v: number) {
+    return v > 0 ? 1 : -1;
+}
+
+export const PI = Math.PI;
+export const PI2 = 2 * PI;

@@ -15,7 +15,6 @@ export const enum Snd {
 
 export let snd:AudioBuffer[];
 
-
 function createAudioBuffers(buffer: ArrayBuffer) {
   const i32 = new Int32Array(buffer);
   for(let i = 0; i < 6; ++i) {

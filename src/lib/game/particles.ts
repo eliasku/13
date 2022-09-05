@@ -2,7 +2,7 @@ import {img, Img} from "../assets/gfx";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, collideWithBounds, updateBody} from "./phy";
-import {getLumaColor32} from "../utils/math";
+import {getLumaColor32, PI2} from "../utils/math";
 import {GRAVITY, OBJECT_HEIGHT} from "./data/world";
 import {_SEED2, nextFloat2, setSeed2} from "../utils/rnd";
 import {GL, gl} from "../graphics/gl";
@@ -137,7 +137,7 @@ export function addFleshParticles(amount: number, actor: Actor, explVel: number,
             particle.w = vel.w * d;
         }
         particle.color_ = (0x60 + 0x30 * nextFloat2()) << 16;
-        addRadialVelocity(particle, nextFloat2() * Math.PI * 2, (0.5 - nextFloat2()) * explVel, 0);
+        addRadialVelocity(particle, nextFloat2() * PI2, (0.5 - nextFloat2()) * explVel, 0);
         particle.img_ = Img.particle_shell;
         particle.splashImg_ = Img.circle_4;
         particle.splashEachJump_ = 1;
@@ -163,7 +163,7 @@ export function addBoneParticles(amount: number, actor: Actor, vel: Vel) {
             particle.v = vel.v * d;
             particle.w = vel.w * d;
         }
-        addRadialVelocity(particle, nextFloat2() * Math.PI * 2, 64 - 128 * nextFloat2(), 128 * nextFloat2());
+        addRadialVelocity(particle, nextFloat2() * PI2, 64 - 128 * nextFloat2(), 128 * nextFloat2());
         const i = nextFloat2() < 0.3 ? Img.particle_flesh0 : Img.particle_flesh1;
         particle.img_ = i;
         particle.splashImg_ = i;
@@ -172,7 +172,7 @@ export function addBoneParticles(amount: number, actor: Actor, vel: Vel) {
         particle.splashSizeX_ = particle.scale_;
         particle.splashSizeY_ = particle.scale_;
         particle.color_ = getLumaColor32(0x80 + 0x20 * nextFloat2());
-        particle.r = (-0.5 + nextFloat2()) * Math.PI * 2;
+        particle.r = (-0.5 + nextFloat2()) * PI2;
         particle.a = -0.5 + nextFloat2();
         particles.push(particle);
     }
@@ -186,9 +186,9 @@ export function addShellParticle(player: Actor, offsetZ: number, color: number) 
     particle.img_ = Img.particle_shell;
     particle.splashImg_ = Img.particle_shell;
     particle.color_ = color;
-    particle.r = (0.5 - nextFloat2()) * Math.PI * 8;
-    particle.a = nextFloat2() * Math.PI * 2;
-    addRadialVelocity(particle, nextFloat2() * Math.PI * 2, 16 + 32 * nextFloat2(), 32);
+    particle.r = (0.5 - nextFloat2()) * PI2 * 4;
+    particle.a = nextFloat2() * PI2;
+    addRadialVelocity(particle, nextFloat2() * PI2, 16 + 32 * nextFloat2(), 32);
     particles.push(particle);
 }
 

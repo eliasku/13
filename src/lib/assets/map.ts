@@ -3,6 +3,7 @@ import {createCanvas} from "./gfx";
 import {createTexture, uploadTexture} from "../graphics/draw2d";
 import {BOUNDS_SIZE} from "./params";
 import {GL, gl} from "../graphics/gl";
+import {PI2} from "../utils/math";
 
 export const mapTexture = createTexture(BOUNDS_SIZE);
 export let mapFramebuffer = gl.createFramebuffer();
@@ -13,14 +14,17 @@ gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 
 export function generateMapBackground(): void {
     const map = createCanvas(BOUNDS_SIZE, false);
+    const detailsColor = ["#080", "#572"];
     map.fillStyle = "#060";
     map.fillRect(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
 
-    map.fillStyle = "#080";
-    map.scale(1, .25);
-    for (let i = 0; i < 128; ++i) {
+    // map.fillStyle = "#080";
+    map.scale(1,.25);
+    for (let i = 0; i < BOUNDS_SIZE; ++i) {
+        map.fillStyle = detailsColor[rand(2)];
+        // map.globalAlpha = i / (BOUNDS_SIZE * 2);
         map.beginPath()
-        map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE * 4), 4 + rand(16), 0, 2 * Math.PI);
+        map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE * 4), 4 + rand(16), 0, PI2);
         map.closePath();
         map.fill();
     }
@@ -31,7 +35,7 @@ export function generateMapBackground(): void {
     // ctx.fillStyle = "#AAA";
     // for (let i = 0; i < 32; ++i) {
     //     ctx.beginPath()
-    //     ctx.arc(rand(size), rand(size), 2, 0, Math.PI, true);
+    //     ctx.arc(rand(size), rand(size), 2, 0, PI, true);
     //     ctx.closePath();
     //     ctx.fill();
     // }

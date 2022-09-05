@@ -10,11 +10,7 @@ export const enum Const {
     // ~130 bytes
     RLE = 0,
 
-    AngleRes = 0x80,
-    MoveAngleBit = 8,
-    LookAngleBit = 16,
-
-    StartWeapon = 2,
+    StartWeapon = 0,
 
     NetPrecision = 65536,
 }

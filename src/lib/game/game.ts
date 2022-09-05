@@ -6,7 +6,7 @@ import {termPrint} from "../utils/log";
 import {beginRender, camera, draw, flush} from "../graphics/draw2d";
 import {_SEED, fxRandElement, nextFloat, rand, random, setSeed} from "../utils/rnd";
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
-import {AVATARS, img, Img} from "../assets/gfx";
+import {AVATARS, img, Img, WEAPONS} from "../assets/gfx";
 import {_debugLagK, Const, setDebugLagK} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {
@@ -22,7 +22,7 @@ import {
     Vel
 } from "./types";
 import {pack, unpack} from "./packets";
-import {getLumaColor32, lerp, reach} from "../utils/math";
+import {getLumaColor32, lerp, PI, PI2, reach} from "../utils/math";
 import {
     ControlsFlag,
     drawVirtualPad,
@@ -230,11 +230,12 @@ function createSeedGameState() {
     state.seed_ = _SEED;
     recreateMap();
     for (let i = 0; i < 32; ++i) {
-        setRandomPosition(newItemRandomWeapon());
-        setRandomPosition(newItemRandomEffect());
+        //setRandomPosition(newItemRandomWeapon());
+        //setRandomPosition(newItemRandomEffect());
         const actor = newActorObject(ActorType.Barrel);
         actor.hp_ = 3 + rand(4);
         actor.btn_ = rand(2);
+        actor.weapon_ = rand(WEAPONS.length);
         pushActor(setRandomPosition(actor));
     }
     state.seed_ = _SEED;
@@ -286,6 +287,9 @@ function printStatus() {
                 str += full ? "❤️" : (half ? "💔" : "🖤");
             }
             termPrint(str + "\n");
+            if (p0.weapon_) {
+                termPrint(WEAPONS[p0.weapon_] + "" + "\n");
+            }
         } else {
             termPrint("Tap to spawn!\n");
         }
@@ -361,14 +365,14 @@ function checkPlayerInput() {
     let btn = 0;
     if (player) {
         if (moveX || moveY) {
-            btn |= (packAngleByte(moveY, moveX) << 8) | ControlsFlag.Move;
+            btn |= (packAngleByte(moveY, moveX, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
             if (moveFast) {
                 btn |= ControlsFlag.Run;
             }
         }
 
         if (viewX || viewY) {
-            btn |= packAngleByte(viewY, viewX) << 16;
+            btn |= packAngleByte(viewY, viewX, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
             if (shootButtonDown) {
                 btn |= ControlsFlag.Shooting;
             }
@@ -525,7 +529,7 @@ function sendInput() {
                 if (!cl.ready_) {
                     packet.state_ = state;
                 } else if (cl.isPlaying_) {
-                    if(debugStateEnabled) {
+                    if (debugStateEnabled) {
                         packet.state_ = state;
                         packet.checkState_ = debugState;
                     }
@@ -591,7 +595,7 @@ function processPacket(sender: Client, data: Packet) {
                 console.warn("gen id mismatch from client " + data.client_ + " at tic " + data.checkTic_);
                 console.warn(data.checkNextId_ + " != " + state.nextId_);
             }
-            if(debugStateEnabled) {
+            if (debugStateEnabled) {
                 if (data.checkState_ && debugState) {
                     assertStateEquality("[DEBUG] ", debugState, data.checkState_);
                 }
@@ -681,7 +685,7 @@ function processTicCommands(commands: ClientEvent[]) {
                 p.y /= 10;
                 p.hp_ = 10;
                 p.btn_ = cmd.btn_;
-                p.weapon_ = Const.StartWeapon;
+                p.weapon_ = 1 + rand(3);//Const.StartWeapon;
                 pushActor(p);
             }
         }
@@ -731,6 +735,7 @@ function updateGameCamera(dt: number) {
         const wpn = weapons[p0.weapon_];
         cameraX = p0.x + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x);
         cameraY = p0.y + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y);
+        cameraScale *= wpn.cameraScale_;
     }
     gameCamera[0] = lerp(gameCamera[0], cameraX, 4 * dt);
     gameCamera[1] = lerp(gameCamera[1], cameraY, 4 * dt);
@@ -745,7 +750,7 @@ function simulateTic(dt: number) {
         updatePlayer(a, dt);
     }
 
-    if(debugStateEnabled) {
+    if (debugStateEnabled) {
         debugState = cloneState();
         debugState.seed_ = _SEED;
         for (const a of debugState.actors_) roundActors(a);
@@ -843,7 +848,7 @@ function kill(actor: Actor) {
         copyPosFromActorCenter(item, actor);
         addVelFrom(item, actor);
         const v = 32 + rand(64);
-        addRadialVelocity(item, random(Math.PI * 2), v, v);
+        addRadialVelocity(item, random(PI2), v, v);
         item.animHit_ = ANIM_HIT_MAX;
         if (actor.weapon_) {
             item.btn_ = ItemCategory.Weapon | actor.weapon_;
@@ -917,15 +922,25 @@ function updateBulletCollision(b: Actor, list: Actor[]) {
     }
 }
 
-function unpackAngleByte(angleByte: number) {
-    return 2 * Math.PI * (angleByte & 0x7F) / Const.AngleRes - Math.PI;
+function unpackAngleByte(angleByte: number, res: number) {
+    return PI2 * (angleByte & (res - 1)) / res - PI;
 }
 
-function packAngleByte(y: number, x: number) {
-    return (Const.AngleRes * (Math.PI + Math.atan2(y, x)) / (2 * Math.PI)) & 0x7F;
+function packAngleByte(y: number, x: number, res: number) {
+    return (res * (PI + Math.atan2(y, x)) / PI2) & (res - 1);
+}
+
+function updateAI(player: Actor) {
+    const md = rand(ControlsFlag.MoveAngleMax);
+    player.btn_ = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
+    if (player.hp_ < 10) {
+        player.btn_ |= ControlsFlag.Drop | ControlsFlag.Run;
+    }
+    if (!rand(20) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
 }
 
 function updatePlayer(player: Actor, dt: number) {
+    if (!player.client_) updateAI(player);
     let grounded = player.z === 0 && player.w === 0;
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
@@ -936,12 +951,12 @@ function updatePlayer(player: Actor, dt: number) {
         }
     }
     const c = grounded ? 16 : 8;
-    const lookAngle = unpackAngleByte(player.btn_ >> Const.LookAngleBit);
-    const moveAngle = unpackAngleByte(player.btn_ >> Const.MoveAngleBit);
-    const lookDirX = Math.cos(lookAngle);
-    const lookDirY = Math.sin(lookAngle);
+    const moveAngle = unpackAngleByte(player.btn_ >> ControlsFlag.MoveAngleBit, ControlsFlag.MoveAngleMax);
+    const lookAngle = unpackAngleByte(player.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const moveDirX = Math.cos(moveAngle);
     const moveDirY = Math.sin(moveAngle);
+    const lookDirX = Math.cos(lookAngle);
+    const lookDirY = Math.sin(lookAngle);
     if (player.btn_ & ControlsFlag.Move) {
         const speed = (player.btn_ & ControlsFlag.Run) ? 2 : 1;
         const vel = speed * 60;
@@ -1155,8 +1170,8 @@ function drawCrosshair() {
         const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t) + 4 * Math.min(1, p0.s);
         let a = 0.1 * lastFrameTs;
         for (let i = 0; i < 4; ++i) {
-            draw(img[Img.box_t2], lookAtX, lookAtY, a, 2, len, 0.5);
-            a += Math.PI / 2;
+            draw(img[Img.box_t1], lookAtX, lookAtY, a, 2, len, 0.5);
+            a += PI / 2;
         }
     }
 }
@@ -1242,7 +1257,7 @@ function drawObjects() {
 
 function drawPlayer(p: Actor) {
     const co = getHitColorOffset(p.animHit_);
-    const imgHead = (debugCheckAvatar + (p.client_ || p.anim0_)) % Img.num_avatars;
+    const imgHead = p.client_ ? (Img.avatar0 + (debugCheckAvatar + (p.anim0_)) % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
     const colorC = COLOR_BODY[p.anim0_ % COLOR_BODY.length];
     const colorArm = colorC;
     const colorBody = colorC;
@@ -1255,14 +1270,12 @@ function drawPlayer(p: Actor) {
     const idle_base = (1 - walk) * ((1 + Math.sin(10 * lastFrameTs) ** 2) / 4);
     base += idle_base;
     const leg1 = 5 - 4 * walk * 0.5 * (1.0 + Math.sin(40 * runK * lastFrameTs));
-    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + Math.sin(40 * runK * lastFrameTs + Math.PI));
-    const sw1 = walk * Math.sin(20 * runK * lastFrameTs);
-    const sw2 = walk * Math.cos(20 * runK * lastFrameTs);
+    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + Math.sin(40 * runK * lastFrameTs + PI));
 
     /////
 
     const wpn = weapons[p.weapon_];
-    let viewAngle = unpackAngleByte(p.btn_ >> Const.LookAngleBit);
+    let viewAngle = unpackAngleByte(p.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const weaponBaseAngle = wpn.gfxRot_;
     const weaponBaseScaleX = wpn.gfxSx_;
     const weaponBaseScaleY = 1;
@@ -1275,29 +1288,29 @@ function drawPlayer(p: Actor) {
     let weaponSX = weaponBaseScaleX;
     let weaponSY = weaponBaseScaleY;
     let weaponBack = 0;
-    if (weaponAngle < -0.2 && weaponAngle > -Math.PI + 0.2) {
+    if (weaponAngle < -0.2 && weaponAngle > -PI + 0.2) {
         weaponBack = 1;
         //weaponY -= 16 * 4;
     }
-    const A = Math.sin(weaponAngle - Math.PI);
+    const A = Math.sin(weaponAngle - PI);
     let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
     let wx = 1;
-    if (weaponAngle < -Math.PI * 0.5 || weaponAngle > Math.PI * 0.5) {
+    if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
         wx = -1;
     }
     if (wpn.handsAnim_) {
         // const t = Math.max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
         const t = Math.min(1, wpn.launchTime_ > 0 ? (p.s / wpn.launchTime_) : Math.max(0, (p.s - 0.5) * 2));
-        wd += Math.sin(t * Math.PI) * wpn.handsAnim_;
-        weaponAngle -= -wx * Math.PI * 0.25 * Math.sin((1 - (1 - t) ** 2) * Math.PI * 2);
+        wd += Math.sin(t * PI) * wpn.handsAnim_;
+        weaponAngle -= -wx * PI * 0.25 * Math.sin((1 - (1 - t) ** 2) * PI2);
     }
     weaponX += wd * Math.cos(weaponAngle);
     weaponY += wd * Math.sin(weaponAngle);
 
     if (wx < 0) {
         weaponSX *= wx;
-        weaponAngle -= Math.PI + 2 * weaponBaseAngle;
+        weaponAngle -= PI + 2 * weaponBaseAngle;
     }
 
     weaponAngle += weaponBaseAngle;
@@ -1313,13 +1326,13 @@ function drawPlayer(p: Actor) {
     {
         const s = p.w * 0.002;
         const a = 0.002 * p.u;
-        draw(img[Img.avatar0 + imgHead], x, y - 16 + base * 2, a, 1 - s, 1 + s, 1, COLOR_WHITE, 0, co);
+        draw(img[imgHead], x, y - 16 + base * 2, a, 1 - s, 1 + s, 1, COLOR_WHITE, 0, co);
     }
 
     // DRAW HANDS
     const rArmX = x + 4;
     const lArmX = x - 4;
-    const armY = (y - PLAYER_HANDS_Z + base * 2);
+    const armY = y - PLAYER_HANDS_Z + base * 2;
     const rArmRot = Math.atan2(weaponY - armY, weaponX - rArmX);
     const lArmRot = Math.atan2(weaponY - armY, weaponX - lArmX);
     const lArmLen = Math.hypot(weaponX - lArmX, weaponY - armY) - 1;
@@ -1329,8 +1342,16 @@ function drawPlayer(p: Actor) {
         draw(img[Img.box_l], x + 4, y - 10 + base, rArmRot, rArmLen, 2, 1, colorArm, 0, co);
         draw(img[Img.box_l], x - 4, y - 10 + base, lArmRot, lArmLen, 2, 1, colorArm, 0, co);
     } else {
-        draw(img[Img.box_l], x + 4, y - 10 + base, sw1 + Math.PI / 4, 5, 2, 1, colorArm, 0, co);
-        draw(img[Img.box_l], x - 4, y - 10 + base, sw2 + Math.PI - Math.PI / 4, 5, 2, 1, colorArm, 0, co);
+        let sw1 = walk * Math.sin(20 * runK * lastFrameTs);
+        let sw2 = walk * Math.cos(20 * runK * lastFrameTs);
+        let armLen = 5;
+        if (!p.client_ && p.hp_ < 10) {
+            sw1 -= PI / 2;
+            sw2 += PI / 2;
+            armLen += 4;
+        }
+        draw(img[Img.box_l], x + 4, y - 10 + base, sw1 + PI / 4, armLen, 2, 1, colorArm, 0, co);
+        draw(img[Img.box_l], x - 4, y - 10 + base, sw2 + PI - PI / 4, armLen, 2, 1, colorArm, 0, co);
     }
 
     if (!weaponBack && p.weapon_) {

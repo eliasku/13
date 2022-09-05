@@ -18,6 +18,11 @@ export const enum ControlsFlag {
     Shooting = 0x8,
     Drop = 0x10,
     Spawn = 0x20,
+
+    MoveAngleMax = 0x40,
+    MoveAngleBit = 6,
+    LookAngleMax = 0x80,
+    LookAngleBit = 12,
 }
 
 export const gameCamera: number[] = [0, 0, 1];

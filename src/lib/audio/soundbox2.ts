@@ -1,4 +1,5 @@
 import {audioContext} from "./context";
+import {PI, PI2} from "../utils/math";
 
 export const enum SongField {
     n = 0,
@@ -93,7 +94,7 @@ function createNote(ii: number[], n: number, rowLen: number) {
 // Array of oscillator functions
 const oscillators = [
     //osc_sin,
-    (value: number): number => Math.sin(value * 2 * Math.PI),
+    (value: number): number => Math.sin(value * PI2),
     //osc_square,
     (value: number): number => (value % 1) < 0.5 ? 1 : -1,
     //osc_saw,
@@ -149,12 +150,12 @@ function generate(song: SongData2, mixL: Float32Array, mixR: Float32Array, track
             const lfoFreq = 2 * (2 ** (ii[18] - 9)) / rowLen;
             const fxLFO = ii[19];
             const fxFilter = ii[20];
-            const fxFreq = ii[21] * 43.23529 * Math.PI / 44100;
+            const fxFreq = ii[21] * 43.23529 * PI / 44100;
             const q = 1 - ii[22] / 255;
             const dist = ii[23] * 1e-5;
             const drive = ii[24] / 32;
             const panAmt = ii[25] / 512;
-            const panFreq = 2 * 2 * Math.PI * (2 ** (ii[26] - 9)) / rowLen;
+            const panFreq = 2 * PI2 * (2 ** (ii[26] - 9)) / rowLen;
             const dlyAmt = ii[27] / 255;
             // Must be an even number
             const dly = (ii[28] * rowLen) >> 1;
