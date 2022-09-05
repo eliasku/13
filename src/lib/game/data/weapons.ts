@@ -1,6 +1,5 @@
 import {toRad} from "../../utils/math";
 import {Const} from "../config";
-import {Img} from "../../assets/gfx";
 
 export const enum BulletType {
     Melee = 0,
@@ -111,20 +110,22 @@ export const weapons: WeaponConfig[] = [
     // 10, 11, 12, 13
 ];
 
-let i = 0;
-weapons[i].rate_ = 2;
+let i = 1;
 
 // 🔪
-++i;
+weapons[i].rate_ = 8;
+weapons[i].bulletDamage_ = 4;
 weapons[i].gfxRot_ = toRad(-45);
-weapons[i].rate_ = 4;
 
 // AXE
 ++i;
+weapons[i].rate_ = 2;
+weapons[i].bulletDamage_ = 8;
 weapons[i].gfxRot_ = toRad(-45);
 
 // 🔫
 ++i;
+weapons[i].bulletDamage_ = 2;
 weapons[i].angleSpread_ = 0.1;
 weapons[i].velocity_ /= 2;
 weapons[i].relaunchSpeed_ = 16;
@@ -162,16 +163,17 @@ weapons[i].velocityVar_ = 200;
 weapons[i].handsAnim_ = 1;
 weapons[i].angleVar_ = 0.5;
 weapons[i].bulletHp_ = 2;
+weapons[i].bulletDamage_ = 2;
 weapons[i].bulletShellColor_ = 0xAA0000;
 
 // CROSS BOW ⛏
 ++i;
-weapons[i].detuneSpeed_ = 32;
+weapons[i].detuneSpeed_ = 4;
 weapons[i].cameraFeedback_ = 0.1;
-weapons[i].cameraLookForward_ = 0.3;
-weapons[i].velocity_ = 600 + 180;
+weapons[i].cameraLookForward_ = 0.4;
+weapons[i].velocity_ = 960;
 weapons[i].handsAnim_ = 1;
-weapons[i].bulletDamage_ = 3;
+weapons[i].bulletDamage_ = 5;
 weapons[i].bulletType_ = BulletType.Arrow;
 weapons[i].bulletShellColor_ = 0x00FF00;
 
@@ -179,9 +181,9 @@ weapons[i].bulletShellColor_ = 0x00FF00;
 ++i;
 weapons[i].angleSpread_ = 0.5;
 weapons[i].detuneSpeed_ = 10;
-weapons[i].rate_ = 8;
+weapons[i].rate_ = 6;
 weapons[i].cameraLookForward_ = 0.3;
-weapons[i].velocity_ = 300;
+weapons[i].velocity_ = 420;
 weapons[i].bulletDamage_ = 1;
 weapons[i].bulletHp_ = 2;
 weapons[i].bulletType_ = BulletType.Plasma;
@@ -194,8 +196,8 @@ weapons[i].detuneSpeed_ = 0;
 weapons[i].cameraShake_ = 0.5;
 weapons[i].velocity_ = 1;
 weapons[i].cameraFeedback_ = 0.1;
-weapons[i].cameraLookForward_ = 0.3;
-weapons[i].bulletDamage_ = 3;
+weapons[i].cameraLookForward_ = 0.4;
+weapons[i].bulletDamage_ = 5;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10 / Const.NetFq;
 weapons[i].bulletShellColor_ = 0x990099;
