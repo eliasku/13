@@ -188,7 +188,5 @@ export const flushSplatsToMap = () => {
         drawSplats();
         splats.length = 0;
         flush();
-        gl.bindFramebuffer(GL.FRAMEBUFFER, null);
-        gl.bindTexture(GL.TEXTURE_2D, null);
     }
 }

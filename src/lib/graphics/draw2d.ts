@@ -1,4 +1,5 @@
 import {GL} from "./gl";
+import {mapTexture} from "../assets/map";
 
 type Renderer = WebGLRenderingContext & {
     $?: ANGLE_instanced_arrays;
@@ -80,6 +81,7 @@ const GLSLX_NAME_M = "p"
 const maxBatch = 65535;
 // const depth = 1e5;
 // const depth = 1;
+// TODO: move to scope
 let count = 0;
 let currentTexture: WebGLTexture = null;
 
@@ -217,10 +219,18 @@ export const createTexture = (size: number): Texture => ({
     v1_: 1
 });
 
-export const uploadTexture = (glTexture: WebGLTexture, source: TexImageSource): void => {
+export const createFramebuffer = (texture: WebGLTexture, _fbo?:WebGLFramebuffer) => {
+    _fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(GL.FRAMEBUFFER, _fbo);
+    gl.bindTexture(GL.TEXTURE_2D, texture);
+    gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture, 0);
+    return _fbo;
+}
+
+export const uploadTexture = (glTexture: WebGLTexture, source?: TexImageSource, filter:GLint = GL.NEAREST): void => {
     gl.bindTexture(GL.TEXTURE_2D, glTexture);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, filter);
+    gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, filter);
     gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
 }
 

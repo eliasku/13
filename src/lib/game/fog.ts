@@ -33,6 +33,4 @@ export const prerenderFog = (...lists: Actor[][]) => {
     }
 
     flush();
-    gl.bindFramebuffer(GL.FRAMEBUFFER, null);
-    gl.bindTexture(GL.TEXTURE_2D, null);
 }

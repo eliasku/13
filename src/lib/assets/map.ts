@@ -1,26 +1,19 @@
 import {rand} from "../utils/rnd";
 import {createCanvas} from "./gfx";
-import {createTexture, gl, uploadTexture} from "../graphics/draw2d";
+import {createFramebuffer, createTexture, gl, uploadTexture} from "../graphics/draw2d";
 import {BOUNDS_SIZE} from "./params";
 import {GL} from "../graphics/gl";
 import {PI2} from "../utils/math";
 
 export const mapTexture = createTexture(BOUNDS_SIZE);
-export let mapFramebuffer = gl.createFramebuffer();
-gl.bindFramebuffer(GL.FRAMEBUFFER, mapFramebuffer);
-gl.bindTexture(GL.TEXTURE_2D, mapTexture.texture_);
-gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, mapTexture.texture_, 0);
+export const mapFramebuffer = createFramebuffer(mapTexture.texture_);
 
 export const fogTexture = createTexture(BOUNDS_SIZE);
 gl.bindTexture(GL.TEXTURE_2D, fogTexture.texture_);
 gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
 gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
 gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, BOUNDS_SIZE, BOUNDS_SIZE, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
-export let fogFramebuffer = gl.createFramebuffer();
-gl.bindFramebuffer(GL.FRAMEBUFFER, fogFramebuffer);
-gl.bindTexture(GL.TEXTURE_2D, fogTexture.texture_);
-gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, fogTexture.texture_, 0);
-
+export const fogFramebuffer = createFramebuffer(fogTexture.texture_);
 gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 
 export const generateMapBackground = (): void => {

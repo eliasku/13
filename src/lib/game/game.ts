@@ -1084,6 +1084,7 @@ const drawGame = () => {
     camera.atY_ = gameCamera[1] + ((Math.random() - 0.5) * cameraShake * 8) | 0;
     camera.angle_ = (Math.random() - 0.5) * cameraShake / 8;
 
+    gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     beginRender();
     gl.clearColor(0.2, 0.2, 0.2, 1.0);
     gl.clear(GL.COLOR_BUFFER_BIT);

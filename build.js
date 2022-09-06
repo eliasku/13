@@ -132,6 +132,8 @@ report.push("TERSER: " + sz(...files));
 // postprocess("public/s.js");
 // report.push("TERSER+: " + sz(...files));
 
+console.info("release build ready... " + sz(...files));
+
 if (process.argv.indexOf("--zip") > 0) {
 
     // Include only files you need! Do not include some hidden files like .DS_Store (6kb)
@@ -161,46 +163,12 @@ if (process.argv.indexOf("--zip") > 0) {
 
 console.info(report.join("\n"));
 
-// - draw default values,
-// - input dpr instead of calculation,
-// - random inline SEED,
-// - u32 to f32: bits inline
-// - onresize default arguments
-// - gl remove uniform globals, pick each frame
-
-// BUILD: 59092
-// MANGLE: 56754
-// TERSER: 36084
-// ROADROLL: 17833 / 17872
-// LZMA: 13249 / 13277
-// rem: 63 / 35
-
-// cut alpha: local variable -> arguments
-// BUILD: 59084
-// MANGLE: 56746
-// TERSER: 36073
-// ROADROLL: 17819
-// LZMA: 13239
-// rem: 73
-
-// default args on cut alpha and sub-texture (cut+ pivot)
-// remove magic const in renderCircle
-// remove canvas dispose
-// BUILD: 58946
-// MANGLE: 56608
-// TERSER: 35970
-// ROADROLL: 17823
-// LZMA: 13240
-// rem: 72
-
-
-// after splash screen:
-// BUILD: 59275
-// MANGLE: 56915
-// TERSER: 36291
-// ROADROLL: 18005
-// LZMA: 13381
-// rem: -69
+// BUILD: 61266
+// MANGLE: 58882
+// TERSER: 37629
+// ROADROLL: 18444
+// LZMA: 13713
+// rem: -401
 
 
 function mangle_types(file, dest) {
