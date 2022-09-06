@@ -229,7 +229,7 @@ export const createSplashState = () => {
         const actor = newActorObject(ActorType.Player);
         actor.client_ = 1 + i;
         actor.weapon_ = 1 + (i % (weapons.length - 1));
-        actor.anim0_ = 1 + i;
+        actor.anim0_ = i + rand(10) * Img.num_avatars;
         actor.btn_ = packAngleByte(i / 13, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
         const D = 80 + rand(20);
         actor.x_ = BOUNDS_SIZE / 2 + D * Math.cos(i * PI2 / 13);
