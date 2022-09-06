@@ -175,6 +175,23 @@ console.info(report.join("\n"));
 // LZMA: 13249 / 13277
 // rem: 63 / 35
 
+// cut alpha: local variable -> arguments
+// BUILD: 59084
+// MANGLE: 56746
+// TERSER: 36073
+// ROADROLL: 17819
+// LZMA: 13239
+// rem: 73
+
+// default args on cut alpha and sub-texture (cut+ pivot)
+// remove magic const in renderCircle
+// remove canvas dispose
+// BUILD: 58946
+// MANGLE: 56608
+// TERSER: 35970
+// ROADROLL: 17823
+// LZMA: 13240
+// rem: 72
 
 function mangle_types(file, dest) {
 

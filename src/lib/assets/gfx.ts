@@ -79,12 +79,13 @@ export const createCanvas = (size: number, alpha: boolean) => {
     return ctx;
 }
 
-const cutAlpha = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cut: number) => {
-    const bmp = ctx.getImageData(x, y, w, h);
-    for (let i = 3; i < bmp.data.length; i += 4) {
-        bmp.data[i] = bmp.data[i] >= cut ? 0xFF : 0;
+const cutAlpha = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number | ImageData, h: number | Uint8ClampedArray, cut: number = 0x80) => {
+    w = ctx.getImageData(x, y, w as number, h as number);
+    h = w.data;
+    for (let i = 3; i < h.length; i += 4) {
+        h[i] = h[i] < cut ? 0 : 0xFF;
     }
-    ctx.putImageData(bmp, x, y);
+    ctx.putImageData(w, x, y);
 }
 
 export const loadAtlas = (): void => {
@@ -113,10 +114,10 @@ export const loadAtlas = (): void => {
         sprHeight = h;
     };
 
-    const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number = 0, a: number = 0, sx: number = 1, sy: number = 1, cut: number = 0x80, ax: number = 0.5, ay: number = 0.5) => {
+    const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number = 0, a: number = 0, sx: number = 1, sy: number = 1, cut?: number, ax?: number, ay?: number) => {
         // const emoji = String.fromCodePoint(...emojiCode);
-        const scale = 1 / 8;
-        const emojiSize = ((16 + size) / scale) | 0;
+        let scale = 8;
+        const emojiSize = (16 + size) * scale;
         temp.clearRect(0, 0, tempSize, tempSize);
         temp.font = emojiSize + "px e";
         temp.textAlign = "center";
@@ -126,15 +127,15 @@ export const loadAtlas = (): void => {
         temp.scale(sx, sy);
         temp.fillText(emoji, 0, 0);
         temp.resetTransform();
-        const alphaThreshold = cut;
         pushSprite(w, h);
         // atlas.imageSmoothingEnabled = false;
         atlas.translate(x + 1, y + 1);
+        scale = 1 / scale;
         atlas.scale(scale, scale);
         atlas.translate(-ox, -oy);
         atlas.drawImage(temp.canvas, 0, 0);
         atlas.resetTransform();
-        cutAlpha(atlas, x, y, w, h, alphaThreshold);
+        cutAlpha(atlas, x, y, w, h, cut);
         EMOJI[img.length] = emoji;
         img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, ax, ay));
     }
@@ -144,29 +145,29 @@ export const loadAtlas = (): void => {
         pushSprite(s, s);
         atlas.translate(x + r, y + r);
         atlas.beginPath();
-        atlas.arc(0, 0, r * 0.925, 0, PI2);
+        atlas.arc(0, 0, r - 0.3, 0, PI2);
         atlas.closePath();
         atlas.fill();
         atlas.resetTransform();
-        cutAlpha(atlas, x, y, sprWidth, sprHeight, 0x80);
-        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
+        cutAlpha(atlas, x, y, sprWidth, sprHeight);
+        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight));
     }
     // BOX
     pushSprite(1, 1);
     atlas.fillRect(x, y, 1, 1);
     img.push(
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5),
+        getSubTexture(texture, x, y, sprWidth, sprHeight),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0, 0),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0),
         getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, -1),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0, 0.5),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 1, 0.5),
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 0),
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 1),
     );
     // CIRCLE
     createCircle(4);
     img.push(
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.6, 0.5),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.7, 0.5),
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.6),
+        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.7),
     );
     createCircle(16);
 
@@ -223,13 +224,14 @@ export const loadAtlas = (): void => {
     }
 
     const renderJoy = (r0: number, r1: number, text0: string, text1: string) => {
-        const s = r1 * 2 + 32;
+        let s = r1 * 2 + 32;
         pushSprite(s, s);
         atlas.font = "10px monospace";
         atlas.textAlign = "center";
         atlas.lineWidth = 2;
 
-        atlas.translate(x + s / 2, y + s / 2);
+        s /= 2;
+        atlas.translate(x + s, y + s);
 
         strokeCircle(r0);
         strokeCircle(r1);
@@ -249,7 +251,7 @@ export const loadAtlas = (): void => {
     uploadTexture(texture.texture_, atlas.canvas);
 
     // TODO: dispose
-    atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
+    // atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
 
     // document.body.appendChild(atlas.canvas);
     // atlas.canvas.style.position = "fixed";
