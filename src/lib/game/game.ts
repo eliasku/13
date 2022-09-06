@@ -1,5 +1,5 @@
 import {ClientID} from "../../shared/types";
-import {clientId, disconnect, getUserName, isChannelOpen, remoteClients} from "../net/messaging";
+import {clientId, disconnect, getUserName, isPeerConnected, remoteClients} from "../net/messaging";
 import {GL} from "../graphics/gl";
 import {play} from "../audio/context";
 import {beginRender, camera, draw, flush, gl} from "../graphics/draw2d";
@@ -7,7 +7,7 @@ import {_SEED, fxRand, fxRandElement, fxRandomNorm, nextFloat, rand, random, set
 import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {_debugLagK, Const, setDebugLagK} from "./config";
-import {generateMapBackground, mapTexture} from "../assets/map";
+import {fogTexture, generateMapBackground, mapTexture} from "../assets/map";
 import {
     Actor,
     ActorType,
@@ -83,6 +83,7 @@ import {
 } from "./data/world";
 import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
 import {termPrint} from "../graphics/ui";
+import {prerenderFog} from "./fog";
 
 const clients = new Map<ClientID, Client>()
 
@@ -227,9 +228,9 @@ export const createSplashState = () => {
     for (let i = 0; i < 13; ++i) {
         const actor = newActorObject(ActorType.Player);
         actor.client_ = 1 + i;
-        actor.weapon_ = 1 + (i % weapons.length);
+        actor.weapon_ = 1 + (i % (weapons.length - 1));
         actor.anim0_ = 1 + i;
-        actor.weapon_ = rand(weapons.length);
+        actor.btn_ = packAngleByte(i / 13, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
         const D = 80 + rand(20);
         actor.x_ = BOUNDS_SIZE / 2 + D * Math.cos(i * PI2 / 13);
         actor.y_ = BOUNDS_SIZE / 2 + D * Math.sin(i * PI2 / 13);
@@ -256,6 +257,7 @@ export const updateTestGame = (ts: number) => {
         flushSplatsToMap();
         const predicted = beginPrediction();
         {
+            prerenderFog(...state.actors_);
             drawGame();
             // check input before overlay, or save camera settings
             checkPlayerInput();
@@ -273,38 +275,40 @@ export const updateTestGame = (ts: number) => {
 }
 
 const printStatus = () => {
-    if (joined) {
-        const p0 = getMyPlayer();
-        if (p0) {
-            let str = "";
-            for (let i = 0; i < 10;) {
-                const half = p0.hp_ > i++;
-                const full = p0.hp_ > i++;
-                str += full ? "❤️" : (half ? "💔" : "🖤");
-            }
-            termPrint(str + "\n");
-            if (p0.weapon_) {
-                termPrint(EMOJI[Img.weapon0 + p0.weapon_] + "\n");
+    if (clientId) {
+        if (joined) {
+            const p0 = getMyPlayer();
+            if (p0) {
+                let str = "";
+                for (let i = 0; i < 10;) {
+                    const half = p0.hp_ > i++;
+                    const full = p0.hp_ > i++;
+                    str += full ? "❤️" : (half ? "💔" : "🖤");
+                }
+                termPrint(str + "\n");
+                if (p0.weapon_) {
+                    termPrint(EMOJI[Img.weapon0 + p0.weapon_] + "\n");
+                }
+            } else {
+                termPrint("Tap to spawn!\n");
             }
         } else {
-            termPrint("Tap to spawn!\n");
+            termPrint("Joining\n");
         }
-    } else {
-        termPrint("Joining\n");
-    }
 
-    const getPlayerIcon = (id?: ClientID) => {
-        const player = getPlayerByClient(id);
-        return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
-    }
-
-    termPrint(getPlayerIcon(clientId) + " " + getUserName() + " | ☠️" + (state.scores_[clientId] | 0) + "\n");
-    for (const [id, rc] of remoteClients) {
-        let status = "🔴";
-        if (isChannelOpen(rc) && rc?.pc_.iceConnectionState[1] == "o") {
-            status = getPlayerIcon(rc.id_);
+        const getPlayerIcon = (id?: ClientID) => {
+            const player = getPlayerByClient(id);
+            return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
         }
-        termPrint(status + " " + rc.name_ + " | ☠️" + (state.scores_[id] | 0) + "\n");
+
+        termPrint(getPlayerIcon(clientId) + " " + getUserName() + " | ☠️" + (state.scores_[clientId] | 0) + "\n");
+        for (const [id, rc] of remoteClients) {
+            let status = "🔴";
+            if (isPeerConnected(rc)) {
+                status = getPlayerIcon(rc.id_);
+            }
+            termPrint(status + " " + rc.name_ + " | ☠️" + (state.scores_[id] | 0) + "\n");
+        }
     }
 }
 
@@ -352,14 +356,14 @@ const checkPlayerInput = () => {
     let btn = 0;
     if (player) {
         if (moveX || moveY) {
-            btn |= (packAngleByte(moveY, moveX, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
+            btn |= (packDirByte(moveX, moveY, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
             if (moveFast) {
                 btn |= ControlsFlag.Run;
             }
         }
 
         if (viewX || viewY) {
-            btn |= packAngleByte(viewY, viewX, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
+            btn |= packDirByte(viewX, viewY, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
             if (shootButtonDown) {
                 btn |= ControlsFlag.Shooting;
             }
@@ -404,7 +408,7 @@ const checkPlayerInput = () => {
 const checkJoinSync = () => {
     if (!joined && startTic >= 0) {
         for (const [id, rc] of remoteClients) {
-            if (isChannelOpen(rc)) {
+            if (isPeerConnected(rc)) {
                 const cl = clients.get(id);
                 if (!cl || !cl.ready_) {
                     console.log("syncing...");
@@ -483,7 +487,7 @@ const tryRunTicks = (ts: number): number => {
 const sendInput = () => {
     const lastTic = gameTic - 1;
     for (const [id, rc] of remoteClients) {
-        if (isChannelOpen(rc)) {
+        if (isPeerConnected(rc)) {
             const cl = requireClient(id);
             const packet: Packet = {
                 client_: clientId,
@@ -526,7 +530,7 @@ const sendInput = () => {
     }
 }
 
-const getMinTic = (minTic:number = 0x7FFFFFFF) => {
+const getMinTic = (minTic: number = 0x7FFFFFFF) => {
     for (const [, cl] of clients) {
         if (minTic > cl.tic_) {
             minTic = cl.tic_;
@@ -800,6 +804,16 @@ const simulateTic = () => {
         pushActor(p);
     }
 
+    // SPLASH SCREEN
+    if (!clientId) {
+        spawnFleshParticles({
+            x_: fxRand(BOUNDS_SIZE),
+            y_: fxRand(BOUNDS_SIZE),
+            z_: fxRand(128),
+            type_: 0
+        } as any as Actor, 128, 1);
+    }
+
     if (lastAudioTic < gameTic) {
         lastAudioTic = gameTic;
     }
@@ -916,8 +930,11 @@ const updateBulletCollision = (b: Actor, list: Actor[]) => {
 const unpackAngleByte = (angleByte: number, res: number) =>
     PI2 * (angleByte & (res - 1)) / res - PI;
 
-const packAngleByte = (y: number, x: number, res: number) =>
-    (res * (PI + Math.atan2(y, x)) / PI2) & (res - 1);
+const packAngleByte = (a: number, res: number) =>
+    (res * a) & (res - 1);
+
+const packDirByte = (x: number, y: number, res: number) =>
+    packAngleByte((PI + Math.atan2(y, x)) / PI2, res);
 
 const updateAI = (player: Actor) => {
     const md = rand(ControlsFlag.MoveAngleMax);
@@ -1072,17 +1089,21 @@ const drawGame = () => {
     gl.clear(GL.COLOR_BUFFER_BIT);
     drawMapBackground();
     drawObjects();
+    {
+        const p0 = getMyPlayer();
+        let add = p0 ? getHitColorOffset(p0.animHit_) : 0;
+        draw(fogTexture, -256, -256, 0, 4, 4, 0.7, (0x40 + 0x20 * Math.sin(lastFrameTs)) << 16 | 0x1133, 0, add & 0xFF3333);
+    }
 
     if (process.env.NODE_ENV === "development") {
         drawCollisions();
     }
-
     drawMapOverlay();
-    if(!clientId) {
-        for(let i = 10; i > 0; --i) {
+    if (!clientId) {
+        for (let i = 10; i > 0; --i) {
             let a = 0.5 * Math.sin(i / 4 + lastFrameTs * 16);
-            draw(img[Img.logo_title], camera.atX_ + fxRandomNorm(i / 4), -16 + camera.atY_ + fxRandomNorm(i / 2) + i / 4, a * i / 100, 1 + i / 100, 1 + i / 100, 1,  ((0x20*(11-i) + 0x20 * a) & 0xFF) << 16);
-            draw(img[Img.logo_start], camera.atX_ + fxRandomNorm(i / 4), 48 + camera.atY_ + fxRandomNorm(i / 2) + i / 4, a * i / 100, 1 + i / 100, 1 + i / 100, 1,  ((0x20*(11-i) + 0x20 * a) & 0xFF) << 16);
+            draw(img[Img.logo_title], camera.atX_ + fxRandomNorm(i / 4),  camera.atY_ + fxRandomNorm(i / 2) + i / 4, a * i / 100, 1 + i / 100, 1 + i / 100, 1, ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16);
+            draw(img[Img.logo_start], camera.atX_ + fxRandomNorm(i / 4), 110 + camera.atY_ + fxRandomNorm(i / 2) + i / 4, a * i / 100, 1 + i / 100, 1 + i / 100, 1, ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16);
         }
     }
     drawCrosshair();

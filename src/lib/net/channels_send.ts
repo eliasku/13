@@ -1,5 +1,5 @@
 import {_debugLagK} from "../game/config";
-import {isChannelOpen, RemoteClient} from "./messaging";
+import {isPeerConnected, RemoteClient} from "./messaging";
 import {fx_chance, fx_range} from "../utils/rnd";
 
 const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
@@ -25,7 +25,7 @@ const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
         } else {
             const delay = fx_range(lagMin / 4, lagMax / 4);
             setTimeout(() => {
-                if (isChannelOpen(client)) {
+                if (isPeerConnected(client)) {
                     try {
                         client.dc_.send(data);
                     } catch (e) {

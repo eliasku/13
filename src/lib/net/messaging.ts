@@ -307,5 +307,5 @@ const requireRemoteClient = (id_: ClientID): RemoteClient => {
     return rc;
 }
 
-export const isChannelOpen = (rc?: RemoteClient): boolean =>
-    rc?.dc_?.readyState[0] == "o";
+export const isPeerConnected = (rc?: RemoteClient): boolean =>
+    rc?.dc_?.readyState[0] == "o" && rc?.pc_.iceConnectionState[1] == "o";

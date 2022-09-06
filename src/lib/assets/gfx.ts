@@ -1,6 +1,7 @@
-import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d";
+import {createTexture, getSubTexture, gl, Texture, uploadTexture} from "../graphics/draw2d";
 import {PI2, toRad} from "../utils/math";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./params";
+import {GL} from "../graphics/gl";
 
 export const enum Img {
     box = 0,
@@ -58,6 +59,8 @@ export const enum Img {
 
     logo_title,
     logo_start,
+
+    light_circle,
 
     num_avatars = 8,
     num_npc = 3,
@@ -274,4 +277,29 @@ export const loadAtlas = (): void => {
 
     // TODO: dispose
     // atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
+
+    {
+        const ctx = createCanvas(64, true);
+        ctx.translate(32, 32);
+        const grd = ctx.createRadialGradient(0,0,32 /3 ,0,0,32);
+        grd.addColorStop(0,"rgba(255,255,255,0.7)");
+        grd.addColorStop(1,"rgba(255,255,255,0)");
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(0, 0, 32 - 0.3, 0, PI2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.scale(1, 0.25);
+        ctx.beginPath();
+        ctx.arc(0, 0, 32 - 0.3, 0, PI2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.resetTransform();
+        img[Img.light_circle] = createTexture(64);
+        img[Img.light_circle].x_ = 0.5;
+        img[Img.light_circle].y_ = 0.5;
+        uploadTexture(img[Img.light_circle].texture_, ctx.canvas);
+        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
+        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
+    }
 }

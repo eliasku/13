@@ -10,6 +10,17 @@ export let mapFramebuffer = gl.createFramebuffer();
 gl.bindFramebuffer(GL.FRAMEBUFFER, mapFramebuffer);
 gl.bindTexture(GL.TEXTURE_2D, mapTexture.texture_);
 gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, mapTexture.texture_, 0);
+
+export const fogTexture = createTexture(BOUNDS_SIZE);
+gl.bindTexture(GL.TEXTURE_2D, fogTexture.texture_);
+gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
+gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
+gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, BOUNDS_SIZE, BOUNDS_SIZE, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
+export let fogFramebuffer = gl.createFramebuffer();
+gl.bindFramebuffer(GL.FRAMEBUFFER, fogFramebuffer);
+gl.bindTexture(GL.TEXTURE_2D, fogTexture.texture_);
+gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, fogTexture.texture_, 0);
+
 gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 
 export const generateMapBackground = (): void => {
@@ -18,7 +29,7 @@ export const generateMapBackground = (): void => {
     map.fillStyle = "#060";
     map.fillRect(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
     const sc = 4;
-    map.scale(1,1/sc);
+    map.scale(1, 1 / sc);
     for (let i = 0; i < BOUNDS_SIZE; ++i) {
         map.fillStyle = detailsColor[rand(2)];
         map.beginPath()

@@ -114,7 +114,7 @@ export const addPos = (to: Pos, x: number, y: number, z: number, scale: number =
     to.z_ += scale * z;
 }
 
-const sqrLength3 = (x: number, y: number, z: number) => x * x + y * y + z * z;
+export const sqrLength3 = (x: number, y: number, z: number) => x * x + y * y + z * z;
 
 export const testIntersection = (a: Actor, b: Actor): boolean => {
     const ta = a.type_;

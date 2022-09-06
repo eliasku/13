@@ -108,7 +108,7 @@ export const drawParticles = () => {
 
 export const drawParticle = (p: Particle) => {
     const velocityScale = 1 - p.followVelocity_ + p.followScale_ * Math.hypot(p.u_, p.v_, p.w_);
-    const velocityAngle = p.followVelocity_ * Math.atan2(p.v_, p.u_ - p.w_);
+    const velocityAngle = p.followVelocity_ * Math.atan2(p.v_ - p.w_, p.u_);
     const scale = p.scale_;
     const angle = velocityAngle + p.a_;
     if (p.z_ > 1) {
