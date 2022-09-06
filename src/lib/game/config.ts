@@ -1,5 +1,3 @@
-export const DEBUG_TERM = 1;
-
 export const enum Const {
     NetFq = 60,
     InputDelay = 8,

@@ -1,4 +1,33 @@
-import {GL, gl} from "./gl";
+import {GL} from "./gl";
+
+type Renderer = WebGLRenderingContext & {
+    $?: ANGLE_instanced_arrays;
+};
+
+export const gl = c.getContext("webgl", {
+    alpha: false,
+    antialias: false,
+    depth: false,
+}) as Renderer;
+
+gl.$ = gl.getExtension('ANGLE_instanced_arrays')!;
+
+if (process.env.NODE_ENV === "development") {
+    if (!gl?.$) {
+        alert("WebGL is required");
+    }
+}
+
+gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+
+onresize = (_?: any, w: number = innerWidth, h: number = innerHeight, s: number = devicePixelRatio) => {
+    c.style.width = w + "px";
+    c.style.height = h + "px";
+    c.width = w * s;
+    c.height = h * s;
+};
+
+(onresize as any)();
 
 const shader = `attribute vec2 g;
 attribute vec2 a;
@@ -33,20 +62,20 @@ export void fragment() {
 `;
 
 // shaders minified with https://evanw.github.io/glslx/
-export const GLSLX_SOURCE_VERTEX = "attribute float b;attribute vec2 e,f,o,j;attribute vec4 k,g,l;uniform mat4 p;varying vec2 c;varying vec4 d;varying vec3 h;void main(){c=k.xy+e*k.zw,d=vec4(g.bgr*g.a,(1.-l.a)*g.a),h=l.bgr;vec2 a=(e-f)*j;float i=cos(b),m=sin(b);a=vec2(a.x*i-a.y*m,a.x*m+a.y*i),a+=f+o,gl_Position=p*vec4(a,0,1);}"
+const GLSLX_SOURCE_VERTEX = "attribute float b;attribute vec2 e,f,o,j;attribute vec4 k,g,l;uniform mat4 p;varying vec2 c;varying vec4 d;varying vec3 h;void main(){c=k.xy+e*k.zw,d=vec4(g.bgr*g.a,(1.-l.a)*g.a),h=l.bgr;vec2 a=(e-f)*j;float i=cos(b),m=sin(b);a=vec2(a.x*i-a.y*m,a.x*m+a.y*i),a+=f+o,gl_Position=p*vec4(a,0,1);}"
 // still need to add `precision mediump float;` manually
-export const GLSLX_SOURCE_FRAGMENT = "precision mediump float;uniform sampler2D n;varying vec2 c;varying vec4 d;varying vec3 h;void main(){vec4 a=d*texture2D(n,c);gl_FragColor=a+vec4(h*a.a,0.);}"
+const GLSLX_SOURCE_FRAGMENT = "precision mediump float;uniform sampler2D n;varying vec2 c;varying vec4 d;varying vec3 h;void main(){vec4 a=d*texture2D(n,c);gl_FragColor=a+vec4(h*a.a,0.);}"
 
-export const GLSLX_NAME_R = "b"
-export const GLSLX_NAME_G = "e"
-export const GLSLX_NAME_A = "f"
-export const GLSLX_NAME_C = "g"
-export const GLSLX_NAME_S = "j"
-export const GLSLX_NAME_U = "k"
-export const GLSLX_NAME_O = "l"
-export const GLSLX_NAME_X = "n"
-export const GLSLX_NAME_T = "o"
-export const GLSLX_NAME_M = "p"
+const GLSLX_NAME_R = "b"
+const GLSLX_NAME_G = "e"
+const GLSLX_NAME_A = "f"
+const GLSLX_NAME_C = "g"
+const GLSLX_NAME_S = "j"
+const GLSLX_NAME_U = "k"
+const GLSLX_NAME_O = "l"
+const GLSLX_NAME_X = "n"
+const GLSLX_NAME_T = "o"
+const GLSLX_NAME_M = "p"
 
 const maxBatch = 65535;
 // const depth = 1e5;

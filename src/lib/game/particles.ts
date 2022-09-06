@@ -1,11 +1,11 @@
 import {img, Img} from "../assets/gfx";
-import {beginRender, camera, draw, flush} from "../graphics/draw2d";
+import {beginRender, camera, draw, flush, gl} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
 import {getLumaColor32, PI2} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEED2, nextFloat2, setSeed2} from "../utils/rnd";
-import {GL, gl} from "../graphics/gl";
+import {GL} from "../graphics/gl";
 import {mapFramebuffer} from "../assets/map";
 import {BOUNDS_SIZE} from "../assets/params";
 

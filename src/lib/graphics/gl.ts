@@ -97,29 +97,3 @@ export const enum GL {
 
     UNPACK_PREMULTIPLY_ALPHA_WEBGL = 0x9241,
 }
-
-export const gl: WebGLRenderingContext & {
-    $?: ANGLE_instanced_arrays;
-} = c.getContext("webgl", {
-    alpha: false,
-    antialias: false,
-    depth: false,
-});
-gl.$ = gl.getExtension('ANGLE_instanced_arrays')!;
-
-if (process.env.NODE_ENV === "development") {
-    if (!gl?.$) {
-        alert("WebGL is required");
-    }
-}
-
-gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
-
-onresize = (_?: any, w: number = innerWidth, h: number = innerHeight, s: number = devicePixelRatio) => {
-    c.style.width = w + "px";
-    c.style.height = h + "px";
-    c.width = w * s;
-    c.height = h * s;
-};
-
-(onresize as any)();

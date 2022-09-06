@@ -37,6 +37,7 @@ export const fx_chance = (prob: number): boolean => Math.random() < prob;
 export const fx_range = (min: number, max: number): number =>
     min + (max - min) * Math.random();
 
+export const fxRandomNorm = (max: number): number => max * 2 * (0.5 - Math.random());
 export const fxRand = (max: number): number => (Math.random() * max) | 0;
 
 export const fxRandElement = <T>(m: T[]): T => m[fxRand(m.length)];

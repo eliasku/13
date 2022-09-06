@@ -20,7 +20,7 @@ export interface RemoteClient {
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
 let eventSource: EventSource | null = null;
-let clientId: undefined | ClientID = undefined;
+export let clientId: 0 | ClientID = 0;
 let username: string = localStorage.getItem("name");
 let messagesToPost: Message[] = [];
 let messageUploading = false;
@@ -211,14 +211,12 @@ export const disconnect = () => {
         for (const [id] of remoteClients) {
             closePeerConnection(id);
         }
-        clientId = undefined;
+        clientId = 0;
     } else if (_sseState == 1) {
         console.warn("currently connecting");
     }
     _sseState = 0;
 }
-
-export const getClientId = (): ClientID => clientId;
 
 // RTC
 

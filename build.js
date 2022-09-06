@@ -193,6 +193,16 @@ console.info(report.join("\n"));
 // LZMA: 13240
 // rem: 72
 
+
+// after splash screen:
+// BUILD: 59275
+// MANGLE: 56915
+// TERSER: 36291
+// ROADROLL: 18005
+// LZMA: 13381
+// rem: -69
+
+
 function mangle_types(file, dest) {
 
     let src = readFileSync(file, "utf8");

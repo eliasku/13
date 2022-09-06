@@ -56,6 +56,9 @@ export const enum Img {
     joy1,
     joy2,
 
+    logo_title,
+    logo_start,
+
     num_avatars = 8,
     num_npc = 3,
 }
@@ -79,21 +82,12 @@ export const createCanvas = (size: number, alpha: boolean) => {
     return ctx;
 }
 
-const cutAlpha = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number | ImageData, h: number | Uint8ClampedArray, cut: number = 0x80) => {
-    w = ctx.getImageData(x, y, w as number, h as number);
-    h = w.data;
-    for (let i = 3; i < h.length; i += 4) {
-        h[i] = h[i] < cut ? 0 : 0xFF;
-    }
-    ctx.putImageData(w, x, y);
-}
-
 export const loadAtlas = (): void => {
-    const tempSize = 512;
-    const atlasSize = 512;
-    const texture = createTexture(atlasSize);
-    const temp = createCanvas(tempSize, true);
-    const atlas = createCanvas(atlasSize, true);
+    const canvaSize = 512;
+    const texture = createTexture(canvaSize);
+    const temp = createCanvas(canvaSize, true);
+    const atlas = createCanvas(canvaSize, true);
+    let imageData:ImageData, imagePixels:Uint8ClampedArray;
     let x = 1;
     let y = 1;
     let x1 = 1;
@@ -103,7 +97,7 @@ export const loadAtlas = (): void => {
     const pushSprite = (w: number, h: number) => {
         x = x1;
         x1 = x + w + 1;
-        if (x1 + 1 >= atlasSize) {
+        if (x1 + 1 >= canvaSize) {
             y += 1 + maxHeight;
             maxHeight = h;
             x = 1;
@@ -114,15 +108,27 @@ export const loadAtlas = (): void => {
         sprHeight = h;
     };
 
+    const saveImage = (ax?:number, ay?:number) =>
+        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, ax, ay));
+
+    const cutAlpha = (cut: number = 0x80) => {
+        imageData = atlas.getImageData(x, y, sprWidth, sprHeight);
+        imagePixels = imageData.data;
+        for (let i = 3; i < imagePixels.length; i += 4) {
+            imagePixels[i] = imagePixels[i] < cut ? 0 : 0xFF;
+        }
+        atlas.putImageData(imageData, x, y);
+    };
+
     const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number = 0, a: number = 0, sx: number = 1, sy: number = 1, cut?: number, ax?: number, ay?: number) => {
         // const emoji = String.fromCodePoint(...emojiCode);
         let scale = 8;
         const emojiSize = (16 + size) * scale;
-        temp.clearRect(0, 0, tempSize, tempSize);
+        temp.clearRect(0, 0, canvaSize, canvaSize);
         temp.font = emojiSize + "px e";
         temp.textAlign = "center";
         temp.textBaseline = "middle";
-        temp.translate(tempSize / 2, tempSize / 2);
+        temp.translate(canvaSize / 2, canvaSize / 2);
         temp.rotate(toRad(a));
         temp.scale(sx, sy);
         temp.fillText(emoji, 0, 0);
@@ -135,9 +141,9 @@ export const loadAtlas = (): void => {
         atlas.translate(-ox, -oy);
         atlas.drawImage(temp.canvas, 0, 0);
         atlas.resetTransform();
-        cutAlpha(atlas, x, y, w, h, cut);
+        cutAlpha(cut);
         EMOJI[img.length] = emoji;
-        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, ax, ay));
+        saveImage(ax, ay);
     }
 
     const createCircle = (r: number) => {
@@ -149,32 +155,30 @@ export const loadAtlas = (): void => {
         atlas.closePath();
         atlas.fill();
         atlas.resetTransform();
-        cutAlpha(atlas, x, y, sprWidth, sprHeight);
-        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight));
+        cutAlpha();
+        saveImage();
     }
     // BOX
     pushSprite(1, 1);
     atlas.fillRect(x, y, 1, 1);
-    img.push(
-        getSubTexture(texture, x, y, sprWidth, sprHeight),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0, 0),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, -1),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 1),
-    );
+    saveImage();
+    saveImage(0, 0);
+    saveImage(0.5, 0);
+    saveImage(0.5, -1);
+    saveImage(0);
+    saveImage(1);
     // CIRCLE
     createCircle(4);
-    img.push(
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.6),
-        getSubTexture(texture, x, y, sprWidth, sprHeight, 0.7),
-    );
+    saveImage(0.6);
+    saveImage(0.7);
+
     createCircle(16);
 
     // none weapon gfx index
-    img.push(undefined);
+    saveImage();
+    // img.push(undefined);
 
-    const DATA = [
+    [
         /* 🔪 */ ["🔪", 180, 234, 19, 7, -4, -50, , , , 0.3,],
         /* 🪓 */ ["🪓", 198, 210, 20, 10, , 45, -1, , , 0.3,],
         /* 🔫 */ ["🔫", 208, 198, 15, 12, -4, , -1, , , 0.3,],
@@ -204,17 +208,17 @@ export const loadAtlas = (): void => {
         /* 🌲 */ ["🌲", 162, 99, 26, 31, 12, , , , 136, , 0.95],
         /* 🥓 */ ["🥓", 163, 219, 22, 9, , -45, , , , ,],
         /* 🦴 */ ["🦴", 163, 213, 21, 9, , -45, , , , ,],
-    ];
-    for (const a of DATA) {
+    ].map(a=>
         // @ts-ignore
-        createEmoji2(...a);
-    }
-
+        createEmoji2(...a)
+    );
     pushSprite(4, 2);
     atlas.fillRect(x, y, 4, 2);
     atlas.fillStyle = "#999";
     atlas.fillRect(x, y, 1, 2);
-    img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
+    saveImage();
+
+    atlas.fillStyle = "#fff";
 
     const strokeCircle = (r: number) => {
         atlas.beginPath();
@@ -241,20 +245,33 @@ export const loadAtlas = (): void => {
 
         atlas.resetTransform();
 
-        img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, 0.5, 0.5));
+        cutAlpha();
+        saveImage();
     }
 
     renderJoy(PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1, "RUN", "JUMP");
     renderJoy(PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, "AIM", "FIRE");
     renderJoy(16, 16, "DROP", "");
 
-    uploadTexture(texture.texture_, atlas.canvas);
+    pushSprite(72, 64);
+    atlas.font = "72px monospace";
+    atlas.fillText("13", x + 72 / 2, y + 48);
+    cutAlpha();
+    saveImage();
 
-    // TODO: dispose
-    // atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
+    pushSprite(200, 24);
+    atlas.font = "24px monospace";
+    atlas.fillText("TAP TO START", x + 100, y + 24 * 0.75);
+    cutAlpha();
+    saveImage();
+
+    uploadTexture(texture.texture_, atlas.canvas);
 
     // document.body.appendChild(atlas.canvas);
     // atlas.canvas.style.position = "fixed";
     // atlas.canvas.style.top = "0";
     // atlas.canvas.style.left = "0";
+
+    // TODO: dispose
+    // atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
 }

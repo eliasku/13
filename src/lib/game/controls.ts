@@ -1,10 +1,9 @@
 import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
-import {camera, draw} from "../graphics/draw2d";
+import {camera, draw, gl} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img, Img} from "../assets/gfx";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "../assets/params";
 import {COLOR_WHITE} from "./data/colors";
-import {gl} from "../graphics/gl";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius

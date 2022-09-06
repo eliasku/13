@@ -1,10 +1,10 @@
 import {_sseState, connect, getUserName, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
-import {termClear, termFlush, termPrint} from "./utils/log";
-import {resetGame, updateTestGame} from "./game/game";
+import {termPrint} from "./graphics/ui";
+import {createSplashState, resetGame, updateTestGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {play} from "./audio/context";
-import {fps, updateFpsMeter} from "./utils/fpsMeter";
+import {updateFpsMeter} from "./utils/fpsMeter";
 import {Snd, snd} from "./assets/sfx";
 
 // initDraw2d();
@@ -19,12 +19,13 @@ const enum StartState {
 let state = StartState.Loading;
 const onStart = async () => {
     if (state !== StartState.TapToConnect) return;
+    resetGame();
     state = StartState.Connecting;
     //onbeforeunload = disconnect;
     await connect();
-    play(snd[Snd.bgm], 0.5, 0, true);
-    resetGame();
+
     state = StartState.Connected;
+    play(snd[Snd.bgm], 0.5, 0, true);
 };
 
 new FontFace("e", `url(e.ttf)`).load().then((font) => {
@@ -32,12 +33,17 @@ new FontFace("e", `url(e.ttf)`).load().then((font) => {
     // loadZZFX();
     // loadMusic();
     loadAtlas();
+    goToSplash();
     if (!getUserName()) {
         const defaultName = "guest";
         setUserName(prompt("pick your name", defaultName) || defaultName);
     }
-    state = StartState.TapToConnect;
 });
+
+const goToSplash = () => {
+    state = StartState.TapToConnect;
+    createSplashState();
+}
 
 const raf = (ts: DOMHighResTimeStamp) => {
     doFrame(ts / 1000);
@@ -46,33 +52,28 @@ const raf = (ts: DOMHighResTimeStamp) => {
 }
 
 const doFrame = (ts: number) => {
-    updateFpsMeter(ts);
-    termClear();
-    termPrint(`FPS: ${fps}\n`);
+    l.innerText = updateFpsMeter(ts) + "\n";
 
     switch (state) {
         case StartState.TapToConnect:
-            termPrint("\nTap to connect!\n");
+            updateTestGame(ts);
+            //termPrint("\nTAP TO START\n");
             if (isAnyKeyDown()) {
                 onStart();
             }
             break;
         case StartState.Loading:
-            termPrint("\nLoading...\n");
-            break;
         case StartState.Connecting:
-            termPrint("Connecting...\n");
+            termPrint("╫╪"[ts * 9 & 0x1]);
             break;
         default:
-            if (_sseState) {
-                updateTestGame(ts);
-            } else {
+            updateTestGame(ts);
+            if (!_sseState) {
                 snd[Snd.bgm].$?.stop();
-                state = StartState.TapToConnect;
+                goToSplash();
             }
             break;
     }
-    termFlush();
 }
 
 requestAnimationFrame(raf);

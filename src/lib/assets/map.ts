@@ -1,8 +1,8 @@
 import {rand} from "../utils/rnd";
 import {createCanvas} from "./gfx";
-import {createTexture, uploadTexture} from "../graphics/draw2d";
+import {createTexture, gl, uploadTexture} from "../graphics/draw2d";
 import {BOUNDS_SIZE} from "./params";
-import {GL, gl} from "../graphics/gl";
+import {GL} from "../graphics/gl";
 import {PI2} from "../utils/math";
 
 export const mapTexture = createTexture(BOUNDS_SIZE);
