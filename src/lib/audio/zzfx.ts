@@ -2,14 +2,13 @@ import {audioContext} from "./context";
 import {PI2, sign} from "../utils/math";
 
 const zzfxV = .3;    // volume
-export const zzfxR = 44100; // sample rate
+const zzfxR = 44100; // sample rate
 
 const createAudioBuffer = (...channels: number[][]): AudioBuffer => {
     const audioBuffer = audioContext.createBuffer(channels.length, channels[0].length, zzfxR);
     channels.map((x, i) => audioBuffer.getChannelData(i).set(x));
     return audioBuffer;
 }
-
 
 export const zzfx = (code: number[]): AudioBuffer => createAudioBuffer(zzfxG(...code));
 

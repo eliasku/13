@@ -859,7 +859,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
     playAt(actor, Snd.hit);
     if (actor.hp_) {
         actor.hp_ -= bullet.weapon_;
-        if (actor.type_ === ActorType.Player) {
+        if (!actor.type_) {
             addFleshParticles(16, actor, 64, bullet);
             playAt(actor, Snd.hurt);
         }
@@ -869,8 +869,8 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
             kill(actor);
 
             const killerID = bullet.client_;
-            if (killerID) {
-                state.scores_[killerID] = (state.scores_[killerID] ?? 0) +
+            if (killerID && !actor.type_) {
+                state.scores_[killerID] = (state.scores_[killerID] | 0) +
                     (actor.client_ ? 10 : 1);
             }
         }

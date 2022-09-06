@@ -17,19 +17,17 @@ export const generateMapBackground = (): void => {
     const detailsColor = ["#080", "#572"];
     map.fillStyle = "#060";
     map.fillRect(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
-
-    // map.fillStyle = "#080";
-    map.scale(1,.25);
-    for (let i = 0; i < BOUNDS_SIZE * 10; ++i) {
+    const sc = 4;
+    map.scale(1,1/sc);
+    for (let i = 0; i < BOUNDS_SIZE; ++i) {
         map.fillStyle = detailsColor[rand(2)];
-        map.globalAlpha = i / (BOUNDS_SIZE * 20);
         map.beginPath()
-        map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * 4, 4 + rand(16), 0, PI2);
+        map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * sc, 1 + rand(16), 0, PI2);
         map.closePath();
         map.fill();
-        //map.fillStyle = "#572";
-        map.globalAlpha = 1;
-        map.fillRect(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * 4, 1, 4 + rand(8));
+        map.fillRect(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * sc, 1, 4 + rand(8));
+        // map.fillText("🌼,🌸,🌺,🍀".split(",")[rand(4)], rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * sc);
+        // map.fillText("🌷,🌻,🥀,🌿".split(",")[rand(4)], rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * sc);
     }
 
     ///// LZMA: ~111

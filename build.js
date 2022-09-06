@@ -104,13 +104,14 @@ const pureFunc = [
 const compress = [
     "booleans_as_integers=true",
     "unsafe_arrows=true",
-    "passes=100",
+    "passes=1000",
     "keep_fargs=false",
     "pure_getters=true",
     `pure_funcs=[${pureFunc.map(x => `'${x}'`).join(",")}]`,
     "unsafe_methods=true",
+    //"expression=true",
     // "hoist_funs=true",
-    //"inline=2",
+    "inline=3",
 ];//"unsafe=true",
 
 
@@ -175,6 +176,14 @@ console.info(report.join("\n"));
 // ROADROLL: 17984
 // LZMA: 13364
 // rem: -52
+
+// resize / gl context / remove alpha from map art generator
+// BUILD: 59328
+// MANGLE: 56990
+// TERSER: 36209
+// ROADROLL: 17892
+// LZMA: 13297
+// rem: 15
 
 function mangle_types(file, dest) {
 

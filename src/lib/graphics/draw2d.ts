@@ -1,4 +1,4 @@
-import {GL, gl, gl_instanced_arrays} from "./gl";
+import {GL, gl} from "./gl";
 
 const shader = `attribute vec2 g;
 attribute vec2 a;
@@ -79,7 +79,7 @@ const bindAttrib = (name: string, size: number, stride: number, divisor: number,
     gl.enableVertexAttribArray(location);
     gl.vertexAttribPointer(location, size, type, norm, stride, offset);
     if (divisor) {
-        gl_instanced_arrays.vertexAttribDivisorANGLE(location, divisor);
+        gl.$.vertexAttribDivisorANGLE(location, divisor);
     }
 }
 
@@ -89,7 +89,7 @@ const byteSize = floatSize * 4;
 // const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
 const floatView = new Float32Array(1 << 20);
 const uintView = new Uint32Array(floatView.buffer);
-let program: WebGLProgram | null = null;
+let program: WebGLProgram | null = gl.createProgram();
 let matrixLocation: WebGLUniformLocation = null;
 let textureLocation: WebGLUniformLocation = null;
 
@@ -97,50 +97,47 @@ const getUniformLocation = (name: string): WebGLUniformLocation | null => {
     return gl.getUniformLocation(program, name);
 }
 
-// export const initDraw2d = () => {
-    program = gl.createProgram();
+gl.attachShader(program, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
+gl.attachShader(program, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
+gl.linkProgram(program);
 
-    gl.attachShader(program, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
-    gl.attachShader(program, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
-    gl.linkProgram(program);
-
-    if (process.env.NODE_ENV === "development") {
-        if (!gl.getProgramParameter(program, GL.LINK_STATUS)) {
-            const error = gl.getProgramInfoLog(program);
-            gl.deleteProgram(program);
-            console.error(error);
-        }
+if (process.env.NODE_ENV === "development") {
+    if (!gl.getProgramParameter(program, GL.LINK_STATUS)) {
+        const error = gl.getProgramInfoLog(program);
+        gl.deleteProgram(program);
+        console.error(error);
     }
+}
 
-    // indicesBuffer
-    createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
+// indicesBuffer
+createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
 
-    // vertexBuffer
-    createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
+// vertexBuffer
+createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
 
-    // vertexLocation
-    bindAttrib(GLSLX_NAME_G, 2, 0, 0, 0, GL.FLOAT, false);
+// vertexLocation
+bindAttrib(GLSLX_NAME_G, 2, 0, 0, 0, GL.FLOAT, false);
 
-    // dynamicBuffer
-    createBuffer(GL.ARRAY_BUFFER, floatView, GL.DYNAMIC_DRAW);
+// dynamicBuffer
+createBuffer(GL.ARRAY_BUFFER, floatView, GL.DYNAMIC_DRAW);
 
-    // anchorLocation
-    bindAttrib(GLSLX_NAME_A, 2, byteSize, 1, 0, GL.FLOAT, false);
-    // scaleLocation
-    bindAttrib(GLSLX_NAME_S, 2, byteSize, 1, 8, GL.FLOAT, false);
-    // rotationLocation
-    bindAttrib(GLSLX_NAME_R, 1, byteSize, 1, 16, GL.FLOAT, false);
-    // translationLocation
-    bindAttrib(GLSLX_NAME_T, 2, byteSize, 1, 20, GL.FLOAT, false);
-    // uvsLocation
-    bindAttrib(GLSLX_NAME_U, 4, byteSize, 1, 28, GL.FLOAT, false);
-    // colorLocation
-    bindAttrib(GLSLX_NAME_C, 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
-    // colorOffsetLocation
-    bindAttrib(GLSLX_NAME_O, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
+// anchorLocation
+bindAttrib(GLSLX_NAME_A, 2, byteSize, 1, 0, GL.FLOAT, false);
+// scaleLocation
+bindAttrib(GLSLX_NAME_S, 2, byteSize, 1, 8, GL.FLOAT, false);
+// rotationLocation
+bindAttrib(GLSLX_NAME_R, 1, byteSize, 1, 16, GL.FLOAT, false);
+// translationLocation
+bindAttrib(GLSLX_NAME_T, 2, byteSize, 1, 20, GL.FLOAT, false);
+// uvsLocation
+bindAttrib(GLSLX_NAME_U, 4, byteSize, 1, 28, GL.FLOAT, false);
+// colorLocation
+bindAttrib(GLSLX_NAME_C, 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
+// colorOffsetLocation
+bindAttrib(GLSLX_NAME_O, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
 
-    matrixLocation = getUniformLocation(GLSLX_NAME_M);
-    textureLocation = getUniformLocation(GLSLX_NAME_X);
+matrixLocation = getUniformLocation(GLSLX_NAME_M);
+textureLocation = getUniformLocation(GLSLX_NAME_X);
 
 export interface Camera {
     atX_: number;
@@ -267,7 +264,7 @@ export const flush = () => {
         gl.bindTexture(GL.TEXTURE_2D, currentTexture);
         gl.uniform1i(textureLocation, 0);
         gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
-        gl_instanced_arrays.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
+        gl.$.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
         count = 0;
     }
 }
