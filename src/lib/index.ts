@@ -5,7 +5,7 @@ import {resetGame, updateTestGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {play} from "./audio/context";
 import {fps, updateFpsMeter} from "./utils/fpsMeter";
-import {Bgm, bgm} from "./assets/bgm";
+import {Snd, snd} from "./assets/sfx";
 
 // initDraw2d();
 
@@ -17,13 +17,12 @@ const enum StartState {
 }
 
 let state = StartState.Loading;
-let music: AudioBufferSourceNode;
 const onStart = async () => {
     if (state !== StartState.TapToConnect) return;
     state = StartState.Connecting;
     //onbeforeunload = disconnect;
     await connect();
-    music = play(bgm[Bgm.main], 0.5, 0, true);
+    play(snd[Snd.bgm], 0.5, 0, true);
     resetGame();
     state = StartState.Connected;
 };
@@ -68,9 +67,7 @@ const doFrame = (ts: number) => {
             if (_sseState) {
                 updateTestGame(ts);
             } else {
-                if (music) {
-                    music.stop();
-                }
+                snd[Snd.bgm].$?.stop();
                 state = StartState.TapToConnect;
             }
             break;

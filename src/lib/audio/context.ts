@@ -1,22 +1,28 @@
 export const audioContext = new AudioContext();
 
-export const play = (audioBuffer: AudioBuffer, vol: number, pan: number, loop: boolean): AudioBufferSourceNode => {
+export type AudioBufferWithState = AudioBuffer & {
+    $?: AudioBufferSourceNode
+};
+
+export const play = (audioBuffer: AudioBufferWithState,
+                     vol: number | StereoPannerNode,
+                     pan: number | AudioBufferSourceNode,
+                     loop: boolean,
+                     gain?: GainNode): void => {
     const testMasterVol = 0.8;
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
+    gain = audioContext.createGain();
+    gain.gain.value = vol as number * testMasterVol;
+    gain.connect(audioContext.destination);
 
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = vol * testMasterVol;
-    gainNode.connect(audioContext.destination);
+    vol = audioContext.createStereoPanner();
+    vol.pan.value = pan as number;
+    vol.connect(gain);
 
-    const panNode = audioContext.createStereoPanner();
-    panNode.pan.value = pan;
-    panNode.connect(gainNode);
-
-    source.connect(panNode);
-    source.loop = loop;
-    source.start();
-    return source;
+    pan = audioBuffer.$ = audioContext.createBufferSource();
+    pan.buffer = audioBuffer;
+    pan.loop = loop;
+    pan.connect(vol);
+    pan.start();
 }
 
 export const unlockAudio = () => {

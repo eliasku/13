@@ -185,6 +185,15 @@ console.info(report.join("\n"));
 // LZMA: 13297
 // rem: 15
 
+// play audio buffer (use arguments for local variables)
+// BUILD: 59257
+// MANGLE: 56919
+// TERSER: 36185
+// ROADROLL: 17862
+// LZMA: 13271
+// rem: 41
+
+
 function mangle_types(file, dest) {
 
     let src = readFileSync(file, "utf8");

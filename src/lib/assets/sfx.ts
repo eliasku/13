@@ -1,4 +1,5 @@
 import {zzfx, zzfxM} from "../audio/zzfx";
+import {AudioBufferWithState} from "../audio/context";
 
 export const enum Snd {
     heal = 0,
@@ -14,7 +15,7 @@ export const enum Snd {
     bgm,
 }
 
-export let snd: AudioBuffer[] = [
+export let snd: AudioBufferWithState[] = [
     zzfx([, , 103, , .02, .06, , 1.24, -18, 4.4, , , , .7, , .1, , .95, .03]),
     zzfx([1.27, , 390, .01, .04, .02, 4, .71, 4.8, , , , , , , , .01, .6, .06]),
     zzfx([1.12, , 73, , .02, .11, 2, 1.18, , -0.1, , , , , , .3, , .55, .05, .23]),
