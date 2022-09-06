@@ -54,8 +54,8 @@ const maxBatch = 65535;
 let count = 0;
 let currentTexture: WebGLTexture = null;
 
-const compileShader = (source: string, type: GLenum): WebGLShader => {
-    const shader = gl.createShader(type);
+const compileShader = (source: string, shader: GLenum | WebGLShader): WebGLShader => {
+    shader = gl.createShader(shader as GLenum);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
 
@@ -74,12 +74,12 @@ const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
     gl.bufferData(type, src, usage);
 }
 
-const bindAttrib = (name: string, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
-    const location = gl.getAttribLocation(program, name);
-    gl.enableVertexAttribArray(location);
-    gl.vertexAttribPointer(location, size, type, norm, stride, offset);
+const bindAttrib = (name: string | GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
+    name = gl.getAttribLocation(program, name as string);
+    gl.enableVertexAttribArray(name);
+    gl.vertexAttribPointer(name, size, type, norm, stride, offset);
     if (divisor) {
-        gl.$.vertexAttribDivisorANGLE(location, divisor);
+        gl.$.vertexAttribDivisorANGLE(name, divisor);
     }
 }
 
@@ -90,12 +90,9 @@ const byteSize = floatSize * 4;
 const floatView = new Float32Array(1 << 20);
 const uintView = new Uint32Array(floatView.buffer);
 let program: WebGLProgram | null = gl.createProgram();
-let matrixLocation: WebGLUniformLocation = null;
-let textureLocation: WebGLUniformLocation = null;
 
-const getUniformLocation = (name: string): WebGLUniformLocation | null => {
-    return gl.getUniformLocation(program, name);
-}
+const getUniformLocation = (name: string): WebGLUniformLocation | null =>
+    gl.getUniformLocation(program, name);
 
 gl.attachShader(program, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
 gl.attachShader(program, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
@@ -136,9 +133,6 @@ bindAttrib(GLSLX_NAME_C, 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
 // colorOffsetLocation
 bindAttrib(GLSLX_NAME_O, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
 
-matrixLocation = getUniformLocation(GLSLX_NAME_M);
-textureLocation = getUniformLocation(GLSLX_NAME_X);
-
 export interface Camera {
     atX_: number;
     atY_: number;
@@ -171,32 +165,28 @@ export interface Texture {
     v1_: number;
 }
 
-export const getSubTexture = (src: Texture, x: number, y: number, w: number, h: number, ax: number, ay: number): Texture => {
-    return {
-        texture_: src.texture_,
-        w_: w, h_: h,
-        x_: ax,
-        y_: ay,
-        u0_: x / src.w_,
-        v0_: y / src.h_,
-        u1_: w / src.w_,
-        v1_: h / src.h_,
-    };
-}
+export const getSubTexture = (src: Texture, x: number, y: number, w: number, h: number, ax: number, ay: number): Texture => ({
+    texture_: src.texture_,
+    w_: w, h_: h,
+    x_: ax,
+    y_: ay,
+    u0_: x / src.w_,
+    v0_: y / src.h_,
+    u1_: w / src.w_,
+    v1_: h / src.h_,
+});
 
-export const createTexture = (size: number): Texture => {
-    return {
-        texture_: gl.createTexture(),
-        w_: size,
-        h_: size,
-        x_: 0,
-        y_: 0,
-        u0_: 0,
-        v0_: 0,
-        u1_: 1,
-        v1_: 1
-    };
-}
+export const createTexture = (size: number): Texture => ({
+    texture_: gl.createTexture(),
+    w_: size,
+    h_: size,
+    x_: 0,
+    y_: 0,
+    u0_: 0,
+    v0_: 0,
+    u1_: 1,
+    v1_: 1
+});
 
 export const uploadTexture = (glTexture: WebGLTexture, source: TexImageSource): void => {
     gl.bindTexture(GL.TEXTURE_2D, glTexture);
@@ -255,28 +245,26 @@ export const beginRender = (
     gl.enable(GL.BLEND);
     gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(program);
-    gl.uniformMatrix4fv(matrixLocation, false, projection);
+    gl.uniformMatrix4fv(getUniformLocation(GLSLX_NAME_M), false, projection);
     gl.viewport(0, 0, width, Math.abs(height));
 }
 
 export const flush = () => {
     if (count) {
         gl.bindTexture(GL.TEXTURE_2D, currentTexture);
-        gl.uniform1i(textureLocation, 0);
+        gl.uniform1i(getUniformLocation(GLSLX_NAME_X), 0);
         gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
         gl.$.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
         count = 0;
     }
 }
 
-export const draw = (texture: Texture, x: number, y: number, r: number, sx: number, sy: number, alpha?: number, color?: number, additive?: number, offset?: number) => {
-    if (currentTexture !== texture.texture_ || count === maxBatch) {
+export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) => {
+    if (currentTexture !== texture.texture_ || count == maxBatch) {
         flush();
         currentTexture = texture.texture_;
     }
-
-    let i = count * floatSize;
-
+    let i = count++ * floatSize;
     floatView[i++] = texture.x_;
     floatView[i++] = texture.y_;
     floatView[i++] = sx * texture.w_;
@@ -288,8 +276,6 @@ export const draw = (texture: Texture, x: number, y: number, r: number, sx: numb
     floatView[i++] = texture.v0_;
     floatView[i++] = texture.u1_;
     floatView[i++] = texture.v1_;
-    uintView[i++] = ((((alpha ?? 1) * 0xFF) << 24) | ((color ?? 0xFFFFFF) & 0xFFFFFF)) >>> 0;
-    uintView[i++] = (((additive * 0xFF) << 24) | (offset & 0xFFFFFF)) >>> 0;
-
-    count++;
+    uintView[i++] = (((alpha * 0xFF) << 24) | color) >>> 0;
+    uintView[i++] = (((additive * 0xFF) << 24) | offset) >>> 0;
 }

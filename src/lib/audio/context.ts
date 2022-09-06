@@ -24,14 +24,3 @@ export const play = (audioBuffer: AudioBufferWithState,
     pan.connect(vol);
     pan.start();
 }
-
-export const unlockAudio = () => {
-    if (audioContext.state[0] == "s") {
-        // audioContext.resume().then(() => {
-        //     console.info("AudioContext resumed");
-        // }).catch((reason) => {
-        //     console.error("AudioContext resume failed:", reason);
-        // });
-        audioContext.resume().catch();
-    }
-}

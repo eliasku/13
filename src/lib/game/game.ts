@@ -1133,7 +1133,7 @@ const collectVisibleActors = (...lists: Actor[][]) => {
 }
 
 const drawMapBackground = () => {
-    draw(mapTexture, 0, 0, 0, 1, 1);
+    draw(mapTexture, 0, 0);
     // draw(img[Img.box_lt], 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
     draw(img[Img.box_lt], 0, -OBJECT_RADIUS * 3, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4, 0.5, 0);
 }

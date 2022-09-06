@@ -1,3 +1,6 @@
+export const PI = Math.PI;
+export const PI2 = 2 * PI;
+
 /* @__PURE__ */
 export const reach = (t0: number, t1: number, v: number): number => {
     if (t0 < t1) {
@@ -34,6 +37,3 @@ export const getLumaColor32 = (luma: number): number => (luma << 16) | (luma << 
 // }
 
 export const sign = (v: number) => v > 0 ? 1 : -1;
-
-export const PI = Math.PI;
-export const PI2 = 2 * PI;

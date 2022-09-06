@@ -161,37 +161,19 @@ if (process.argv.indexOf("--zip") > 0) {
 
 console.info(report.join("\n"));
 
-// before:
-// BUILD: 60023
-// MANGLE: 57707
-// TERSER: 36629
-// ROADROLL: 18127
-// LZMA: 13467
-// rem: -155
+// - draw default values,
+// - input dpr instead of calculation,
+// - random inline SEED,
+// - u32 to f32: bits inline
+// - onresize default arguments
+// - gl remove uniform globals, pick each frame
 
-// after:
-// BUILD: 59543
-// MANGLE: 57207
-// TERSER: 36382
-// ROADROLL: 17984
-// LZMA: 13364
-// rem: -52
-
-// resize / gl context / remove alpha from map art generator
-// BUILD: 59328
-// MANGLE: 56990
-// TERSER: 36209
-// ROADROLL: 17892
-// LZMA: 13297
-// rem: 15
-
-// play audio buffer (use arguments for local variables)
-// BUILD: 59257
-// MANGLE: 56919
-// TERSER: 36185
-// ROADROLL: 17862
-// LZMA: 13271
-// rem: 41
+// BUILD: 59092
+// MANGLE: 56754
+// TERSER: 36084
+// ROADROLL: 17833 / 17872
+// LZMA: 13249 / 13277
+// rem: 63 / 35
 
 
 function mangle_types(file, dest) {

@@ -115,10 +115,7 @@ if (process.env.NODE_ENV === "development") {
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
-onresize = () => {
-    const w = innerWidth;
-    const h = innerHeight;
-    const s = devicePixelRatio;
+onresize = (_?: any, w: number = innerWidth, h: number = innerHeight, s: number = devicePixelRatio) => {
     c.style.width = w + "px";
     c.style.height = h + "px";
     c.width = w * s;

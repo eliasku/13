@@ -1,4 +1,15 @@
-import {unlockAudio} from "../audio/context";
+import {audioContext} from "../audio/context";
+
+const unlockAudio = () => {
+    if (audioContext.state[0] == "s") {
+        // audioContext.resume().then(() => {
+        //     console.info("AudioContext resumed");
+        // }).catch((reason) => {
+        //     console.error("AudioContext resume failed:", reason);
+        // });
+        audioContext.resume().catch();
+    }
+}
 
 export interface Pointer {
     id_: number;
@@ -12,18 +23,16 @@ export interface Pointer {
 }
 
 /* @__PURE__ */
-const newPointer = (id_: number): Pointer => {
-    return {
-        id_,
-        startX_: 0,
-        startY_: 0,
-        x_: 0,
-        y_: 0,
-        downEvent_: false,
-        upEvent_: false,
-        active_: false,
-    };
-}
+const newPointer = (id_: number): Pointer => ({
+    id_,
+    startX_: 0,
+    startY_: 0,
+    x_: 0,
+    y_: 0,
+    downEvent_: false,
+    upEvent_: false,
+    active_: false,
+});
 
 export const mousePointer = newPointer(0);
 export const inputPointers = new Map<number, Pointer>();
@@ -84,11 +93,10 @@ export const isAnyKeyDown = () =>
 oncontextmenu = e => e.preventDefault();
 
 const handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
-    const scale = c.width / c.clientWidth;
     const bb = c.getBoundingClientRect();
     fn(mousePointer,
-        ((e.clientX - bb.x) * scale) | 0,
-        ((e.clientY - bb.y) * scale) | 0);
+        ((e.clientX - bb.x) * devicePixelRatio) | 0,
+        ((e.clientY - bb.y) * devicePixelRatio) | 0);
 };
 
 c.onmousedown = (e) => {
@@ -122,15 +130,15 @@ c.onmousemove = (e) => {
 
 const handleTouchEvent = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void) => {
     e.preventDefault();
-    const scale = c.width / c.clientWidth;
     const bb = c.getBoundingClientRect();
     for (let i = 0; i < e.changedTouches.length; ++i) {
         const touch = e.changedTouches[i];
         fn(getPointer(touch.identifier),
-            ((touch.clientX - bb.x) * scale) | 0,
-            ((touch.clientY - bb.y) * scale) | 0);
+            ((touch.clientX - bb.x) * devicePixelRatio) | 0,
+            ((touch.clientY - bb.y) * devicePixelRatio) | 0);
     }
 };
+
 c.ontouchstart = (e: TouchEvent) => {
     handleTouchEvent(e, handleDown);
     unlockAudio();
