@@ -1,12 +1,4 @@
-import {
-    ClientID,
-    Message,
-    MessageData,
-    MessageField,
-    MessageType,
-    PostMessagesResponse,
-    Request
-} from "../../shared/types";
+import {ClientID, Message, MessageData, MessageField, MessageType, PostMessagesResponse} from "../../shared/types";
 import {channels_processMessage} from "./channels";
 
 export interface RemoteClient {
@@ -25,7 +17,7 @@ let username: string = localStorage.getItem("name");
 let messagesToPost: Message[] = [];
 let messageUploading = false;
 let nextCallId = 1;
-const callbacks: ((msg: Message) => void)[] = [];
+let callbacks: ((msg: Message) => void)[] = [];
 
 export const setUserName = (name: string) => {
     localStorage.setItem("name", name);
@@ -50,9 +42,22 @@ export const remoteSend = (to: ClientID, type: MessageType, data: MessageData): 
 type Handler = ((req: Message) => Promise<MessageData>) |
     ((req: Message) => void);
 
+export const disconnect = () => {
+    if (eventSource) {
+        console.log("terminate SSE");
+        // eventSource.onerror = null;
+        // eventSource.onmessage = null;
+        eventSource.close();
+        eventSource = null;
+    }
+    remoteClients.forEach(closePeerConnection);
+    clientId = 0;
+    _sseState = 0;
+}
+
 const handlers: Handler[] = [
     // 0
-    (req: Message): void => {
+    () => {
     },
     // MessageType.RtcOffer
     async (req): Promise<RTCSessionDescriptionInit> => {
@@ -71,17 +76,14 @@ const handlers: Handler[] = [
         return answer;
     },
     // MessageType.RtcCandidate
-    (req): void => {
+    (req, _rc?: RemoteClient): void => {
         if (req[MessageField.Data].candidate) {
-            try {
-                const rc = requireRemoteClient(req[MessageField.Source]);
-                if (!rc.pc_) {
-                    initPeerConnection(rc);
-                }
-                rc.pc_.addIceCandidate(new RTCIceCandidate(req[MessageField.Data]));
-            } catch (error: any) {
-                console.warn("ice candidate set failed: " + error.message);
+            _rc = requireRemoteClient(req[MessageField.Source]);
+            if (!_rc.pc_) {
+                initPeerConnection(_rc);
             }
+            _rc.pc_.addIceCandidate(new RTCIceCandidate(req[MessageField.Data]))
+                .catch(error => console.warn("ice candidate set failed: " + error.message));
         }
     },
     // MessageType.Name
@@ -102,82 +104,55 @@ const requestHandler = (req: Message) =>
         ])
     );
 
-setInterval(async () => {
+setInterval(() => {
     if (_sseState > 1 && !messageUploading && messagesToPost.length) {
         messageUploading = true;
-        try {
-            const data: PostMessagesResponse = await _post([
-                clientId!,
-                messagesToPost
-            ]);
-            messagesToPost = messagesToPost.slice(data);
-        } catch (e) {
-            console.warn("http-messaging error", e);
-        }
-        messageUploading = false;
+        _post(messagesToPost).then(response => {
+            messagesToPost = messagesToPost.slice(response);
+            messageUploading = false;
+        }).catch(disconnect);
     }
 }, 100);
 
-const _post = async (req: Request): Promise<PostMessagesResponse> => {
-    const response = await fetch(/*EventSourceUrl*/"_", {
+const _post = (messages: Message[]): Promise<PostMessagesResponse> =>
+    fetch(/*EventSourceUrl*/"_", {
         method: "POST",
-        body: JSON.stringify(req)
-    });
-    if (response.ok) {
-        return await response.json() as PostMessagesResponse;
-    }
-    disconnect();
-}
-
-const termSSE = () => {
-    if (eventSource) {
-        console.log("terminate SSE");
-        eventSource.onerror = null;
-        eventSource.onmessage = null;
-        eventSource.close();
-        eventSource = null;
-    }
-    _sseState = 0;
-}
+        body: JSON.stringify([clientId, messages])
+    }).then(response => response.json() as Promise<PostMessagesResponse>);
 
 const onSSE: ((data: string) => void)[] = [
     // CLOSE
-    termSSE,
+    disconnect as ((data: string) => void),
     // PING
-    () => _post([clientId!, []]),
+    () => _post([]).catch(disconnect),
     // INIT
-    (data: string) => {
-        console.info("[SSE] got init " + data);
-        console.info("[SSE] got init " + data.split(";"));
-        const ids = data.split(";").map(Number);
-        clientId = ids.shift();
-        for (const id of ids) {
+    (data: string, _ids?: number[]) => {
+        // console.info("[SSE] got init " + data);
+        // console.info("[SSE] got init " + data.split(";"));
+        _ids = data.split(";").map(Number);
+        clientId = _ids.shift();
+        _ids.map(id => {
             console.info(`remote client ${id} observed`);
             requireRemoteClient(id);
             remoteSend(id, MessageType.Name, username);
-        }
+        });
         _sseState = 2;
     },
     // UPDATE
-    (data: string) => {
-        const message = JSON.parse(data) as Message;
-        const waiter = callbacks[message[MessageField.Call]];
-        if (waiter) {
-            waiter(message);
-        } else {
-            requestHandler(message);
-        }
+    (data: string, _message?: Message) => {
+        _message = JSON.parse(data);
+        (callbacks[_message[MessageField.Call]] || requestHandler)(_message);
     },
     // LIST CHANGE
-    (data: string) => {
-        const id = +data;
-        if (id > 0) {
-            connectToRemote(id);
-            remoteSend(id, MessageType.Name, username);
-            console.info(`remote client ${id} added`);
+    (data: string, _id?: number) => {
+        _id = +data;
+        if (_id > 0) {
+            connectToRemote(_id);
+            remoteSend(_id, MessageType.Name, username);
+            console.info(`remote client ${_id} added`);
         } else {
-            closePeerConnection(-id);
-            console.info(`remote client ${-id} removed`);
+            closePeerConnection(remoteClients.get(-_id));
+            console.info(`remote client ${-_id} removed`);
         }
     }
 ];
@@ -185,29 +160,17 @@ const onSSE: ((data: string) => void)[] = [
 export const connect = () => {
     if (!_sseState) {
         _sseState = 1;
+        messageUploading = false;
+        messagesToPost = [];
+        callbacks = [];
         eventSource = new EventSource(/*EventSourceUrl*/ "_");
-        eventSource.onerror = termSSE;
+        eventSource.onerror = disconnect;
         // eventSource.onerror = (e) => {
         //     console.warn("server-event error");
         //     termSSE();
         // };
-        eventSource.onmessage = (e) => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
+        eventSource.onmessage = e => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
     }
-}
-
-export const disconnect = () => {
-    if (_sseState > 1) {
-        termSSE();
-        messagesToPost.length = 0;
-        callbacks.length = 0;
-        for (const [id] of remoteClients) {
-            closePeerConnection(id);
-        }
-        clientId = 0;
-    } else if (_sseState == 1) {
-        console.warn("currently connecting");
-    }
-    _sseState = 0;
 }
 
 // RTC
@@ -226,27 +189,25 @@ const sendOffer = async (remoteClient: RemoteClient, iceRestart?: boolean, negot
     }
 }
 
-const initPeerConnection = (remoteClient: RemoteClient) => {
-    const id = remoteClient.id_;
-    const pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
-    remoteClient.pc_ = pc;
-    pc.onicecandidate = (e) => {
-        const candidate = e.candidate;
-        if (candidate) {
-            remoteSend(id, MessageType.RtcCandidate, candidate.toJSON());
+const initPeerConnection = (remoteClient: RemoteClient, _pc?: RTCPeerConnection) => {
+    remoteClient.pc_ = _pc =
+        new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
+    _pc.onicecandidate = (e) => {
+        if (e.candidate) {
+            remoteSend(remoteClient.id_, MessageType.RtcCandidate, e.candidate.toJSON());
         }
     };
 
-    pc.onnegotiationneeded = async () => {
+    _pc.onnegotiationneeded = () => {
         console.log("negotiation needed");
-        await sendOffer(remoteClient, false);
+        sendOffer(remoteClient, false);
     };
 
-    pc.ondatachannel = (e) => {
+    _pc.ondatachannel = (e) => {
         console.log("received data-channel on Slave");
         remoteClient.dc_ = e.channel;
         if (e.channel) {
-            setupDataChannel(id, e.channel);
+            setupDataChannel(remoteClient.id_, e.channel);
         }
     };
 
@@ -256,28 +217,24 @@ const initPeerConnection = (remoteClient: RemoteClient) => {
     // };
 }
 
-export const closePeerConnection = (id: ClientID) => {
-    const rc = remoteClients.get(id);
-    rc?.dc_?.close();
-    rc?.pc_?.close();
-    remoteClients.delete(id);
+export const closePeerConnection = (rc?: RemoteClient) => {
+    if (remoteClients.delete(rc?.id_)) {
+        rc.dc_?.close();
+        rc.pc_?.close();
+    }
 }
 
 export const connectToRemote = async (id: ClientID) => {
     const rc = requireRemoteClient(id);
     initPeerConnection(rc);
-    rc.pc_.oniceconnectionstatechange = (e) => {
-        if (rc.pc_?.iceConnectionState[0] == "f") {
+    rc.pc_.oniceconnectionstatechange = e => {
+        if ("fd".indexOf(rc.pc_?.iceConnectionState[0]) >= 0) {
             sendOffer(rc, true);
-            // TODO: debug
-        } else if (rc.pc_.iceConnectionState[0] === "d") {
-            sendOffer(rc, true);
-            // disconnect();
         }
     };
     await sendOffer(rc);
 
-    rc.dc_ = rc.pc_.createDataChannel("net", {ordered: false, maxRetransmits: 0});
+    rc.dc_ = rc.pc_.createDataChannel("", {ordered: false, maxRetransmits: 0});
     setupDataChannel(rc.id_, rc.dc_);
 }
 

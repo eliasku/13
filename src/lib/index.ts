@@ -18,6 +18,27 @@ const enum StartState {
 
 let state = StartState.Loading;
 
+const poem = "The horse ran faster than a gazelle.\n" +
+    "It rasped and struggled, as if to battle;\n" +
+    "At times it stopped,\n" +
+    "And listened to the wind\n" +
+    "And flared its nostrils;\n" +
+    "And then, hitting the ground\n" +
+    "With the ringing spikes of its hooves,\n" +
+    "And shaking its disheveled mane,\n" +
+    "It would take to running once again.\n" +
+    "A silent rider sat upon the steed!\n" +
+    "At times, he struggled in his seat,\n" +
+    "Falling headfirst onto the horse's mane.\n" +
+    "He no longer held the reins,\n" +
+    "But his feet were still in the stirrups,\n" +
+    "And one could see wide streams of blood\n" +
+    "Upon his saddle cloth.\n" +
+    "Valiant steed, you carried your master\n" +
+    "Out of battle, swift as an arrow,\n" +
+    "But an Ossetian wicked bullet\n" +
+    "Found him in the dark!";
+
 const goToSplash = () => {
     state = StartState.TapToConnect;
     createSplashState();
@@ -28,8 +49,7 @@ new FontFace("e", `url(e.ttf),local(Arial)`).load().then((font) => {
     loadAtlas();
     goToSplash();
     if (!getUserName()) {
-        const defaultName = "guest";
-        setUserName(prompt("pick your name", defaultName) || defaultName);
+        setUserName(prompt("pick your name") || "guest");
     }
 });
 
@@ -41,7 +61,6 @@ const raf = (ts: DOMHighResTimeStamp) => {
     switch (state) {
         case StartState.TapToConnect:
             updateTestGame(ts);
-
             if (isAnyKeyDown()) {
                 resetGame();
                 state = StartState.Connecting;
@@ -54,6 +73,7 @@ const raf = (ts: DOMHighResTimeStamp) => {
             if (_sseState == 2) {
                 state = StartState.Connected;
                 play(snd[Snd.bgm], 0.5, 0, true);
+                speechSynthesis.speak(new SpeechSynthesisUtterance("Fight!"));
             }
             break;
         default:

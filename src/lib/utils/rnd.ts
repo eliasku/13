@@ -1,4 +1,5 @@
 import {unorm_f32_from_u32} from "./bits";
+import {M} from "./math";
 
 const enum Tempering {
     MaskB = 0x9D2C5680,
@@ -20,7 +21,7 @@ export let _SEED = Date.now() >>> 0;
 export const setSeed = (state: number) => _SEED = state;
 
 export const nextInt = (): number /* u32 */ => {
-    _SEED = (Math.imul(_SEED, 1103515245) + 12345) >>> 0;
+    _SEED = (M.imul(_SEED, 1103515245) + 12345) >>> 0;
     return temper(_SEED) >>> 1;
 }
 
@@ -32,13 +33,13 @@ export const nextFloat = () => unorm_f32_from_u32(nextInt());
 
 // just visual random
 
-export const fx_chance = (prob: number): boolean => Math.random() < prob;
+export const fx_chance = (prob: number): boolean => M.random() < prob;
 
 export const fx_range = (min: number, max: number): number =>
-    min + (max - min) * Math.random();
+    min + (max - min) * M.random();
 
-export const fxRandomNorm = (max: number): number => max * 2 * (0.5 - Math.random());
-export const fxRand = (max: number): number => (Math.random() * max) | 0;
+export const fxRandomNorm = (max: number): number => max * 2 * (0.5 - M.random());
+export const fxRand = (max: number): number => (M.random() * max) | 0;
 
 export const fxRandElement = <T>(m: T[]): T => m[fxRand(m.length)];
 
@@ -49,7 +50,7 @@ export let _SEED2 = Date.now() >>> 0;
 export const setSeed2 = (state: number) => _SEED2 = state;
 
 export const nextInt2 = (): number /* u32 */ => {
-    _SEED2 = (Math.imul(_SEED2, 1103515245) + 12345) >>> 0;
+    _SEED2 = (M.imul(_SEED2, 1103515245) + 12345) >>> 0;
     return temper(_SEED2) >>> 1;
 }
 

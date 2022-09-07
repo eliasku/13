@@ -1,6 +1,6 @@
 import {Actor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
-import {reach} from "../utils/math";
+import {M, reach} from "../utils/math";
 import {ControlsFlag} from "./controls";
 import {Const} from "./config";
 import {
@@ -41,7 +41,7 @@ export const updateBody = (body: Pos & Vel, gravity: number, loss: number) => {
 }
 
 export const updateAnim = (actor: Actor) =>
-    actor.animHit_ = Math.max(0, actor.animHit_ - 2);
+    actor.animHit_ = M.max(0, actor.animHit_ - 2);
 
 export const updateActorPhysics = (a: Actor) => {
     const isWeakGravity = a.type_ ? 0 : (a.btn_ & ControlsFlag.Jump);
@@ -80,7 +80,7 @@ export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number)
 }
 
 export const addRadialVelocity = (vel: Vel, a: number, velXYLen: number, velZ: number) =>
-    addVelocityDir(vel, velXYLen * Math.cos(a), velXYLen * Math.sin(a) / 2, velZ);
+    addVelocityDir(vel, velXYLen * M.cos(a), velXYLen * M.sin(a) / 2, velZ);
 
 export const reflectVelocity = (v: Vel, nx: number, ny: number, loss: number) => {
     // r = d - 2(d⋅n)n
@@ -92,7 +92,7 @@ export const reflectVelocity = (v: Vel, nx: number, ny: number, loss: number) =>
 export const applyGroundFriction = (p: Actor, amount: number) => {
     let v0 = p.u_ * p.u_ + p.v_ * p.v_;
     if (v0 > 0) {
-        v0 = Math.sqrt(v0);
+        v0 = M.sqrt(v0);
         const k = reach(v0, 0, amount) / v0;
         p.u_ *= k;
         p.v_ *= k;
@@ -138,7 +138,7 @@ export const updateBodyCollisions = (a: Actor, list: Actor[], ioffset: number) =
         const sqrDist = sqrLength3(nx, ny, nz);
         const D = ra + OBJECT_RADIUS_BY_TYPE[bt];
         if (sqrDist < D * D && sqrDist > 0) {
-            const pen = (D / Math.sqrt(sqrDist) - 1) / 2;
+            const pen = (D / M.sqrt(sqrDist) - 1) / 2;
             addPos(a, nx, ny, nz, ima * pen);
             addPos(b, nx, ny, nz, -OBJECT_IMASS[bt] * pen);
         }

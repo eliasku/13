@@ -4,6 +4,7 @@ import {beginRenderToTexture, clear, createTexture, draw, gl, initFramebuffer, u
 import {BOUNDS_SIZE} from "../assets/params";
 import {GL} from "../graphics/gl";
 import {clientId} from "../net/messaging";
+import {M} from "../utils/math";
 
 const fogTexture = createTexture(BOUNDS_SIZE);
 uploadTexture(fogTexture);
@@ -32,4 +33,4 @@ export const renderFogObjects = (list: Actor[]) => {
 }
 
 export const renderFog = (t: number, add: number) =>
-    draw(fogTexture, -256, -256, 0, 4, 4, 0.7, (0x40 + 0x20 * Math.sin(t)) << 16 | 0x1133, 0, add & 0x990000);
+    draw(fogTexture, -256, -256, 0, 4, 4, 0.7, (0x40 + 0x20 * M.sin(t)) << 16 | 0x1133, 0, add & 0x990000);

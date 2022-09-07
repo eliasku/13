@@ -5,6 +5,7 @@ import {img, Img} from "../assets/gfx";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "../assets/params";
 import {COLOR_WHITE} from "./data/colors";
 import {getScreenScale} from "./game";
+import {M} from "../utils/math";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -79,7 +80,7 @@ export const updateControls = (player: Actor) => {
                 const pp = control.pointer_;
                 moveX = pp ? (pp.x_ - pp.startX_) * k : 0;
                 moveY = pp ? (pp.y_ - pp.startY_) * k : 0;
-                const len = Math.hypot(moveX, moveY);
+                const len = M.hypot(moveX, moveY);
                 moveFast = +(len > control.r1_);
                 jumpButtonDown = +(len > control.r2_);
             }
@@ -88,7 +89,7 @@ export const updateControls = (player: Actor) => {
                 const pp = control.pointer_;
                 viewX = pp ? (pp.x_ - pp.startX_) * k : 0;
                 viewY = pp ? (pp.y_ - pp.startY_) * k : 0;
-                const len = Math.hypot(viewX, viewY);
+                const len = M.hypot(viewX, viewY);
                 lookAtX = px + viewX * 2;
                 lookAtY = py + viewY * 2;
                 shootButtonDown = +(len > control.r2_);

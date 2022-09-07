@@ -20,7 +20,7 @@ import {
     Vel
 } from "./types";
 import {pack, unpack} from "./packets";
-import {getLumaColor32, lerp, PI, PI2, reach} from "../utils/math";
+import {getLumaColor32, lerp, M, PI, PI2, reach} from "../utils/math";
 import {
     ControlsFlag,
     drawVirtualPad,
@@ -230,16 +230,18 @@ const createSeedGameState = () => {
 export const createSplashState = () => {
     recreateMap();
     for (let i = 0; i < 13; ++i) {
+        const k = i / 13;
         const actor = newActorObject(ActorType.Player);
         actor.client_ = 1 + i;
         actor.weapon_ = 1 + (i % (weapons.length - 1));
         actor.anim0_ = i + rand(10) * Img.num_avatars;
-        actor.btn_ = packAngleByte(i / 13, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
+        actor.btn_ = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
         const D = 80 + rand(20);
-        actor.x_ = BOUNDS_SIZE / 2 + D * Math.cos(i * PI2 / 13);
-        actor.y_ = BOUNDS_SIZE / 2 + D * Math.sin(i * PI2 / 13);
+        actor.x_ = BOUNDS_SIZE / 2 + D * M.cos(k * PI2);
+        actor.y_ = BOUNDS_SIZE / 2 + D * M.sin(k * PI2);
         pushActor(actor);
     }
+    gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
 }
 
 const updateFrameTime = (ts: number) => {
@@ -330,7 +332,7 @@ const getLocalEvent = (tic: number, _e?: ClientEvent): ClientEvent => {
 }
 
 const getNextInputTic = (tic: number) =>
-    tic + Math.max(
+    tic + M.max(
         Const.InputDelay,
         ((lastFrameTs - prevTime) * Const.NetFq) | 0
     );
@@ -482,7 +484,7 @@ const tryRunTicks = (ts: number): number => {
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
-    localEvents = localEvents.filter(v => v.tic_ > Math.min(ackMin, lastTic));
+    localEvents = localEvents.filter(v => v.tic_ > M.min(ackMin, lastTic));
 
     return framesSimulated;
 }
@@ -646,7 +648,7 @@ const updateGameCamera = () => {
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
     }
 
-    let cameraScale = BASE_RESOLUTION / Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight);
+    let cameraScale = BASE_RESOLUTION / M.min(gl.drawingBufferWidth, gl.drawingBufferHeight);
     let cameraX = BOUNDS_SIZE >> 1;
     let cameraY = BOUNDS_SIZE >> 1;
     const p0 = getMyPlayer() ?? getRandomPlayer();
@@ -853,6 +855,24 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
             if (killerID && !actor.type_) {
                 state.scores_[killerID] = (state.scores_[killerID] | 0) +
                     (actor.client_ ? 10 : 1);
+
+                const getNameById = (client: ClientID) => client == clientId ? getUserName() : remoteClients.get(client)?.name_;
+                const a = getNameById(killerID);
+                const b = getNameById(actor.client_);
+                if (a) {
+                    let t = b ? [
+                        `${a} CRUSHED ${b}!`,
+                        `${a} destroyed ${b}!`,
+                        `${a} killed ${b}!`,
+                        `${a} took ${b} life`,
+                    ] : [
+                        `warm-up for ${a}!`,
+                        `${a} killed someone`,
+                        `death by ${a}`,
+                        `${a} sows DEATH!`
+                    ]
+                    speechSynthesis.speak(new SpeechSynthesisUtterance(fxRandElement(t)));
+                }
             }
         }
     }
@@ -861,7 +881,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
         if (bullet.hp_) {
             let nx = bullet.x_ - actor.x_;
             let ny = bullet.y_ - actor.y_;
-            const dist = Math.sqrt(nx * nx + ny * ny);
+            const dist = M.sqrt(nx * nx + ny * ny);
             if (dist > 0) {
                 nx /= dist;
                 ny /= dist;
@@ -900,7 +920,7 @@ const packAngleByte = (a: number, res: number) =>
     (res * a) & (res - 1);
 
 const packDirByte = (x: number, y: number, res: number) =>
-    packAngleByte((PI + Math.atan2(y, x)) / PI2, res);
+    packAngleByte((PI + M.atan2(y, x)) / PI2, res);
 
 const updateAI = (player: Actor) => {
     const md = rand(ControlsFlag.MoveAngleMax);
@@ -925,10 +945,10 @@ const updatePlayer = (player: Actor) => {
     const c = (grounded ? 16 : 8) / Const.NetFq;
     const moveAngle = unpackAngleByte(player.btn_ >> ControlsFlag.MoveAngleBit, ControlsFlag.MoveAngleMax);
     const lookAngle = unpackAngleByte(player.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
-    const moveDirX = Math.cos(moveAngle);
-    const moveDirY = Math.sin(moveAngle);
-    const lookDirX = Math.cos(lookAngle);
-    const lookDirY = Math.sin(lookAngle);
+    const moveDirX = M.cos(moveAngle);
+    const moveDirY = M.sin(moveAngle);
+    const lookDirX = M.cos(lookAngle);
+    const lookDirY = M.sin(lookAngle);
     if (player.btn_ & ControlsFlag.Move) {
         const speed = (player.btn_ & ControlsFlag.Run) ? 2 : 1;
         const vel = speed * 60;
@@ -960,7 +980,7 @@ const updatePlayer = (player: Actor) => {
         player.s_ = reach(player.s_, 0, weapon.rate_ / Const.NetFq);
         if (!player.s_) {
             if (player.client_ == clientId) {
-                cameraShake = Math.max(weapon.cameraShake_, cameraShake);
+                cameraShake = M.max(weapon.cameraShake_, cameraShake);
                 cameraFeedback = 1;
             }
             player.s_ = 1;
@@ -970,9 +990,9 @@ const updatePlayer = (player: Actor) => {
             for (let i = 0; i < weapon.spawnCount_; ++i) {
                 const a = lookAngle +
                     weapon.angleVar_ * (nextFloat() - 0.5) +
-                    weapon.angleSpread_ * Math.min(1, player.t_) * (nextFloat() - 0.5);
-                const dx = Math.cos(a);
-                const dy = Math.sin(a);
+                    weapon.angleSpread_ * M.min(1, player.t_) * (nextFloat() - 0.5);
+                const dx = M.cos(a);
+                const dy = M.sin(a);
                 const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (nextFloat() - 0.5);
                 const bullet = newActorObject(ActorType.Bullet);
                 bullet.client_ = player.client_;
@@ -1015,7 +1035,7 @@ const beginPrediction = (): boolean => {
     if (!Const.Prediction) return false;
 
     // global state
-    let frames = Math.min(1, lastFrameTs - prevTime) * Const.NetFq | 0;
+    let frames = M.min(1, lastFrameTs - prevTime) * Const.NetFq | 0;
     if (!frames) return false;
 
     // save particles
@@ -1069,7 +1089,7 @@ const drawGame = () => {
     drawMapOverlay();
     if (!clientId) {
         for (let i = 10; i > 0; --i) {
-            let a = 0.5 * Math.sin(i / 4 + lastFrameTs * 16);
+            let a = 0.5 * M.sin(i / 4 + lastFrameTs * 16);
             const add = ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16;
             const scale = 1 + i / 100;
             const angle = a * i / 100;
@@ -1083,7 +1103,7 @@ const drawGame = () => {
     flush();
 }
 
-export const getScreenScale = () => Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
+export const getScreenScale = () => M.min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
 const drawOverlay = () => {
     beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
     drawVirtualPad();
@@ -1141,7 +1161,7 @@ const drawMapOverlay = () => {
 const drawCrosshair = () => {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
-        const len = 4 + 0.25 * Math.sin(2 * lastFrameTs) * Math.cos(4 * lastFrameTs) + 4 * Math.min(1, p0.t_) + 4 * Math.min(1, p0.s_);
+        const len = 4 + 0.25 * M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) + 4 * M.min(1, p0.t_) + 4 * M.min(1, p0.s_);
         let a = 0.1 * lastFrameTs;
         for (let i = 0; i < 4; ++i) {
             draw(img[Img.box_t1], lookAtX, lookAtY, a, 2, len, 0.5);
@@ -1167,8 +1187,8 @@ const drawItem = (item: Actor) => {
         }
     } else /*if (cat == ItemCategory.Effect)*/ {
         const anim = item.anim0_ / 0xFF;
-        const s = 1 + 0.1 * Math.sin(16 * (lastFrameTs + anim * 10));
-        const o = 2 * Math.cos(lastFrameTs + anim * 10);
+        const s = 1 + 0.1 * M.sin(16 * (lastFrameTs + anim * 10));
+        const o = 2 * M.cos(lastFrameTs + anim * 10);
         draw(img[Img.item0 + idx], item.x_, item.y_ - item.z_ - OBJECT_RADIUS - o, 0, s, s, 1, COLOR_WHITE, 0, colorOffset);
     }
 }
@@ -1196,13 +1216,13 @@ const drawBullet = (actor: Actor) => {
 
     const x = actor.x_;
     const y = actor.y_ - actor.z_;
-    const a = Math.atan2(actor.v_, actor.u_);
+    const a = M.atan2(actor.v_, actor.u_);
     const type = actor.btn_;
     const color = fxRandElement(BULLET_COLOR[type] as number[]);
     const longing = BULLET_LENGTH[type];
     const longing2 = BULLET_LENGTH_LIGHT[type];
     const sz = BULLET_SIZE[type] +
-        BULLET_PULSE[type] * Math.sin(32 * lastFrameTs + actor.anim0_) / 2;
+        BULLET_PULSE[type] * M.sin(32 * lastFrameTs + actor.anim0_) / 2;
     let res = type * 3;
 
     draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
@@ -1219,14 +1239,14 @@ const drawPlayer = (p: Actor): void => {
     const colorBody = colorC;
     const x = p.x_;
     const y = p.y_ - p.z_;
-    const speed = Math.hypot(p.u_, p.v_, p.w_);
+    const speed = M.hypot(p.u_, p.v_, p.w_);
     const runK = (p.btn_ & ControlsFlag.Run) ? 1 : 0.8;
-    const walk = Math.min(1, speed / 100);
-    let base = -0.5 * walk * 0.5 * (1.0 + Math.sin(40 * runK * basePhase));
-    const idle_base = (1 - walk) * ((1 + Math.sin(10 * basePhase) ** 2) / 4);
+    const walk = M.min(1, speed / 100);
+    let base = -0.5 * walk * 0.5 * (1.0 + M.sin(40 * runK * basePhase));
+    const idle_base = (1 - walk) * ((1 + M.sin(10 * basePhase) ** 2) / 4);
     base += idle_base;
-    const leg1 = 5 - 4 * walk * 0.5 * (1.0 + Math.sin(40 * runK * basePhase));
-    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + Math.sin(40 * runK * basePhase + PI));
+    const leg1 = 5 - 4 * walk * 0.5 * (1.0 + M.sin(40 * runK * basePhase));
+    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + M.sin(40 * runK * basePhase + PI));
 
     /////
 
@@ -1237,9 +1257,9 @@ const drawPlayer = (p: Actor): void => {
     const weaponBaseScaleY = 1;
     let weaponX = x;
     let weaponY = y - PLAYER_HANDS_Z;
-    let weaponAngle = Math.atan2(
-        y + 1000 * Math.sin(viewAngle) - weaponY,
-        x + 1000 * Math.cos(viewAngle) - weaponX
+    let weaponAngle = M.atan2(
+        y + 1000 * M.sin(viewAngle) - weaponY,
+        x + 1000 * M.cos(viewAngle) - weaponX
     );
     let weaponSX = weaponBaseScaleX;
     let weaponSY = weaponBaseScaleY;
@@ -1248,21 +1268,21 @@ const drawPlayer = (p: Actor): void => {
         weaponBack = 1;
         //weaponY -= 16 * 4;
     }
-    const A = Math.sin(weaponAngle - PI);
+    const A = M.sin(weaponAngle - PI);
     let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
     let wx = 1;
     if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
         wx = -1;
     }
     if (wpn.handsAnim_) {
-        // const t = Math.max(0, (p.s - 0.8) * 5);
+        // const t = M.max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
-        const t = Math.min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : Math.max(0, (p.s_ - 0.5) * 2));
-        wd += Math.sin(t * PI) * wpn.handsAnim_;
-        weaponAngle -= -wx * PI * 0.25 * Math.sin((1 - (1 - t) ** 2) * PI2);
+        const t = M.min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : M.max(0, (p.s_ - 0.5) * 2));
+        wd += M.sin(t * PI) * wpn.handsAnim_;
+        weaponAngle -= -wx * PI * 0.25 * M.sin((1 - (1 - t) ** 2) * PI2);
     }
-    weaponX += wd * Math.cos(weaponAngle);
-    weaponY += wd * Math.sin(weaponAngle);
+    weaponX += wd * M.cos(weaponAngle);
+    weaponY += wd * M.sin(weaponAngle);
 
     if (wx < 0) {
         weaponSX *= wx;
@@ -1289,17 +1309,17 @@ const drawPlayer = (p: Actor): void => {
     const rArmX = x + 4;
     const lArmX = x - 4;
     const armY = y - PLAYER_HANDS_Z + base * 2;
-    const rArmRot = Math.atan2(weaponY - armY, weaponX - rArmX);
-    const lArmRot = Math.atan2(weaponY - armY, weaponX - lArmX);
-    const lArmLen = Math.hypot(weaponX - lArmX, weaponY - armY) - 1;
-    const rArmLen = Math.hypot(weaponX - rArmX, weaponY - armY) - 1;
+    const rArmRot = M.atan2(weaponY - armY, weaponX - rArmX);
+    const lArmRot = M.atan2(weaponY - armY, weaponX - lArmX);
+    const lArmLen = M.hypot(weaponX - lArmX, weaponY - armY) - 1;
+    const rArmLen = M.hypot(weaponX - rArmX, weaponY - armY) - 1;
 
     if (p.weapon_) {
         draw(img[Img.box_l], x + 4, y - 10 + base, rArmRot, rArmLen, 2, 1, colorArm, 0, co);
         draw(img[Img.box_l], x - 4, y - 10 + base, lArmRot, lArmLen, 2, 1, colorArm, 0, co);
     } else {
-        let sw1 = walk * Math.sin(20 * runK * basePhase);
-        let sw2 = walk * Math.cos(20 * runK * basePhase);
+        let sw1 = walk * M.sin(20 * runK * basePhase);
+        let sw2 = walk * M.cos(20 * runK * basePhase);
         let armLen = 5;
         if (!p.client_ && p.hp_ < 10) {
             sw1 -= PI / 2;
@@ -1316,7 +1336,7 @@ const drawPlayer = (p: Actor): void => {
 }
 
 const getHitColorOffset = (anim: number) =>
-    getLumaColor32(0xFF * Math.min(1, 2 * anim / ANIM_HIT_MAX));
+    getLumaColor32(0xFF * M.min(1, 2 * anim / ANIM_HIT_MAX));
 
 const drawObject = (p: Actor, id: Img) => {
     const x = p.x_;
@@ -1360,9 +1380,9 @@ const playAt = (actor: Actor, id: Snd) => {
 
         const dx = (actor.x_ - lx) / 256;
         const dy = (actor.y_ - ly) / 256;
-        const v = 1 - Math.hypot(dx, dy);
+        const v = 1 - M.hypot(dx, dy);
         if (v > 0) {
-            const pan = Math.max(-1, Math.min(1, dx));
+            const pan = M.max(-1, M.min(1, dx));
             play(snd[id], v, pan, false);
         }
     }

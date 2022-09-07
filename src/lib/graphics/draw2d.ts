@@ -1,4 +1,5 @@
 import {GL} from "./gl";
+import {M} from "../utils/math";
 
 type Renderer = WebGLRenderingContext & {
     instancedArrays_?: ANGLE_instanced_arrays;
@@ -233,8 +234,8 @@ export const setupProjection = (
     const x = posX - width * pivotX;
     const y = posY - height * pivotY;
 
-    const c = scale * Math.cos(angle);
-    const s = scale * Math.sin(angle);
+    const c = scale * M.cos(angle);
+    const s = scale * M.sin(angle);
 
     const w = 2 / width;
     const h = -2 / height;
