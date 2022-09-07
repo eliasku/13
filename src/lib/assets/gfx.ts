@@ -1,4 +1,4 @@
-import {createTexture, getSubTexture, gl, Texture, uploadTexture} from "../graphics/draw2d";
+import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d";
 import {PI2, toRad} from "../utils/math";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./params";
 import {GL} from "../graphics/gl";
@@ -72,31 +72,28 @@ export const enum Img {
     num_npc = 3,
 }
 
+const Font = (size: number): string => size + "px Georgia,e";
+// export const Font = (size: number): string => size + "px e";
 export const EMOJI: Record<number, string> = [];
-
-type EmojiDecl = [string, number, number, number, number,
-    number?,
-    number?, number?, number?,
-    number?,
-    number?, number?];
 
 export const img: Texture[] = [];
 
-export const createCanvas = (size: number, alpha: boolean) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext("2d", {alpha});
-    ctx.fillStyle = "#fff";
-    ctx.strokeStyle = "#fff";
-    return ctx;
+export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasRenderingContext2D): CanvasRenderingContext2D => {
+    _canvas = document.createElement("canvas");
+    _canvas.width = _canvas.height = size;
+    _canvas = _canvas.getContext("2d", {alpha: true});
+    _canvas.fillStyle = _canvas.strokeStyle = "#fff";
+    _canvas.textAlign = "center";
+    _canvas.textBaseline = "middle";
+    return _canvas;
 }
 
 export const loadAtlas = (): void => {
     const canvaSize = 512;
     const texture = createTexture(canvaSize);
-    const temp = createCanvas(canvaSize, true);
-    const atlas = createCanvas(canvaSize, true);
-    let imageData:ImageData, imagePixels:Uint8ClampedArray;
+    const temp = createCanvas(canvaSize);
+    const atlas = createCanvas(canvaSize);
+    let imageData: ImageData, imagePixels: Uint8ClampedArray;
     let x = 1;
     let y = 1;
     let x1 = 1;
@@ -117,7 +114,7 @@ export const loadAtlas = (): void => {
         sprHeight = h;
     };
 
-    const saveImage = (ax?:number, ay?:number) =>
+    const saveImage = (ax?: number, ay?: number) =>
         img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, ax, ay));
 
     const cutAlpha = (cut: number = 0x80) => {
@@ -134,9 +131,7 @@ export const loadAtlas = (): void => {
         let scale = 8;
         const emojiSize = (16 + size) * scale;
         temp.clearRect(0, 0, canvaSize, canvaSize);
-        temp.font = emojiSize + "px e";
-        temp.textAlign = "center";
-        temp.textBaseline = "middle";
+        temp.font = Font(emojiSize);
         temp.translate(canvaSize / 2, canvaSize / 2);
         temp.rotate(toRad(a));
         temp.scale(sx, sy);
@@ -206,11 +201,11 @@ export const loadAtlas = (): void => {
         /* 🐙 */ ["🐙", 192, 166, 19, 18, , , , , , ,],
         /* 🐰 */ ["🐰", 186, 144, 20, 23, 4, , , , , , 0.65],
         /* 🦌 */ ["🦌", 176, 144, 23, 23, 4, , , , , , 0.67],
-        /* 🐺 */ ["🐺", 181, 153, 21, 20, 4, , , , , , ],
-        /* 🐵 */ ["🐵", 181, 144, 21, 23, 4, , , , , , ],
-        /* 🦊 */ ["🦊", 177, 153, 22, 20, 4, , , , , , ],
-        /* 🐭 */ ["🐭", 176, 148, 23, 22, 4, , , , , , ],
-        /* 🦍 */ ["🦍", 179, 145, 22, 22, 4, , , , , , ],
+        /* 🐺 */ ["🐺", 181, 153, 21, 20, 4, , , , , ,],
+        /* 🐵 */ ["🐵", 181, 144, 21, 23, 4, , , , , ,],
+        /* 🦊 */ ["🦊", 177, 153, 22, 20, 4, , , , , ,],
+        /* 🐭 */ ["🐭", 176, 148, 23, 22, 4, , , , , ,],
+        /* 🦍 */ ["🦍", 179, 145, 22, 22, 4, , , , , ,],
 
         /* 🍅 */ ["🍅", 195, 166, 18, 19, , , , , , ,],
         /* 😐 */ ["😐", 192, 166, 19, 19, , , , , , ,],
@@ -224,7 +219,7 @@ export const loadAtlas = (): void => {
         /* 🌲 */ ["🌲", 162, 99, 26, 31, 12, , , , 136, , 0.95],
         /* 🥓 */ ["🥓", 163, 219, 22, 9, , -45, , , , ,],
         /* 🦴 */ ["🦴", 163, 213, 21, 9, , -45, , , , ,],
-    ].map(a=>
+    ].map(a =>
         // @ts-ignore
         createEmoji2(...a)
     );
@@ -246,8 +241,7 @@ export const loadAtlas = (): void => {
     const renderJoy = (r0: number, r1: number, text0: string, text1: string) => {
         let s = r1 * 2 + 32;
         pushSprite(s, s);
-        atlas.font = "10px monospace";
-        atlas.textAlign = "center";
+        atlas.font = Font(10);
         atlas.lineWidth = 2;
 
         s /= 2;
@@ -270,18 +264,18 @@ export const loadAtlas = (): void => {
     renderJoy(16, 16, "DROP", "");
 
     pushSprite(72, 64);
-    atlas.font = "72px monospace";
-    atlas.fillText("13", x + 72 / 2, y + 48);
+    atlas.font = Font(72);
+    atlas.fillText("13", x + 72 / 2, y + 32);
     cutAlpha();
     saveImage();
 
     pushSprite(200, 24);
-    atlas.font = "24px monospace";
-    atlas.fillText("TAP TO START", x + 100, y + 24 * 0.75);
+    atlas.font = Font(24);
+    atlas.fillText("TAP TO START", x + 100, y + 12);
     cutAlpha();
     saveImage();
 
-    uploadTexture(texture.texture_, atlas.canvas);
+    uploadTexture(texture, atlas.canvas);
 
     // document.body.appendChild(atlas.canvas);
     // atlas.canvas.style.position = "fixed";
@@ -292,11 +286,11 @@ export const loadAtlas = (): void => {
     // atlas.canvas.width = atlas.canvas.height = temp.canvas.width = temp.canvas.height = 0;
 
     {
-        const ctx = createCanvas(64, true);
+        const ctx = createCanvas(64);
         ctx.translate(32, 32);
-        const grd = ctx.createRadialGradient(0,0,32 /3 ,0,0,32);
-        grd.addColorStop(0,"rgba(255,255,255,0.7)");
-        grd.addColorStop(1,"rgba(255,255,255,0)");
+        const grd = ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32);
+        grd.addColorStop(0, "rgba(255,255,255,1)");
+        grd.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = grd;
         ctx.beginPath();
         ctx.arc(0, 0, 32 - 0.3, 0, PI2);
@@ -311,8 +305,6 @@ export const loadAtlas = (): void => {
         img[Img.light_circle] = createTexture(64);
         img[Img.light_circle].x_ = 0.5;
         img[Img.light_circle].y_ = 0.5;
-        uploadTexture(img[Img.light_circle].texture_, ctx.canvas);
-        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
-        gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
+        uploadTexture(img[Img.light_circle], ctx.canvas, GL.LINEAR);
     }
 }

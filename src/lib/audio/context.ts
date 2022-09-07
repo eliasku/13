@@ -1,7 +1,7 @@
 export const audioContext = new AudioContext();
 
 export type AudioBufferWithState = AudioBuffer & {
-    $?: AudioBufferSourceNode
+    currentSource_?: AudioBufferSourceNode
 };
 
 export const play = (audioBuffer: AudioBufferWithState,
@@ -18,7 +18,7 @@ export const play = (audioBuffer: AudioBufferWithState,
     vol.pan.value = pan as number;
     vol.connect(gain);
 
-    pan = audioBuffer.$ = audioContext.createBufferSource();
+    pan = audioBuffer.currentSource_ = audioContext.createBufferSource();
     pan.buffer = audioBuffer;
     pan.loop = loop;
     pan.connect(vol);

@@ -1,8 +1,10 @@
 import {GL} from "./gl";
-import {mapTexture} from "../assets/map";
 
 type Renderer = WebGLRenderingContext & {
-    $?: ANGLE_instanced_arrays;
+    instancedArrays_?: ANGLE_instanced_arrays;
+    quadCount_?: number;
+    quadProgram_?: WebGLProgram;
+    quadTexture_?: WebGLTexture;
 };
 
 export const gl = c.getContext("webgl", {
@@ -11,15 +13,16 @@ export const gl = c.getContext("webgl", {
     depth: false,
 }) as Renderer;
 
-gl.$ = gl.getExtension('ANGLE_instanced_arrays')!;
+gl.instancedArrays_ = gl.getExtension('ANGLE_instanced_arrays')!;
 
 if (process.env.NODE_ENV === "development") {
-    if (!gl?.$) {
+    if (!gl?.instancedArrays_) {
         alert("WebGL is required");
     }
 }
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+gl.quadCount_ = 0;
 
 onresize = (_?: any, w: number = innerWidth, h: number = innerHeight, s: number = devicePixelRatio) => {
     c.style.width = w + "px";
@@ -29,6 +32,20 @@ onresize = (_?: any, w: number = innerWidth, h: number = innerHeight, s: number 
 };
 
 (onresize as any)();
+
+
+const maxBatch = 65535;
+// const depth = 1e5;
+// const depth = 1;
+// TODO: move to scope
+
+const floatSize = 2 + 2 + 1 + 2 + 4 + 1 + 1 + 1;
+const byteSize = floatSize * 4;
+// maxBatch * byteSize
+// const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
+const floatView = new Float32Array(1 << 20);
+const uintView = new Uint32Array(floatView.buffer);
+// let program: WebGLProgram | null = gl.createProgram();
 
 const shader = `attribute vec2 g;
 attribute vec2 a;
@@ -63,124 +80,91 @@ export void fragment() {
 `;
 
 // shaders minified with https://evanw.github.io/glslx/
-const GLSLX_SOURCE_VERTEX = "attribute float b;attribute vec2 e,f,o,j;attribute vec4 k,g,l;uniform mat4 p;varying vec2 c;varying vec4 d;varying vec3 h;void main(){c=k.xy+e*k.zw,d=vec4(g.bgr*g.a,(1.-l.a)*g.a),h=l.bgr;vec2 a=(e-f)*j;float i=cos(b),m=sin(b);a=vec2(a.x*i-a.y*m,a.x*m+a.y*i),a+=f+o,gl_Position=p*vec4(a,0,1);}"
+const GLSLX_SOURCE_VERTEX = "attribute float b;attribute vec2 e,f,o,j;attribute vec4 k,g,l;uniform mat4 p;varying vec2 c;varying vec4 d;varying vec3 h;void main(){c=k.xy+e*k.zw,d=vec4(g.bgr*g.a,(1.-l.a)*g.a),h=l.bgr;vec2 a=(e-f)*j;float i=cos(b),m=sin(b);a=vec2(a.x*i-a.y*m,a.x*m+a.y*i),a+=f+o,gl_Position=p*vec4(a,0,1);}";
 // still need to add `precision mediump float;` manually
-const GLSLX_SOURCE_FRAGMENT = "precision mediump float;uniform sampler2D n;varying vec2 c;varying vec4 d;varying vec3 h;void main(){vec4 a=d*texture2D(n,c);gl_FragColor=a+vec4(h*a.a,0.);}"
+const GLSLX_SOURCE_FRAGMENT = "precision mediump float;uniform sampler2D n;varying vec2 c;varying vec4 d;varying vec3 h;void main(){vec4 a=d*texture2D(n,c);gl_FragColor=a+vec4(h*a.a,0.);}";
 
-const GLSLX_NAME_R = "b"
-const GLSLX_NAME_G = "e"
-const GLSLX_NAME_A = "f"
-const GLSLX_NAME_C = "g"
-const GLSLX_NAME_S = "j"
-const GLSLX_NAME_U = "k"
-const GLSLX_NAME_O = "l"
-const GLSLX_NAME_X = "n"
-const GLSLX_NAME_T = "o"
-const GLSLX_NAME_M = "p"
+const GLSLX_NAME_R = "b";
+const GLSLX_NAME_G = "e";
+const GLSLX_NAME_A = "f";
+const GLSLX_NAME_C = "g";
+const GLSLX_NAME_S = "j";
+const GLSLX_NAME_U = "k";
+const GLSLX_NAME_O = "l";
+const GLSLX_NAME_X = "n";
+const GLSLX_NAME_T = "o";
+const GLSLX_NAME_M = "p";
 
-const maxBatch = 65535;
-// const depth = 1e5;
-// const depth = 1;
-// TODO: move to scope
-let count = 0;
-let currentTexture: WebGLTexture = null;
+{
+    const compileShader = (source: string, shader: GLenum | WebGLShader): WebGLShader => {
+        shader = gl.createShader(shader as GLenum);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
 
-const compileShader = (source: string, shader: GLenum | WebGLShader): WebGLShader => {
-    shader = gl.createShader(shader as GLenum);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
+        if (process.env.NODE_ENV === "development") {
+            if (!gl.getShaderParameter(shader, GL.COMPILE_STATUS)) {
+                const error = gl.getShaderInfoLog(shader);
+                gl.deleteShader(shader);
+                console.error(error);
+            }
+        }
+        return shader;
+    }
+
+    const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
+        gl.bindBuffer(type, gl.createBuffer());
+        gl.bufferData(type, src, usage);
+    }
+
+    const bindAttrib = (name: string | GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
+        name = gl.getAttribLocation(gl.quadProgram_, name as string);
+        gl.enableVertexAttribArray(name);
+        gl.vertexAttribPointer(name, size, type, norm, stride, offset);
+        if (divisor) {
+            gl.instancedArrays_.vertexAttribDivisorANGLE(name, divisor);
+        }
+    }
+
+    gl.quadProgram_ = gl.createProgram();
+    gl.attachShader(gl.quadProgram_, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
+    gl.attachShader(gl.quadProgram_, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
+    gl.linkProgram(gl.quadProgram_);
 
     if (process.env.NODE_ENV === "development") {
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            const error = gl.getShaderInfoLog(shader);
-            gl.deleteShader(shader);
+        if (!gl.getProgramParameter(gl.quadProgram_, GL.LINK_STATUS)) {
+            const error = gl.getProgramInfoLog(gl.quadProgram_);
+            gl.deleteProgram(gl.quadProgram_);
             console.error(error);
         }
     }
-    return shader;
-}
-
-const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
-    gl.bindBuffer(type, gl.createBuffer());
-    gl.bufferData(type, src, usage);
-}
-
-const bindAttrib = (name: string | GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
-    name = gl.getAttribLocation(program, name as string);
-    gl.enableVertexAttribArray(name);
-    gl.vertexAttribPointer(name, size, type, norm, stride, offset);
-    if (divisor) {
-        gl.$.vertexAttribDivisorANGLE(name, divisor);
-    }
-}
-
-const floatSize = 2 + 2 + 1 + 2 + 4 + 1 + 1 + 1;
-const byteSize = floatSize * 4;
-// maxBatch * byteSize
-// const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
-const floatView = new Float32Array(1 << 20);
-const uintView = new Uint32Array(floatView.buffer);
-let program: WebGLProgram | null = gl.createProgram();
-
-const getUniformLocation = (name: string): WebGLUniformLocation | null =>
-    gl.getUniformLocation(program, name);
-
-gl.attachShader(program, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
-gl.attachShader(program, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
-gl.linkProgram(program);
-
-if (process.env.NODE_ENV === "development") {
-    if (!gl.getProgramParameter(program, GL.LINK_STATUS)) {
-        const error = gl.getProgramInfoLog(program);
-        gl.deleteProgram(program);
-        console.error(error);
-    }
-}
 
 // indicesBuffer
-createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
+    createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
 
 // vertexBuffer
-createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
+    createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
 
 // vertexLocation
-bindAttrib(GLSLX_NAME_G, 2, 0, 0, 0, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_G, 2, 0, 0, 0, GL.FLOAT, false);
 
 // dynamicBuffer
-createBuffer(GL.ARRAY_BUFFER, floatView, GL.DYNAMIC_DRAW);
+    createBuffer(GL.ARRAY_BUFFER, floatView, GL.DYNAMIC_DRAW);
 
 // anchorLocation
-bindAttrib(GLSLX_NAME_A, 2, byteSize, 1, 0, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_A, 2, byteSize, 1, 0, GL.FLOAT, false);
 // scaleLocation
-bindAttrib(GLSLX_NAME_S, 2, byteSize, 1, 8, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_S, 2, byteSize, 1, 8, GL.FLOAT, false);
 // rotationLocation
-bindAttrib(GLSLX_NAME_R, 1, byteSize, 1, 16, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_R, 1, byteSize, 1, 16, GL.FLOAT, false);
 // translationLocation
-bindAttrib(GLSLX_NAME_T, 2, byteSize, 1, 20, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_T, 2, byteSize, 1, 20, GL.FLOAT, false);
 // uvsLocation
-bindAttrib(GLSLX_NAME_U, 4, byteSize, 1, 28, GL.FLOAT, false);
+    bindAttrib(GLSLX_NAME_U, 4, byteSize, 1, 28, GL.FLOAT, false);
 // colorLocation
-bindAttrib(GLSLX_NAME_C, 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
+    bindAttrib(GLSLX_NAME_C, 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
 // colorOffsetLocation
-bindAttrib(GLSLX_NAME_O, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
-
-export interface Camera {
-    atX_: number;
-    atY_: number;
-    toX_: number;
-    toY_: number;
-    angle_: number;
-    scale_: number;
+    bindAttrib(GLSLX_NAME_O, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
 }
-
-export let camera: Camera = {
-    atX_: 0,
-    atY_: 0,
-    toX_: 0,
-    toY_: 0,
-    angle_: 0,
-    scale_: 1,
-};
 
 export interface Texture {
     texture_?: WebGLTexture;
@@ -194,11 +178,13 @@ export interface Texture {
     v0_: number;
     u1_: number;
     v1_: number;
+    fbo_?: WebGLFramebuffer;
 }
 
 export const getSubTexture = (src: Texture, x: number, y: number, w: number, h: number, ax: number = 0.5, ay: number = 0.5): Texture => ({
     texture_: src.texture_,
-    w_: w, h_: h,
+    w_: w,
+    h_: h,
     x_: ax,
     y_: ay,
     u0_: x / src.w_,
@@ -219,32 +205,36 @@ export const createTexture = (size: number): Texture => ({
     v1_: 1
 });
 
-export const createFramebuffer = (texture: WebGLTexture, _fbo?:WebGLFramebuffer) => {
-    _fbo = gl.createFramebuffer();
-    gl.bindFramebuffer(GL.FRAMEBUFFER, _fbo);
-    gl.bindTexture(GL.TEXTURE_2D, texture);
-    gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture, 0);
-    return _fbo;
+export const initFramebuffer = (texture: Texture) => {
+    texture.fbo_ = gl.createFramebuffer();
+    gl.bindFramebuffer(GL.FRAMEBUFFER, texture.fbo_);
+    gl.bindTexture(GL.TEXTURE_2D, texture.texture_);
+    gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture.texture_, 0);
 }
 
-export const uploadTexture = (glTexture: WebGLTexture, source?: TexImageSource, filter:GLint = GL.NEAREST): void => {
-    gl.bindTexture(GL.TEXTURE_2D, glTexture);
+export const uploadTexture = (texture: Texture, source?: TexImageSource, filter: GLint = GL.NEAREST): void => {
+    gl.bindTexture(GL.TEXTURE_2D, texture.texture_);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, filter);
     gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, filter);
-    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
+    if (source) {
+        gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
+    } else {
+        gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, texture.w_, texture.h_, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
+    }
 }
 
-export const beginRender = (
-    width: number = gl.drawingBufferWidth,
-    height: number = gl.drawingBufferHeight
+// set projection and activate 0 texture level
+export const setupProjection = (
+    posX: number, posY: number,
+    pivotX: number, pivotY: number,
+    angle: number, scale: number,
+    width: number, height: number
 ) => {
-    const {atX_, atY_, toX_, toY_, angle_, scale_} = camera;
+    const x = posX - width * pivotX;
+    const y = posY - height * pivotY;
 
-    const x = atX_ - width * toX_;
-    const y = atY_ - height * toY_;
-
-    const c = scale_ * Math.cos(angle_);
-    const s = scale_ * Math.sin(angle_);
+    const c = scale * Math.cos(angle);
+    const s = scale * Math.sin(angle);
 
     const w = 2 / width;
     const h = -2 / height;
@@ -270,40 +260,60 @@ export const beginRender = (
     |           0|           0| -1/depth| 0|
     | -2x/width-1| 2y/height+1|        0| 1|
     */
-
-    const projection = [
+    gl.uniformMatrix4fv(gl.getUniformLocation(gl.quadProgram_, GLSLX_NAME_M), false, [
         c * w, s * h, 0, 0,
         -s * w, c * h, 0, 0,
-        0, 0, -1/* / depth*/, 0,
-
-        (atX_ * (1 - c) + atY_ * s) * w - 2 * x / width - 1,
-        (atY_ * (1 - c) - atX_ * s) * h + 2 * y / height + 1,
+        0, 0, -1, 0,
+        (posX * (1 - c) + posY * s) * w - 2 * x / width - 1,
+        (posY * (1 - c) - posX * s) * h + 2 * y / height + 1,
         0, 1,
-    ];
+    ]);
 
-    gl.enable(GL.BLEND);
-    gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
-    gl.useProgram(program);
-    gl.uniformMatrix4fv(getUniformLocation(GLSLX_NAME_M), false, projection);
-    gl.viewport(0, 0, width, Math.abs(height));
+    gl.uniform1i(gl.getUniformLocation(gl.quadProgram_, GLSLX_NAME_X), 0);
 }
 
-export const flush = () => {
-    if (count) {
-        gl.bindTexture(GL.TEXTURE_2D, currentTexture);
-        gl.uniform1i(getUniformLocation(GLSLX_NAME_X), 0);
-        gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, count * floatSize));
-        gl.$.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, count);
-        count = 0;
+export const beginRender = () => {
+    gl.enable(GL.BLEND);
+    gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(gl.quadProgram_);
+}
+
+export const clear = (r: number, g: number, b: number, a: number) => {
+    gl.clearColor(r, g, b, a);
+    gl.clear(GL.COLOR_BUFFER_BIT);
+}
+
+export const beginRenderToTexture = (texture: Texture) => {
+    beginRender();
+    setupProjection(0, 0, 0, 1, 0, 1, texture.w_, -texture.h_);
+    gl.bindFramebuffer(GL.FRAMEBUFFER, texture.fbo_);
+    gl.viewport(0, 0, texture.w_, texture.h_);
+}
+
+export const beginRenderToMain = (x: number, y: number, px: number, py: number, angle: number, scale: number,
+                                  w = gl.drawingBufferWidth,
+                                  h = gl.drawingBufferHeight) => {
+    beginRender();
+    setupProjection(x, y, px, py, angle, scale, w, h);
+    gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+    gl.viewport(0, 0, w, h);
+}
+
+export const flush = (_count = gl.quadCount_) => {
+    if (_count) {
+        gl.bindTexture(GL.TEXTURE_2D, gl.quadTexture_);
+        gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, _count * floatSize));
+        gl.instancedArrays_.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, _count);
+        gl.quadCount_ = 0;
     }
 }
 
 export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) => {
-    if (currentTexture != texture.texture_ || count == maxBatch) {
+    if (gl.quadTexture_ != texture.texture_ || gl.quadCount_ == maxBatch) {
         flush();
-        currentTexture = texture.texture_;
+        gl.quadTexture_ = texture.texture_;
     }
-    let i = count++ * floatSize;
+    let i = gl.quadCount_++ * floatSize;
     floatView[i++] = texture.x_;
     floatView[i++] = texture.y_;
     floatView[i++] = sx * texture.w_;

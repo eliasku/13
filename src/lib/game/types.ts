@@ -75,42 +75,44 @@ export interface ClientEvent {
 }
 
 export interface StateData {
-    mapSeed_: number;
-    seed_: number;
-    actors_: Actor[][];
     nextId_: number;
+    tic_: number;
+    seed_: number;
+    mapSeed_: number;
+    actors_: Actor[][];
     scores_: Record<number, number>;
 }
 
 export const newStateData = (): StateData => ({
-    mapSeed_: 0,
-    seed_: 0,
-    actors_: [[], [], [], []],
     nextId_: 0,
+    tic_: 0,
+    seed_: 0,
+    mapSeed_: 0,
+    actors_: [[], [], [], []],
     scores_: {},
 });
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
 export interface Packet {
     sync_: boolean;
-
-    // DEBUG: check current tic seed
-    checkSeed_: number;
-    checkTic_: number;
-    checkNextId_: number;
-    checkState_?: StateData;
-    /////
-
-    client_: ClientID;
     // confirm the last tic we received from Sender
     receivedOnSender_: number;
     // packet contains info tic and before
     tic_: number;
     // events are not confirmed
     events_: ClientEvent[];
-
     // init state
     state_?: StateData;
+
+    // DEBUG: check current tic seed
+    debug?: PacketDebug;
+}
+
+export interface PacketDebug {
+    nextId: number;
+    tic: number;
+    seed: number;
+    state?: StateData;
 }
 
 export interface Particle extends Pos, Vel {

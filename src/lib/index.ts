@@ -17,21 +17,14 @@ const enum StartState {
 }
 
 let state = StartState.Loading;
-const onStart = async () => {
-    if (state !== StartState.TapToConnect) return;
-    resetGame();
-    state = StartState.Connecting;
-    //onbeforeunload = disconnect;
-    await connect();
 
-    state = StartState.Connected;
-    play(snd[Snd.bgm], 0.5, 0, true);
-};
+const goToSplash = () => {
+    state = StartState.TapToConnect;
+    createSplashState();
+}
 
-new FontFace("e", `url(e.ttf)`).load().then((font) => {
+new FontFace("e", `url(e.ttf),local(Arial)`).load().then((font) => {
     document.fonts.add(font);
-    // loadZZFX();
-    // loadMusic();
     loadAtlas();
     goToSplash();
     if (!getUserName()) {
@@ -40,40 +33,40 @@ new FontFace("e", `url(e.ttf)`).load().then((font) => {
     }
 });
 
-const goToSplash = () => {
-    state = StartState.TapToConnect;
-    createSplashState();
-}
-
 const raf = (ts: DOMHighResTimeStamp) => {
-    doFrame(ts / 1000);
-    updateInput();
-    requestAnimationFrame(raf);
-}
-
-const doFrame = (ts: number) => {
+    ts /= 1000;
+    //** DO FRAME **//
     l.innerText = updateFpsMeter(ts) + "\n";
 
     switch (state) {
         case StartState.TapToConnect:
             updateTestGame(ts);
-            //termPrint("\nTAP TO START\n");
+
             if (isAnyKeyDown()) {
-                onStart();
+                resetGame();
+                state = StartState.Connecting;
+                connect();
             }
             break;
         case StartState.Loading:
         case StartState.Connecting:
             termPrint("╫╪"[ts * 9 & 0x1]);
+            if (_sseState == 2) {
+                state = StartState.Connected;
+                play(snd[Snd.bgm], 0.5, 0, true);
+            }
             break;
         default:
             updateTestGame(ts);
             if (!_sseState) {
-                snd[Snd.bgm].$?.stop();
+                snd[Snd.bgm].currentSource_?.stop();
                 goToSplash();
             }
             break;
     }
+
+    updateInput();
+    requestAnimationFrame(raf);
 }
 
-requestAnimationFrame(raf);
+raf(0);

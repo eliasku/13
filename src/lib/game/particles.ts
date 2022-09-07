@@ -1,12 +1,12 @@
 import {img, Img} from "../assets/gfx";
-import {beginRender, camera, draw, flush, gl} from "../graphics/draw2d";
+import {beginRender, draw, flush, gl, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
 import {getLumaColor32, PI2} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEED2, nextFloat2, setSeed2} from "../utils/rnd";
 import {GL} from "../graphics/gl";
-import {mapFramebuffer} from "../assets/map";
+import {mapTexture} from "../assets/map";
 import {BOUNDS_SIZE} from "../assets/params";
 
 export const newParticle = (): Particle => ({
@@ -179,11 +179,15 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
 }
 
 export const flushSplatsToMap = () => {
-    if (splats.length && mapFramebuffer) {
-        gl.bindFramebuffer(GL.FRAMEBUFFER, mapFramebuffer);
-        camera.scale_ = camera.toY_ = 1;
-        camera.angle_ = camera.toX_ = camera.atX_ = camera.atY_ = 0;
-        beginRender(BOUNDS_SIZE, -BOUNDS_SIZE);
+    if (splats.length) {
+        gl.bindFramebuffer(GL.FRAMEBUFFER, mapTexture.fbo_);
+        beginRender();
+        setupProjection(
+            0, 0,
+            0, 1,
+            0, 1,
+            BOUNDS_SIZE, -BOUNDS_SIZE
+        );
         gl.viewport(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
         drawSplats();
         splats.length = 0;

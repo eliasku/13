@@ -14,7 +14,7 @@ export interface RemoteClient {
     pc_?: RTCPeerConnection;
     dc_?: RTCDataChannel;
     name_?: string;
-    debugPacketByteLength_?: number;
+    debugPacketByteLength?: number;
 }
 
 export let _sseState = 0;
@@ -129,19 +129,6 @@ const _post = async (req: Request): Promise<PostMessagesResponse> => {
     disconnect();
 }
 
-let waitForConnectedEvent: () => void | null = null;
-
-const initSSE = (): Promise<void> =>
-    new Promise((resolve, _) => {
-        waitForConnectedEvent = resolve;
-        eventSource = new EventSource(/*EventSourceUrl*/ "_");
-        eventSource.onerror = (e) => {
-            console.warn("server-event error");
-            termSSE();
-        };
-        eventSource.onmessage = (e) => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
-    });
-
 const termSSE = () => {
     if (eventSource) {
         console.log("terminate SSE");
@@ -149,8 +136,8 @@ const termSSE = () => {
         eventSource.onmessage = null;
         eventSource.close();
         eventSource = null;
-        waitForConnectedEvent = null;
     }
+    _sseState = 0;
 }
 
 const onSSE: ((data: string) => void)[] = [
@@ -169,7 +156,7 @@ const onSSE: ((data: string) => void)[] = [
             requireRemoteClient(id);
             remoteSend(id, MessageType.Name, username);
         }
-        waitForConnectedEvent();
+        _sseState = 2;
     },
     // UPDATE
     (data: string) => {
@@ -195,11 +182,16 @@ const onSSE: ((data: string) => void)[] = [
     }
 ];
 
-export const connect = async () => {
+export const connect = () => {
     if (!_sseState) {
         _sseState = 1;
-        await initSSE();
-        _sseState = 2;
+        eventSource = new EventSource(/*EventSourceUrl*/ "_");
+        eventSource.onerror = termSSE;
+        // eventSource.onerror = (e) => {
+        //     console.warn("server-event error");
+        //     termSSE();
+        // };
+        eventSource.onmessage = (e) => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
     }
 }
 
@@ -298,13 +290,10 @@ const setupDataChannel = (id: ClientID, channel: RTCDataChannel) => {
 }
 
 const requireRemoteClient = (id_: ClientID): RemoteClient => {
-    let rc = remoteClients.get(id_);
-    if (!rc) {
-        //console.warn(`WARNING: required remote client ${id_} not found and created`);
-        rc = {id_};
-        remoteClients.set(id_, rc);
+    if (!remoteClients.has(id_)) {
+        remoteClients.set(id_, {id_});
     }
-    return rc;
+    return remoteClients.get(id_);
 }
 
 export const isPeerConnected = (rc?: RemoteClient): boolean =>

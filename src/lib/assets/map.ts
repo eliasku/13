@@ -1,23 +1,14 @@
 import {rand} from "../utils/rnd";
 import {createCanvas} from "./gfx";
-import {createFramebuffer, createTexture, gl, uploadTexture} from "../graphics/draw2d";
+import {createTexture, initFramebuffer, uploadTexture} from "../graphics/draw2d";
 import {BOUNDS_SIZE} from "./params";
-import {GL} from "../graphics/gl";
 import {PI2} from "../utils/math";
 
 export const mapTexture = createTexture(BOUNDS_SIZE);
-export const mapFramebuffer = createFramebuffer(mapTexture.texture_);
-
-export const fogTexture = createTexture(BOUNDS_SIZE);
-gl.bindTexture(GL.TEXTURE_2D, fogTexture.texture_);
-gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.LINEAR);
-gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.LINEAR);
-gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, BOUNDS_SIZE, BOUNDS_SIZE, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
-export const fogFramebuffer = createFramebuffer(fogTexture.texture_);
-gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+initFramebuffer(mapTexture);
 
 export const generateMapBackground = (): void => {
-    const map = createCanvas(BOUNDS_SIZE, false);
+    const map = createCanvas(BOUNDS_SIZE);
     const detailsColor = ["#080", "#572"];
     map.fillStyle = "#060";
     map.fillRect(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
@@ -60,7 +51,7 @@ export const generateMapBackground = (): void => {
     //     ctx.fillText("🌷,🌻,🥀,🌿".split(",")[rand(4)], rand(size), rand(size));
     // }
 
-    uploadTexture(mapTexture.texture_, map.canvas);
+    uploadTexture(mapTexture, map.canvas);
 
     ///// LZMA: ~22
     // ctx.canvas.width = ctx.canvas.height = 0;

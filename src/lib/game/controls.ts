@@ -1,9 +1,10 @@
 import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
-import {camera, draw, gl} from "../graphics/draw2d";
+import {draw, gl} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img, Img} from "../assets/gfx";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "../assets/params";
 import {COLOR_WHITE} from "./data/colors";
+import {getScreenScale} from "./game";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -177,7 +178,7 @@ export const drawVirtualPad = () => {
     }
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
-    const k = 1 / camera.scale_;
+    const k = 1 / getScreenScale();
     let i = 0;
     for (const control of vpad) {
         const w_ = W * (control.r_ - control.l_);

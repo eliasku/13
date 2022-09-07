@@ -1,13 +1,12 @@
 import {ClientID} from "../../shared/types";
 import {clientId, disconnect, getUserName, isPeerConnected, remoteClients} from "../net/messaging";
-import {GL} from "../graphics/gl";
 import {play} from "../audio/context";
-import {beginRender, camera, draw, flush, gl} from "../graphics/draw2d";
+import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
 import {_SEED, fxRand, fxRandElement, fxRandomNorm, nextFloat, rand, random, setSeed} from "../utils/rnd";
-import {channels_sendObjectData, getChannelPacketSize} from "../net/channels_send";
+import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
-import {_debugLagK, Const, setDebugLagK} from "./config";
-import {fogTexture, generateMapBackground, mapTexture} from "../assets/map";
+import {Const} from "./config";
+import {generateMapBackground, mapTexture} from "../assets/map";
 import {
     Actor,
     ActorType,
@@ -38,7 +37,7 @@ import {
     viewX,
     viewY
 } from "./controls";
-import {isAnyKeyDown, keyboardDown} from "../utils/input";
+import {isAnyKeyDown} from "../utils/input";
 import {Snd, snd} from "../assets/sfx";
 import {BulletType, weapons} from "./data/weapons";
 import {
@@ -76,14 +75,21 @@ import {
     ANIM_HIT_OVER,
     BULLET_RADIUS,
     JUMP_VEL,
-    OBJECT_HEIGHT,
     OBJECT_RADIUS,
     OBJECT_RADIUS_BY_TYPE,
     PLAYER_HANDS_Z,
 } from "./data/world";
 import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
 import {termPrint} from "../graphics/ui";
-import {prerenderFog} from "./fog";
+import {beginFogRender, renderFog, renderFogObjects} from "./fog";
+import {
+    addDebugState,
+    assertStateInSync,
+    drawCollisions,
+    printDebugInfo,
+    saveDebugState,
+    updateDebugInput
+} from "./debug";
 
 const clients = new Map<ClientID, Client>()
 
@@ -150,12 +156,10 @@ const newItemRandomEffect = (): Actor => {
 }
 
 const requireClient = (id: ClientID): Client => {
-    let client = clients.get(id);
-    if (!client) {
-        client = {id_: id, tic_: 0, acknowledgedTic_: 0};
-        clients.set(id, client);
+    if (!clients.has(id)) {
+        clients.set(id, {id_: id, tic_: 0, acknowledgedTic_: 0});
     }
-    return client;
+    return clients.get(id);
 }
 
 export const resetGame = () => {
@@ -257,7 +261,6 @@ export const updateTestGame = (ts: number) => {
         flushSplatsToMap();
         const predicted = beginPrediction();
         {
-            prerenderFog(...state.actors_);
             drawGame();
             // check input before overlay, or save camera settings
             checkPlayerInput();
@@ -270,7 +273,7 @@ export const updateTestGame = (ts: number) => {
     }
     printStatus();
     if (process.env.NODE_ENV === "development") {
-        printDebugInfo();
+        printDebugInfo(gameTic, netTic, lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 }
 
@@ -334,7 +337,7 @@ const getNextInputTic = (tic: number) =>
 
 const checkPlayerInput = () => {
     if (process.env.NODE_ENV === "development") {
-        checkDebugInput();
+        updateDebugInput();
     }
 
     const player = getMyPlayer();
@@ -484,48 +487,39 @@ const tryRunTicks = (ts: number): number => {
     return framesSimulated;
 }
 
+const _packetBuffer = new Int32Array(1024 * 16);
+
 const sendInput = () => {
     const lastTic = gameTic - 1;
     for (const [id, rc] of remoteClients) {
         if (isPeerConnected(rc)) {
             const cl = requireClient(id);
-            const packet: Packet = {
-                client_: clientId,
-                events_: [],
-                checkSeed_: state.seed_,
-                checkTic_: lastTic,
-                checkNextId_: state.nextId_,
-                // t: lastTic + simTic + Const.InputDelay,
-                tic_: lastTic,
-                // send to Client info that we know already
-                receivedOnSender_: lastTic,
-                sync_: false,
-            };
-            //if () {
-            packet.tic_ = getNextInputTic(lastTic);
-            packet.receivedOnSender_ = cl.tic_;
-            packet.sync_ = cl.isPlaying_;
-            if (packet.tic_ > cl.acknowledgedTic_) {
-                packet.events_ = localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= packet.tic_);
+            const inputTic = getNextInputTic(lastTic);
+            if (inputTic > cl.acknowledgedTic_) {
+                const packet: Packet = {
+                    sync_: cl.isPlaying_,
+                    // send to Client info that we know already
+                    receivedOnSender_: cl.tic_,
+                    // t: lastTic + simTic + Const.InputDelay,
+                    tic_: inputTic,
+                    events_: localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= inputTic),
+                };
                 if (!cl.ready_) {
                     packet.state_ = state;
-                } else if (cl.isPlaying_) {
-                    if (debugStateEnabled) {
-                        packet.state_ = state;
-                        packet.checkState_ = debugState;
-                    }
+                }
+                if (process.env.NODE_ENV === "development") {
+                    packet.debug = {
+                        nextId: state.nextId_,
+                        tic: state.tic_,
+                        seed: state.seed_,
+                    };
+                    addDebugState(cl, packet, state);
                 }
                 // if(packet.events_.length) {
                 //     console.info("SEND: " + JSON.stringify(packet.events_));
                 // }
-                channels_sendObjectData(rc, pack(packet));
+                channels_sendObjectData(rc, pack(packet, _packetBuffer));
             }
-            // if(!cl.isPlaying_) {
-            //     packet.state_ = state;
-            //     // packet.events_ = localEvents;
-            //     //packet.events_ = localEvents.concat(receivedEvents).filter(e => e.tic_ > lastTic);
-            //     channels_sendObjectData(rc, pack(packet));
-            // }
         }
     }
 }
@@ -541,48 +535,18 @@ const getMinTic = (minTic: number = 0x7FFFFFFF) => {
 
 const processPacket = (sender: Client, data: Packet) => {
     if (startTic < 0 && data.state_) {
-        if (data.checkTic_ > getMinTic()) {
-            startTic = data.checkTic_;
-            prevTime = lastFrameTs - 1 / Const.NetFq;
-            gameTic = data.checkTic_ + 1;
+        if (data.state_.tic_ > getMinTic()) {
             netTic = 0;
+            prevTime = lastFrameTs - 1 / Const.NetFq;
             state = data.state_;
+            gameTic = startTic = state.tic_ + 1;
             recreateMap();
         }
-
-        // sender.tic_ = data.tic_;
-        // sender.acknowledgedTic_ = data.receivedOnSender_;
-        // for (const e of data.events_) {
-        //     const cld = requireClient(e.client_);
-        //     if (cld.tic_ < e.tic_) {
-        //         cld.tic_ = e.tic_;
-        //     }
-        //     cld.acknowledgedTic_ = data.receivedOnSender_;
-        //     receivedEvents.push(e);
-        // }
-        for (const cl of clients) {
-
-        }
     }
-    // } else {
-    if (startTic > 0 && process.env.NODE_ENV === "development") {
-        if (data.checkTic_ === (gameTic - 1)) {
-            if (data.checkSeed_ !== _SEED) {
-                console.warn("seed mismatch from client " + data.client_ + " at tic " + data.checkTic_);
-                console.warn(data.checkSeed_ + " != " + _SEED);
-            }
-            if (data.checkNextId_ !== state.nextId_) {
-                console.warn("gen id mismatch from client " + data.client_ + " at tic " + data.checkTic_);
-                console.warn(data.checkNextId_ + " != " + state.nextId_);
-            }
-            if (debugStateEnabled) {
-                if (data.checkState_ && debugState) {
-                    assertStateEquality("[DEBUG] ", debugState, data.checkState_);
-                }
-                if (data.state_) {
-                    assertStateEquality("[FINAL] ", state, data.state_);
-                }
-            }
+
+    if (process.env.NODE_ENV === "development") {
+        if (startTic > 0) {
+            assertStateInSync(sender.id_, data, state, gameTic);
         }
     }
 
@@ -613,10 +577,7 @@ const processPacket = (sender: Client, data: Packet) => {
 }
 
 export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
-    const data = unpack(buffer);
-    if (data) {
-        processPacket(requireClient(from), data);
-    }
+    processPacket(requireClient(from), unpack(from, new Int32Array(buffer)));
     if (document.hidden) {
         updateFrameTime(performance.now() / 1000);
         if (tryRunTicks(lastFrameTs)) {
@@ -653,35 +614,6 @@ const cleaningUpClients = () => {
 
 /// Game logic
 
-const processTicCommands = (tic_events: number | ClientEvent[]) => {
-    tic_events = localEvents.concat(receivedEvents).filter(v => v.tic_ == tic_events);
-    tic_events.sort((a, b) => a.client_ - b.client_);
-    for (const cmd of tic_events) {
-        if (cmd.btn_ !== undefined) {
-            const player = getPlayerByClient(cmd.client_);
-            if (player) {
-                player.btn_ = cmd.btn_;
-            } else if (cmd.btn_ & ControlsFlag.Spawn) {
-                const p = newActorObject(ActorType.Player);
-                p.client_ = cmd.client_;
-                setRandomPosition(p);
-                // p.x_ /= 10;
-                // p.y_ /= 10;
-                p.hp_ = 10;
-                p.btn_ = cmd.btn_;
-                p.weapon_ = 1 + rand(3);//Const.StartWeapon;
-                pushActor(p);
-            }
-        }
-    }
-}
-
-const sortById = (list: Actor[]) =>
-    list.sort((a, b) => a.id_ - b.id_);
-
-const sortList = (list: Actor[]) =>
-    list.sort((a, b) => BOUNDS_SIZE * (a.y_ - b.y_) + a.x_ - b.x_);
-
 const pickItem = (item: Actor, player: Actor) => {
     // isWeapon
     const itemId = item.btn_ & 0xFF;
@@ -709,15 +641,22 @@ const pickItem = (item: Actor, player: Actor) => {
 }
 
 const updateGameCamera = () => {
+    const getRandomPlayer = () => {
+        const l = state.actors_[ActorType.Player].filter(p => p.client_);
+        return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
+    }
+
     let cameraScale = BASE_RESOLUTION / Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight);
     let cameraX = BOUNDS_SIZE >> 1;
     let cameraY = BOUNDS_SIZE >> 1;
-    const p0 = getMyPlayer();
+    const p0 = getMyPlayer() ?? getRandomPlayer();
     if (p0?.client_) {
         const wpn = weapons[p0.weapon_];
         cameraX = p0.x_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x_);
         cameraY = p0.y_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y_);
         cameraScale *= wpn.cameraScale_;
+    } else {
+
     }
     gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
     gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
@@ -725,11 +664,40 @@ const updateGameCamera = () => {
 }
 
 const simulateTic = () => {
+    const sortById = (list: Actor[]) => list.sort((a, b) => a.id_ - b.id_);
+
     for (const a of state.actors_) {
         sortById(a);
         roundActors(a);
     }
 
+    const processTicCommands = (tic_events: number | ClientEvent[]) => {
+        tic_events = localEvents.concat(receivedEvents).filter(v => v.tic_ == tic_events);
+        tic_events.sort((a, b) => a.client_ - b.client_);
+        for (const cmd of tic_events) {
+            if (cmd.btn_ !== undefined) {
+                const player = getPlayerByClient(cmd.client_);
+                if (player) {
+                    player.btn_ = cmd.btn_;
+                } else if (cmd.btn_ & ControlsFlag.Spawn) {
+                    const p = newActorObject(ActorType.Player);
+                    p.client_ = cmd.client_;
+                    setRandomPosition(p);
+
+                    if (clientId == cmd.client_) {
+                        gameCamera[0] = p.x_;
+                        gameCamera[1] = p.y_;
+                    }
+                    // p.x_ /= 10;
+                    // p.y_ /= 10;
+                    p.hp_ = 10;
+                    p.btn_ = cmd.btn_;
+                    p.weapon_ = 1 + rand(3);//Const.StartWeapon;
+                    pushActor(p);
+                }
+            }
+        }
+    }
     processTicCommands(gameTic);
 
     //if(startTick < 0) return;
@@ -739,10 +707,8 @@ const simulateTic = () => {
         updatePlayer(a);
     }
 
-    if (debugStateEnabled) {
-        debugState = cloneState();
-        debugState.seed_ = _SEED;
-        for (const a of debugState.actors_) roundActors(a);
+    if (process.env.NODE_ENV === "development") {
+        saveDebugState(cloneState());
     }
 
     for (const a of state.actors_[ActorType.Player]) {
@@ -796,16 +762,16 @@ const simulateTic = () => {
     cameraShake = reach(cameraShake, 0, 0.02);
     cameraFeedback = reach(cameraFeedback, 0, 0.2);
 
-    if (!(gameTic & 0x1ff)) {
-        const p = newActorObject(ActorType.Player);
-        setRandomPosition(p);
-        p.hp_ = 10;
-        p.weapon_ = rand(weapons.length);
-        pushActor(p);
-    }
-
-    // SPLASH SCREEN
-    if (!clientId) {
+    if (clientId) {
+        if (!(gameTic & 0x1ff)) {
+            const p = newActorObject(ActorType.Player);
+            setRandomPosition(p);
+            p.hp_ = 10;
+            p.weapon_ = rand(weapons.length);
+            pushActor(p);
+        }
+    } else {
+        // SPLASH SCREEN
         spawnFleshParticles({
             x_: fxRand(BOUNDS_SIZE),
             y_: fxRand(BOUNDS_SIZE),
@@ -824,7 +790,7 @@ const simulateTic = () => {
     }
 
     state.seed_ = _SEED;
-    ++gameTic;
+    state.tic_ = gameTic++;
 }
 
 const updateBodyInterCollisions2 = (list1: Actor[], list2: Actor[]) => {
@@ -993,9 +959,11 @@ const updatePlayer = (player: Actor) => {
     if (player.btn_ & ControlsFlag.Shooting && player.weapon_) {
         player.s_ = reach(player.s_, 0, weapon.rate_ / Const.NetFq);
         if (!player.s_) {
-            cameraShake = Math.max(weapon.cameraShake_, cameraShake);
+            if (player.client_ == clientId) {
+                cameraShake = Math.max(weapon.cameraShake_, cameraShake);
+                cameraFeedback = 1;
+            }
             player.s_ = 1;
-            cameraFeedback = 1;
             player.t_ = reach(player.t_, 1, weapon.detuneSpeed_ / Const.NetFq);
             addVelocityDir(player, lookDirX, lookDirY, -1, player.w_ > 0 ? 0 : -weapon.kickBack_);
             playAt(player, Snd.shoot);
@@ -1035,6 +1003,7 @@ export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, 
 
 const cloneState = (): StateData => ({
     nextId_: state.nextId_,
+    tic_: state.tic_,
     seed_: state.seed_,
     mapSeed_: state.mapSeed_,
     actors_: state.actors_.map(list => list.map(a => ({...a}))),
@@ -1055,14 +1024,11 @@ const beginPrediction = (): boolean => {
     // save state
     lastState = state;
     state = cloneState();
-    const savedGameTic = gameTic;
 
     // && gameTic <= lastInputTic
     while (frames--) {
         simulateTic();
     }
-
-    gameTic = savedGameTic;
     return true;
 }
 
@@ -1070,7 +1036,7 @@ const endPrediction = () => {
     // global state
     state = lastState;
     setSeed(state.seed_);
-
+    gameTic = state.tic_ + 1;
     // restore particles
     restoreParticles();
 }
@@ -1078,43 +1044,48 @@ const endPrediction = () => {
 /*** DRAWING ***/
 
 const drawGame = () => {
-    camera.scale_ = 1 / gameCamera[2];
-    camera.toX_ = camera.toY_ = 0.5;
-    camera.atX_ = gameCamera[0] + ((Math.random() - 0.5) * cameraShake * 8) | 0;
-    camera.atY_ = gameCamera[1] + ((Math.random() - 0.5) * cameraShake * 8) | 0;
-    camera.angle_ = (Math.random() - 0.5) * cameraShake / 8;
+    beginFogRender();
+    renderFogObjects(state.actors_[ActorType.Player]);
+    renderFogObjects(state.actors_[ActorType.Bullet]);
+    renderFogObjects(state.actors_[ActorType.Item]);
+    flush();
 
-    gl.bindFramebuffer(GL.FRAMEBUFFER, null);
-    beginRender();
-    gl.clearColor(0.2, 0.2, 0.2, 1.0);
-    gl.clear(GL.COLOR_BUFFER_BIT);
+    beginRenderToMain(
+        gameCamera[0] + fxRandomNorm(cameraShake * 8) | 0,
+        gameCamera[1] + fxRandomNorm(cameraShake * 8) | 0,
+        0.5, 0.5,
+        fxRandomNorm(cameraShake / 8),
+        1 / gameCamera[2]
+    );
+    clear(0.2, 0.2, 0.2, 1);
+
     drawMapBackground();
     drawObjects();
-    {
-        const p0 = getMyPlayer();
-        let add = p0 ? getHitColorOffset(p0.animHit_) : 0;
-        draw(fogTexture, -256, -256, 0, 4, 4, 0.7, (0x40 + 0x20 * Math.sin(lastFrameTs)) << 16 | 0x1133, 0, add & 0xFF3333);
-    }
+    renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
 
     if (process.env.NODE_ENV === "development") {
-        drawCollisions();
+        drawCollisions(drawList);
     }
     drawMapOverlay();
     if (!clientId) {
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * Math.sin(i / 4 + lastFrameTs * 16);
-            draw(img[Img.logo_title], camera.atX_ + fxRandomNorm(i / 4),  camera.atY_ + fxRandomNorm(i / 2) + i / 4, a * i / 100, 1 + i / 100, 1 + i / 100, 1, ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16);
-            draw(img[Img.logo_start], camera.atX_ + fxRandomNorm(i / 4), 110 + camera.atY_ + fxRandomNorm(i / 2) + i / 4, a * i / 100, 1 + i / 100, 1 + i / 100, 1, ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16);
+            const add = ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16;
+            const scale = 1 + i / 100;
+            const angle = a * i / 100;
+            const i4 = i / 4;
+            const y1 = gameCamera[1] + i4;
+            draw(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
+            draw(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), 110 + y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
         }
     }
     drawCrosshair();
     flush();
 }
 
+export const getScreenScale = () => Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
 const drawOverlay = () => {
-    camera.scale_ = Math.min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
-    camera.toX_ = camera.toY_ = camera.atX_ = camera.atY_ = camera.angle_ = 0;
-    beginRender();
+    beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
     drawVirtualPad();
     flush()
 }
@@ -1140,10 +1111,11 @@ const collectVisibleActors = (...lists: Actor[][]) => {
     const pad = OBJECT_RADIUS * 2;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
-    const l = (0 - W / 2) / camera.scale_ + camera.atX_ - pad;
-    const t = (0 - H / 2) / camera.scale_ + camera.atY_ - pad - 128;
-    const r = (W - W / 2) / camera.scale_ + camera.atX_ + pad;
-    const b = (H - H / 2) / camera.scale_ + camera.atY_ + pad + 128;
+    const invScale = gameCamera[2] / 2;
+    const l = -invScale * W + gameCamera[0] - pad;
+    const t = -invScale * H + gameCamera[1] - pad - 128;
+    const r = invScale * W + gameCamera[0] + pad;
+    const b = invScale * H + gameCamera[1] + pad + 128;
     for (const list of lists) {
         for (const a of list) {
             if ((a.x_ > l && a.x_ < r && a.y_ > t && a.y_ < b) ||
@@ -1241,7 +1213,7 @@ const drawBullet = (actor: Actor) => {
 const drawPlayer = (p: Actor): void => {
     const co = getHitColorOffset(p.animHit_);
     const basePhase = p.anim0_ + lastFrameTs;
-    const imgHead = p.client_ ? (Img.avatar0 + (debugCheckAvatar + p.anim0_) % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
+    const imgHead = p.client_ ? (Img.avatar0 + p.anim0_ % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
     const colorC = COLOR_BODY[p.anim0_ % COLOR_BODY.length];
     const colorArm = colorC;
     const colorBody = colorC;
@@ -1368,7 +1340,7 @@ const drawObjects = () => {
     drawSplats();
     drawParticles();
     collectVisibleActors(trees, ...state.actors_);
-    sortList(drawList);
+    drawList.sort((a, b) => BOUNDS_SIZE * (a.y_ - b.y_) + a.x_ - b.x_);
     drawShadows();
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor.type_](actor);
@@ -1392,149 +1364,6 @@ const playAt = (actor: Actor, id: Snd) => {
         if (v > 0) {
             const pan = Math.max(-1, Math.min(1, dx));
             play(snd[id], v, pan, false);
-        }
-    }
-}
-
-//// DEBUG UTILITIES ////
-
-let debugState: StateData;
-let debugStateEnabled = false;
-let drawCollisionEnabled = false;
-let debugCheckAvatar = 0;
-let prevSimulatedTic = 0;
-
-const icons_iceState = {
-    "disconnected": "⭕",
-    "closed": "🔴",
-    "failed": "❌",
-    "connected": "🟢",
-    "completed": "✅",
-    "new": "🆕",
-    "checking": "🟡",
-};
-
-const icons_channelState = {
-    "connecting": "🟡",
-    "open": "🟢",
-    "closed": "🔴",
-    "closing": "❌",
-};
-
-const printDebugInfo = () => {
-    let text = gameTic > prevSimulatedTic ? "🌐" : "🥶";
-    const ticsAhead = (lastFrameTs - prevTime) * Const.NetFq | 0;
-    const ticsPrediction = Math.min(Const.NetFq, ticsAhead);
-    if (ticsPrediction) text += "🔮";
-    text += `~ ${ticsPrediction} of ${ticsAhead}\n`;
-    prevSimulatedTic = gameTic;
-
-    if (_debugLagK) {
-        text += "debug-lag K: " + _debugLagK + "\n";
-    }
-    text += "visible: " + drawList.length + "\n";
-    text += "players: " + state.actors_[ActorType.Player].length + "\n";
-    text += "barrels: " + state.actors_[ActorType.Barrel].length + "\n";
-    text += "items: " + state.actors_[ActorType.Item].length + "\n";
-    text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
-    text += "trees: " + trees.length + "\n";
-
-    text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTic}\n`;
-    for (const [, remoteClient] of remoteClients) {
-        const pc = remoteClient.pc_;
-        const dc = remoteClient.dc_;
-        const cl = clients.get(remoteClient.id_);
-        text += "├ " + remoteClient.name_ + remoteClient.id_;
-        text += pc ? (icons_iceState[pc.iceConnectionState] ?? "❓") : "🧿";
-        text += dc ? icons_channelState[dc.readyState] : "🧿";
-        if (cl) {
-            text += `+${cl.tic_ - (gameTic - 1)}`;
-            text += "| x" + getChannelPacketSize(remoteClient).toString(16);
-        }
-        text += "\n";
-    }
-    termPrint(text + "\n");
-}
-
-const checkDebugInput = () => {
-    if (keyboardDown.has("Digit1")) {
-        ++debugCheckAvatar;
-    }
-    if (keyboardDown.has("Digit2")) {
-        drawCollisionEnabled = !drawCollisionEnabled;
-    }
-    if (keyboardDown.has("Digit3")) {
-        setDebugLagK((_debugLagK + 1) % 3);
-    }
-    if (keyboardDown.has("Digit4")) {
-        debugStateEnabled = !debugStateEnabled;
-    }
-}
-
-const drawActorBoundingSphere = (p: Actor) => {
-    const r = OBJECT_RADIUS_BY_TYPE[p.type_];
-    const h = OBJECT_HEIGHT[p.type_];
-    const x = p.x_;
-    const y = p.y_ - p.z_ - h;
-    const s = r / 16;
-    draw(img[Img.box_t], x, y, 0, 1, p.z_ + h);
-    draw(img[Img.circle_16], x, y, 0, s, s, 0.5, 0xFF0000);
-}
-
-const drawCollisions = () => {
-    if (drawCollisionEnabled) {
-        for (const p of drawList) {
-            drawActorBoundingSphere(p);
-        }
-    }
-}
-
-const assertStateEquality = (label: string, a: StateData, b: StateData) => {
-
-    if (a.nextId_ != b.nextId_) {
-        console.warn(label + "NEXT ID MISMATCH", a.nextId_, b.nextId_);
-    }
-    if (a.seed_ != b.seed_) {
-        console.warn(label + "SEED MISMATCH", a.seed_, b.seed_);
-    }
-    if (a.mapSeed_ != b.mapSeed_) {
-        console.warn(label + "MAP SEED MISMATCH", a.mapSeed_, b.mapSeed_);
-    }
-    for (let i = 0; i < a.actors_.length; ++i) {
-        const listA = a.actors_[i];
-        const listB = b.actors_[i];
-        if (listA.length == listB.length) {
-            for (let j = 0; j < listA.length; ++j) {
-                const actorA = listA[j];
-                const actorB = listB[j];
-                const fields = [
-                    "x",
-                    "y",
-                    "z",
-                    "u",
-                    "v",
-                    "w",
-                    "s",
-                    "t",
-                    "id_",
-                    "type_",
-                    "client_",
-                    "btn_",
-                    "weapon_",
-                    "hp_",
-                    "anim0_",
-                    "animHit_",
-                ];
-                for (const f of fields) {
-                    if ((actorA as any)[f] !== (actorB as any)[f]) {
-                        console.warn(label + "ACTOR DATA mismatch, field: " + f);
-                        console.warn("    MY: " + f + " = " + (actorA as any)[f]);
-                        console.warn("REMOTE: " + f + " = " + (actorB as any)[f]);
-                    }
-                }
-            }
-        } else {
-            console.warn(label + "ACTOR LIST " + i + " SIZE MISMATCH", listA.length, listB.length);
         }
     }
 }

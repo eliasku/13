@@ -3,7 +3,7 @@ import {isPeerConnected, RemoteClient} from "./messaging";
 import {fx_chance, fx_range} from "../utils/rnd";
 
 const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
-    client.debugPacketByteLength_ = data.byteLength;
+    client.debugPacketByteLength = data.byteLength;
     if (data.byteLength >= 1200 / 2) {
         //console.warn("HUGE packet could not be delivered: " + data.byteLength);
         //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
@@ -51,6 +51,6 @@ export const channels_sendObjectData = (client: RemoteClient, data: ArrayBuffer)
 
 export const getChannelPacketSize = (client: RemoteClient): number =>
     process.env.NODE_ENV === "development" ?
-        (client.debugPacketByteLength_ | 0) :
+        (client.debugPacketByteLength | 0) :
         (client.dc_.bufferedAmount);
 

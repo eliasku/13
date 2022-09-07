@@ -1,3 +1,17 @@
+// BUILD: 61266
+// MANGLE: 58882
+// TERSER: 37629
+// ROADROLL: 18444
+// LZMA: 13713
+// rem: -401
+
+// BUILD: 59385
+// MANGLE: 56967
+// TERSER: 36679
+// ROADROLL: 18285
+// LZMA: 13584
+// rem: -272
+
 import {execSync} from "child_process";
 import {copyFileSync, readFileSync, rmSync, writeFileSync} from "fs";
 
@@ -163,14 +177,6 @@ if (process.argv.indexOf("--zip") > 0) {
 
 console.info(report.join("\n"));
 
-// BUILD: 61266
-// MANGLE: 58882
-// TERSER: 37629
-// ROADROLL: 18444
-// LZMA: 13713
-// rem: -401
-
-
 function mangle_types(file, dest) {
 
     let src = readFileSync(file, "utf8");
@@ -178,24 +184,8 @@ function mangle_types(file, dest) {
     const _rename = new Map();
     let alphaSize = 0;
 
-    const alphabet = [
-        "x", "y", "z",
-        "u", "v", "w",
-        "r", "s", "t", "q",
-        "i", "j", "k", "l",
-        "m", "n", "o", "p",
-        "a", "b", "c", "d",
-        "e", "f", "g", "h",
-        "_", "$"
-    ];
-
-    for (let i = 0; i < alphabet.length; ++i) {
-        alphabet[i] = "$" + i + "_";
-    }
-
-    function isRenamable(id) {
-        return id.length > 1 && id.at(-1) === "_";
-    }
+    const getAlphaID = i => `$${i}_`;
+    const isRenamable = id => id.length > 1 && id.at(-1) === "_";
 
     function addType(fields) {
 
@@ -221,17 +211,13 @@ function mangle_types(file, dest) {
                 let renamed = _rename.get(f);
                 if (!renamed) {
                     let idx = 0;
-                    while (usedIds.has(alphabet[idx])) {
+                    while (usedIds.has(getAlphaID(idx))) {
                         idx++;
-                        if (idx >= alphabet.length) {
-                            console.error("not enough alphabet");
-                            process.exit();
-                        }
                         if (alphaSize < idx) {
                             alphaSize = idx;
                         }
                     }
-                    const id = alphabet[idx];
+                    const id = getAlphaID(idx);
                     _rename.set(f, id);
                     //console.info("replace: " + f + " to " + id);
                     usedIds.add(id);
@@ -246,7 +232,7 @@ function mangle_types(file, dest) {
             "pc_",
             "dc_",
             "name_",
-            "debugPacketByteLength_",
+            "debugPacketByteLength",
         ],
         [
             // WeaponConfig
@@ -342,32 +328,28 @@ function mangle_types(file, dest) {
         ],
         [
             // StateData
-            "mapSeed_",
-            "seed_",
-            "actors_",
             "nextId_",
+            "tic_",
+            "seed_",
+            "mapSeed_",
+            "actors_",
+            "scores_",
         ],
         [
             // Packet
             "sync_",
-            "checkSeed_",
-            "checkTic_",
-            "checkNextId_",
-            "checkState_",
-            "client_",
             "receivedOnSender_",
             "tic_",
             "events_",
             "state_",
+            "debug",
         ],
         [
-            // Camera
-            "atX_",
-            "atY_",
-            "toX_",
-            "toY_",
-            "angle_",
-            "scale_",
+            // PacketDebug
+            "seed",
+            "tic",
+            "nextId",
+            "state",
         ],
         [
             // Pointer
@@ -392,7 +374,28 @@ function mangle_types(file, dest) {
             "v0_",
             "u1_",
             "v1_",
+            "fbo_",
         ],
+
+        // GL renderer
+        [
+            "instancedArrays_",
+            "quadCount_",
+            "quadProgram_",
+            "quadTexture_",
+        ],
+
+        // audio buffer source node
+        [
+            "currentSource_"
+        ],
+
+        [
+            "fpsAcc_",
+            "fpsTime_",
+            "fps_",
+        ],
+
 
         // SERVER CONNECTION
         [
