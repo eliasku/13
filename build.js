@@ -61,7 +61,7 @@ if (isProd) {
     // esbuildArgs.push("--charset=utf8");
     // esbuildArgs.push("--tree-shaking=true");
     // esbuildArgs.push("--minify-whitespace");
-    esbuildArgs.push("--minify-identifiers");
+    // esbuildArgs.push("--minify-identifiers");
     esbuildArgs.push("--minify-syntax");
     // esbuildArgs.push("--mangle-props=" + manglePropsRegex);
     //esbuildArgs.push("--analyze");
@@ -95,23 +95,23 @@ const pureFunc = [
     // 'console.warn',
     // 'console.info',
     // 'console.error',
-    'Math.sin',
-    'Math.cos',
-    'Math.sqrt',
-    'Math.hypot',
-    'Math.floor',
-    'Math.round',
-    'Math.ceil',
-    'Math.max',
-    'Math.min',
-    'Math.random',
-    'Math.abs',
-    // 'reach',
-    // 'lerp',
+    'M.sin',
+    'M.cos',
+    'M.sqrt',
+    'M.hypot',
+    'M.floor',
+    'M.round',
+    'M.ceil',
+    'M.max',
+    'M.min',
+    'M.random',
+    'M.abs',
+    'reach',
+    'lerp',
     'toRad',
     // 'getLumaColor32',
-    // 'temper',
-    // 'unorm_f32_from_u32',
+    'temper',
+    'unorm_f32_from_u32',
     // 'newPointer',
 ];
 
@@ -389,13 +389,6 @@ function mangle_types(file, dest) {
         [
             "currentSource_"
         ],
-
-        [
-            "fpsAcc_",
-            "fpsTime_",
-            "fps_",
-        ],
-
 
         // SERVER CONNECTION
         [

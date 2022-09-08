@@ -57,8 +57,7 @@ export const disconnect = () => {
 
 const handlers: Handler[] = [
     // 0
-    () => {
-    },
+    ,
     // MessageType.RtcOffer
     async (req): Promise<RTCSessionDescriptionInit> => {
         const remoteClient = requireRemoteClient(req[MessageField.Source]);
@@ -169,7 +168,7 @@ export const connect = () => {
         //     console.warn("server-event error");
         //     termSSE();
         // };
-        eventSource.onmessage = e => onSSE[(e.data[0] as any) | 0](e.data.substring(1));
+        eventSource.onmessage = e => onSSE[(e.data[0] as any) | 0]?.(e.data.substring(1));
     }
 }
 
