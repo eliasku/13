@@ -430,6 +430,11 @@ function mangle_types(file: string, dest: string) {
     writeFileSync(dest, src, "utf8");
 }
 
+const enum Hash {
+     Seed = 2046694626,
+     Mod = 591,
+}
+
 function rehashWebAPI(file: string, dest: string) {
     let src = readFileSync(file, "utf8");
     let BASE32: number[] = [];
@@ -455,10 +460,7 @@ function rehashWebAPI(file: string, dest: string) {
 
     const reFieldID = (from: string) => new RegExp("([.])(" + from + ")([^\\w_$]|$)", "gm");
 
-    const Seed = 187860190;
-    const Mod = 811;
-
-    const h2 = (str: string, seed = Seed, mod = Mod) => {
+    const h2 = (str: string, seed = Hash.Seed, mod = Hash.Mod) => {
         for (const i of str) {
             seed = (Math.imul(seed, 23131) + i.charCodeAt(0)) >>> 0;
         }
@@ -489,26 +491,24 @@ function rehashWebAPI(file: string, dest: string) {
                 }
             }
         }
-        estimatedMap = new Map([...estimatedMap].sort((a, b) => 32 * b[1] - 32 * a[1] + a[0] - b[0]));
-        // console.info(estimatedMap);
+        estimatedMap = new Map([...estimatedMap].sort((a, b) =>
+            (b[1] << 5) - (a[1] << 5) + a[0] - b[0]));
         const indices = [];
         for (let i = 0; i < 32; ++i) {
             indices[i] = i;
         }
         indices.sort((a, b) =>
-            32 * (estimatedMap.get(b) ?? 0) - 32 * (estimatedMap.get(a) ?? 0) +
+            (estimatedMap.get(b) << 5) - (estimatedMap.get(a) << 5) +
             a - b
         );
-        // console.info(indices);
-
 
         let tb = BASE32.concat();
         for (const i of indices) {
             SORTED_BASE32[i] = tb.shift();
         }
-        // console.info("INITIAL BASE32: " + String.fromCharCode(...BASE32));
+        console.info("INITIAL BASE32: " + String.fromCharCode(...BASE32));
         alphabet = String.fromCharCode(...SORTED_BASE32);
-        // console.info("SORTED  BASE32: " + alphabet);
+        console.info("SORTED  BASE32: " + alphabet);
     }
 
     const stats = new Map;
@@ -534,7 +534,7 @@ function rehashWebAPI(file: string, dest: string) {
 
     src = src.replace(`"################################"`, `"${alphabet}"`);
 
-    if (1) {
+    if (0) {
         const sortedStats = [...stats].sort((a, b) => b[1] - a[1]);
         for (const s of sortedStats) {
             console.info(s[1] + " : " + s[0]);

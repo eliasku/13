@@ -31,14 +31,10 @@ export const setUserName = (name: string) => {
 const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>
     messagesToPost.push([clientId, to, type, call, data]);
 
-const remoteCall = (to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> =>
+const remoteCall = (to: ClientID, type: MessageType, data: MessageData): Promise<Message> =>
     new Promise((resolve) => {
-        const call = nextCallId++;
-        callbacks[call] = (res) => {
-            callbacks[call] = undefined;
-            resolve(res[MessageField.Data]);
-        };
-        remoteSend(to, type, data, call);
+        callbacks[nextCallId] = resolve;
+        remoteSend(to, type, data, nextCallId++);
     });
 
 type Handler = ((req: Message) => Promise<MessageData>) |
@@ -99,7 +95,7 @@ const requestHandler = (req: Message) =>
         ])
     );
 
-setInterval(() => {
+export const processMessages = () => {
     if (_sseState > 1 && !messageUploading && messagesToPost.length) {
         messageUploading = true;
         _post(messagesToPost).then(response => {
@@ -107,7 +103,7 @@ setInterval(() => {
             messageUploading = false;
         }).catch(disconnect);
     }
-}, 100);
+};
 
 const _post = (messages: Message[]): Promise<PostMessagesResponse> =>
     fetch(/*EventSourceUrl*/"_", {
@@ -134,15 +130,17 @@ const onSSE: ((data: string) => void)[] = [
         });
     },
     // UPDATE
-    (data: string, _message?: Message) => {
+    (data: string, _message?: Message, _call?: number, _cb?: (req: Message) => void) => {
         _message = JSON.parse(data);
-        (callbacks[_message[MessageField.Call]] || requestHandler)(_message);
+        _call = _message[MessageField.Call];
+        _cb = callbacks[_call];
+        callbacks[_call] = 0 as null;
+        (_cb || requestHandler)(_message);
     },
     // LIST CHANGE
     (data: string, _id?: number) => {
         _id = +data;
         if (_id > 0) {
-            //connectToRemote(_id);
             remoteSend(_id, MessageType.Name, clientName);
             console.info(`remote client ${_id} added`);
         } else {
@@ -172,10 +170,12 @@ export const connect = () => {
 
 const sendOffer = async (remoteClient: RemoteClient, iceRestart?: boolean) => {
     try {
+        console.log("send offer to " + remoteClient.id_);
         const pc = remoteClient.pc_;
         const offer = await pc.createOffer({iceRestart});
         await pc.setLocalDescription(offer);
-        const result = await remoteCall(remoteClient.id_, MessageType.RtcOffer, offer);
+        const result = (await remoteCall(remoteClient.id_, MessageType.RtcOffer, offer))
+            [MessageField.Data];
         if (result) {
             await pc.setRemoteDescription(new RTCSessionDescription(result));
         }
@@ -227,6 +227,7 @@ const connectToRemote = async (rc: RemoteClient) => {
             sendOffer(rc, true);
         }
     };
+    console.log("connecting to " + rc.id_);
     await sendOffer(rc);
     rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
     setupDataChannel(rc);
@@ -235,19 +236,19 @@ const connectToRemote = async (rc: RemoteClient) => {
 const setupDataChannel = (rc: RemoteClient) => {
     if (rc.dc_) {
         rc.dc_.binaryType = "arraybuffer";
+        rc.dc_.onmessage = (msg) => channels_processMessage(rc.id_, msg);
         // TODO: debug
         // channel.onopen = () => console.log("data channel opened");
         // channel.onerror = (e) => console.warn("data channel error", e);
-        rc.dc_.onmessage = (msg) => channels_processMessage(rc.id_, msg);
     }
 }
 
-const requireRemoteClient = (id_: ClientID): RemoteClient => {
-    if (!remoteClients.has(id_)) {
-        remoteClients.set(id_, newRemoteClient(id_));
+const requireRemoteClient = (id: ClientID): RemoteClient => {
+    if (!remoteClients.has(id)) {
+        remoteClients.set(id, newRemoteClient(id));
     }
-    return remoteClients.get(id_);
+    return remoteClients.get(id);
 }
 
 export const isPeerConnected = (rc?: RemoteClient): boolean =>
-    rc?.dc_?.readyState[0] == "o" && rc?.pc_.iceConnectionState[1] == "o";
+    rc?.dc_?.readyState[0] == "o" && rc?.pc_?.iceConnectionState[1] == "o";

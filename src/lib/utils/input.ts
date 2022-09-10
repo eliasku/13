@@ -46,9 +46,9 @@ export const enum KeyCode {
 
 export let mousePointer: Pointer;
 export const inputPointers = new Map<number, Pointer>();
-export const keyboardState: Set<number> = new Set();
-export const keyboardDown: Set<number> = new Set();
-export const keyboardUp: Set<number> = new Set();
+export const keyboardState = new Set<number>();
+export const keyboardDown = new Set<number>();
+export const keyboardUp = new Set<number>();
 
 // LOCAL SCOPE
 {

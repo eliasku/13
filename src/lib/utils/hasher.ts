@@ -1,8 +1,8 @@
 import {M} from "./math";
 
 const enum Hash {
-    Seed = 187860190,
-    Mod = 811,
+    Seed = 2046694626,
+    Mod = 591,
 }
 
 const l3 = (i: number, a = "################################") => a[i % 32] + (i < 32 ? [] : a[i >> 5]);
@@ -14,35 +14,29 @@ const h2 = (str: string, seed = Hash.Seed, mod = Hash.Mod, _c?: string) => {
     return seed % mod;
 }
 
-export const rehash = <T>(obj: T): void => {
-    if (process.env.NODE_ENV === "development") {
-        (window as any).REHASH_FIELDS ??= {};
-        const name = obj.constructor.name;
-        for (let i in obj) {
-            if (i[4] && i[0] > "`") {
-                (window as any).REHASH_FIELDS[name] ??= [];
-                (window as any).REHASH_FIELDS[name].push(i);
-            }
-        }
-        return;
-    }
-    for (let i in obj) {
+export const rehash = <T extends object>(obj: T): void => {
+    // if (process.env.NODE_ENV === "development") {
+    //     (window as any).REHASH_FIELDS ??= {};
+    //     const name = obj.constructor.name;
+    //     for (let i in obj) {
+    //         if (i[4] && i[0] > "`") {
+    //             (window as any).REHASH_FIELDS[name] ??= [];
+    //             (window as any).REHASH_FIELDS[name].push(i);
+    //         }
+    //     }
+    //     return;
+    // }
+
+    for (const i in obj) {
         if (i[4] && i[0] > "`") {
-            try {
-                Object.defineProperty(obj, l3(h2(i)), {
-                    // @ts-ignore
-                    get() {
-                        return this[i];
-                    },
-                    // @ts-ignore
-                    set(v) {
-                        // @ts-ignore
-                        this[i] = v;
-                    }
-                });
-            } catch {
-               // alert("ERROR REDEFINE: " + l3(h2(i)) + " from " + i + " , " + obj.constructor.name);
-            }
+            Reflect.defineProperty(obj, l3(h2(i)), {
+                get(): any {
+                    return this[i];
+                },
+                set(v: any) {
+                    this[i] = v;
+                },
+            });
         }
     }
 }

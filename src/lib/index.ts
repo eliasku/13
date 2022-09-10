@@ -1,4 +1,4 @@
-import {_sseState, connect, clientName, setUserName} from "./net/messaging";
+import {_sseState, connect, clientName, setUserName, processMessages} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
 import {termPrint} from "./graphics/ui";
 import {createSplashState, resetGame, updateTestGame} from "./game/game";
@@ -84,6 +84,7 @@ const raf = (ts: DOMHighResTimeStamp) => {
     }
 
     updateInput();
+    processMessages();
     requestAnimationFrame(raf);
 }
 

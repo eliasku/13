@@ -103,8 +103,8 @@ const h2_ = (str: number[], seed: number, mod: number): number => {
 
 if (process.argv.indexOf("--gen") > 0) {
     let seed = 1;
-// let mod = 513;//Hash.Mod;
-    let mod = 811;//32 * 32;
+    // let mod = 513; //Hash.Mod;
+    let mod = 32; //32 * 32;
     let st = new Set<number>();
     let ust = new Set<number>();
 
@@ -117,7 +117,13 @@ if (process.argv.indexOf("--gen") > 0) {
                 const f = h2_(propList[i], seed, mod);
                 if (!ust.has(f)) {
                     if (usedMap[typename].has(String.fromCharCode(...propList[i]))) {
+                        if(st.has(f)) {
+                            return true;
+                        }
                         ust.add(f);
+                    }
+                    else {
+                        st.add(f);
                     }
                 } else {
                     // console.warn(typename + ": " + f + " vs " + String.fromCharCode(...propList[i]));
@@ -168,7 +174,7 @@ if (process.argv.indexOf("--gen") > 0) {
         if (mod >= 32 * 32) {
             console.info("cycle!");
             // _rngSeed = new Date as any as number >>> 0;
-            mod = 811;
+            mod = 32;
         }
     }
 
