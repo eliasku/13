@@ -1,5 +1,6 @@
 import {GL} from "./gl";
 import {M} from "../utils/math";
+import {rehash} from "../utils/hasher";
 
 type Renderer = WebGLRenderingContext & {
     instancedArrays_?: ANGLE_instanced_arrays;
@@ -8,10 +9,9 @@ type Renderer = WebGLRenderingContext & {
     quadTexture_?: WebGLTexture;
 };
 
+rehash(WebGLRenderingContext.prototype);
 export const gl = c.getContext("webgl", {
-    alpha: false,
     antialias: false,
-    depth: false,
 }) as Renderer;
 
 gl.instancedArrays_ = gl.getExtension('ANGLE_instanced_arrays')!;
@@ -25,15 +25,15 @@ if (process.env.NODE_ENV === "development") {
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 gl.quadCount_ = 0;
 
-onresize = (_?: any, w: number = innerWidth, h: number = innerHeight, s: number = devicePixelRatio) => {
+(onresize = (_?: any,
+             w: number = innerWidth,
+             h: number = innerHeight,
+             s: number = devicePixelRatio) => {
     c.style.width = w + "px";
     c.style.height = h + "px";
     c.width = w * s;
     c.height = h * s;
-};
-
-(onresize as any)();
-
+})();
 
 const maxBatch = 65535;
 // const depth = 1e5;

@@ -1,4 +1,12 @@
 import {audioContext} from "../audio/context";
+import {rehash} from "./hasher";
+
+if(!!window.TouchEvent) {
+    rehash(TouchEvent.prototype);
+    rehash(TouchList.prototype);
+}
+rehash(MouseEvent.prototype);
+rehash(KeyboardEvent.prototype);
 
 export interface Pointer {
     id_: number;
@@ -11,11 +19,36 @@ export interface Pointer {
     active_: boolean;
 }
 
+export const enum KeyCode {
+    Space = 32,
+    A = 65,
+    S = 83,
+    W = 87,
+    D = 68,
+    Right = 39,
+    Left = 37,
+    Up = 38,
+    Down = 40,
+    Shift = 16,
+    E = 69,
+
+    Digit0 = 48,
+    Digit1,
+    Digit2,
+    Digit3,
+    Digit4,
+    Digit5,
+    Digit6,
+    Digit7,
+    Digit8,
+    Digit9,
+}
+
 export let mousePointer: Pointer;
 export const inputPointers = new Map<number, Pointer>();
-export const keyboardState: Set<string> = new Set();
-export const keyboardDown: Set<string> = new Set();
-export const keyboardUp: Set<string> = new Set();
+export const keyboardState: Set<number> = new Set();
+export const keyboardDown: Set<number> = new Set();
+export const keyboardUp: Set<number> = new Set();
 
 // LOCAL SCOPE
 {
@@ -77,13 +110,12 @@ export const keyboardUp: Set<string> = new Set();
             ((e.clientY - _bb.y) * devicePixelRatio) | 0);
     };
 
-    const _handleTouch = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect()) => {
+    const _handleTouch = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect(), _touch?:Touch) => {
         e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; ++i) {
-            const touch = e.changedTouches[i];
-            fn(getPointer(touch.identifier),
-                ((touch.clientX - _bb.x) * devicePixelRatio) | 0,
-                ((touch.clientY - _bb.y) * devicePixelRatio) | 0);
+        for (_touch of e.changedTouches) {
+            fn(getPointer(_touch.identifier),
+                ((_touch.clientX - _bb.x) * devicePixelRatio) | 0,
+                ((_touch.clientY - _bb.y) * devicePixelRatio) | 0);
         }
     };
 
@@ -95,17 +127,17 @@ export const keyboardUp: Set<string> = new Set();
     /*document.*/
     onkeydown = (e: KeyboardEvent) => {
         // e.preventDefault();
-        if (!keyboardState.has(e.code) && !e.repeat) {
-            keyboardDown.add(e.code);
-            keyboardState.add(e.code);
+        if (!keyboardState.has(e.which) && !e.repeat) {
+            keyboardDown.add(e.which);
+            keyboardState.add(e.which);
         }
         unlockAudio();
     };
     /*document.*/
     onkeyup = (e: KeyboardEvent) => {
         e.preventDefault();
-        if (keyboardState.delete(e.code)) {
-            keyboardUp.add(e.code);
+        if (keyboardState.delete(e.which)) {
+            keyboardUp.add(e.which);
         }
     };
 
@@ -147,10 +179,10 @@ export const keyboardUp: Set<string> = new Set();
         _handleTouch(e, handleMove);
         // console.info("ontouchmove");
     };
-    c.ontouchend = (e: TouchEvent) => {
+    c.ontouchend = (e: TouchEvent, _touch?:Touch) => {
         e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; ++i) {
-            handleUp(getPointer(e.changedTouches[i].identifier));
+        for (_touch of e.changedTouches) {
+            handleUp(getPointer(_touch.identifier));
         }
         // console.info("ontouchend");
     };

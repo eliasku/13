@@ -1,5 +1,6 @@
 import {ClientID, Message, MessageData, MessageField, MessageType, PostMessagesResponse} from "../../shared/types";
 import {channels_processMessage} from "./channels";
+import {rehash} from "../utils/hasher";
 
 export interface RemoteClient {
     id_: ClientID;
@@ -9,35 +10,36 @@ export interface RemoteClient {
     debugPacketByteLength?: number;
 }
 
+rehash(EventSource.prototype);
+rehash(RTCPeerConnection.prototype);
+rehash(RTCDataChannel.prototype);
+
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
 let eventSource: EventSource | null = null;
 export let clientId: 0 | ClientID = 0;
-let username: string = localStorage.getItem("name");
+export let clientName: string | null = localStorage.getItem("_");
 let messagesToPost: Message[] = [];
 let messageUploading = false;
 let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
 export const setUserName = (name: string) => {
-    localStorage.setItem("name", name);
-    username = name;
+    localStorage.setItem("_", clientName = name);
 }
 
-export const getUserName = () => username;
+const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>
+    messagesToPost.push([clientId, to, type, call, data]);
 
-export const remoteCall = (to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> =>
-    new Promise((resolve, reject) => {
+const remoteCall = (to: ClientID, type: MessageType, data: MessageData): Promise<MessageData> =>
+    new Promise((resolve) => {
         const call = nextCallId++;
         callbacks[call] = (res) => {
             callbacks[call] = undefined;
             resolve(res[MessageField.Data]);
         };
-        messagesToPost.push([clientId, to, type, call, data]);
+        remoteSend(to, type, data, call);
     });
-
-export const remoteSend = (to: ClientID, type: MessageType, data: MessageData): number =>
-    messagesToPost.push([clientId, to, type, 0, data]);
 
 type Handler = ((req: Message) => Promise<MessageData>) |
     ((req: Message) => void);
@@ -61,9 +63,6 @@ const handlers: Handler[] = [
     // MessageType.RtcOffer
     async (req): Promise<RTCSessionDescriptionInit> => {
         const remoteClient = requireRemoteClient(req[MessageField.Source]);
-        if (!remoteClient.pc_) {
-            initPeerConnection(remoteClient);
-        }
         try {
             await remoteClient.pc_.setRemoteDescription(req[MessageField.Data]);
         } catch (err) {
@@ -77,11 +76,8 @@ const handlers: Handler[] = [
     // MessageType.RtcCandidate
     (req, _rc?: RemoteClient): void => {
         if (req[MessageField.Data].candidate) {
-            _rc = requireRemoteClient(req[MessageField.Source]);
-            if (!_rc.pc_) {
-                initPeerConnection(_rc);
-            }
-            _rc.pc_.addIceCandidate(new RTCIceCandidate(req[MessageField.Data]))
+            requireRemoteClient(req[MessageField.Source])
+                .pc_.addIceCandidate(new RTCIceCandidate(req[MessageField.Data]))
                 .catch(error => console.warn("ice candidate set failed: " + error.message));
         }
     },
@@ -126,16 +122,16 @@ const onSSE: ((data: string) => void)[] = [
     () => _post([]).catch(disconnect),
     // INIT
     (data: string, _ids?: number[]) => {
-        // console.info("[SSE] got init " + data);
-        // console.info("[SSE] got init " + data.split(";"));
-        _ids = data.split(";").map(Number);
+        _ids = data.split(",").map(Number);
         clientId = _ids.shift();
-        _ids.map(id => {
-            console.info(`remote client ${id} observed`);
-            requireRemoteClient(id);
-            remoteSend(id, MessageType.Name, username);
-        });
         _sseState = 2;
+        Promise.all(_ids.map(id => {
+            console.info(`remote client ${id} observed`);
+            remoteSend(id, MessageType.Name, clientName);
+            return connectToRemote(requireRemoteClient(id));
+        })).then((_) => {
+            _sseState = 3;
+        });
     },
     // UPDATE
     (data: string, _message?: Message) => {
@@ -146,8 +142,8 @@ const onSSE: ((data: string) => void)[] = [
     (data: string, _id?: number) => {
         _id = +data;
         if (_id > 0) {
-            connectToRemote(_id);
-            remoteSend(_id, MessageType.Name, username);
+            //connectToRemote(_id);
+            remoteSend(_id, MessageType.Name, clientName);
             console.info(`remote client ${_id} added`);
         } else {
             closePeerConnection(remoteClients.get(-_id));
@@ -168,13 +164,13 @@ export const connect = () => {
         //     console.warn("server-event error");
         //     termSSE();
         // };
-        eventSource.onmessage = e => onSSE[(e.data[0] as any) | 0]?.(e.data.substring(1));
+        eventSource.onmessage = e => onSSE[e.data[0]]?.(e.data.substring(1));
     }
 }
 
 // RTC
 
-const sendOffer = async (remoteClient: RemoteClient, iceRestart?: boolean, negotiation?: boolean) => {
+const sendOffer = async (remoteClient: RemoteClient, iceRestart?: boolean) => {
     try {
         const pc = remoteClient.pc_;
         const offer = await pc.createOffer({iceRestart});
@@ -188,66 +184,67 @@ const sendOffer = async (remoteClient: RemoteClient, iceRestart?: boolean, negot
     }
 }
 
-const initPeerConnection = (remoteClient: RemoteClient, _pc?: RTCPeerConnection) => {
-    remoteClient.pc_ = _pc =
-        new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
+const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
+    const rc: RemoteClient = {
+        id_: id,
+        pc_: _pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]}),
+    };
+
     _pc.onicecandidate = (e) => {
         if (e.candidate) {
-            remoteSend(remoteClient.id_, MessageType.RtcCandidate, e.candidate.toJSON());
+            remoteSend(id, MessageType.RtcCandidate, e.candidate.toJSON());
         }
     };
 
     _pc.onnegotiationneeded = () => {
         console.log("negotiation needed");
-        sendOffer(remoteClient, false);
+        sendOffer(rc, false);
     };
 
     _pc.ondatachannel = (e) => {
         console.log("received data-channel on Slave");
-        remoteClient.dc_ = e.channel;
-        if (e.channel) {
-            setupDataChannel(remoteClient.id_, e.channel);
-        }
+        rc.dc_ = e.channel;
+        setupDataChannel(rc);
     };
 
     // TODO: debug
     // pc.onicecandidateerror = (e: RTCPeerConnectionIceErrorEvent) => {
     //     console.warn("ice candidate error: " + e.errorText);
     // };
+    return rc;
 }
 
-export const closePeerConnection = (rc?: RemoteClient) => {
+const closePeerConnection = (rc?: RemoteClient) => {
     if (remoteClients.delete(rc?.id_)) {
         rc.dc_?.close();
         rc.pc_?.close();
     }
 }
 
-export const connectToRemote = async (id: ClientID) => {
-    const rc = requireRemoteClient(id);
-    initPeerConnection(rc);
+const connectToRemote = async (rc: RemoteClient) => {
     rc.pc_.oniceconnectionstatechange = e => {
         if ("fd".indexOf(rc.pc_?.iceConnectionState[0]) >= 0) {
             sendOffer(rc, true);
         }
     };
     await sendOffer(rc);
-
-    rc.dc_ = rc.pc_.createDataChannel("", {ordered: false, maxRetransmits: 0});
-    setupDataChannel(rc.id_, rc.dc_);
+    rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
+    setupDataChannel(rc);
 }
 
-const setupDataChannel = (id: ClientID, channel: RTCDataChannel) => {
-    channel.binaryType = "arraybuffer";
-    // TODO: debug
-    // channel.onopen = () => console.log("data channel opened");
-    // channel.onerror = (e) => console.warn("data channel error", e);
-    channel.onmessage = (msg) => channels_processMessage(id, msg);
+const setupDataChannel = (rc: RemoteClient) => {
+    if (rc.dc_) {
+        rc.dc_.binaryType = "arraybuffer";
+        // TODO: debug
+        // channel.onopen = () => console.log("data channel opened");
+        // channel.onerror = (e) => console.warn("data channel error", e);
+        rc.dc_.onmessage = (msg) => channels_processMessage(rc.id_, msg);
+    }
 }
 
 const requireRemoteClient = (id_: ClientID): RemoteClient => {
     if (!remoteClients.has(id_)) {
-        remoteClients.set(id_, {id_});
+        remoteClients.set(id_, newRemoteClient(id_));
     }
     return remoteClients.get(id_);
 }

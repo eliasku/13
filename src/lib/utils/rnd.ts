@@ -16,34 +16,18 @@ const temper = (x: number /* u32 */): number /* u32 */ => {
 }
 
 // simple PRNG from libc with u32 state
-export let _SEED = new Date as any as number >>> 0;
-export let _SEED2 = new Date as any as number >>> 0;
+export const _SEEDS = [, ,].fill(new Date as any as number >>> 0);
 
-export const setSeed = (state: number) => _SEED = state;
-
-export const nextInt = (): number /* u32 */ =>
-    temper(_SEED = (M.imul(_SEED, 1103515245) + 12345) >>> 0);
+export const nextInt = (idx = 0): number /* u32 */ =>
+    temper(_SEEDS[idx] = (M.imul(_SEEDS[idx], 1103515245) + 12345) >>> 0);
 
 export const rand = (max: number): number /* u32 */ => nextInt() % max;
-
-export const random = (max: number): number /* u32 */ => nextFloat() * max;
-
-export const nextFloat = () => unorm_f32_from_u32(nextInt());
+export const random = (max: number = 1, idx?:number) => max * unorm_f32_from_u32(nextInt(idx));
+export const random1n = (v: number = 1) => random(v * 2, 1) - v;
+export const random1 = (max?: number) => random(max, 1);
 
 // just visual random
 
 export const fxRandomNorm = (max: number): number => max * 2 * (0.5 - M.random());
 export const fxRand = (max: number): number => (M.random() * max) | 0;
-
 export const fxRandElement = <T>(m: T[]): T => m[fxRand(m.length)];
-
-// replayable random for effects
-
-export const setSeed2 = (state: number) => _SEED2 = state;
-
-export const nextInt2 = (): number /* u32 */ => {
-    _SEED2 = (M.imul(_SEED2, 1103515245) + 12345) >>> 0;
-    return temper(_SEED2) >>> 1;
-}
-
-export const nextFloat2 = () => unorm_f32_from_u32(nextInt2());

@@ -1,13 +1,11 @@
-import {_sseState, connect, getUserName, setUserName} from "./net/messaging";
+import {_sseState, connect, clientName, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
 import {termPrint} from "./graphics/ui";
 import {createSplashState, resetGame, updateTestGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
-import {play} from "./audio/context";
+import {play, speak} from "./audio/context";
 import {updateFpsMeter} from "./utils/fpsMeter";
 import {Snd, snd} from "./assets/sfx";
-
-// initDraw2d();
 
 const enum StartState {
     Loading = 0,
@@ -44,11 +42,11 @@ const goToSplash = () => {
     createSplashState();
 }
 
-new FontFace("e", `url(e.ttf),local(Arial)`).load().then((font) => {
+new FontFace("e", "url(e.ttf),local(Arial)").load().then((font) => {
     document.fonts.add(font);
     loadAtlas();
     goToSplash();
-    if (!getUserName()) {
+    if (!clientName) {
         setUserName(prompt("pick your name") || "guest");
     }
 });
@@ -70,10 +68,10 @@ const raf = (ts: DOMHighResTimeStamp) => {
         case StartState.Loading:
         case StartState.Connecting:
             termPrint("╫╪"[ts * 9 & 0x1]);
-            if (_sseState == 2) {
+            if (_sseState == 3) {
                 state = StartState.Connected;
                 play(snd[Snd.bgm], 0.5, 0, true);
-                speechSynthesis.speak(new SpeechSynthesisUtterance("Fight!"));
+                speak("Fight!");
             }
             break;
         default:

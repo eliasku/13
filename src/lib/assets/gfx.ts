@@ -2,6 +2,7 @@ import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/
 import {PI2, toRad} from "../utils/math";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./params";
 import {GL} from "../graphics/gl";
+import {rehash} from "../utils/hasher";
 
 export const enum Img {
     box = 0,
@@ -78,10 +79,12 @@ export const EMOJI: Record<number, string> = [];
 
 export const img: Texture[] = [];
 
+rehash(CanvasRenderingContext2D.prototype);
+rehash(CanvasGradient.prototype);
 export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasRenderingContext2D): CanvasRenderingContext2D => {
     _canvas = document.createElement("canvas");
     _canvas.width = _canvas.height = size;
-    _canvas = _canvas.getContext("2d", {alpha: true});
+    _canvas = _canvas.getContext("2d");
     _canvas.fillStyle = _canvas.strokeStyle = "#fff";
     _canvas.textAlign = "center";
     _canvas.textBaseline = "middle";

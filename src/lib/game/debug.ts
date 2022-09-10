@@ -1,14 +1,14 @@
 import {Actor, ActorType, Client, Packet, StateData} from "./types";
 import {_debugLagK, Const, setDebugLagK} from "./config";
-import {getUserName, remoteClients} from "../net/messaging";
+import {clientName, remoteClients} from "../net/messaging";
 import {getChannelPacketSize} from "../net/channels_send";
 import {termPrint} from "../graphics/ui";
-import {keyboardDown} from "../utils/input";
+import {keyboardDown, KeyCode} from "../utils/input";
 import {OBJECT_HEIGHT, OBJECT_RADIUS_BY_TYPE} from "./data/world";
 import {draw} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
 import {ClientID} from "../../shared/types";
-import {_SEED} from "../utils/rnd";
+import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
 import {M} from "../utils/math";
 
@@ -49,7 +49,7 @@ export const printDebugInfo = (
 
     let text = gameTic > prevSimulatedTic ? "🌐" : "🥶";
     const ticsAhead = (lastFrameTs - prevTime) * Const.NetFq | 0;
-    const ticsPrediction = M.min(Const.NetFq, ticsAhead);
+    const ticsPrediction = M.min(Const.InputDelay, ticsAhead);
     if (ticsPrediction) text += "🔮";
     text += `~ ${ticsPrediction} of ${ticsAhead}\n`;
     prevSimulatedTic = gameTic;
@@ -64,7 +64,7 @@ export const printDebugInfo = (
     text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
     text += "trees: " + trees.length + "\n";
 
-    text += `┌ ${getUserName()} | game: ${gameTic}, net: ${netTic}\n`;
+    text += `┌ ${clientName} | game: ${gameTic}, net: ${netTic}\n`;
     for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;
@@ -82,20 +82,19 @@ export const printDebugInfo = (
 }
 
 export const updateDebugInput = () => {
-
-    if (keyboardDown.has("Digit0")) {
+    if (keyboardDown.has(KeyCode.Digit0)) {
         showDebugInfo = !showDebugInfo;
     }
-    if (keyboardDown.has("Digit1")) {
+    if (keyboardDown.has(KeyCode.Digit1)) {
         ++debugCheckAvatar;
     }
-    if (keyboardDown.has("Digit2")) {
+    if (keyboardDown.has(KeyCode.Digit2)) {
         drawCollisionEnabled = !drawCollisionEnabled;
     }
-    if (keyboardDown.has("Digit3")) {
+    if (keyboardDown.has(KeyCode.Digit3)) {
         setDebugLagK((_debugLagK + 1) % 3);
     }
-    if (keyboardDown.has("Digit4")) {
+    if (keyboardDown.has(KeyCode.Digit4)) {
         debugStateEnabled = !debugStateEnabled;
     }
 }
@@ -121,7 +120,7 @@ export const drawCollisions = (list: Actor[]) => {
 export const saveDebugState = (stateData: StateData) => {
     if (debugStateEnabled) {
         debugState = stateData;
-        debugState.seed_ = _SEED;
+        debugState.seed_ = _SEEDS[0];
         ++debugState.tic_;
         debugState.actors_.map(roundActors);
     }
@@ -136,9 +135,9 @@ export const addDebugState = (client: Client, packet: Packet, state: StateData) 
 
 export const assertStateInSync = (from: ClientID, data: Packet, state: StateData, gameTic: number) => {
     if (data.debug && data.debug.tic === (gameTic - 1)) {
-        if (data.debug.seed !== _SEED) {
+        if (data.debug.seed !== _SEEDS[0]) {
             console.warn("seed mismatch from client " + from + " at tic " + data.debug.tic);
-            console.warn(data.debug.seed + " != " + _SEED);
+            console.warn(data.debug.seed + " != " + _SEEDS[0]);
         }
         if (data.debug.nextId !== state.nextId_) {
             console.warn("gen id mismatch from client " + from + " at tic " + data.debug.tic);

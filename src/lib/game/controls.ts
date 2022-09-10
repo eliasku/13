@@ -1,4 +1,4 @@
-import {inputPointers, keyboardState, mousePointer, Pointer} from "../utils/input";
+import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input";
 import {draw, gl} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img, Img} from "../assets/gfx";
@@ -59,17 +59,17 @@ export const updateControls = (player: Actor) => {
 
     shootButtonDown = +((viewX || viewY) && mouse.active_);
 
-    moveX = (keyboardState.has("KeyD") || keyboardState.has("ArrowRight")) as any
-        - ((keyboardState.has("KeyA") || keyboardState.has("ArrowLeft")) as any);
-    moveY = (keyboardState.has("KeyS") || keyboardState.has("ArrowDown")) as any
-        - ((keyboardState.has("KeyW") || keyboardState.has("ArrowUp")) as any);
+    moveX = (keyboardState.has(KeyCode.D) || keyboardState.has(KeyCode.Right)) as any
+        - ((keyboardState.has(KeyCode.A) || keyboardState.has(KeyCode.Left)) as any);
+    moveY = (keyboardState.has(KeyCode.S) || keyboardState.has(KeyCode.Down)) as any
+        - ((keyboardState.has(KeyCode.W) || keyboardState.has(KeyCode.Up)) as any);
 
     if (moveX || moveY) {
-        moveFast = +!(keyboardState.has("ShiftLeft") || keyboardState.has("ShiftRight"));
+        moveFast = +!(keyboardState.has(KeyCode.Shift));
     }
 
-    jumpButtonDown = +keyboardState.has("Space");
-    dropButton = +keyboardState.has("KeyE");
+    jumpButtonDown = +keyboardState.has(KeyCode.Space);
+    dropButton = +keyboardState.has(KeyCode.E);
 
     {
         updateVirtualPad();
@@ -127,14 +127,6 @@ let touchPadActive = false;
 
 const checkPointerIsAvailableForCapturing = (pointer: Pointer) =>
     !vpad.some(c => c.pointer_ == pointer);
-// {
-//     for (const control of vpad) {
-//         if (control.pointer_ === pointer) {
-//             return false;
-//         }
-//     }
-//     return true;
-// }
 
 const testZone = (control: VPadControl, rx: number, ry: number) =>
     rx > control.l_ && rx < control.r_ && ry > control.t_ && ry < control.b_;

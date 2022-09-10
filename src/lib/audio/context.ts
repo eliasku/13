@@ -1,4 +1,7 @@
-export const audioContext = new AudioContext();
+import {rehash} from "../utils/hasher";
+
+rehash(AudioContext.prototype);
+export const audioContext = new AudioContext({sampleRate: 44100, latencyHint: "interactive"});
 
 export type AudioBufferWithState = AudioBuffer & {
     currentSource_?: AudioBufferSourceNode
@@ -9,7 +12,7 @@ export const play = (audioBuffer: AudioBufferWithState,
                      pan: number | AudioBufferSourceNode,
                      loop: boolean,
                      gain?: GainNode): void => {
-    const testMasterVol = 0.8;
+    const testMasterVol = 0.2;
     gain = audioContext.createGain();
     gain.gain.value = vol as number * testMasterVol;
     gain.connect(audioContext.destination);
@@ -23,4 +26,10 @@ export const play = (audioBuffer: AudioBufferWithState,
     pan.loop = loop;
     pan.connect(vol);
     pan.start();
+}
+
+export const speak = (text: string) => {
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.volume = 0.2;
+    speechSynthesis.speak(speech);
 }

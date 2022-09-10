@@ -100,7 +100,7 @@ const processServerEvents = (req: IncomingMessage, res: ServerResponse) => {
     req.on("close", () => removeClient(client));
 
     console.info("init client " + client.id_);
-    sendServerEvent(client, ServerEventName.ClientInit, clientIds.join(";"));
+    sendServerEvent(client, ServerEventName.ClientInit, "" + clientIds);
 
     console.info("broadcast add client " + client.id_);
     broadcastServerEvent(id, ServerEventName.ClientListChange, "" + id);
@@ -119,7 +119,7 @@ const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
     }
 }
 
- const processIncomeMessages = async (req: IncomingMessage, res: ServerResponse) => {
+const processIncomeMessages = async (req: IncomingMessage, res: ServerResponse) => {
     const reqData = await readJSON(req);
     if (!reqData) {
         res.writeHead(500);

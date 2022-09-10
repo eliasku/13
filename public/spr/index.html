@@ -78,7 +78,7 @@
         canvas.style.border = "solid 1px blue";
         canvas.width = w_;
         canvas.height = h_;
-        const ctx = canvas.getContext("2d", {alpha: true});
+        const ctx = canvas.getContext("2d");//, {alpha: true});
         ctx.font = emojiSize + "px e";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";

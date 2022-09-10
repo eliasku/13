@@ -1,8 +1,8 @@
 import {ClientID} from "../../shared/types";
-import {clientId, disconnect, getUserName, isPeerConnected, remoteClients} from "../net/messaging";
-import {play} from "../audio/context";
+import {clientId, disconnect, clientName, isPeerConnected, remoteClients} from "../net/messaging";
+import {play, speak} from "../audio/context";
 import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
-import {_SEED, fxRand, fxRandElement, fxRandomNorm, nextFloat, rand, random, setSeed} from "../utils/rnd";
+import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const} from "./config";
@@ -188,7 +188,7 @@ export const resetGame = () => {
 
 const recreateMap = () => {
     // generate map
-    setSeed(state.mapSeed_);
+    _SEEDS[0] = state.mapSeed_;
     generateMapBackground();
     trees.length = 0;
     const nextId = state.nextId_;
@@ -199,7 +199,7 @@ const recreateMap = () => {
         setRandomPosition(tree);
         trees.push(tree);
     }
-    setSeed(state.seed_);
+    _SEEDS[0] = state.seed_;
     state.nextId_ = nextId;
 }
 
@@ -211,8 +211,7 @@ const createSeedGameState = () => {
     startTic = 0;
     gameTic = 0;
     netTic = 0;
-    state.mapSeed_ = _SEED;
-    state.seed_ = _SEED;
+    state.mapSeed_ = state.seed_ = _SEEDS[0];
     recreateMap();
     for (let i = 0; i < 32; ++i) {
         //setRandomPosition(newItemRandomWeapon());
@@ -224,7 +223,6 @@ const createSeedGameState = () => {
         setRandomPosition(actor)
         pushActor(actor);
     }
-    state.seed_ = _SEED;
 }
 
 export const createSplashState = () => {
@@ -306,7 +304,7 @@ const printStatus = () => {
             return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
         }
 
-        termPrint(getPlayerIcon(clientId) + " " + getUserName() + " | ☠️" + (state.scores_[clientId] | 0) + "\n");
+        termPrint(getPlayerIcon(clientId) + " " + clientName + " | ☠️" + (state.scores_[clientId] | 0) + "\n");
         for (const [id, rc] of remoteClients) {
             let status = "🔴";
             if (isPeerConnected(rc)) {
@@ -605,7 +603,7 @@ const cleaningUpClients = () => {
                 (rc.pc_?.iceConnectionState[1] != "o" || rc.dc_?.readyState[0] != "o")) {
                 if (++disconnectTimes > 60 * 5) {
                     disconnect();
-                    alert("Connection lost");
+                    alert("connection lost");
                 }
                 return;
             }
@@ -791,7 +789,7 @@ const simulateTic = () => {
         roundActors(a);
     }
 
-    state.seed_ = _SEED;
+    state.seed_ = _SEEDS[0];
     state.tic_ = gameTic++;
 }
 
@@ -856,7 +854,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                 state.scores_[killerID] = (state.scores_[killerID] | 0) +
                     (actor.client_ ? 10 : 1);
 
-                const getNameById = (client: ClientID) => client == clientId ? getUserName() : remoteClients.get(client)?.name_;
+                const getNameById = (client: ClientID) => client == clientId ? clientName : remoteClients.get(client)?.name_;
                 const a = getNameById(killerID);
                 const b = getNameById(actor.client_);
                 if (a) {
@@ -871,7 +869,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                         `death by ${a}`,
                         `${a} sows DEATH!`
                     ]
-                    speechSynthesis.speak(new SpeechSynthesisUtterance(fxRandElement(t)));
+                    speak(fxRandElement(t));
                 }
             }
         }
@@ -989,11 +987,11 @@ const updatePlayer = (player: Actor) => {
             playAt(player, Snd.shoot);
             for (let i = 0; i < weapon.spawnCount_; ++i) {
                 const a = lookAngle +
-                    weapon.angleVar_ * (nextFloat() - 0.5) +
-                    weapon.angleSpread_ * M.min(1, player.t_) * (nextFloat() - 0.5);
+                    weapon.angleVar_ * (random() - 0.5) +
+                    weapon.angleSpread_ * M.min(1, player.t_) * (random() - 0.5);
                 const dx = M.cos(a);
                 const dy = M.sin(a);
-                const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (nextFloat() - 0.5);
+                const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
                 const bullet = newActorObject(ActorType.Bullet);
                 bullet.client_ = player.client_;
                 copyPosFromActorCenter(bullet, player);
@@ -1035,7 +1033,7 @@ const beginPrediction = (): boolean => {
     if (!Const.Prediction) return false;
 
     // global state
-    let frames = M.min(1, lastFrameTs - prevTime) * Const.NetFq | 0;
+    let frames = M.min(Const.InputDelay, (lastFrameTs - prevTime) * Const.NetFq | 0);
     if (!frames) return false;
 
     // save particles
@@ -1055,7 +1053,7 @@ const beginPrediction = (): boolean => {
 const endPrediction = () => {
     // global state
     state = lastState;
-    setSeed(state.seed_);
+    _SEEDS[0] = state.seed_;
     gameTic = state.tic_ + 1;
     // restore particles
     restoreParticles();
