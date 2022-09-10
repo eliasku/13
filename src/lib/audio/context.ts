@@ -1,7 +1,7 @@
 import {rehash} from "../utils/hasher";
 
 rehash(AudioContext.prototype);
-export const audioContext = new AudioContext({sampleRate: 44100, latencyHint: "interactive"});
+export const audioContext = new AudioContext();
 
 export type AudioBufferWithState = AudioBuffer & {
     currentSource_?: AudioBufferSourceNode

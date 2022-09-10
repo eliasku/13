@@ -1,8 +1,8 @@
 import {M} from "./math";
 
 const enum Hash {
-    Seed = 822478298,
-    Mod = 1019,
+    Seed = 187860190,
+    Mod = 811,
 }
 
 const l3 = (i: number, a = "################################") => a[i % 32] + (i < 32 ? [] : a[i >> 5]);
@@ -41,7 +41,7 @@ export const rehash = <T>(obj: T): void => {
                     }
                 });
             } catch {
-                alert("ERROR REDEFINE: " + l3(h2(i)) + " from " + i + " , " + obj.constructor.name);
+               // alert("ERROR REDEFINE: " + l3(h2(i)) + " from " + i + " , " + obj.constructor.name);
             }
         }
     }

@@ -8,10 +8,9 @@
     "start-watch": "npx nodemon ./public/s.js",
     "build-ts-server": "tsc -p server/tsconfig.json",
     "build-ts-client": "tsc -p tsconfig.json",
-    "rollup-client": "rollup build/client/lib/index.js --file build/client-bundle.js",
-    "build": "node build.js",
-    "build-dev": "node build.js --dev",
-    "zip": "node build.js --zip",
+    "build": "ts-node --esm tools/build.ts",
+    "build-dev": "ts-node --esm tools/build.ts --dev",
+    "zip": "ts-node --esm tools/build.ts --zip",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/c.js",
     "debug-watch": "esbuild src/lib/index.ts --tsconfig=tsconfig.json --watch --bundle --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/debug.js",
     "typecheck": "tsc -p tsconfig.json --watch --noEmit",
@@ -20,12 +19,12 @@
   "author": "eliasku",
   "license": "ISC",
   "devDependencies": {
-    "rollup": "^2.79.0",
     "typescript": "^4.8.2",
     "@types/node": "^18.7.1",
     "esbuild": "^0.15.0",
     "html-minifier": "^4.0.0",
     "roadroller": "^2.1.0",
-    "terser": "^5.14.2"
+    "terser": "^5.14.2",
+    "ts-node": "^10.9.1"
   }
 }

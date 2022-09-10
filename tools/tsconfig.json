@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "removeComments": false,
+    "preserveConstEnums": false,
+    "sourceMap": false,
+    "outDir": "../build/server",
+    "lib": ["es2021"]
+  },
+  "include": ["./*.ts"],
+  "exclude": ["node_modules"]
+}

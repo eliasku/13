@@ -1,4 +1,4 @@
-import {M} from "../src/lib/utils/math";
+import {readFileSync} from "fs";
 
 const inputProps: Record<string, Record<string, string[]>> = {
     safari: {
@@ -39,15 +39,27 @@ const inputProps: Record<string, Record<string, string[]>> = {
 };
 
 //"clientX", "clientY", "label","close", "open",
-const filter: string[] = ["clear", "state", "flush", "delete", "get", "has", "set", "filter", "map", "fill", "length"];
+export const filter: string[] = ["clear", "state", "flush", "delete", "get", "has", "set", "filter", "map", "fill", "length"];
 
-let propMap: Record<string, Set<string>> = {};
+export let propMap: Record<string, Set<string>> = {};
+export let usedMap: Record<string, Set<string>> = {};
+
+const refSource = readFileSync("public/c0.js", "utf8");
+const reFieldID = (from: string) => new RegExp("([.])(" + from + ")([^\\w_$]|$)", "gm");
+
 for (const map of Object.keys(inputProps)) {
     for (const type of Object.keys(inputProps[map])) {
         propMap[type] ??= new Set();
+        usedMap[type] ??= new Set();
         const fields = inputProps[map][type];
         for (const f of fields) {
             propMap[type].add(f);
+            if (filter.indexOf(f) < 0) {
+                refSource.replaceAll(reFieldID(f), (a, c1, c2, c3) => {
+                    usedMap[type].add(f);
+                    return "";
+                });
+            }
         }
     }
 }
@@ -82,59 +94,82 @@ let _rngSeed = new Date as any as number >>> 0;
 const nextInt = (): number =>
     temper(_rngSeed = (Math.imul(_rngSeed, 1103515245) + 12345) >>> 0);
 
-const h2_ = (str: number[], seed: number, mod: number) => {
+const h2_ = (str: number[], seed: number, mod: number): number => {
     for (let i = 0, n = str.length; i < n; ++i) {
         seed = (Math.imul(seed, 23131) + str[i]) >>> 0;
     }
     return seed % mod;
 }
 
-let seed = 1;
+if (process.argv.indexOf("--gen") > 0) {
+    let seed = 1;
 // let mod = 513;//Hash.Mod;
-let mod = 513;//32 * 32;
-let st = new Set;
+    let mod = 811;//32 * 32;
+    let st = new Set<number>();
+    let ust = new Set<number>();
 
-const types = Object.values(props);
-const seedHasCollisions = (seed: number, mod: number) => {
-    for (const props of types) {
-        st.clear();
-        for (let i = 0, n = props.length; i < n; ++i) {
-            const f = h2_(props[i], seed, mod);
-            if (!st.has(f)) {
-                st.add(f);
-                //console.warn(typename + ": " + f + " vs " + i);
-            } else {
-                return true;
+    const seedHasCollisions = (seed: number, mod: number) => {
+        for (const typename in props) {
+            const propList = props[typename];
+            st.clear();
+            ust.clear();
+            for (let i = 0, n = propList.length; i < n; ++i) {
+                const f = h2_(propList[i], seed, mod);
+                if (!ust.has(f)) {
+                    if (usedMap[typename].has(String.fromCharCode(...propList[i]))) {
+                        ust.add(f);
+                    }
+                } else {
+                    // console.warn(typename + ": " + f + " vs " + String.fromCharCode(...propList[i]));
+                    return true;
+                }
             }
         }
+        return false;
     }
-    return false;
-}
 
-while (mod <= 32 * 32) {
-    console.info("Start mod: 0x" + mod.toString(16));
-    let attempts = 0;
-    let found = true;
-    // _SEEDS[1] = +new Date >>> 0;
-    // seed = nextInt(1);
-    const maxIters = 0x80000;
-    // const maxIters = 0x80000000;
-    while (seedHasCollisions(seed, mod)) {
-        seed = nextInt();
-        if (++attempts > maxIters) {
-            found = false;
-            break;
+    let prevMinMod = 1000000;
+    let prevMinSeed = 0x100000000;
+    while (mod <= 32 * 32) {
+        //console.info("Start mod: 0x" + mod.toString(16));
+        let attempts = 0;
+        let found = true;
+        // _SEEDS[1] = +new Date >>> 0;
+        // seed = nextInt(1);
+        const maxIters = 0x1000;
+        // const maxIters = 0x80000000;
+        while (seedHasCollisions(seed, mod)) {
+            seed = nextInt();
+            if (++attempts > maxIters) {
+                found = false;
+                break;
+            }
+        }
+        if (found) {
+            if (mod < prevMinMod) {
+                prevMinMod = mod;
+                prevMinSeed = seed;
+                console.info("Found on iteration: " + attempts);
+                console.info("SEED = " + seed);
+                console.info("MOD = " + mod);
+            }
+            else if(mod == prevMinMod && seed < prevMinSeed) {
+                prevMinSeed = seed;
+                console.info("Found on iteration: " + attempts);
+                console.info("SEED = " + seed);
+                console.info("MOD = " + mod);
+            }
+        }
+
+        ++mod;
+        while (!(mod & 1)) {
+            ++mod;
+        }
+        if (mod >= 32 * 32) {
+            console.info("cycle!");
+            // _rngSeed = new Date as any as number >>> 0;
+            mod = 811;
         }
     }
-    if (found) {
-        console.info("Found on iteration: " + attempts);
-        console.info("SEED = " + seed);
-        console.info("MOD = " + mod);
-    }
 
-    ++mod;
-    // while (!(mod & 1)) {
-    //     ++mod;
-    // }
 }
-
