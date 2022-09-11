@@ -370,14 +370,6 @@ function mangle_types(file: string, dest: string) {
             "fbo_",
         ],
 
-        // GL renderer
-        [
-            "instancedArrays_",
-            "quadCount_",
-            "quadProgram_",
-            "quadTexture_",
-        ],
-
         // audio buffer source node
         [
             "currentSource_"
@@ -431,8 +423,8 @@ function mangle_types(file: string, dest: string) {
 }
 
 const enum Hash {
-     Seed = 2046694626,
-     Mod = 591,
+     Seed = 48639327,
+     Mod = 427,
 }
 
 function rehashWebAPI(file: string, dest: string) {
@@ -525,12 +517,12 @@ function rehashWebAPI(file: string, dest: string) {
         }
     }
 
-    src = src.replaceAll('("canvas")', '`canvas`');
-    src = src.replaceAll('("2d")', '`2d`');
-    src = src.replaceAll('(",")', '`,`');
-    src = src.replaceAll('getItem("_")', 'getItem`_`');
-    src = src.replaceAll('("pick your name")', '`pick your name`');
-    src = src.replaceAll('("connection lost")', '`connection lost`');
+    // src = src.replaceAll('("canvas")', '`canvas`');
+    // src = src.replaceAll('("2d")', '`2d`');
+    // src = src.replaceAll('(",")', '`,`');
+    // src = src.replaceAll('getItem("_")', 'getItem`_`');
+    // src = src.replaceAll('("pick your name")', '`pick your name`');
+    // src = src.replaceAll('("connection lost")', '`connection lost`');
 
     src = src.replace(`"################################"`, `"${alphabet}"`);
 

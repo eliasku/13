@@ -79,12 +79,10 @@ export const EMOJI: Record<number, string> = [];
 
 export const img: Texture[] = [];
 
-rehash(CanvasRenderingContext2D.prototype);
-rehash(CanvasGradient.prototype);
 export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasRenderingContext2D): CanvasRenderingContext2D => {
     _canvas = document.createElement("canvas");
     _canvas.width = _canvas.height = size;
-    _canvas = _canvas.getContext("2d");
+    _canvas = rehash(_canvas.getContext("2d"));
     _canvas.fillStyle = _canvas.strokeStyle = "#fff";
     _canvas.textAlign = "center";
     _canvas.textBaseline = "middle";
@@ -291,7 +289,7 @@ export const loadAtlas = (): void => {
     {
         const ctx = createCanvas(64);
         ctx.translate(32, 32);
-        const grd = ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32);
+        const grd = rehash(ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32));
         grd.addColorStop(0, "rgba(255,255,255,1)");
         grd.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = grd;

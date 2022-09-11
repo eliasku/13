@@ -2,37 +2,28 @@ import {GL} from "./gl";
 import {M} from "../utils/math";
 import {rehash} from "../utils/hasher";
 
-type Renderer = WebGLRenderingContext & {
-    instancedArrays_?: ANGLE_instanced_arrays;
-    quadCount_?: number;
-    quadProgram_?: WebGLProgram;
-    quadTexture_?: WebGLTexture;
-};
-
-rehash(WebGLRenderingContext.prototype);
-export const gl = c.getContext("webgl", {
+export const gl = rehash(c.getContext("webgl", {
     antialias: false,
-}) as Renderer;
-
-gl.instancedArrays_ = gl.getExtension('ANGLE_instanced_arrays')!;
+}));
+const instancedArrays = rehash(gl.getExtension('ANGLE_instanced_arrays')!);
 
 if (process.env.NODE_ENV === "development") {
-    if (!gl?.instancedArrays_) {
+    if (!gl || !instancedArrays) {
         alert("WebGL is required");
     }
 }
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
-gl.quadCount_ = 0;
 
+//export let DPR = 1;
 (onresize = (_?: any,
              w: number = innerWidth,
              h: number = innerHeight,
              s: number = devicePixelRatio) => {
-    c.style.width = w + "px";
-    c.style.height = h + "px";
     c.width = w * s;
     c.height = h * s;
+    c.style.width = w + "px";
+    c.style.height = h + "px";
 })();
 
 const maxBatch = 65535;
@@ -47,6 +38,9 @@ const byteSize = floatSize * 4;
 const floatView = new Float32Array(1 << 20);
 const uintView = new Uint32Array(floatView.buffer);
 // let program: WebGLProgram | null = gl.createProgram();
+let quadCount = 0;
+let quadProgram: WebGLProgram;
+let quadTexture: WebGLTexture;
 
 const shader = `attribute vec2 g;
 attribute vec2 a;
@@ -118,23 +112,23 @@ const GLSLX_NAME_M = "p";
     }
 
     const bindAttrib = (name: string | GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
-        name = gl.getAttribLocation(gl.quadProgram_, name as string);
+        name = gl.getAttribLocation(quadProgram, name as string);
         gl.enableVertexAttribArray(name);
         gl.vertexAttribPointer(name, size, type, norm, stride, offset);
         if (divisor) {
-            gl.instancedArrays_.vertexAttribDivisorANGLE(name, divisor);
+            instancedArrays.vertexAttribDivisorANGLE(name, divisor);
         }
     }
 
-    gl.quadProgram_ = gl.createProgram();
-    gl.attachShader(gl.quadProgram_, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
-    gl.attachShader(gl.quadProgram_, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
-    gl.linkProgram(gl.quadProgram_);
+    quadProgram = gl.createProgram();
+    gl.attachShader(quadProgram, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
+    gl.attachShader(quadProgram, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
+    gl.linkProgram(quadProgram);
 
     if (process.env.NODE_ENV === "development") {
-        if (!gl.getProgramParameter(gl.quadProgram_, GL.LINK_STATUS)) {
-            const error = gl.getProgramInfoLog(gl.quadProgram_);
-            gl.deleteProgram(gl.quadProgram_);
+        if (!gl.getProgramParameter(quadProgram, GL.LINK_STATUS)) {
+            const error = gl.getProgramInfoLog(quadProgram);
+            gl.deleteProgram(quadProgram);
             console.error(error);
         }
     }
@@ -261,7 +255,7 @@ export const setupProjection = (
     |           0|           0| -1/depth| 0|
     | -2x/width-1| 2y/height+1|        0| 1|
     */
-    gl.uniformMatrix4fv(gl.getUniformLocation(gl.quadProgram_, GLSLX_NAME_M), false, [
+    gl.uniformMatrix4fv(gl.getUniformLocation(quadProgram, GLSLX_NAME_M), false, [
         c * w, s * h, 0, 0,
         -s * w, c * h, 0, 0,
         0, 0, -1, 0,
@@ -270,13 +264,13 @@ export const setupProjection = (
         0, 1,
     ]);
 
-    gl.uniform1i(gl.getUniformLocation(gl.quadProgram_, GLSLX_NAME_X), 0);
+    gl.uniform1i(gl.getUniformLocation(quadProgram, GLSLX_NAME_X), 0);
 }
 
 export const beginRender = () => {
     gl.enable(GL.BLEND);
     gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
-    gl.useProgram(gl.quadProgram_);
+    gl.useProgram(quadProgram);
 }
 
 export const clear = (r: number, g: number, b: number, a: number) => {
@@ -300,21 +294,21 @@ export const beginRenderToMain = (x: number, y: number, px: number, py: number, 
     gl.viewport(0, 0, w, h);
 }
 
-export const flush = (_count = gl.quadCount_) => {
+export const flush = (_count = quadCount) => {
     if (_count) {
-        gl.bindTexture(GL.TEXTURE_2D, gl.quadTexture_);
+        gl.bindTexture(GL.TEXTURE_2D, quadTexture);
         gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, _count * floatSize));
-        gl.instancedArrays_.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, _count);
-        gl.quadCount_ = 0;
+        instancedArrays.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, _count);
+        quadCount = 0;
     }
 }
 
 export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) => {
-    if (gl.quadTexture_ != texture.texture_ || gl.quadCount_ == maxBatch) {
+    if (quadTexture != texture.texture_ || quadCount == maxBatch) {
         flush();
-        gl.quadTexture_ = texture.texture_;
+        quadTexture = texture.texture_;
     }
-    let i = gl.quadCount_++ * floatSize;
+    let i = quadCount++ * floatSize;
     floatView[i++] = texture.x_;
     floatView[i++] = texture.y_;
     floatView[i++] = sx * texture.w_;

@@ -50,7 +50,6 @@ setInterval(() => {
 const constructMessage = (id: number, data: string) =>
     `id:${id}\ndata:${data}\n\n`;
 
-
 const sendServerEvent = (client: ClientState, event: ServerEventName, data: string) =>
     client.eventStream_.write(
         constructMessage(client.nextEventId_++, event + data),
@@ -107,46 +106,42 @@ const processServerEvents = (req: IncomingMessage, res: ServerResponse) => {
 }
 
 const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
-    try {
-        const buffers = [];
-        for await (const chunk of req) {
-            buffers.push(chunk);
-        }
-        const data = Buffer.concat(buffers).toString();
-        return JSON.parse(data) as Request;
-    } catch {
-        console.warn("error decode JSON from /_");
+    const buffers = [];
+    for await (const chunk of req) {
+        buffers.push(chunk);
     }
+    return JSON.parse(Buffer.concat(buffers).toString()) as Request;
 }
 
-const processIncomeMessages = async (req: IncomingMessage, res: ServerResponse) => {
-    const reqData = await readJSON(req);
-    if (!reqData) {
-        res.writeHead(500);
-        res.end();
-    }
-    // process new clients
-    const client = clients.get(reqData[0]);
-    if (!client) {
-        // handle on client bad connection state (need to connect again and get new ID)
-        console.warn("client is not active: ", reqData[0]);
-        res.writeHead(404);
-        res.end();
-        return;
-    }
-
-    client.ts_ = performance.now();
-    let numProcessedMessages = 0;
-    for (const msg of reqData[1]) {
-        const toClient = clients.get(msg[MessageField.Destination]);
-        if (toClient) {
-            sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
+const processIncomeMessages = (req: IncomingMessage, res: ServerResponse) =>
+    readJSON(req).then((reqData) => {
+        if (!reqData) {
+            res.writeHead(500);
+            res.end();
         }
-        ++numProcessedMessages;
-    }
-    res.writeHead(200, HDR.n);
-    res.end("" + numProcessedMessages);
-}
+        // process new clients
+        const client = clients.get(reqData[0]);
+        if (client) {
+            client.ts_ = performance.now();
+            let numProcessedMessages = 0;
+            for (const msg of reqData[1]) {
+                const toClient = clients.get(msg[MessageField.Destination]);
+                if (toClient) {
+                    sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
+                }
+                ++numProcessedMessages;
+            }
+            res.writeHead(200, HDR.n);
+            res.end("" + numProcessedMessages);
+        } else {
+            // handle on client bad connection state (need to connect again and get new ID)
+            console.warn("client is not active: ", reqData[0]);
+            res.writeHead(404);
+            res.end();
+        }
+    }).catch(() => {
+        console.warn("error handle income message /_");
+    })
 
 const serveStatic = (file: string, res: ServerResponse, mime: OutgoingHttpHeaders) =>
     readFile(
@@ -180,4 +175,4 @@ createServer((req: IncomingMessage, res: ServerResponse) => {
 }).listen(+process.env.PORT || 8080);
 
 // console will be dropped for prod build
-console.log(`Local server http://localhost:8080`);
+console.log("Local server http://localhost:8080");

@@ -1,12 +1,8 @@
 import {audioContext} from "../audio/context";
-import {rehash} from "./hasher";
 
-if(!!window.TouchEvent) {
-    rehash(TouchEvent.prototype);
-    rehash(TouchList.prototype);
-}
-rehash(MouseEvent.prototype);
-rehash(KeyboardEvent.prototype);
+/// make cold id to hot id
+// const _preventDefault = (e:Event) => e.preventDefault();
+// const _whichKey = (e:KeyboardEvent) => e.which;
 
 export interface Pointer {
     id_: number;
@@ -122,22 +118,21 @@ export const keyboardUp = new Set<number>();
 // INIT INPUT
     mousePointer = newPointer(0);
 
-    oncontextmenu = e => e.preventDefault();
+    oncontextmenu = e=> e.preventDefault();
 
     /*document.*/
-    onkeydown = (e: KeyboardEvent) => {
-        // e.preventDefault();
-        if (!keyboardState.has(e.which) && !e.repeat) {
-            keyboardDown.add(e.which);
-            keyboardState.add(e.which);
+    onkeydown = (e: KeyboardEvent, _kode = e.which) => {
+        if (!keyboardState.has(_kode) && !e.repeat) {
+            keyboardDown.add(_kode);
+            keyboardState.add(_kode);
         }
         unlockAudio();
     };
     /*document.*/
-    onkeyup = (e: KeyboardEvent) => {
+    onkeyup = (e: KeyboardEvent, _kode = e.which) => {
         e.preventDefault();
-        if (keyboardState.delete(e.which)) {
-            keyboardUp.add(e.which);
+        if (keyboardState.delete(_kode)) {
+            keyboardUp.add(_kode);
         }
     };
 
@@ -149,7 +144,6 @@ export const keyboardUp = new Set<number>();
 
     c.onmouseup = (e) => {
         handleUp(mousePointer);
-        //e.preventDefault();
         // console.info("onmouseup");
     };
 

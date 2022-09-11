@@ -1,8 +1,8 @@
 import {M} from "./math";
 
 const enum Hash {
-    Seed = 2046694626,
-    Mod = 591,
+    Seed = 48639327,
+    Mod = 427,
 }
 
 const l3 = (i: number, a = "################################") => a[i % 32] + (i < 32 ? [] : a[i >> 5]);
@@ -14,7 +14,7 @@ const h2 = (str: string, seed = Hash.Seed, mod = Hash.Mod, _c?: string) => {
     return seed % mod;
 }
 
-export const rehash = <T extends object>(obj: T): void => {
+export const rehash = <T extends object>(obj: T): T => {
     // if (process.env.NODE_ENV === "development") {
     //     (window as any).REHASH_FIELDS ??= {};
     //     const name = obj.constructor.name;
@@ -39,6 +39,7 @@ export const rehash = <T extends object>(obj: T): void => {
             });
         }
     }
+    return obj;
 }
 
 if (0 && process.env.NODE_ENV === "development") {

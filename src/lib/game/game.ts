@@ -859,15 +859,15 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                 const b = getNameById(actor.client_);
                 if (a) {
                     let t = b ? [
-                        `${a} CRUSHED ${b}!`,
-                        `${a} destroyed ${b}!`,
-                        `${a} killed ${b}!`,
-                        `${a} took ${b} life`,
+                        a + " CRUSHED " + b,
+                        a + " destroyed " + b,
+                        a + " killed " + b,
+                        a + " took " + b + " life",
                     ] : [
-                        `warm-up for ${a}!`,
-                        `${a} killed someone`,
-                        `death by ${a}`,
-                        `${a} sows DEATH!`
+                        "warm-up for " + a,
+                        a + " killed someone",
+                        "death by " + a,
+                        a + " sows DEATH",
                     ]
                     speak(fxRandElement(t));
                 }

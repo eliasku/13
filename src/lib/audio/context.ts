@@ -1,7 +1,6 @@
 import {rehash} from "../utils/hasher";
 
-rehash(AudioContext.prototype);
-export const audioContext = new AudioContext();
+export const audioContext = rehash(new AudioContext());
 
 export type AudioBufferWithState = AudioBuffer & {
     currentSource_?: AudioBufferSourceNode

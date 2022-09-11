@@ -10,7 +10,6 @@ export interface RemoteClient {
     debugPacketByteLength?: number;
 }
 
-rehash(EventSource.prototype);
 rehash(RTCPeerConnection.prototype);
 rehash(RTCDataChannel.prototype);
 
@@ -31,11 +30,10 @@ export const setUserName = (name: string) => {
 const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>
     messagesToPost.push([clientId, to, type, call, data]);
 
-const remoteCall = (to: ClientID, type: MessageType, data: MessageData): Promise<Message> =>
-    new Promise((resolve) => {
-        callbacks[nextCallId] = resolve;
-        remoteSend(to, type, data, nextCallId++);
-    });
+const remoteCall = (to: ClientID, type: MessageType, data: MessageData, callback: (response: Message) => void): void => {
+    callbacks[nextCallId] = callback;
+    remoteSend(to, type, data, nextCallId++);
+}
 
 type Handler = ((req: Message) => Promise<MessageData>) |
     ((req: Message) => void);
@@ -53,22 +51,19 @@ export const disconnect = () => {
     _sseState = 0;
 }
 
+const handleOffer = (rc: RemoteClient, offer: RTCSessionDescriptionInit) =>
+    rc.pc_.setRemoteDescription(offer)
+        .then(() => rc.pc_.createAnswer())
+        .then(answer => rc.pc_.setLocalDescription(answer))
+        .then(() => rc.pc_.localDescription.toJSON())
+        .catch(() => console.warn("setRemoteDescription error"));
+
 const handlers: Handler[] = [
     // 0
     ,
     // MessageType.RtcOffer
-    async (req): Promise<RTCSessionDescriptionInit> => {
-        const remoteClient = requireRemoteClient(req[MessageField.Source]);
-        try {
-            await remoteClient.pc_.setRemoteDescription(req[MessageField.Data]);
-        } catch (err) {
-            console.warn("setRemoteDescription error");
-            return;
-        }
-        const answer = await remoteClient.pc_.createAnswer();
-        await remoteClient.pc_.setLocalDescription(answer);
-        return answer;
-    },
+    (req): Promise<RTCSessionDescriptionInit> =>
+        handleOffer(requireRemoteClient(req[MessageField.Source]), req[MessageField.Data]),
     // MessageType.RtcCandidate
     (req, _rc?: RemoteClient): void => {
         if (req[MessageField.Data].candidate) {
@@ -121,11 +116,14 @@ const onSSE: ((data: string) => void)[] = [
         _ids = data.split(",").map(Number);
         clientId = _ids.shift();
         _sseState = 2;
-        Promise.all(_ids.map(id => {
-            console.info(`remote client ${id} observed`);
-            remoteSend(id, MessageType.Name, clientName);
-            return connectToRemote(requireRemoteClient(id));
-        })).then((_) => {
+        Promise.all(
+            _ids.map(
+                id => {
+                    remoteSend(id, MessageType.Name, clientName)
+                    return connectToRemote(requireRemoteClient(id))
+                }
+            )
+        ).then((_) => {
             _sseState = 3;
         });
     },
@@ -156,7 +154,7 @@ export const connect = () => {
         messageUploading = false;
         messagesToPost = [];
         callbacks = [];
-        eventSource = new EventSource(/*EventSourceUrl*/ "_");
+        eventSource = rehash(new EventSource(/*EventSourceUrl*/ "_"));
         eventSource.onerror = disconnect;
         // eventSource.onerror = (e) => {
         //     console.warn("server-event error");
@@ -168,21 +166,16 @@ export const connect = () => {
 
 // RTC
 
-const sendOffer = async (remoteClient: RemoteClient, iceRestart?: boolean) => {
-    try {
-        console.log("send offer to " + remoteClient.id_);
-        const pc = remoteClient.pc_;
-        const offer = await pc.createOffer({iceRestart});
-        await pc.setLocalDescription(offer);
-        const result = (await remoteCall(remoteClient.id_, MessageType.RtcOffer, offer))
-            [MessageField.Data];
-        if (result) {
-            await pc.setRemoteDescription(new RTCSessionDescription(result));
-        }
-    } catch (e) {
-        console.warn("Couldn't create offer");
-    }
-}
+const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
+    rc.pc_.createOffer({iceRestart})
+        .then(offer => rc.pc_.setLocalDescription(offer))
+        .then(() =>
+            remoteCall(
+                rc.id_, MessageType.RtcOffer, rc.pc_.localDescription.toJSON(),
+                (message) => rc.pc_.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
+            )
+        )
+        .catch();
 
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
@@ -221,20 +214,22 @@ const closePeerConnection = (rc?: RemoteClient) => {
     }
 }
 
-const connectToRemote = async (rc: RemoteClient) => {
+const connectToRemote = (rc: RemoteClient): Promise<void> => {
     rc.pc_.oniceconnectionstatechange = e => {
         if ("fd".indexOf(rc.pc_?.iceConnectionState[0]) >= 0) {
             sendOffer(rc, true);
         }
     };
     console.log("connecting to " + rc.id_);
-    await sendOffer(rc);
-    rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
-    setupDataChannel(rc);
+    return sendOffer(rc).then(_ => {
+        rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
+        setupDataChannel(rc);
+    });
 }
 
 const setupDataChannel = (rc: RemoteClient) => {
     if (rc.dc_) {
+        // TODO: rc.dc_?.
         rc.dc_.binaryType = "arraybuffer";
         rc.dc_.onmessage = (msg) => channels_processMessage(rc.id_, msg);
         // TODO: debug
