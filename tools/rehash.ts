@@ -42,24 +42,13 @@ const inputProps: Record<string, Record<string, string[]>> = {
 export const filter: string[] = ["clear", "state", "flush", "delete", "get", "has", "set", "filter", "map", "fill", "length"];
 
 export let propMap: Record<string, Set<string>> = {};
-export let usedMap: Record<string, Set<string>> = {};
-
-const refSource = readFileSync("public/c0.js", "utf8");
-const reFieldID = (from: string) => new RegExp("([.])(" + from + ")([^\\w_$]|$)", "gm");
 
 for (const map of Object.keys(inputProps)) {
     for (const type of Object.keys(inputProps[map])) {
         propMap[type] ??= new Set();
-        usedMap[type] ??= new Set();
         const fields = inputProps[map][type];
         for (const f of fields) {
             propMap[type].add(f);
-            if (filter.indexOf(f) < 0) {
-                refSource.replaceAll(reFieldID(f), (a, c1, c2, c3) => {
-                    usedMap[type].add(f);
-                    return "";
-                });
-            }
         }
     }
 }
@@ -102,6 +91,26 @@ const h2_ = (str: number[], seed: number, mod: number): number => {
 }
 
 if (process.argv.indexOf("--gen") > 0) {
+
+    const usedMap: Record<string, Set<string>> = {};
+    const refSource = readFileSync("public/c0.js", "utf8");
+    const reFieldID = (from: string) => new RegExp("([.])(" + from + ")([^\\w_$]|$)", "gm");
+
+    for (const map of Object.keys(inputProps)) {
+        for (const type of Object.keys(inputProps[map])) {
+            usedMap[type] ??= new Set();
+            const fields = inputProps[map][type];
+            for (const f of fields) {
+                if (filter.indexOf(f) < 0) {
+                    refSource.replaceAll(reFieldID(f), (a, c1, c2, c3) => {
+                        usedMap[type].add(f);
+                        return "";
+                    });
+                }
+            }
+        }
+    }
+
     let seed = 1;
     // let mod = 513; //Hash.Mod;
     let mod = 255; //32 * 32;
