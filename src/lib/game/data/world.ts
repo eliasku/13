@@ -1,7 +1,7 @@
 export const GRAVITY = 5;
 export const GRAVITY_WEAK = 3;
 
-export const OBJECT_RADIUS = 8;
+export const OBJECT_RADIUS = 10;
 export const BULLET_RADIUS = 4;
 
 export const PLAYER_HANDS_Z = 10;
@@ -15,15 +15,15 @@ export const OBJECT_RADIUS_BY_TYPE = [
     OBJECT_RADIUS,
     BULLET_RADIUS,
     OBJECT_RADIUS,
-    OBJECT_RADIUS + OBJECT_RADIUS / 2,
+    OBJECT_RADIUS + 4,
 ];
 
 export const OBJECT_HEIGHT = [
-    OBJECT_RADIUS + OBJECT_RADIUS / 2,
+    OBJECT_RADIUS + 4,
     OBJECT_RADIUS,
     0,
     0,
-    OBJECT_RADIUS * 2,
+    OBJECT_RADIUS + 4,
 ];
 export const OBJECT_GROUND_LOSS = [512, 2, 512, 2, 512];
 export const OBJECT_BOUNDS_LOSS = [2, 2, 1, 2];

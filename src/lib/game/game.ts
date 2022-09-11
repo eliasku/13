@@ -150,7 +150,7 @@ const newActorObject = (type: ActorType): Actor =>
 
 const newItemRandomEffect = (): Actor => {
     const item = newActorObject(ActorType.Item);
-    item.btn_ = ItemCategory.Effect | rand(2);
+    item.btn_ = ItemCategory.Effect;
     pushActor(item);
     return item;
 }
@@ -240,6 +240,7 @@ export const createSplashState = () => {
         pushActor(actor);
     }
     gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
+    startTic = 0;
 }
 
 const updateFrameTime = (ts: number) => {
@@ -251,7 +252,7 @@ const updateFrameTime = (ts: number) => {
 export const updateTestGame = (ts: number) => {
     updateFrameTime(ts);
 
-    if (startTic < 0 && !remoteClients.size) {
+    if (clientId && startTic < 0 && !remoteClients.size) {
         createSeedGameState();
     }
 
@@ -382,7 +383,7 @@ const checkPlayerInput = () => {
     }
 
     // RESPAWN EVENT
-    if (!waitToSpawn && !player && joined) {
+    if (clientId && !waitToSpawn && !player && joined) {
         if (isAnyKeyDown() || waitToAutoSpawn) {
             btn |= ControlsFlag.Spawn;
             waitToSpawn = true;
@@ -474,8 +475,8 @@ const tryRunTicks = (ts: number): number => {
         if (gameTic + Const.InputDelay < netTic) {
             // speed up
             // console.info("speed up");
-            // prevTime -= Const.NetDt * dropRate;
-            prevTime = nearPrevTime;
+            prevTime -= Const.InputDelay / Const.NetFq;
+            // prevTime = nearPrevTime;
             // prevTime = ts - Const.InputDelay * Const.NetDt;
         }
     }
@@ -627,16 +628,16 @@ const pickItem = (item: Actor, player: Actor) => {
             item.hp_ = item.btn_ = 0;
         }
     } else /*if(itemCat == ItemCategory.Effect)*/ {
-        if (itemId == EffectItemType.Med) {
-            playAt(player, Snd.med);
+        // if (itemId == EffectItemType.Med) {
+        //     playAt(player, Snd.med);
+        //     item.hp_ = item.btn_ = 0;
+        // } else if (itemId == EffectItemType.Health) {
+        if (player.hp_ < 10) {
+            ++player.hp_;
+            playAt(player, Snd.heal);
             item.hp_ = item.btn_ = 0;
-        } else if (itemId == EffectItemType.Health) {
-            if (player.hp_ < 10) {
-                ++player.hp_;
-                playAt(player, Snd.heal);
-                item.hp_ = item.btn_ = 0;
-            }
         }
+        // }
     }
 }
 
@@ -645,18 +646,17 @@ const updateGameCamera = () => {
         const l = state.actors_[ActorType.Player].filter(p => p.client_);
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
     }
-
     let cameraScale = BASE_RESOLUTION / M.min(gl.drawingBufferWidth, gl.drawingBufferHeight);
-    let cameraX = BOUNDS_SIZE >> 1;
-    let cameraY = BOUNDS_SIZE >> 1;
-    const p0 = getMyPlayer() ?? getRandomPlayer();
-    if (p0?.client_) {
-        const wpn = weapons[p0.weapon_];
-        cameraX = p0.x_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x_);
-        cameraY = p0.y_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y_);
-        cameraScale *= wpn.cameraScale_;
-    } else {
-
+    let cameraX = gameCamera[0];
+    let cameraY = gameCamera[1];
+    if (clientId) {
+        const p0 = getMyPlayer() ?? getRandomPlayer();
+        if (p0?.client_) {
+            const wpn = weapons[p0.weapon_];
+            cameraX = p0.x_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x_);
+            cameraY = p0.y_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y_);
+            cameraScale *= wpn.cameraScale_;
+        }
     }
     gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
     gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
@@ -868,8 +868,10 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                         a + " killed someone",
                         "death by " + a,
                         a + " sows DEATH",
-                    ]
-                    speak(fxRandElement(t));
+                    ];
+                    if(gameTic > lastAudioTic) {
+                        speak(fxRandElement(t));
+                    }
                 }
             }
         }
@@ -952,7 +954,7 @@ const updatePlayer = (player: Actor) => {
         const vel = speed * 60;
         player.u_ = reach(player.u_, vel * moveDirX, vel * c);
         player.v_ = reach(player.v_, vel * moveDirY, vel * c);
-        if (grounded && !(gameTic % (20 / speed))) {
+        if (grounded && !((gameTic + player.anim0_) % (20 / speed))) {
             playAt(player, Snd.step);
         }
     } else {
@@ -1186,8 +1188,8 @@ const drawItem = (item: Actor) => {
     } else /*if (cat == ItemCategory.Effect)*/ {
         const anim = item.anim0_ / 0xFF;
         const s = 1 + 0.1 * M.sin(16 * (lastFrameTs + anim * 10));
-        const o = 2 * M.cos(lastFrameTs + anim * 10);
-        draw(img[Img.item0 + idx], item.x_, item.y_ - item.z_ - OBJECT_RADIUS - o, 0, s, s, 1, COLOR_WHITE, 0, colorOffset);
+        // const o = 2 * M.cos(lastFrameTs + anim * 10);
+        draw(img[Img.item0 + idx], item.x_, item.y_ - item.z_ - BULLET_RADIUS, 0, s, s, 1, COLOR_WHITE, 0, colorOffset);
     }
 }
 
@@ -1367,7 +1369,7 @@ const drawObjects = () => {
 /// SOUND ENV ///
 
 const playAt = (actor: Actor, id: Snd) => {
-    if (gameTic >= lastAudioTic) {
+    if (gameTic > lastAudioTic) {
         let lx = BOUNDS_SIZE / 2;
         let ly = BOUNDS_SIZE / 2;
         const p0 = getMyPlayer();

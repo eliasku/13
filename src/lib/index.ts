@@ -3,9 +3,9 @@ import {isAnyKeyDown, updateInput} from "./utils/input";
 import {termPrint} from "./graphics/ui";
 import {createSplashState, resetGame, updateTestGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
-import {play, speak} from "./audio/context";
+import {speak} from "./audio/context";
 import {updateFpsMeter} from "./utils/fpsMeter";
-import {Snd, snd} from "./assets/sfx";
+import {updateSong} from "./audio/gen";
 
 const enum StartState {
     Loading = 0,
@@ -45,7 +45,7 @@ const goToSplash = () => {
 new FontFace("e", "url(e.ttf),local(Arial)").load().then((font) => {
     document.fonts.add(font);
     loadAtlas();
-    goToSplash();
+    //goToSplash();
     if (!clientName) {
         setUserName(prompt("pick your name") || "guest");
     }
@@ -55,6 +55,7 @@ const raf = (ts: DOMHighResTimeStamp) => {
     ts /= 1000;
     //** DO FRAME **//
     l.innerText = updateFpsMeter(ts) + "\n";
+    updateSong(state != StartState.Connected);
 
     switch (state) {
         case StartState.TapToConnect:
@@ -66,18 +67,25 @@ const raf = (ts: DOMHighResTimeStamp) => {
             }
             break;
         case StartState.Loading:
+            l.innerText += "tap to start";
+            if(isAnyKeyDown()) {
+                goToSplash();
+            }
+            break;
         case StartState.Connecting:
             termPrint("╫╪"[ts * 9 & 0x1]);
             if (_sseState == 3) {
                 state = StartState.Connected;
-                play(snd[Snd.bgm], 0.5, 0, true);
+                //play(snd[Snd.bgm], 0.5, 0, true);
+
+                //instrumentParameters[2] *= 2 ** ((note - 12) / 12)
                 speak("Fight!");
             }
             break;
         default:
             updateTestGame(ts);
             if (!_sseState) {
-                snd[Snd.bgm].currentSource_?.stop();
+                //snd[Snd.bgm].currentSource_?.stop();
                 goToSplash();
             }
             break;

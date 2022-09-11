@@ -163,11 +163,6 @@ export const testRayWithSphere = (from: Actor, target: Actor, dx: number, dy: nu
     return dSq <= rSq;
 }
 
-// const __I32 = new Int32Array(1);
-// function roundI32(f:number):number {
-//     __I32[0] = f * Const.NetPrecision;
-//     return __I32[0] / Const.NetPrecision;
-// }
 const f_16_16 = (x: number): number => ((x * Const.NetPrecision) | 0) / Const.NetPrecision;
 
 export const roundActors = (list: Actor[]) => {

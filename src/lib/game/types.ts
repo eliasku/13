@@ -16,8 +16,7 @@ export const enum ItemCategory {
 }
 
 export const enum EffectItemType {
-    Med = 0,
-    Health = 1,
+    Health = 0,
 }
 
 export interface Pos {
