@@ -39,6 +39,7 @@ const poem = "The horse ran faster than a gazelle.\n" +
 
 const goToSplash = () => {
     state = StartState.TapToConnect;
+    resetGame();
     createSplashState();
 }
 
@@ -74,12 +75,17 @@ const raf = (ts: DOMHighResTimeStamp) => {
             break;
         case StartState.Connecting:
             termPrint("╫╪"[ts * 9 & 0x1]);
+            updateTestGame(ts);
             if (_sseState == 3) {
                 state = StartState.Connected;
                 //play(snd[Snd.bgm], 0.5, 0, true);
 
                 //instrumentParameters[2] *= 2 ** ((note - 12) / 12)
                 speak("Fight!");
+            }
+            else if(!_sseState) {
+                //snd[Snd.bgm].currentSource_?.stop();
+                goToSplash();
             }
             break;
         default:

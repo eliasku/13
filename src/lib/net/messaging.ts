@@ -110,7 +110,10 @@ const onSSE: ((data: string) => void)[] = [
     // CLOSE
     disconnect as ((data: string) => void),
     // PING
-    () => _post([]).catch(disconnect),
+    () => {
+        remoteSend(0, MessageType.Nop, 0);
+        processMessages();
+    },
     // INIT
     (data: string, _ids?: number[]) => {
         _ids = data.split(",").map(Number);
@@ -121,7 +124,7 @@ const onSSE: ((data: string) => void)[] = [
             return connectToRemote(requireRemoteClient(id))
         }))
             .then((_) => _sseState = 3)
-            .catch(() => _sseState = 0);
+            .catch(disconnect);
     },
     // UPDATE
     (data: string, _message?: Message, _call?: number, _cb?: (req: Message) => void) => {
