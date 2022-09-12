@@ -17,7 +17,7 @@ Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https
 #### 📱 Touch-screen
 - Use Left Joystick to walk-run-jump
 - Use Right Joystick to aim-shoot (Move around aim-shoot zones to trigger some weapons like Pistol)
-- Use Right `DROP` button to drop the weapon
+- Use `DROP` button to drop the weapon
 
 ### 📜 Rules 
 
