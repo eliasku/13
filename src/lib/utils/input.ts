@@ -95,7 +95,7 @@ export const keyboardUp = new Set<number>();
     }
 
     const handleUp = (p: Pointer) => {
-        p.upEvent_ = true;
+        p.upEvent_ = p.active_;
         p.active_ = false;
         // console.info("-up:", pointer.id_);
     }

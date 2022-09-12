@@ -964,7 +964,8 @@ const updatePlayer = (player: Actor) => {
             const item = newActorObject(ActorType.Item);
             pushActor(item);
             copyPosFromActorCenter(item, player);
-            addVelFrom(item, player, 0.5);
+            addPos(item, lookDirX, lookDirY, 0, OBJECT_RADIUS);
+            addVelFrom(item, player);
             addVelocityDir(item, lookDirX, lookDirY, 0, 64);
             // set weapon item
             item.btn_ = ItemCategory.Weapon | player.weapon_;
