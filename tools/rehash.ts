@@ -93,7 +93,7 @@ const h2_ = (str: number[], seed: number, mod: number): number => {
 if (process.argv.indexOf("--gen") > 0) {
 
     const usedMap: Record<string, Set<string>> = {};
-    const refSource = readFileSync("public/c0.js", "utf8");
+    const refSource = readFileSync("build/client0.js", "utf8");
     const reFieldID = (from: string) => new RegExp("([.])(" + from + ")([^\\w_$]|$)", "gm");
 
     for (const map of Object.keys(inputProps)) {

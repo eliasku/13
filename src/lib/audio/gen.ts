@@ -1,7 +1,6 @@
-import {AudioBufferWithState, audioContext} from "./context";
+import {audioContext} from "./context";
 import {Snd, snd} from "../assets/sfx";
 import {fxRand} from "../utils/rnd";
-import {termPrint} from "../graphics/ui";
 
 // 0 1 2 3 4 5 6 7 8 9 10 11 12
 // 0   2 3   5   7 8   10    12
@@ -12,17 +11,16 @@ const scalenotes = [0, 2, 3, 5, 7, 8, 10, 12, 12 + 2, 12 + 3, 12 + 5, 12 + 7, 12
 const bassFilter = audioContext.createBiquadFilter();
 bassFilter.connect(audioContext.destination);
 
-const playNote = (audioBuffer: AudioBufferWithState,
-                  note: number, when: number, len: number = 1, dest: AudioNode = audioContext.destination) => {
+const playNote = (sndId: Snd, note: number, when: number,
+                  len: number = 1, dest: AudioNode = audioContext.destination) => {
     const s = audioContext.createBufferSource();
-    s.buffer = audioBuffer;
+    s.buffer = snd[sndId];
     s.detune.value = note * 100;//2 ** ((note - 12) / 12);
 
     s.connect(dest);
     s.start(when, 0, len);
 }
 
-let currentMusicTic = 0;
 let currentBar = 0;
 let musicEndTime = 0;
 export const updateSong = (mainMenu: boolean) => {
@@ -37,8 +35,8 @@ export const updateSong = (mainMenu: boolean) => {
         let snares = fxRand(2) && !mainMenu;
         let hats = fxRand(2) && !mainMenu;
         let brk = fxRand(4) == 0 || mainMenu;
-        let q =  mainMenu ? 0 : fxRand(2);
-        let fq =  mainMenu ? fxRand(2000) : fxRand(10000);
+        let q = mainMenu ? 0 : fxRand(2);
+        let fq = mainMenu ? fxRand(2000) : fxRand(10000);
         bassFilter.Q.linearRampToValueAtTime(q, time + (t + 8) * k);
         bassFilter.frequency.linearRampToValueAtTime(fq, time + (t + 8) * k)
 
@@ -62,21 +60,21 @@ export const updateSong = (mainMenu: boolean) => {
                 s = scalenotes[(noteStep + 1 + fxRand(5)) % scalenotes.length];
             }
             if (t % 16 < 8 || !brk) {
-                playNote(snd[Snd.bass], s, time + k * t, k, bassFilter);
+                playNote(Snd.bass, s, time + k * t, k, bassFilter);
             }
 
             if (t % 4 == 0) {
                 if (t % 8 == 4 && snares) {
-                    playNote(snd[Snd.snare], -4, time + t * k, k * 2);
+                    playNote(Snd.snare, -4, time + t * k, k * 2);
                 } else {
-                    playNote(snd[Snd.kick], 0, time + t * k, k * 2);
+                    playNote(Snd.kick, 0, time + t * k, k * 2);
                 }
             }
             if (t % 16 == 11 && fxRand(2) && snares) {
-                playNote(snd[Snd.kick], 0, time + t * k, k * 2);
+                playNote(Snd.kick, 0, time + t * k, k * 2);
             }
             if ((t % 8 > 5 || t % 2 == 0) && hats) {
-                playNote(snd[Snd.hat], 0, time + t * k, k);
+                playNote(Snd.hat, 0, time + t * k, k);
             }
 
             ++t;

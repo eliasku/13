@@ -4,8 +4,11 @@ import {filter, propMap} from "./rehash.js";
 
 let report = [];
 const files = ["public/c.js", "public/s.js", "public/index.html"];
-const zipFolderFiles = ["zip/c.js", "zip/s.js", "zip/index.html"];//, "zip/r"];
+const zipFolderFiles = ["public/c.js", "public/s.js", "public/index.html"];//, "zip/r"];
 const isProd = process.argv.indexOf("--dev") < 0;
+
+// build special debug.js and debug.html
+const buildDebugVersion = process.argv.indexOf("--debug") >= 0;
 const envDef = isProd ? "production" : "development";
 
 function del(...files: string[]) {
@@ -35,10 +38,15 @@ del(...files);
 del(...zipFolderFiles);
 
 execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
-copyFileSync("html/debug.html", "public/debug.html");
+
+if (buildDebugVersion) {
+    execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
+    copyFileSync("html/debug.html", "public/debug.html");
+    copyFileSync("html/index4.html", "public/index4.html");
+    copyFileSync("html/debug4.html", "public/debug4.html");
+}
 
 const manglePropsRegex = "._$";
-// execSync(`esbuild server/src/index.ts --bundle --minify --mangle-props=_$ --platform=node --target=node16 --format=esm --outfile=public/server.js`);
 const esbuildArgs: string[] = [];
 if (isProd) {
     // esbuildArgs.push("--minify");
@@ -54,31 +62,27 @@ if (isProd) {
     //esbuildArgs.push("--analyze");
 }
 
-execSync(`esbuild server/src/index.ts --tsconfig=server/tsconfig.json ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=public/s0.js --metafile=dump/server-build.json`, {
+execSync(`esbuild server/src/index.ts --tsconfig=server/tsconfig.json ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=build/server0.js --metafile=build/server0-build.json`, {
     encoding: "utf8",
     stdio: "inherit"
 });
-execSync(`esbuild src/lib/index.ts --tsconfig=tsconfig.json ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=public/c0.js --metafile=dump/client-build.json`, {
+execSync(`esbuild src/lib/index.ts --tsconfig=tsconfig.json ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=build/client0.js --metafile=build/client0-build.json`, {
     encoding: "utf8",
     stdio: "inherit"
 });
 // copyFileSync("client.js", "public/c0.js");
 // copyFileSync("server.js", "public/s0.js");
 
-report.push("BUILD: " + sz("public/c0.js", "public/s0.js", "public/index.html"));
+report.push("BUILD: " + sz("build/client0.js", "build/server0.js", "public/index.html"));
 
-mangle_types("public/c0.js", "public/c1.js");
-mangle_types("public/s0.js", "public/s1.js");
+mangle_types("build/client0.js", "build/client1.js");
+mangle_types("build/server0.js", "build/server1.js");
 // copyFileSync("public/c0.js", "public/c1.js");
 // copyFileSync("public/s0.js", "public/s1.js");
 
-report.push("MANGLE: " + sz("public/c1.js", "public/s1.js", "public/index.html"));
+report.push("MANGLE: " + sz("build/client1.js", "build/server1.js", "public/index.html"));
 
 const pureFunc = [
-    // 'console.log',
-    // 'console.warn',
-    // 'console.info',
-    // 'console.error',
     'M.sin',
     'M.cos',
     'M.sqrt',
@@ -93,10 +97,8 @@ const pureFunc = [
     'reach',
     'lerp',
     'toRad',
-    // 'getLumaColor32',
     'temper',
     'unorm_f32_from_u32',
-    // 'newPointer',
 ];
 
 const compress = [
@@ -112,32 +114,17 @@ const compress = [
     "inline=3",
 ];//"unsafe=true",
 
+execSync(`terser build/server1.js -f wrap_func_args=false --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o build/server2.js`);
+execSync(`terser build/client1.js -f wrap_func_args=false --toplevel --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o build/client2.js`);
 
-let tl = "--toplevel";
-execSync(`terser public/s1.js -f wrap_func_args=false ${tl} --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/s.js`);
-execSync(`terser public/c1.js -f wrap_func_args=false ${tl} --module --ecma=2020 -c ${compress.join(",")} --mangle-props regex=/${manglePropsRegex}/ -m -o public/c.js`);
+report.push("TERSER: " + sz("build/client2.js", "build/server2.js", "public/index.html"));
 
-report.push("TERSER: " + sz(...files));
+rehashWebAPI("build/client2.js", "build/client2.js");
 
-rehashWebAPI("public/c.js", "public/c.js");
+report.push("REHASH: " + sz("build/client2.js", "build/server2.js", "public/index.html"));
 
-report.push("REHASH: " + sz(...files));
-
-// debug.js
-execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=public/debug.js`);
-// rehashWebAPI("public/debug.js", "public/debug.js");
-
-// function postprocess(file) {
-//     let A = readFileSync(file, "utf8");
-//     A = A.replaceAll(new RegExp("([^\\w_$]|^)(const\\s)", "gm"), (a, c1, c2) => {
-//         return c1 + "let ";
-//     });
-//     writeFileSync(file, A, "utf8");
-// }
-//
-// postprocess("public/c.js");
-// postprocess("public/s.js");
-// report.push("TERSER+: " + sz(...files));
+copyFileSync("build/server2.js", "public/s.js");
+copyFileSync("build/client2.js", "public/c.js");
 
 console.info("release build ready... " + sz(...files));
 
@@ -147,9 +134,7 @@ if (process.argv.indexOf("--zip") > 0) {
     // execSync(`zip -9 -X -D game.zip public/index.js public/server.js public/index.html`);
     // report.push("ZIP: " + sz("game.zip"));
 
-    execSync(`roadroller -D -O2 -- public/c.js -o zip/c.js`);
-    copyFileSync("public/s.js", "zip/s.js");
-    copyFileSync("public/index.html", "zip/index.html");
+    execSync(`roadroller -D -O2 -- build/client2.js -o public/c.js`);
 
     report.push("ROADROLL: " + sz(...zipFolderFiles));
 
@@ -370,11 +355,6 @@ function mangle_types(file: string, dest: string) {
             "fbo_",
         ],
 
-        // audio buffer source node
-        [
-            "currentSource_"
-        ],
-
         // SERVER CONNECTION
         [
             "id_",
@@ -423,8 +403,8 @@ function mangle_types(file: string, dest: string) {
 }
 
 const enum Hash {
-     Seed = 48639327,
-     Mod = 427,
+    Seed = 48639327,
+    Mod = 427,
 }
 
 function rehashWebAPI(file: string, dest: string) {
