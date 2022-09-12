@@ -58,7 +58,7 @@ Destroy objects 🛢 | 📦 | 🪦 to get items
 - Modern JS syntax support
 - Checked in the latest Chrome, Safari, Firefox on iOS, Android and Mac.
 
-## Resources
+## 📦 Resources
 
 Code for Music generation in runtime created by [author](https://twitter.com/eliaskuvoice). Some instrument samples are picked from [ZzFXM](https://keithclark.github.io/ZzFXM/) example song `Depp`
 
@@ -68,14 +68,27 @@ Emoji Font [Twemoji Mozilla](https://github.com/mozilla/twemoji-colr/releases) i
 
 Sound Effects - [ZZFX](https://github.com/KilledByAPixel/ZzFX).
 
-## Build compression
+## 💾 Build compression
 
 Shaders are minified in TypeScript source code by [GLSLX - online minifier](https://evanw.github.io/glslx/)
 
-1. [esbuild]() creates bundle from TypeScript source-code
-2. Merge and rename properties which are non-overlapping in scope of Type.
-3. [terser]() is used to minify and mangle javascript files
-4. Rehash properties for selected Web API classes (`WebGLRenderingContext`, `CanvasRenderingContext2D`, `AudioContext`, etc)
-5. Pack client with [RoadRoller](https://github.com/lifthrasiir/roadroller) is used for final compression
-6. Zip with [AdvanceCOMP](https://www.advancemame.it/comp-readme.html)
+1. [html-minifier](https://github.com/kangax/html-minifier) minifies `index.html`
+2. [esbuild](https://github.com/evanw/esbuild) creates bundle from TypeScript source-code
+3. Merge and rename properties which are non-overlapping in scope of Type.
+4. [terser](https://github.com/terser/terser) is used to minify and mangle javascript files
+5. Rehash properties for selected Web API classes (`WebGLRenderingContext`, `CanvasRenderingContext2D`, `AudioContext`, etc)
+6. Pack client with [RoadRoller](https://github.com/lifthrasiir/roadroller) is used for final compression
+7. Zip with [AdvanceCOMP](https://www.advancemame.it/comp-readme.html)
+
+## Build instructions
+
+```shell
+npm i
+npm run build --zip
+npm run start
+```
+
+Navigate to [localhost:8080](http://localhost:8080)
+
+Use `npm run build --debug` to generate `debug.js` and `index4.html` / `debug4.html` to enable testing 4-players on a page.
 
