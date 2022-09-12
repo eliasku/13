@@ -122,11 +122,11 @@ export const keyboardUp = new Set<number>();
 
     /*document.*/
     onkeydown = (e: KeyboardEvent, _kode = e.which) => {
+        unlockAudio();
         if (!keyboardState.has(_kode) && !e.repeat) {
             keyboardDown.add(_kode);
             keyboardState.add(_kode);
         }
-        unlockAudio();
     };
     /*document.*/
     onkeyup = (e: KeyboardEvent, _kode = e.which) => {
@@ -138,11 +138,11 @@ export const keyboardUp = new Set<number>();
 
     c.onmousedown = (e) => {
         _handleMouse(e, handleDown);
-        unlockAudio();
         // console.info("onmousedown");
     };
 
     c.onmouseup = (e) => {
+        unlockAudio();
         handleUp(mousePointer);
         // console.info("onmouseup");
     };
@@ -166,7 +166,6 @@ export const keyboardUp = new Set<number>();
 
     c.ontouchstart = (e: TouchEvent) => {
         _handleTouch(e, handleDown);
-        unlockAudio();
         // console.info("ontouchstart");
     };
     c.ontouchmove = (e: TouchEvent) => {
@@ -174,6 +173,7 @@ export const keyboardUp = new Set<number>();
         // console.info("ontouchmove");
     };
     c.ontouchend = (e: TouchEvent, _touch?:Touch) => {
+        unlockAudio();
         e.preventDefault();
         for (_touch of e.changedTouches) {
             handleUp(getPointer(_touch.identifier));
@@ -196,6 +196,6 @@ export const updateInput = () => {
 }
 
 export const isAnyKeyDown = () =>
-    mousePointer.downEvent_ ||
+    mousePointer.upEvent_ ||
     keyboardDown.size ||
-    [...inputPointers.values()].some(x => x.downEvent_);
+    [...inputPointers.values()].some(x => x.upEvent_);

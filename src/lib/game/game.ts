@@ -1,5 +1,5 @@
 import {ClientID} from "../../shared/types";
-import {clientId, disconnect, clientName, isPeerConnected, remoteClients} from "../net/messaging";
+import {clientId, disconnect, clientName, isPeerConnected, remoteClients, _sseState} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
@@ -294,10 +294,10 @@ const printStatus = () => {
                     termPrint(EMOJI[Img.weapon0 + p0.weapon_] + "\n");
                 }
             } else {
-                termPrint("Tap to spawn!\n");
+                termPrint("tap to respawn\n");
             }
         } else {
-            termPrint("Joining\n");
+            termPrint("joining\n");
         }
 
         const getPlayerIcon = (id?: ClientID) => {
@@ -1098,8 +1098,14 @@ const drawGame = () => {
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
+
+            // if(!_sseState) {
+                draw(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), 110 + y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
+            // }
+            // else {
+            //     scale *= 1.5 + 0.5 * Math.sin(lastFrameTs * 16);
+            // }
             draw(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
-            draw(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), 110 + y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
         }
     }
     drawCrosshair();

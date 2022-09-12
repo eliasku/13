@@ -9,9 +9,10 @@ import {updateSong} from "./audio/gen";
 
 const enum StartState {
     Loading = 0,
-    TapToConnect = 1,
-    Connecting = 2,
-    Connected = 3,
+    Loaded = 1,
+    TapToConnect = 2,
+    Connecting = 3,
+    Connected = 4,
 }
 
 let state = StartState.Loading;
@@ -20,6 +21,7 @@ const goToSplash = () => {
     state = StartState.TapToConnect;
     resetGame();
     createSplashState();
+    speak("13 the game");
 }
 
 new FontFace("e", "url(e.ttf),local(Arial)").load().then((font) => {
@@ -29,6 +31,7 @@ new FontFace("e", "url(e.ttf),local(Arial)").load().then((font) => {
     if (!clientName) {
         setUserName(prompt("pick your name") || "guest");
     }
+    state = StartState.Loaded;
 });
 
 const raf = (ts: DOMHighResTimeStamp) => {
@@ -41,23 +44,26 @@ const raf = (ts: DOMHighResTimeStamp) => {
         case StartState.TapToConnect:
             updateTestGame(ts);
             if (isAnyKeyDown()) {
-                resetGame();
                 state = StartState.Connecting;
+                resetGame();
                 connect();
             }
             break;
         case StartState.Loading:
-            l.innerText += "tap to start";
+            l.innerText = "loading" + ".".repeat((ts * 8) & 7);
+            break;
+        case StartState.Loaded:
+            l.innerText = "tap to start";
             if(isAnyKeyDown()) {
                 goToSplash();
             }
             break;
         case StartState.Connecting:
-            termPrint("╫╪"[ts * 9 & 0x1]);
             updateTestGame(ts);
+            termPrint(".".repeat((ts * 8) & 7));
             if (_sseState == 3) {
                 state = StartState.Connected;
-                speak("Fight!");
+                speak("fight");
             }
             else if(!_sseState) {
                 goToSplash();
