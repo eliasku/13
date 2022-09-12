@@ -132,7 +132,12 @@ if (process.argv.indexOf("--zip") > 0) {
     // execSync(`zip -9 -X -D game.zip public/index.js public/server.js public/index.html`);
     // report.push("ZIP: " + sz("game.zip"));
 
-    execSync(`roadroller -D -O2 -- build/client2.js -o public/c.js`);
+    let options = "";
+    if(process.argv.indexOf("--max") > 0) {
+        options = "-O2";
+    }
+    // execSync(`roadroller -O2 -- build/client2.js -o public/c.js`);
+    execSync(`roadroller ${options} -- build/client2.js -o public/c.js`);
 
     report.push("ROADROLL: " + sz(...files));
 
