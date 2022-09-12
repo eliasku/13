@@ -2,6 +2,52 @@
 
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
 
+## 📖 How to play
+
+### 🎮 Controls
+
+#### 🖱️Mouse | ⌨️ Keyboard
+- Move Mouse to aim and look around
+- Push Mouse button to shoot
+- Use `W A S D` / `↑ ← ↓ →` to move
+- Hold `Shift` to slow down moving
+- Press `E` to drop the weapon
+- Press `Space` to jump
+
+#### 📱 Touch-screen
+- Use Left Joystick to walk-run-jump
+- Use Right Joystick to aim-shoot (Move around aim-shoot zones to trigger some weapons like Pistol)
+- Use Right `DROP` button to drop the weapon
+
+### 📜 Rules 
+
+At spawn each Player or NPC has 10 hit points.
+
+- Player kills neutral NPC to gain +1 score.
+- Player kills another Player to gain +10 scores.
+
+Kill opponents 💀 | 👹 | 🤡 | 🤖 | 🎃 | 🦝 | 🐙 | 🐰 | 🦌 | 🐺 | 🐵 | 🦊 | 🐭 | 🦍 to gain scores
+
+Kill NPC 🍅 | 😐 | 🐷 to get scores
+
+### Items
+
+Destroy objects 🛢 | 📦 | 🪦 to get items
+
+- ❤️ Heart: pick to restore 1`hp`
+
+### Weapons
+
+- 🔪 Knife (melee)
+- 🪓 Axe (melee)
+- 🔫 Pistol (trigger)
+- 🖊 Machine-gun (auto)
+- ️✏️ Heavy machine-gun (auto)
+- 🪥 Shotgun (bouncing, scatter)
+- ⛏ Crossbow (high velocity)
+- 🔌 Plasma-gun (bouncing, auto)
+- 🧵 Rail-gun (piercing)
+
 ## Minimal requirements
 
 - **Good, low-latency network connection** is required for each playing client
