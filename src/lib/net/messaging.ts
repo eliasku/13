@@ -1,7 +1,6 @@
 import {ClientID, Message, MessageData, MessageField, MessageType, PostMessagesResponse} from "../../shared/types";
 import {channels_processMessage} from "./channels";
 import {rehash} from "../utils/hasher";
-import {clearInterval} from "timers";
 
 export interface RemoteClient {
     id_: ClientID;
@@ -117,18 +116,12 @@ const onSSE: ((data: string) => void)[] = [
         _ids = data.split(",").map(Number);
         clientId = _ids.shift();
         _sseState = 2;
-        Promise.all(
-            _ids.map(
-                id => {
-                    remoteSend(id, MessageType.Name, clientName)
-                    return connectToRemote(requireRemoteClient(id))
-                }
-            )
-        ).then((_) => {
-            _sseState = 3;
-        }).catch(() =>
-            _sseState = 0
-        );
+        Promise.all(_ids.map(id => {
+            remoteSend(id, MessageType.Name, clientName)
+            return connectToRemote(requireRemoteClient(id))
+        }))
+            .then((_) => _sseState = 3)
+            .catch(() => _sseState = 0);
     },
     // UPDATE
     (data: string, _message?: Message, _call?: number, _cb?: (req: Message) => void) => {
