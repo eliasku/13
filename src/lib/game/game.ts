@@ -506,8 +506,10 @@ const sendInput = () => {
                     tic_: inputTic,
                     events_: localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= inputTic),
                 };
-                if (!cl.ready_) {
+                if (!cl.ready_ && joined) {
                     packet.state_ = state;
+                    cl.tic_ = state.tic_;
+                    cl.acknowledgedTic_ = state.tic_;
                 }
                 if (process.env.NODE_ENV === "development") {
                     packet.debug = {
@@ -539,7 +541,8 @@ const processPacket = (sender: Client, data: Packet) => {
     if (startTic < 0 && data.state_) {
         if (data.state_.tic_ > getMinTic()) {
             netTic = 0;
-            prevTime = lastFrameTs - 1 / Const.NetFq;
+            updateFrameTime(performance.now() / 1000);
+            prevTime = lastFrameTs;
             state = data.state_;
             gameTic = startTic = state.tic_ + 1;
             recreateMap();
