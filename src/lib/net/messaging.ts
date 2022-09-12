@@ -17,15 +17,14 @@ export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
 let eventSource: EventSource | null = null;
 export let clientId: 0 | ClientID = 0;
-export let clientName: string | null = localStorage.getItem("_");
+export let clientName: string | null = localStorage.getItem("l3name");
 let messagesToPost: Message[] = [];
 let messageUploading = false;
 let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
-export const setUserName = (name: string) => {
-    localStorage.setItem("_", clientName = name);
-}
+export const setUserName = (name: string) =>
+    localStorage.setItem("l3name", clientName = name);
 
 const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>
     messagesToPost.push([clientId, to, type, call, data]);
