@@ -125,7 +125,9 @@ const onSSE: ((data: string) => void)[] = [
             )
         ).then((_) => {
             _sseState = 3;
-        });
+        }).catch(() =>
+            _sseState = 0
+        );
     },
     // UPDATE
     (data: string, _message?: Message, _call?: number, _cb?: (req: Message) => void) => {
@@ -174,8 +176,7 @@ const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
                 rc.id_, MessageType.RtcOffer, rc.pc_.localDescription.toJSON(),
                 (message) => rc.pc_.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
             )
-        )
-        .catch();
+        );
 
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
@@ -217,7 +218,7 @@ const closePeerConnection = (rc?: RemoteClient) => {
 const connectToRemote = (rc: RemoteClient): Promise<void> => {
     rc.pc_.oniceconnectionstatechange = e => {
         if ("fd".indexOf(rc.pc_?.iceConnectionState[0]) >= 0) {
-            sendOffer(rc, true);
+            sendOffer(rc, true).catch();
         }
     };
     console.log("connecting to " + rc.id_);
