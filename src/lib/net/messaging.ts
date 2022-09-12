@@ -1,6 +1,7 @@
 import {ClientID, Message, MessageData, MessageField, MessageType, PostMessagesResponse} from "../../shared/types";
 import {channels_processMessage} from "./channels";
 import {rehash} from "../utils/hasher";
+import {clearInterval} from "timers";
 
 export interface RemoteClient {
     id_: ClientID;
@@ -171,12 +172,10 @@ export const connect = () => {
 const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
     rc.pc_.createOffer({iceRestart})
         .then(offer => rc.pc_.setLocalDescription(offer))
-        .then(() =>
-            remoteCall(
-                rc.id_, MessageType.RtcOffer, rc.pc_.localDescription.toJSON(),
-                (message) => rc.pc_.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
-            )
-        );
+        .then(() => remoteCall(
+            rc.id_, MessageType.RtcOffer, rc.pc_.localDescription.toJSON(),
+            (message) => rc.pc_.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
+        ));
 
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
@@ -225,6 +224,17 @@ const connectToRemote = (rc: RemoteClient): Promise<void> => {
     return sendOffer(rc).then(_ => {
         rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
         setupDataChannel(rc);
+        return new Promise((resolve, reject) => {
+            let num = 20;
+            const timer = setInterval(() => {
+                if (isPeerConnected(rc)) {
+                    clearInterval(timer);
+                    resolve();
+                } else if (!--num) {
+                    reject();
+                }
+            }, 200);
+        });
     });
 }
 
