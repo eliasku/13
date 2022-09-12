@@ -1,7 +1,7 @@
 {
   "name": "@eliasku/js13k-2022",
   "version": "1.0.0",
-  "description": "js13k test game with p2p realtime multiplayer",
+  "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
     "start": "cd public && node s.js",

@@ -2,11 +2,16 @@
 
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
 
-<center>
-<img src="./images/13logo.gif" align="center">
-</center>
+<p align="center">
+<img src="./images/13logo.gif">
+</p>
 
 ## 📖 How to play
+
+Select and call friends to the room to play with friends:
+
+1. [Play on `🚪 grtc` | `🇪🇺 Europe`](https://grtc.herokuapp.com/)
+2. [Play on `🚪 ga13` | `🇺🇸 US`](https://ga13.herokuapp.com/)
 
 ### 🎮 Controls
 
