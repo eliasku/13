@@ -475,7 +475,8 @@ const tryRunTicks = (ts: number): number => {
         if (gameTic + Const.InputDelay < netTic) {
             // speed up
             // console.info("speed up");
-            prevTime -= Const.InputDelay / Const.NetFq;
+            // prevTime -= Const.InputDelay / Const.NetFq;
+            prevTime -= 1 / Const.NetFq;
             // prevTime = nearPrevTime;
             // prevTime = ts - Const.InputDelay * Const.NetDt;
         }
@@ -1035,7 +1036,7 @@ const beginPrediction = (): boolean => {
     if (!Const.Prediction) return false;
 
     // global state
-    let frames = M.min(Const.InputDelay, (lastFrameTs - prevTime) * Const.NetFq | 0);
+    let frames = M.min(Const.PredictionMax, (lastFrameTs - prevTime) * Const.NetFq | 0);
     if (!frames) return false;
 
     // save particles
