@@ -4,7 +4,6 @@ import {filter, propMap} from "./rehash.js";
 
 let report = [];
 const files = ["public/c.js", "public/s.js", "public/index.html"];
-const zipFolderFiles = ["public/c.js", "public/s.js", "public/index.html"];//, "zip/r"];
 const isProd = process.argv.indexOf("--dev") < 0;
 
 // build special debug.js and debug.html
@@ -35,7 +34,6 @@ function sz(...files: string[]) {
 
 del("game.zip");
 del(...files);
-del(...zipFolderFiles);
 
 execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html html/index.html`);
 
@@ -136,14 +134,11 @@ if (process.argv.indexOf("--zip") > 0) {
 
     execSync(`roadroller -D -O2 -- build/client2.js -o public/c.js`);
 
-    report.push("ROADROLL: " + sz(...zipFolderFiles));
+    report.push("ROADROLL: " + sz(...files));
 
     try {
         // https://linux.die.net/man/1/advzip
-        // execSync(`advzip --not-zip --shrink-insane --recompress game.zip`);
-        // advzip --not-zip --shrink-insane --iter=1000 --add game.zip zip/index.js zip/server.js zip/index.html
-        // --not-zip
-        execSync(`advzip --shrink-insane --iter=1000 --add game.zip ${zipFolderFiles.join(" ")}`);
+        execSync(`advzip --shrink-insane --iter=1000 --add game.zip ${files.join(" ")}`);
         execSync(`advzip --list game.zip`);
         const zipSize = sz("game.zip");
         report.push("LZMA: " + zipSize);

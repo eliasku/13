@@ -2,6 +2,10 @@
 
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
 
+<center>
+<img src="./images/13logo.gif" align="center">
+</center>
+
 ## 📖 How to play
 
 ### 🎮 Controls
