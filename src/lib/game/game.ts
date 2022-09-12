@@ -599,10 +599,9 @@ const cleaningUpClients = () => {
         }
     }
 
-    if (joined) {
+    if (clientId && startTic >= 0) {
         for (const [id, rc] of remoteClients) {
-            if (clients.get(id)?.isPlaying_ &&
-                (rc.pc_?.iceConnectionState[1] != "o" || rc.dc_?.readyState[0] != "o")) {
+            if (clients.get(id)?.isPlaying_ && !isPeerConnected(rc)) {
                 if (++disconnectTimes > 60 * 5) {
                     disconnect();
                     alert("connection lost");
