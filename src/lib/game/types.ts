@@ -37,8 +37,8 @@ export interface Actor extends Pos, Vel {
     client_: ClientID;
     btn_: number;
     // stpq
-    s_?: number;
-    t_?: number;
+    s_: number;
+    t_: number;
     // p?: number;
     // q?: number;
 

@@ -22,7 +22,7 @@ export const renderFogObjects = (list: Actor[]) => {
         let r = SOURCE_RADIUS_BY_TYPE[a.type_] / (32 * 4);
         if (r) {
             if (!a.type_ && a.client_ == clientId) {
-                r *= 3;
+                r *= 2;
             }
             draw(img[Img.light_circle], (a.x_ + 256) / 4, (a.y_ + 256 - a.z_) / 4, 0,
                 r, r, 1);

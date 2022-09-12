@@ -50,7 +50,7 @@ const raf = (ts: DOMHighResTimeStamp) => {
             }
             break;
         case StartState.Loading:
-            l.innerText = "loading" + ".".repeat((ts * 8) & 7);
+            termPrint(".".repeat((ts * 8) & 7));
             break;
         case StartState.Loaded:
             l.innerText = "tap to start";
@@ -59,8 +59,8 @@ const raf = (ts: DOMHighResTimeStamp) => {
             }
             break;
         case StartState.Connecting:
-            updateTestGame(ts);
             termPrint(".".repeat((ts * 8) & 7));
+            updateTestGame(ts);
             if (_sseState == 3) {
                 state = StartState.Connected;
                 speak("fight");

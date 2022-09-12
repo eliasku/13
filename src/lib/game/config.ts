@@ -1,7 +1,7 @@
 export const enum Const {
     NetFq = 60,
     InputDelay = 8,
-    PredictionMax = 16,
+    PredictionMax = 8,
 
     // ~35 bytes
     Prediction = 1,

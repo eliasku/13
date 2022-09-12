@@ -21,6 +21,8 @@ export const lerp = (a: number, b: number, t: number): number => (1 - t) * a + t
 /* @__PURE__ */
 export const getLumaColor32 = (luma: number): number => (luma << 16) | (luma << 8) | luma;
 
+export const dec1 = (x:number) => x ? --x : x;
+export const incTo = (x:number, max: number) => x < max ? ++x : x;
 //
 // /* @__PURE__ */
 // export function max(a:number, b: number) {

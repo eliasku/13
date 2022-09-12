@@ -49,7 +49,7 @@ export const printDebugInfo = (
 
     let text = gameTic > prevSimulatedTic ? "🌐" : "🥶";
     const ticsAhead = (lastFrameTs - prevTime) * Const.NetFq | 0;
-    const ticsPrediction = M.min(Const.InputDelay, ticsAhead);
+    const ticsPrediction = M.min(Const.PredictionMax, ticsAhead);
     if (ticsPrediction) text += "🔮";
     text += `~ ${ticsPrediction} of ${ticsAhead}\n`;
     prevSimulatedTic = gameTic;
@@ -78,7 +78,7 @@ export const printDebugInfo = (
         }
         text += "\n";
     }
-    termPrint(text + "\n");
+    termPrint(text);
 }
 
 export const updateDebugInput = () => {

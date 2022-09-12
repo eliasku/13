@@ -1,3 +1,3 @@
 export const termPrint = (text: string) => {
-    l.innerText += text;
+    l.innerText += text + "\n";
 }

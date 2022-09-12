@@ -2,7 +2,7 @@ export const GRAVITY = 5;
 export const GRAVITY_WEAK = 3;
 
 export const OBJECT_RADIUS = 10;
-export const BULLET_RADIUS = 4;
+export const BULLET_RADIUS = 6;
 
 export const PLAYER_HANDS_Z = 10;
 export const JUMP_VEL = 0x50;

@@ -1,5 +1,5 @@
 import {ClientID} from "../../shared/types";
-import {clientId, disconnect, clientName, isPeerConnected, remoteClients, _sseState} from "../net/messaging";
+import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
@@ -7,20 +7,9 @@ import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
-import {
-    Actor,
-    ActorType,
-    Client,
-    ClientEvent,
-    EffectItemType,
-    ItemCategory,
-    newStateData,
-    Packet,
-    StateData,
-    Vel
-} from "./types";
+import {Actor, ActorType, Client, ClientEvent, ItemCategory, newStateData, Packet, StateData, Vel} from "./types";
 import {pack, unpack} from "./packets";
-import {getLumaColor32, lerp, M, PI, PI2, reach} from "../utils/math";
+import {dec1, getLumaColor32, incTo, lerp, M, PI, PI2, reach} from "../utils/math";
 import {
     ControlsFlag,
     drawVirtualPad,
@@ -120,7 +109,10 @@ let trees: Actor[] = [];
 let state: StateData = newStateData();
 let lastState: StateData;
 
+// 0...50
 let cameraShake = 0;
+
+// 0...5
 let cameraFeedback = 0;
 
 // colors
@@ -168,6 +160,8 @@ export const resetGame = () => {
     receivedEvents.length = 0;
 
     state = newStateData();
+    normalizeState();
+
     // netTic = 0;
     startTic = -1;
     // gameTic = 0;
@@ -192,7 +186,7 @@ const recreateMap = () => {
     generateMapBackground();
     trees.length = 0;
     const nextId = state.nextId_;
-    for (let i = 0; i < 128; ++i) {
+    for (let i = 0; i < 64; ++i) {
         const tree = newActorObject(ActorType.Tree);
         tree.btn_ = rand(2);
         tree.hp_ = 0;
@@ -256,19 +250,18 @@ export const updateTestGame = (ts: number) => {
         createSeedGameState();
     }
 
-    if (startTic >= 0 && !document.hidden) {
+    if (startTic >= 0) {
         tryRunTicks(lastFrameTs);
-
         flushSplatsToMap();
-        const predicted = beginPrediction();
-        {
+        if (!document.hidden) {
+            const predicted = beginPrediction();
             drawGame();
             // check input before overlay, or save camera settings
             checkPlayerInput();
             checkJoinSync();
             drawOverlay();
+            if (predicted) endPrediction();
         }
-        if (predicted) endPrediction();
         sendInput();
         cleaningUpClients();
     }
@@ -289,15 +282,15 @@ const printStatus = () => {
                     const full = p0.hp_ > i++;
                     str += full ? "❤️" : (half ? "💔" : "🖤");
                 }
-                termPrint(str + "\n");
+                termPrint(str);
                 if (p0.weapon_) {
-                    termPrint(EMOJI[Img.weapon0 + p0.weapon_] + "\n");
+                    termPrint(EMOJI[Img.weapon0 + p0.weapon_]);
                 }
             } else {
-                termPrint("tap to respawn\n");
+                termPrint("tap to respawn");
             }
         } else {
-            termPrint("joining\n");
+            termPrint("joining");
         }
 
         const getPlayerIcon = (id?: ClientID) => {
@@ -305,13 +298,15 @@ const printStatus = () => {
             return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
         }
 
-        termPrint(getPlayerIcon(clientId) + " " + clientName + " | ☠️" + (state.scores_[clientId] | 0) + "\n");
+        // const format = (s: string, ...args: any[]) => s.replace(/{(\d+)}/g, (match, number) => args[number]);
+        // const line = "{0} {1} | ☠️ ${2}\n";
+        // termPrint(format(line, getPlayerIcon(clientId), clientName, state.scores_[clientId] | 0));
+        // for (const [id, rc] of remoteClients) {
+        //     termPrint(format(line, isPeerConnected(rc) ? getPlayerIcon(id) : "🔴", rc.name_, state.scores_[id] | 0));
+        // }
+        termPrint(getPlayerIcon(clientId) + " " + clientName + " | ☠️" + (state.scores_[clientId] | 0));
         for (const [id, rc] of remoteClients) {
-            let status = "🔴";
-            if (isPeerConnected(rc)) {
-                status = getPlayerIcon(rc.id_);
-            }
-            termPrint(status + " " + rc.name_ + " | ☠️" + (state.scores_[id] | 0) + "\n");
+            termPrint((isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + " " + rc.name_ + " | ☠️" + (state.scores_[id] | 0));
         }
     }
 }
@@ -456,6 +451,7 @@ const tryRunTicks = (ts: number): number => {
     let framesSimulated = 0;
     while (gameTic <= netTic && frames--) {
         simulateTic();
+        normalizeState();
         ++framesSimulated;
 
         // compensate
@@ -546,6 +542,7 @@ const processPacket = (sender: Client, data: Packet) => {
             state = data.state_;
             gameTic = startTic = state.tic_ + 1;
             recreateMap();
+            normalizeState();
         }
     }
 
@@ -666,14 +663,16 @@ const updateGameCamera = () => {
     gameCamera[2] = lerp(gameCamera[2], cameraScale, 0.05);
 }
 
-const simulateTic = () => {
+const normalizeState = () => {
     const sortById = (list: Actor[]) => list.sort((a, b) => a.id_ - b.id_);
 
     for (const a of state.actors_) {
         sortById(a);
         roundActors(a);
     }
+}
 
+const simulateTic = () => {
     const processTicCommands = (tic_events: number | ClientEvent[]) => {
         tic_events = localEvents.concat(receivedEvents).filter(v => v.tic_ == tic_events);
         tic_events.sort((a, b) => a.client_ - b.client_);
@@ -750,9 +749,10 @@ const simulateTic = () => {
     }
     updateParticles();
 
-    for (let i = 0; i < state.actors_.length; ++i) {
-        state.actors_[i] = state.actors_[i].filter(x => x.hp_);
-    }
+    // for (let i = 0; i < state.actors_.length; ++i) {
+    //     state.actors_[i] = state.actors_[i].filter(x => x.hp_);
+    // }
+    state.actors_ = state.actors_.map(list => list.filter(x => x.hp_));
     updateBodyInterCollisions(state.actors_[ActorType.Player]);
     updateBodyInterCollisions(state.actors_[ActorType.Barrel]);
     updateBodyInterCollisions2(state.actors_[ActorType.Player], state.actors_[ActorType.Barrel]);
@@ -762,8 +762,8 @@ const simulateTic = () => {
     if (waitToSpawn && getMyPlayer()) {
         waitToSpawn = false;
     }
-    cameraShake = reach(cameraShake, 0, 0.02);
-    cameraFeedback = reach(cameraFeedback, 0, 0.2);
+    cameraShake = dec1(cameraShake);
+    cameraFeedback = dec1(cameraFeedback);
 
     if (clientId) {
         if (!(gameTic & 0x1ff)) {
@@ -785,11 +785,6 @@ const simulateTic = () => {
 
     if (lastAudioTic < gameTic) {
         lastAudioTic = gameTic;
-    }
-
-    for (const a of state.actors_) {
-        sortById(a);
-        roundActors(a);
     }
 
     state.seed_ = _SEEDS[0];
@@ -872,7 +867,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                         "death by " + a,
                         a + " sows DEATH",
                     ];
-                    if(gameTic > lastAudioTic) {
+                    if (gameTic > lastAudioTic) {
                         speak(fxRandElement(t));
                     }
                 }
@@ -984,16 +979,16 @@ const updatePlayer = (player: Actor) => {
         if (!player.s_) {
             if (player.client_ == clientId) {
                 cameraShake = M.max(weapon.cameraShake_, cameraShake);
-                cameraFeedback = 1;
+                cameraFeedback = 5;
             }
             player.s_ = 1;
-            player.t_ = reach(player.t_, 1, weapon.detuneSpeed_ / Const.NetFq);
+            player.t_ = incTo(player.t_, weapon.detuneSpeed_);
             addVelocityDir(player, lookDirX, lookDirY, -1, player.w_ > 0 ? 0 : -weapon.kickBack_);
             playAt(player, Snd.shoot);
             for (let i = 0; i < weapon.spawnCount_; ++i) {
                 const a = lookAngle +
                     weapon.angleVar_ * (random() - 0.5) +
-                    weapon.angleSpread_ * M.min(1, player.t_) * (random() - 0.5);
+                    weapon.angleSpread_ * (player.t_ / weapon.detuneSpeed_) * (random() - 0.5);
                 const dx = M.cos(a);
                 const dy = M.sin(a);
                 const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
@@ -1015,7 +1010,7 @@ const updatePlayer = (player: Actor) => {
             }
         }
     } else {
-        player.t_ = reach(player.t_, 0, 0.3);
+        player.t_ = (player.t_ / 3) | 0;
         player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_ / Const.NetFq);
     }
 }
@@ -1074,10 +1069,10 @@ const drawGame = () => {
     flush();
 
     beginRenderToMain(
-        gameCamera[0] + fxRandomNorm(cameraShake * 8) | 0,
-        gameCamera[1] + fxRandomNorm(cameraShake * 8) | 0,
+        gameCamera[0] + fxRandomNorm(cameraShake / 5) | 0,
+        gameCamera[1] + fxRandomNorm(cameraShake / 5) | 0,
         0.5, 0.5,
-        fxRandomNorm(cameraShake / 8),
+        fxRandomNorm(cameraShake / (8 * 50)),
         1 / gameCamera[2]
     );
     clear(0.2, 0.2, 0.2, 1);
@@ -1100,7 +1095,7 @@ const drawGame = () => {
             const y1 = gameCamera[1] + i4;
 
             // if(!_sseState) {
-                draw(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), 110 + y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
+            draw(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), 110 + y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
             // }
             // else {
             //     scale *= 1.5 + 0.5 * Math.sin(lastFrameTs * 16);
@@ -1170,7 +1165,7 @@ const drawMapOverlay = () => {
 const drawCrosshair = () => {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
-        const len = 4 + 0.25 * M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) + 4 * M.min(1, p0.t_) + 4 * M.min(1, p0.s_);
+        const len = 4 + 0.25 * M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) + (p0.t_ / 8) + 4 * M.min(1, p0.s_);
         let a = 0.1 * lastFrameTs;
         for (let i = 0; i < 4; ++i) {
             draw(img[Img.box_t1], lookAtX, lookAtY, a, 2, len, 0.5);
