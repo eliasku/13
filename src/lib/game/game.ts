@@ -733,6 +733,7 @@ const simulateTic = () => {
         updateBody(bullet, 0, 0);
         if (bullet.hp_ && collideWithBoundsA(bullet)) {
             --bullet.hp_;
+            addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
         }
         updateBulletCollision(bullet, state.actors_[ActorType.Player]);
         updateBulletCollision(bullet, state.actors_[ActorType.Barrel]);
