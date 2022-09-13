@@ -24,13 +24,14 @@ const goToSplash = () => {
     speak("13 the game");
 }
 
-new FontFace("e", "url(e.ttf),local(Arial)").load().then((font) => {
+if (!clientName) {
+    setUserName(prompt("your name") || "guest");
+}
+
+new FontFace("e", ([[], "url(e.ttf),"][0 | confirm("load emoji") as any as number]) + "local(Arial)").load().then((font) => {
     document.fonts.add(font);
     loadAtlas();
     //goToSplash();
-    if (!clientName) {
-        setUserName(prompt("pick your name") || "guest");
-    }
     state = StartState.Loaded;
 });
 
@@ -39,44 +40,39 @@ const raf = (ts: DOMHighResTimeStamp) => {
     //** DO FRAME **//
     l.innerText = updateFpsMeter(ts) + "\n";
     updateSong(state != StartState.Connected);
-
+    if (state > StartState.Loaded) {
+        updateTestGame(ts);
+    }
     switch (state) {
         case StartState.TapToConnect:
-            updateTestGame(ts);
             if (isAnyKeyDown()) {
                 state = StartState.Connecting;
                 resetGame();
                 connect();
             }
             break;
-        case StartState.Loading:
-            termPrint(".".repeat((ts * 7) & 7));
-            break;
         case StartState.Loaded:
             l.innerText = "tap to start";
-            if(isAnyKeyDown()) {
+            if (isAnyKeyDown()) {
                 goToSplash();
             }
             break;
         case StartState.Connecting:
             termPrint(".".repeat((ts * 7) & 7));
-            updateTestGame(ts);
             if (_sseState == 3) {
                 state = StartState.Connected;
                 speak("fight");
-            }
-            else if(!_sseState) {
+            } else if (!_sseState) {
                 goToSplash();
             }
             break;
-        default:
-            updateTestGame(ts);
+
+        case StartState.Connected:
             if (!_sseState) {
                 goToSplash();
             }
             break;
     }
-
     updateInput();
     processMessages();
     requestAnimationFrame(raf);
