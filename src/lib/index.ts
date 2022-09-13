@@ -27,20 +27,22 @@ const goToSplash = () => {
 if (!clientName) {
     setUserName(prompt("your name") || "guest");
 }
-
-new FontFace("e", ([[], "url(e.ttf),"][0 | confirm("load emoji") as any as number]) + "local(Arial)").load().then((font) => {
-    document.fonts.add(font);
-    loadAtlas();
-    //goToSplash();
+if(confirm("load emoji")) {
+    new FontFace("e", "url(e.ttf)").load().then((font) => {
+        document.fonts.add(font);
+        state = StartState.Loaded;
+    });
+}
+else {
     state = StartState.Loaded;
-});
+}
 
 const raf = (ts: DOMHighResTimeStamp) => {
     ts /= 1000;
     //** DO FRAME **//
-    l.innerText = updateFpsMeter(ts) + "\n";
     updateSong(state != StartState.Connected);
     if (state > StartState.Loaded) {
+        l.innerText = updateFpsMeter(ts) + "\n";
         updateTestGame(ts);
     }
     switch (state) {
@@ -54,6 +56,7 @@ const raf = (ts: DOMHighResTimeStamp) => {
         case StartState.Loaded:
             l.innerText = "tap to start";
             if (isAnyKeyDown()) {
+                loadAtlas();
                 goToSplash();
             }
             break;
