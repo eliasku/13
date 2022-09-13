@@ -8,7 +8,7 @@
     "start-watch": "npx nodemon ./public/s.js",
     "build-ts-server": "tsc -p server/tsconfig.json",
     "build-ts-client": "tsc -p tsconfig.json",
-    "build": "ts-node --esm tools/build.ts --zip --max",
+    "build": "ts-node --esm tools/build.ts --max",
     "build-dev": "ts-node --esm tools/build.ts --dev",
     "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/c.js",
     "debug-watch": "esbuild src/lib/index.ts --tsconfig=tsconfig.json --watch --bundle --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/debug.js",
