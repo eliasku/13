@@ -5,7 +5,6 @@ export const audioContext = rehash(new AudioContext());
 export const play = (audioBuffer: AudioBuffer,
                      vol: number | StereoPannerNode,
                      pan: number | AudioBufferSourceNode,
-                     loop: boolean,
                      gain?: GainNode): void => {
     const testMasterVol = 0.5;
     gain = audioContext.createGain();
@@ -18,7 +17,6 @@ export const play = (audioBuffer: AudioBuffer,
 
     pan = audioContext.createBufferSource();
     pan.buffer = audioBuffer;
-    pan.loop = loop;
     pan.connect(vol);
     pan.start();
 }

@@ -88,12 +88,17 @@ export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasR
     return _canvas;
 }
 
+const circle = (ctx: CanvasRenderingContext2D, r: number) => {
+    ctx.beginPath();
+    ctx.arc(0, 0, r - 0.3, 0, PI2);
+    ctx.closePath();
+}
+
 export const loadAtlas = (): void => {
     const canvaSize = 512;
     const texture = createTexture(canvaSize);
     const temp = createCanvas(canvaSize);
     const atlas = createCanvas(canvaSize);
-    let imageData: ImageData, imagePixels: Uint8ClampedArray;
     let x = 1;
     let y = 1;
     let x1 = 1;
@@ -117,7 +122,7 @@ export const loadAtlas = (): void => {
     const saveImage = (ax?: number, ay?: number) =>
         img.push(getSubTexture(texture, x, y, sprWidth, sprHeight, ax, ay));
 
-    const cutAlpha = (cut: number = 0x80) => {
+    const cutAlpha = (cut: number = 0x80, imageData?: ImageData, imagePixels?: Uint8ClampedArray) => {
         imageData = atlas.getImageData(x, y, sprWidth, sprHeight);
         imagePixels = imageData.data;
         for (let i = 3; i < imagePixels.length; i += 4) {
@@ -154,9 +159,7 @@ export const loadAtlas = (): void => {
         const s = r * 2;
         pushSprite(s, s);
         atlas.translate(x + r, y + r);
-        atlas.beginPath();
-        atlas.arc(0, 0, r - 0.3, 0, PI2);
-        atlas.closePath();
+        circle(atlas, r);
         atlas.fill();
         atlas.resetTransform();
         cutAlpha();
@@ -230,12 +233,6 @@ export const loadAtlas = (): void => {
 
     atlas.fillStyle = "#fff";
 
-    const strokeCircle = (r: number) => {
-        atlas.beginPath();
-        atlas.arc(0, 0, r, 0, PI2);
-        atlas.closePath();
-        atlas.stroke();
-    }
 
     const renderJoy = (r0: number, r1: number, text0: string, text1: string) => {
         let s = r1 * 2 + 32;
@@ -246,8 +243,11 @@ export const loadAtlas = (): void => {
         s /= 2;
         atlas.translate(x + s, y + s);
 
-        strokeCircle(r0);
-        strokeCircle(r1);
+        circle(atlas, r0);
+        atlas.stroke();
+
+        circle(atlas, r1);
+        atlas.stroke();
 
         atlas.fillText(text0, 0, -r0 - 5);
         atlas.fillText(text1, 0, -r1 - 5);
@@ -291,14 +291,10 @@ export const loadAtlas = (): void => {
         grd.addColorStop(0, "rgba(255,255,255,1)");
         grd.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = grd;
-        ctx.beginPath();
-        ctx.arc(0, 0, 32 - 0.3, 0, PI2);
-        ctx.closePath();
+        circle(ctx, 32);
         ctx.fill();
         ctx.scale(1, 0.25);
-        ctx.beginPath();
-        ctx.arc(0, 0, 32 - 0.3, 0, PI2);
-        ctx.closePath();
+        circle(ctx, 32);
         ctx.fill();
         ctx.resetTransform();
         img[Img.light_circle] = createTexture(64);

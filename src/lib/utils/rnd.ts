@@ -24,6 +24,7 @@ export const nextInt = (idx = 0): number /* u32 */ =>
 export const rand = (max: number): number /* u32 */ => nextInt() % max;
 export const random = (max: number = 1, idx?:number) => max * unorm_f32_from_u32(nextInt(idx));
 export const random1n = (v: number = 1) => random(v * 2, 1) - v;
+export const random1i = (max: number) => nextInt(1) % max;
 export const random1 = (max?: number) => random(max, 1);
 
 // just visual random

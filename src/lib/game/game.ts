@@ -2,7 +2,7 @@ import {ClientID} from "../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
-import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
+import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random, random1} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const} from "./config";
@@ -31,7 +31,7 @@ import {Snd, snd} from "../assets/sfx";
 import {BulletType, weapons} from "./data/weapons";
 import {
     addBoneParticles,
-    addFleshParticles,
+    addFleshParticles, addImpactParticles,
     addShellParticle,
     drawParticles,
     drawSplats,
@@ -832,9 +832,18 @@ const kill = (actor: Actor) => {
     }
 }
 
+const BULLET_COLOR = [
+    [0xFFFFFF],
+    [0xFFFF44],
+    [0x44FFFF],
+    [0x333333],
+    [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF]
+];
+
 const hitWithBullet = (actor: Actor, bullet: Actor) => {
     addVelFrom(actor, bullet, 0.1);
     actor.animHit_ = ANIM_HIT_MAX;
+    addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
     playAt(actor, Snd.hit);
     if (actor.hp_) {
         actor.hp_ -= bullet.weapon_;
@@ -1080,12 +1089,14 @@ const drawGame = () => {
 
     drawMapBackground();
     drawObjects();
+    drawMapOverlay();
+
     renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
 
     if (process.env.NODE_ENV === "development") {
         drawCollisions(drawList);
     }
-    drawMapOverlay();
+
     if (!clientId) {
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * M.sin(i / 4 + lastFrameTs * 16);
@@ -1158,7 +1169,7 @@ const drawMapBackground = () => {
 }
 
 const drawMapOverlay = () => {
-    draw(img[Img.box_lt], 0, BOUNDS_SIZE - OBJECT_RADIUS * 2, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4, 1, 0x666666);
+    draw(img[Img.box_lt], 0, BOUNDS_SIZE - OBJECT_RADIUS * 2, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4, 1, 0x333333);
     // draw(img[Img.box_lt], -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
     // draw(img[Img.box_lt], boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
 }
@@ -1166,47 +1177,23 @@ const drawMapOverlay = () => {
 const drawCrosshair = () => {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
-        const len = 4 + 0.25 * M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) + (p0.t_ / 8) + 4 * M.min(1, p0.s_);
-        let a = 0.1 * lastFrameTs;
+        const len = 4 + M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) / 4 + (p0.t_ / 8) + 4 * M.min(1, p0.s_);
         for (let i = 0; i < 4; ++i) {
-            draw(img[Img.box_t1], lookAtX, lookAtY, a, 2, len, 0.5);
-            a += PI / 2;
+            draw(img[Img.box_t1], lookAtX, lookAtY, lastFrameTs / 10 + i * PI / 2, 2, len, 0.5);
         }
     }
 }
 
-const drawItem = (item: Actor) => {
-    const colorOffset = getHitColorOffset(item.animHit_);
-    const cat = item.btn_ & 0x300;
-    const idx = item.btn_ & 0xFF;
-    if (cat == ItemCategory.Weapon) {
-        const weapon = img[Img.weapon0 + idx];
-        if (weapon) {
-            const px = weapon.x_;
-            const py = weapon.y_;
-            weapon.x_ = 0.5;
-            weapon.y_ = 0.7;
-            draw(weapon, item.x_, item.y_ - item.z_, 0, 0.8, 0.8, 1, COLOR_WHITE, 0, colorOffset);
-            weapon.x_ = px;
-            weapon.y_ = py;
-        }
+const drawItem = (item: Actor, _idx: number = item.btn_ & 0xFF) => {
+    if (item.btn_ & ItemCategory.Weapon) {
+        drawObject(item, Img.weapon0 + _idx, 2, 0.8);
     } else /*if (cat == ItemCategory.Effect)*/ {
-        const anim = item.anim0_ / 0xFF;
-        const s = 1 + 0.1 * M.sin(16 * (lastFrameTs + anim * 10));
-        // const o = 2 * M.cos(lastFrameTs + anim * 10);
-        draw(img[Img.item0 + idx], item.x_, item.y_ - item.z_ - BULLET_RADIUS, 0, s, s, 1, COLOR_WHITE, 0, colorOffset);
+        const t = lastFrameTs * 4 + item.anim0_ / 25;
+        drawObject(item, Img.item0 + _idx, BULLET_RADIUS + M.cos(t), 0.9 + 0.1 * M.sin(4 * t));
     }
 }
 
 const drawBullet = (actor: Actor) => {
-    const BULLET_COLOR = [
-        [0xFFFFFF],
-        [0xFFFF44],
-        [0x44FFFF],
-        [0x333333],
-        [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF]
-    ];
-
     const BULLET_LENGTH = [0.2, 2, 1, 8, 512];
     const BULLET_LENGTH_LIGHT = [0.1, 2, 2, 2, 512];
     const BULLET_SIZE = [6, 3 / 2, 2, 4, 12];
@@ -1343,12 +1330,8 @@ const drawPlayer = (p: Actor): void => {
 const getHitColorOffset = (anim: number) =>
     getLumaColor32(0xFF * M.min(1, 2 * anim / ANIM_HIT_MAX));
 
-const drawObject = (p: Actor, id: Img) => {
-    const x = p.x_;
-    const y = p.y_ - p.z_;
-    const co = getHitColorOffset(p.animHit_);
-    draw(img[id], x, y, 0, 1, 1, 1, COLOR_WHITE, 0, co);
-}
+const drawObject = (p: Actor, id: Img, z: number = 0, scale: number = 1) =>
+    draw(img[id], p.x_, p.y_ - p.z_ - z, 0, scale, scale, 1, COLOR_WHITE, 0, getHitColorOffset(p.animHit_));
 
 const drawBarrel = (p: Actor): void => drawObject(p, p.btn_ + Img.barrel0);
 const drawTree = (p: Actor): void => drawObject(p, p.btn_ + Img.tree0);
@@ -1375,20 +1358,11 @@ const drawObjects = () => {
 
 const playAt = (actor: Actor, id: Snd) => {
     if (gameTic > lastAudioTic) {
-        let lx = BOUNDS_SIZE / 2;
-        let ly = BOUNDS_SIZE / 2;
-        const p0 = getMyPlayer();
-        if (p0) {
-            lx = p0.x_;
-            ly = p0.y_;
-        }
-
-        const dx = (actor.x_ - lx) / 256;
-        const dy = (actor.y_ - ly) / 256;
+        const dx = (actor.x_ - gameCamera[0]) / 256;
+        const dy = (actor.y_ - gameCamera[1]) / 256;
         const v = 1 - M.hypot(dx, dy);
         if (v > 0) {
-            const pan = M.max(-1, M.min(1, dx));
-            play(snd[id], v, pan, false);
+            play(snd[id], v, M.max(-1, M.min(1, dx)));
         }
     }
 }

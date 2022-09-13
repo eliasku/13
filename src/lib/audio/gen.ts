@@ -25,9 +25,7 @@ let currentBar = 0;
 let musicEndTime = 0;
 export const updateSong = (mainMenu: boolean) => {
     const time = audioContext.currentTime;
-    //let baseBPM = mainMenu ? 90 : 110;
-    let bpm = 110 + 15 * Math.sin(time / 10);
-    const k = (60 / (bpm)) / 4;
+    const k = (60 / (110 + 15 * Math.sin(time / 10))) / 4;
     if (time >= musicEndTime) {
         musicEndTime = time + 16 * k;
         let t = 0;

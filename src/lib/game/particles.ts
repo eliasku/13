@@ -4,7 +4,7 @@ import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
 import {getLumaColor32, M, PI} from "../utils/math";
 import {GRAVITY} from "./data/world";
-import {_SEEDS, random1, random1n} from "../utils/rnd";
+import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
 import {mapTexture} from "../assets/map";
 import {BOUNDS_SIZE} from "../assets/params";
@@ -113,7 +113,8 @@ export const drawParticle = (p: Particle) => {
     const angle = velocityAngle + p.a_;
     if (p.z_ > 1) {
         const s = 0.5 - p.z_ / 256;
-        draw(img[Img.circle_4], p.x_, p.y_, 0, s, s / 4, 0.4, 0);
+        const t = (1 - p.lifeTime_ / p.lifeMax_);
+        draw(img[Img.circle_4], p.x_, p.y_, 0, s, s / 4, 0.4 * t, 0);
     }
     draw(img[p.img_], p.x_, p.y_ - p.z_, angle, scale * velocityScale, scale, 1, p.color_);
 }
@@ -194,3 +195,20 @@ export const flushSplatsToMap = () => {
         flush();
     }
 }
+
+export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, colors: number[]) => {
+    while (amount--) {
+        const particle = newParticle();
+        copyPosFromActorCenter(particle, actor);
+        addVelFrom(particle, vel, -random1(0.2));
+        addRadialVelocity(particle, random1n(PI), random1(32), 0);
+        particle.color_ = colors[random1i(colors.length)];
+        particle.img_ = Img.box_l;
+        particle.scale_ = 1 + random1(1);
+        particle.followVelocity_ = 1;
+        particle.followScale_ = 0.02;
+        particle.lifeMax_ = 2 + random1(16);
+        particles.push(particle);
+    }
+}
+

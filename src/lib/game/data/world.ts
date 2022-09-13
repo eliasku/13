@@ -22,7 +22,8 @@ export const OBJECT_HEIGHT = [
     OBJECT_RADIUS + 4,
     OBJECT_RADIUS,
     0,
-    0,
+    // ITEM
+    BULLET_RADIUS,
     OBJECT_RADIUS + 4,
 ];
 export const OBJECT_GROUND_LOSS = [512, 2, 512, 2, 512];
