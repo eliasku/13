@@ -2,7 +2,7 @@ import {ClientID} from "../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
-import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random, random1} from "../utils/rnd";
+import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const} from "./config";
@@ -220,6 +220,7 @@ const createSeedGameState = () => {
 }
 
 export const createSplashState = () => {
+    state.seed_ = state.mapSeed_ = _SEEDS[0];
     recreateMap();
     for (let i = 0; i < 13; ++i) {
         const k = i / 13;
@@ -230,7 +231,7 @@ export const createSplashState = () => {
         actor.btn_ = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
         const D = 80 + rand(20);
         actor.x_ = BOUNDS_SIZE / 2 + D * M.cos(k * PI2);
-        actor.y_ = BOUNDS_SIZE / 2 + D * M.sin(k * PI2);
+        actor.y_ = BOUNDS_SIZE / 2 + D * M.sin(k * PI2) + 10;
         pushActor(actor);
     }
     gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
@@ -1106,13 +1107,7 @@ const drawGame = () => {
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-
-            // if(!_sseState) {
             draw(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), 110 + y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
-            // }
-            // else {
-            //     scale *= 1.5 + 0.5 * Math.sin(lastFrameTs * 16);
-            // }
             draw(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + fxRandomNorm(i4), angle, scale, scale, 1, add);
         }
     }
