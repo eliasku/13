@@ -91,7 +91,7 @@ export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasR
 const circle = (ctx: CanvasRenderingContext2D, r: number) => {
     ctx.beginPath();
     ctx.arc(0, 0, r - 0.3, 0, PI2);
-    ctx.closePath();
+    //ctx.closePath();
 }
 
 export const loadAtlas = (): void => {

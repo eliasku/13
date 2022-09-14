@@ -1,6 +1,6 @@
 import {Actor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
-import {M, reach} from "../utils/math";
+import {dec1, M, reach} from "../utils/math";
 import {ControlsFlag} from "./controls";
 import {Const} from "./config";
 import {
@@ -14,6 +14,8 @@ import {
     OBJECT_RADIUS_BY_TYPE
 } from "./data/world";
 import {BOUNDS_SIZE} from "../assets/params";
+import {GRID_D_BITS, GRID_R, GRID_STRIDE_BITS} from "./grid";
+import {BulletType} from "./data/weapons";
 
 export const setRandomPosition = (actor: Actor) => {
     actor.x_ = OBJECT_RADIUS + rand(BOUNDS_SIZE - OBJECT_RADIUS * 2);
@@ -40,8 +42,10 @@ export const updateBody = (body: Pos & Vel, gravity: number, loss: number) => {
     return false;
 }
 
-export const updateAnim = (actor: Actor) =>
-    actor.animHit_ = M.max(0, actor.animHit_ - 2);
+export const updateAnim = (actor: Actor) => {
+    actor.animHit_ = dec1(actor.animHit_);
+    actor.animHit_ = dec1(actor.animHit_);
+}
 
 export const updateActorPhysics = (a: Actor) => {
     const isWeakGravity = a.type_ ? 0 : (a.btn_ & ControlsFlag.Jump);
@@ -60,20 +64,20 @@ export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number)
     let has = 0;
     if (body.y_ > BOUNDS_SIZE - radius) {
         body.y_ = BOUNDS_SIZE - radius;
-        has = 1;
-        reflectVelocity(body, 0, -1, loss);
+        has |= 2;
+        reflectVelocity(body, 0, 1, loss);
     } else if (body.y_ < radius) {
         body.y_ = radius;
-        has = 1;
+        has |= 2;
         reflectVelocity(body, 0, 1, loss);
     }
     if (body.x_ > BOUNDS_SIZE - radius) {
         body.x_ = BOUNDS_SIZE - radius;
-        has = 1;
-        reflectVelocity(body, -1, 0, loss);
+        has |= 4;
+        reflectVelocity(body, 1, 0, loss);
     } else if (body.x_ < radius) {
         body.x_ = radius;
-        has = 1;
+        has |= 4;
         reflectVelocity(body, 1, 0, loss);
     }
     return has;
@@ -124,6 +128,19 @@ export const testIntersection = (a: Actor, b: Actor): boolean => {
 }
 
 const OBJECT_IMASS = [1, 1, 1, 1, 0];
+
+export const checkBodyCollision = (a: Actor, b: Actor) => {
+    let nx = a.x_ - b.x_;
+    let ny = (a.y_ - b.y_) * 2;
+    let nz = (a.z_ + OBJECT_HEIGHT[a.type_]) - (b.z_ + OBJECT_HEIGHT[b.type_]);
+    const sqrDist = sqrLength3(nx, ny, nz);
+    const D = OBJECT_RADIUS_BY_TYPE[a.type_] + OBJECT_RADIUS_BY_TYPE[b.type_];
+    if (sqrDist < D * D && sqrDist > 0) {
+        const pen = (D / M.sqrt(sqrDist) - 1) / 2;
+        addPos(a, nx, ny, nz, OBJECT_IMASS[a.type_] * pen);
+        addPos(b, nx, ny, nz, -OBJECT_IMASS[b.type_] * pen);
+    }
+};
 
 export const updateBodyCollisions = (a: Actor, list: Actor[], ioffset: number) => {
     const ra = OBJECT_RADIUS_BY_TYPE[a.type_];

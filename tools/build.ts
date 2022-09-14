@@ -281,6 +281,7 @@ function mangle_types(file: string, dest: string) {
             "hp_",
             "anim0_",
             "animHit_",
+            "fstate_",
             "x_",
             "y_",
             "z_",

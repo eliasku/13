@@ -44,7 +44,7 @@ export const updateParticle = (p: Particle): boolean => {
                 splats.push(p.splashImg_, p.x_, p.y_, p.a_, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
             }
             if (v < 4) {
-                return false;
+                return true;
             }
         }
         p.u_ /= 2;
@@ -54,19 +54,18 @@ export const updateParticle = (p: Particle): boolean => {
 
     collideWithBounds(p, 4, 2);
 
-    return p.lifeTime_ < p.lifeMax_;
+    return p.lifeTime_ > p.lifeMax_;
 }
 
-export const updateParticles = () => {
-    for (let i = 0; i < particles.length;) {
-        const p = particles[i];
-        if (updateParticle(p)) {
-            ++i;
-        } else {
-            particles.splice(i, 1);
+const updateParticleList = (list: Particle[], i = 0) => {
+    for (; i < list.length;) {
+        if (updateParticle(list[i++])) {
+            list.splice(--i, 1);
         }
     }
 }
+
+export const updateParticles = () => updateParticleList(particles);
 
 let seed0: number;
 let particles0: Particle[];
@@ -84,18 +83,17 @@ export const restoreParticles = () => {
     splats.length = 0;
 }
 
-export const drawSplats = () => {
-    let i = 0;
-    while (i < splats.length) {
+export const drawSplats = (list = splats, i = 0) => {
+    for (; i < list.length;) {
         draw(
-            img[splats[i++]],
-            splats[i++],
-            splats[i++],
-            splats[i++],
-            splats[i++],
-            splats[i++],
+            img[list[i++]],
+            list[i++],
+            list[i++],
+            list[i++],
+            list[i++],
+            list[i++],
             1,
-            splats[i++]
+            list[i++]
         );
     }
 }

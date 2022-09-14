@@ -130,7 +130,7 @@ weapons[i].angleSpread_ = 0.1;
 weapons[i].velocity_ /= 2;
 weapons[i].relaunchSpeed_ = 16;
 weapons[i].detuneSpeed_ = 16;
-weapons[i].cameraFeedback_ = 0.1/5;
+weapons[i].cameraFeedback_ = 0.02;
 
 // 🖊 light auto gun
 ++i;
@@ -139,7 +139,7 @@ weapons[i].angleSpread_ = 0.25;
 weapons[i].kickBack_ = 20;
 weapons[i].offset_ = 20;
 weapons[i].detuneSpeed_ = 16;
-weapons[i].cameraFeedback_ = 0.01/5;
+weapons[i].cameraFeedback_ = 0.02;
 
 // ✏️ hard machine-gun?
 ++i;
@@ -148,7 +148,7 @@ weapons[i].angleSpread_ = 0.25;
 weapons[i].kickBack_ = 20;
 weapons[i].velocity_ /= 2;
 weapons[i].detuneSpeed_ = 16;
-weapons[i].cameraFeedback_ = 0.05/5;
+weapons[i].cameraFeedback_ = 0.05;
 weapons[i].cameraLookForward_ = 0.3;
 weapons[i].bulletDamage_ = 2;
 
@@ -157,7 +157,7 @@ weapons[i].bulletDamage_ = 2;
 weapons[i].spawnCount_ = 5;
 weapons[i].angleSpread_ = 0.5;
 weapons[i].detuneSpeed_ = 32;
-weapons[i].cameraFeedback_ = 0.1/5;
+weapons[i].cameraFeedback_ = 0.1;
 weapons[i].velocity_ = 300;
 weapons[i].velocityVar_ = 200;
 weapons[i].handsAnim_ = 1;
@@ -169,7 +169,7 @@ weapons[i].bulletShellColor_ = 0xAA0000;
 // CROSS BOW ⛏
 ++i;
 weapons[i].detuneSpeed_ = 1;
-weapons[i].cameraFeedback_ = 0.5/5;
+weapons[i].cameraFeedback_ = 0.2;
 weapons[i].cameraLookForward_ = 0.4;
 weapons[i].cameraScale_ = 1.5;
 weapons[i].velocity_ = 960;
@@ -184,6 +184,7 @@ weapons[i].angleSpread_ = 0.5;
 weapons[i].detuneSpeed_ = 10;
 weapons[i].rate_ = 6;
 weapons[i].cameraLookForward_ = 0.3;
+weapons[i].cameraFeedback_ = 0.05;
 weapons[i].velocity_ = 420;
 weapons[i].bulletDamage_ = 1;
 weapons[i].bulletHp_ = 2;
@@ -195,10 +196,11 @@ weapons[i].bulletShellColor_ = 0x00FFFF;
 weapons[i].rate_ = 0.5;
 weapons[i].cameraShake_ = 25;
 weapons[i].velocity_ = 1;
-weapons[i].cameraFeedback_ = 0.1/5;
+weapons[i].cameraFeedback_ = 0.1;
 weapons[i].cameraLookForward_ = 0.4;
 weapons[i].cameraScale_ = 1.5;
 weapons[i].bulletDamage_ = 5;
+weapons[i].bulletHp_ = 200;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10;
 weapons[i].bulletShellColor_ = 0x990099;

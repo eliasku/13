@@ -18,7 +18,7 @@ export const generateMapBackground = (): void => {
         map.fillStyle = detailsColor[rand(2)];
         map.beginPath()
         map.arc(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * sc, 1 + rand(16), 0, PI2);
-        map.closePath();
+        //map.closePath();
         map.fill();
         map.fillRect(rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * sc, 1, 4 + rand(8));
         // map.fillText("🌼,🌸,🌺,🍀".split(",")[rand(4)], rand(BOUNDS_SIZE), rand(BOUNDS_SIZE) * sc);

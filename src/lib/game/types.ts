@@ -15,10 +15,6 @@ export const enum ItemCategory {
     Weapon = 0x200,
 }
 
-export const enum EffectItemType {
-    Health = 0,
-}
-
 export interface Pos {
     x_: number;
     y_: number;
@@ -48,6 +44,8 @@ export interface Actor extends Pos, Vel {
     anim0_?: number;
     // hit effect (4 bits: 0...15)
     animHit_?: number;
+    // local frame-scope state
+    fstate_?: number;
 }
 
 export interface Client {

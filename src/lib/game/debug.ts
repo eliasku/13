@@ -64,7 +64,7 @@ export const printDebugInfo = (
     text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
     text += "trees: " + trees.length + "\n";
 
-    text += `┌ ${clientName} | game: ${gameTic}, net: ${netTic}\n`;
+    text += `┌ ${clientName} | tic: ${gameTic}, game-net: ${netTic-gameTic}\n`;
     for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;

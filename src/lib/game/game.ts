@@ -31,7 +31,8 @@ import {Snd, snd} from "../assets/sfx";
 import {BulletType, weapons} from "./data/weapons";
 import {
     addBoneParticles,
-    addFleshParticles, addImpactParticles,
+    addFleshParticles,
+    addImpactParticles,
     addShellParticle,
     drawParticles,
     drawSplats,
@@ -46,6 +47,7 @@ import {
     addVelFrom,
     addVelocityDir,
     applyGroundFriction,
+    checkBodyCollision,
     collideWithBoundsA,
     copyPosFromActorCenter,
     reflectVelocity,
@@ -55,8 +57,7 @@ import {
     testRayWithSphere,
     updateActorPhysics,
     updateAnim,
-    updateBody,
-    updateBodyCollisions
+    updateBody
 } from "./phy";
 import {BASE_RESOLUTION, BOUNDS_SIZE} from "../assets/params";
 import {
@@ -79,6 +80,7 @@ import {
     saveDebugState,
     updateDebugInput
 } from "./debug";
+import {addToGrid, queryGridCollisions} from "./grid";
 
 const clients = new Map<ClientID, Client>()
 
@@ -87,11 +89,9 @@ let localEvents: ClientEvent[] = [];
 let receivedEvents: ClientEvent[] = [];
 
 // tics received from all peers (min value), we could simulate to it
-let netTic = 0;
 let startTic = -1;
 let gameTic = 0;
 let prevTime = 0;
-let ackMin = 0;
 let joined = false;
 
 let waitToAutoSpawn = false;
@@ -104,6 +104,9 @@ let lastAudioTic = 0;
 
 // static state
 let trees: Actor[] = [];
+let playersGrid: Actor[][] = [];
+let barrelsGrid: Actor[][] = [];
+let treesGrid: Actor[][] = [];
 
 // dynamic state
 let state: StateData = newStateData();
@@ -185,6 +188,7 @@ const recreateMap = () => {
     _SEEDS[0] = state.mapSeed_;
     generateMapBackground();
     trees.length = 0;
+    treesGrid.length = 0;
     const nextId = state.nextId_;
     for (let i = 0; i < 64; ++i) {
         const tree = newActorObject(ActorType.Tree);
@@ -192,6 +196,7 @@ const recreateMap = () => {
         tree.hp_ = 0;
         setRandomPosition(tree);
         trees.push(tree);
+        addToGrid(treesGrid, tree);
     }
     _SEEDS[0] = state.seed_;
     state.nextId_ = nextId;
@@ -204,7 +209,6 @@ const pushActor = (a: Actor) => {
 const createSeedGameState = () => {
     startTic = 0;
     gameTic = 0;
-    netTic = 0;
     state.mapSeed_ = state.seed_ = _SEEDS[0];
     recreateMap();
     for (let i = 0; i < 32; ++i) {
@@ -268,7 +272,7 @@ export const updateTestGame = (ts: number) => {
     }
     printStatus();
     if (process.env.NODE_ENV === "development") {
-        printDebugInfo(gameTic, netTic, lastFrameTs, prevTime, drawList, state, trees, clients);
+        printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 }
 
@@ -299,12 +303,6 @@ const printStatus = () => {
             return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
         }
 
-        // const format = (s: string, ...args: any[]) => s.replace(/{(\d+)}/g, (match, number) => args[number]);
-        // const line = "{0} {1} | ☠️ ${2}\n";
-        // termPrint(format(line, getPlayerIcon(clientId), clientName, state.scores_[clientId] | 0));
-        // for (const [id, rc] of remoteClients) {
-        //     termPrint(format(line, isPeerConnected(rc) ? getPlayerIcon(id) : "🔴", rc.name_, state.scores_[id] | 0));
-        // }
         termPrint(getPlayerIcon(clientId) + " " + clientName + " | ☠️" + (state.scores_[clientId] | 0));
         for (const [id, rc] of remoteClients) {
             termPrint((isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + " " + rc.name_ + " | ☠️" + (state.scores_[id] | 0));
@@ -427,27 +425,30 @@ const checkJoinSync = () => {
     }
 }
 
-const calcNetTic = () => {
-    netTic = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0;
-    ackMin = gameTic;
-    for (const [id,] of remoteClients) {
-        const client = clients.get(id);
-        if (client) {
-            if (netTic > client.tic_) {
-                netTic = client.tic_;
-            }
-            if (ackMin > client.acknowledgedTic_) {
-                ackMin = client.acknowledgedTic_;
-            }
+const getMinTic = (_tic = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0) => {
+    for (const [,client] of clients) {
+        if (_tic > client.tic_) {
+            _tic = client.tic_;
         }
     }
+    return _tic;
+}
+
+// get minimum tic that already received by
+const getMinAckAndInput = (lastTic:number) => {
+    for (const [,client] of clients) {
+        if (lastTic > client.acknowledgedTic_) {
+            lastTic = client.acknowledgedTic_;
+        }
+    }
+    return lastTic;
 }
 
 const tryRunTicks = (ts: number): number => {
     if (startTic < 0) {
         return 0;
     }
-    calcNetTic();
+    const netTic = getMinTic();
     let frames = (ts - prevTime) * Const.NetFq | 0;
     let framesSimulated = 0;
     while (gameTic <= netTic && frames--) {
@@ -481,7 +482,8 @@ const tryRunTicks = (ts: number): number => {
 
     const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
-    localEvents = localEvents.filter(v => v.tic_ > M.min(ackMin, lastTic));
+    const ackTic = getMinAckAndInput(lastTic);
+    localEvents = localEvents.filter(v => v.tic_ > ackTic);
 
     return framesSimulated;
 }
@@ -525,19 +527,9 @@ const sendInput = () => {
     }
 }
 
-const getMinTic = (minTic: number = 0x7FFFFFFF) => {
-    for (const [, cl] of clients) {
-        if (minTic > cl.tic_) {
-            minTic = cl.tic_;
-        }
-    }
-    return minTic;
-}
-
 const processPacket = (sender: Client, data: Packet) => {
     if (startTic < 0 && data.state_) {
-        if (data.state_.tic_ > getMinTic()) {
-            netTic = 0;
+        if (data.state_.tic_ > getMinTic(1 << 31)) {
             updateFrameTime(performance.now() / 1000);
             prevTime = lastFrameTs;
             state = data.state_;
@@ -617,28 +609,23 @@ const cleaningUpClients = () => {
 /// Game logic
 
 const pickItem = (item: Actor, player: Actor) => {
-    // isWeapon
-    const itemId = item.btn_ & 0xFF;
-    const itemCat = item.btn_ & 0x300;
-    if (itemCat == ItemCategory.Weapon) {
-        const playerHasNoWeapon = !player.weapon_;
-        const playerNotDropping = !(player.btn_ & ControlsFlag.Drop);
-        if (playerHasNoWeapon && playerNotDropping) {
-            player.weapon_ = itemId;
-            playAt(player, Snd.pick);
-            item.hp_ = item.btn_ = 0;
-        }
-    } else /*if(itemCat == ItemCategory.Effect)*/ {
-        // if (itemId == EffectItemType.Med) {
-        //     playAt(player, Snd.med);
-        //     item.hp_ = item.btn_ = 0;
-        // } else if (itemId == EffectItemType.Health) {
-        if (player.hp_ < 10) {
+    if (testIntersection(item, player)) {
+        // isWeapon
+        const itemId = item.btn_ & 0xFF;
+        const itemCat = item.btn_ & 0x300;
+        if (itemCat == ItemCategory.Weapon) {
+            const playerHasNoWeapon = !player.weapon_;
+            const playerNotDropping = !(player.btn_ & ControlsFlag.Drop);
+            if (playerHasNoWeapon && playerNotDropping) {
+                player.weapon_ = itemId;
+                playAt(player, Snd.pick);
+                item.hp_ = item.btn_ = 0;
+            }
+        } else if (player.hp_ < 10) {
             ++player.hp_;
             playAt(player, Snd.heal);
             item.hp_ = item.btn_ = 0;
         }
-        // }
     }
 }
 
@@ -654,8 +641,9 @@ const updateGameCamera = () => {
         const p0 = getMyPlayer() ?? getRandomPlayer();
         if (p0?.client_) {
             const wpn = weapons[p0.weapon_];
-            cameraX = p0.x_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtX - p0.x_);
-            cameraY = p0.y_ + (wpn.cameraLookForward_ - wpn.cameraFeedback_ * cameraFeedback) * (lookAtY - p0.y_);
+            const viewM = 100 * wpn.cameraFeedback_ * cameraFeedback / (M.hypot(viewX, viewY) + 0.001);
+            cameraX = p0.x_ + wpn.cameraLookForward_ * (lookAtX - p0.x_) - viewM * viewX;
+            cameraY = p0.y_ + wpn.cameraLookForward_ * (lookAtY - p0.y_) - viewM * viewY;
             cameraScale *= wpn.cameraScale_;
         }
     }
@@ -672,6 +660,15 @@ const normalizeState = () => {
         roundActors(a);
     }
 }
+
+const checkBulletCollision = (bullet: Actor, actor: Actor) => {
+    if (bullet.hp_ &&
+        bullet.weapon_ &&
+        (bullet.client_ - actor.client_) &&
+        testIntersection(bullet, actor)) {
+        hitWithBullet(actor, bullet);
+    }
+};
 
 const simulateTic = () => {
     const processTicCommands = (tic_events: number | ClientEvent[]) => {
@@ -703,30 +700,32 @@ const simulateTic = () => {
     }
     processTicCommands(gameTic);
 
-    //if(startTick < 0) return;
     updateGameCamera();
+
+    playersGrid.length = 0;
+    barrelsGrid.length = 0;
 
     for (const a of state.actors_[ActorType.Player]) {
         updatePlayer(a);
+        updateActorPhysics(a);
+        addToGrid(playersGrid, a);
+        a.fstate_ = 1;
     }
 
     if (process.env.NODE_ENV === "development") {
         saveDebugState(cloneState());
     }
 
-    for (const a of state.actors_[ActorType.Player]) {
+    for (const a of state.actors_[ActorType.Barrel]) {
         updateActorPhysics(a);
+        addToGrid(barrelsGrid, a);
+        a.fstate_ = 1;
     }
 
-    for (const a of state.actors_[ActorType.Barrel]) updateActorPhysics(a);
     for (const a of state.actors_[ActorType.Item]) {
         updateActorPhysics(a);
         if (!a.animHit_) {
-            for (const player of state.actors_[ActorType.Player]) {
-                if (testIntersection(a, player)) {
-                    pickItem(a, player);
-                }
-            }
+            queryGridCollisions(a, playersGrid, pickItem);
         }
     }
 
@@ -736,34 +735,36 @@ const simulateTic = () => {
             --bullet.hp_;
             addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
         }
-        updateBulletCollision(bullet, state.actors_[ActorType.Player]);
-        updateBulletCollision(bullet, state.actors_[ActorType.Barrel]);
-        updateBulletCollision(bullet, trees);
-        if (bullet.btn_ == BulletType.Ray) {
-            bullet.hp_ = -1;
-        }
+        queryGridCollisions(bullet, playersGrid, checkBulletCollision);
+        queryGridCollisions(bullet, barrelsGrid, checkBulletCollision);
+        queryGridCollisions(bullet, treesGrid, checkBulletCollision);
         if (bullet.s_ && !--bullet.s_) {
             bullet.hp_ = 0;
         }
     }
-    for (const tree of trees) {
-        updateAnim(tree);
-    }
-    updateParticles();
-
-    // for (let i = 0; i < state.actors_.length; ++i) {
-    //     state.actors_[i] = state.actors_[i].filter(x => x.hp_);
-    // }
     state.actors_ = state.actors_.map(list => list.filter(x => x.hp_));
-    updateBodyInterCollisions(state.actors_[ActorType.Player]);
-    updateBodyInterCollisions(state.actors_[ActorType.Barrel]);
-    updateBodyInterCollisions2(state.actors_[ActorType.Player], state.actors_[ActorType.Barrel]);
-    updateBodyInterCollisions2(state.actors_[ActorType.Player], trees);
-    updateBodyInterCollisions2(state.actors_[ActorType.Barrel], trees);
+
+    for (const a of state.actors_[ActorType.Player]) {
+        a.fstate_ = 0;
+        queryGridCollisions(a, treesGrid, checkBodyCollision);
+        queryGridCollisions(a, barrelsGrid, checkBodyCollision);
+        queryGridCollisions(a, playersGrid, checkBodyCollision, 0);
+    }
+    for (const a of state.actors_[ActorType.Barrel]) {
+        a.fstate_ = 0;
+        queryGridCollisions(a, treesGrid, checkBodyCollision);
+        queryGridCollisions(a, barrelsGrid, checkBodyCollision, 0);
+    }
 
     if (waitToSpawn && getMyPlayer()) {
         waitToSpawn = false;
     }
+
+    for (const tree of trees) {
+        updateAnim(tree);
+    }
+
+    updateParticles();
     cameraShake = dec1(cameraShake);
     cameraFeedback = dec1(cameraFeedback);
 
@@ -793,17 +794,24 @@ const simulateTic = () => {
     state.tic_ = gameTic++;
 }
 
-const updateBodyInterCollisions2 = (list1: Actor[], list2: Actor[]) => {
-    for (const a of list1) {
-        updateBodyCollisions(a, list2, 0);
+const castRayBullet = (bullet: Actor) => {
+    for (const a of state.actors_[ActorType.Player]) {
+        if (a.client_ - bullet.client_ &&
+            testRayWithSphere(bullet, a, bullet.u_, bullet.v_)) {
+            hitWithBullet(a, bullet);
+        }
     }
-}
-
-const updateBodyInterCollisions = (list: Actor[]) => {
-    for (let i = 0; i < list.length; ++i) {
-        updateBodyCollisions(list[i], list, i + 1);
+    for (const a of state.actors_[ActorType.Barrel]) {
+        if (testRayWithSphere(bullet, a, bullet.u_, bullet.v_)) {
+            hitWithBullet(a, bullet);
+        }
     }
-}
+    for (const a of trees) {
+        if (testRayWithSphere(bullet, a, bullet.u_, bullet.v_)) {
+            hitWithBullet(a, bullet);
+        }
+    }
+};
 
 const kill = (actor: Actor) => {
     playAt(actor, Snd.death);
@@ -843,6 +851,7 @@ const BULLET_COLOR = [
 ];
 
 const hitWithBullet = (actor: Actor, bullet: Actor) => {
+
     addVelFrom(actor, bullet, 0.1);
     actor.animHit_ = ANIM_HIT_MAX;
     addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
@@ -885,7 +894,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
             }
         }
     }
-    if (bullet.hp_ && bullet.btn_ !== BulletType.Ray) {
+    if (bullet.hp_ && bullet.btn_ != BulletType.Ray) {
         --bullet.hp_;
         if (bullet.hp_) {
             let nx = bullet.x_ - actor.x_;
@@ -898,25 +907,6 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                 const pen = OBJECT_RADIUS_BY_TYPE[actor.type_] + BULLET_RADIUS + 1;
                 bullet.x_ = actor.x_ + pen * nx;
                 bullet.y_ = actor.y_ + pen * ny;
-            }
-        }
-    }
-}
-
-const updateBulletCollision = (b: Actor, list: Actor[]) => {
-    if (b.hp_) {
-        for (const a of list) {
-            const owned = !(a.client_ - b.client_);
-            if (!owned) {
-                if (b.btn_ == BulletType.Ray && b.hp_ > 0) {
-                    if (testRayWithSphere(b, a, b.u_, b.v_)) {
-                        hitWithBullet(a, b);
-                    }
-                } else {
-                    if (testIntersection(a, b)) {
-                        hitWithBullet(a, b);
-                    }
-                }
             }
         }
     }
@@ -1015,6 +1005,11 @@ const updatePlayer = (player: Actor) => {
                 bullet.hp_ = weapon.bulletHp_;
                 bullet.s_ = weapon.bulletLifetime_;
                 pushActor(bullet);
+
+                if (weapon.bulletType_ == BulletType.Ray) {
+                    castRayBullet(bullet);
+                    bullet.weapon_ = 0;
+                }
             }
 
             if (weapon.bulletType_) {
@@ -1031,13 +1026,13 @@ export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, 
     addFleshParticles(amount, actor, expl, vel);
 }
 
-const cloneState = (): StateData => ({
-    nextId_: state.nextId_,
-    tic_: state.tic_,
-    seed_: state.seed_,
-    mapSeed_: state.mapSeed_,
-    actors_: state.actors_.map(list => list.map(a => ({...a}))),
-    scores_: {...state.scores_}
+const cloneState = (_state: StateData = state): StateData => ({
+    nextId_: _state.nextId_,
+    tic_: _state.tic_,
+    seed_: _state.seed_,
+    mapSeed_: _state.mapSeed_,
+    actors_: _state.actors_.map(list => list.map(a => ({...a}))),
+    scores_: {..._state.scores_}
 });
 
 const beginPrediction = (): boolean => {
