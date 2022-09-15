@@ -99,7 +99,7 @@ interface VPadControl {
     t_: number;
     r_: number;
     b_: number;
-    flags_?: number;
+    isButton_?: number;
     pointer_?: Pointer | undefined;
     // any len > undefined = false (undefined is NaN)
     r1_?: number | undefined;
@@ -109,7 +109,7 @@ interface VPadControl {
 const vpad: VPadControl[] = [
     {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: PAD_MOVE_RADIUS_0, r2_: PAD_MOVE_RADIUS_1},
     {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: PAD_FIRE_RADIUS_0, r2_: PAD_FIRE_RADIUS_1},
-    {l_: 0.5, t_: 0, r_: 1, b_: 0.5, flags_: 1},
+    {l_: 0.5, t_: 0, r_: 1, b_: 0.5, isButton_: 1},
 ];
 let touchPadActive = false;
 
@@ -140,7 +140,7 @@ const updateVirtualPad = () => {
             const p = control.pointer_;
             let release = !p.active_;
             // out-of-zone mode
-            if (control.flags_ & 1) {
+            if (control.isButton_) {
                 release ||= !testZone(control, p.x_ / W, p.y_ / H);
             }
             if (release) {
@@ -167,7 +167,7 @@ export const drawVirtualPad = () => {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
     const k = 1 / getScreenScale();
-    let i = 0;
+    let i = Img.joy0;
     for (const control of vpad) {
         const w_ = W * (control.r_ - control.l_);
         const h_ = H * (control.b_ - control.t_);
@@ -175,12 +175,12 @@ export const drawVirtualPad = () => {
         let cy = k * (H * control.t_ + h_ / 2);
         // draw(img[Img.box], cx, cy, 0, w_ * k, h_ * k, 0.1, 0);
         const pp = control.pointer_;
-        if (!(control.flags_ & 1) && pp) {
+        if (!control.isButton_ && pp) {
             cx = pp.startX_ * k;
             cy = pp.startY_ * k;
             draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
         }
-        draw(img[Img.joy0 + i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
+        draw(img[i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
         ++i;
     }
 }

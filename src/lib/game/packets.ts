@@ -1,15 +1,8 @@
 import {Actor, ClientEvent, newStateData, Packet, PacketDebug, StateData} from "./types";
 import {Const} from "./config";
 import {ClientID} from "../../shared/types";
-//import {decodeRLE, encodeRLE} from "../utils/rle";
 
 const DEBUG_SIGN = 0xdeb51a1e;
-
-// const _packU8 = new Uint8Array(_packI32.buffer);
-// const _rleBuffer = new Uint8Array(1024 * 16 * 4);
-
-const _i2f = (x:number) => x / Const.NetPrecision;
-const _f2i = (x:number) => x * Const.NetPrecision;
 
 export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: ClientEvent[] = [], _state?: StateData, _debug?: PacketDebug): Packet => {
     const eventsCount = i32[3];
@@ -47,15 +40,14 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                 btn_,
                 anim0_: anim & 0xFF,
                 animHit_: (anim >> 8) & 0xFF,
-
+                detune_: i32[ptr++],
+                s_: i32[ptr++],
                 x_: i32[ptr++] / Const.NetPrecision,
                 y_: i32[ptr++] / Const.NetPrecision,
                 z_: i32[ptr++] / Const.NetPrecision,
                 u_: i32[ptr++] / Const.NetPrecision,
                 v_: i32[ptr++] / Const.NetPrecision,
                 w_: i32[ptr++] / Const.NetPrecision,
-                s_: i32[ptr++] / Const.NetPrecision,
-                t_: i32[ptr++] / Const.NetPrecision,
             };
             _state.actors_[p.type_].push(p);
         }
@@ -97,6 +89,8 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                         btn_,
                         anim0_,
                         animHit_: anim_,
+                        detune_: i32[ptr++],
+                        s_: i32[ptr++],
 
                         x_: i32[ptr++] / Const.NetPrecision,
                         y_: i32[ptr++] / Const.NetPrecision,
@@ -104,8 +98,6 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                         u_: i32[ptr++] / Const.NetPrecision,
                         v_: i32[ptr++] / Const.NetPrecision,
                         w_: i32[ptr++] / Const.NetPrecision,
-                        s_: i32[ptr++] / Const.NetPrecision,
-                        t_: i32[ptr++] / Const.NetPrecision,
                     };
                     _debug.state.actors_[p.type_].push(p);
                 }
@@ -166,14 +158,14 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
             i32[ptr++] = p.btn_;
             i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
             i32[ptr++] = p.id_;
+            i32[ptr++] = p.detune_;
+            i32[ptr++] = p.s_;
             i32[ptr++] = p.x_ * Const.NetPrecision;
             i32[ptr++] = p.y_ * Const.NetPrecision;
             i32[ptr++] = p.z_ * Const.NetPrecision;
             i32[ptr++] = p.u_ * Const.NetPrecision;
             i32[ptr++] = p.v_ * Const.NetPrecision;
             i32[ptr++] = p.w_ * Const.NetPrecision;
-            i32[ptr++] = p.s_ * Const.NetPrecision;
-            i32[ptr++] = p.t_ * Const.NetPrecision;
         }
         i32[ptr++] = Object.keys(packet.state_.scores_).length;
         for (const id in packet.state_.scores_) {
@@ -201,14 +193,15 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
                     i32[ptr++] = p.btn_;
                     i32[ptr++] = ((p.animHit_ & 0xFF) << 8) | (p.anim0_ & 0xFF);
                     i32[ptr++] = p.id_;
+                    i32[ptr++] = p.detune_;
+                    i32[ptr++] = p.s_;
+
                     i32[ptr++] = p.x_ * Const.NetPrecision;
                     i32[ptr++] = p.y_ * Const.NetPrecision;
                     i32[ptr++] = p.z_ * Const.NetPrecision;
                     i32[ptr++] = p.u_ * Const.NetPrecision;
                     i32[ptr++] = p.v_ * Const.NetPrecision;
                     i32[ptr++] = p.w_ * Const.NetPrecision;
-                    i32[ptr++] = p.s_ * Const.NetPrecision;
-                    i32[ptr++] = p.t_ * Const.NetPrecision;
                 }
             }
         }

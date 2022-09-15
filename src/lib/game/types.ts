@@ -10,9 +10,9 @@ export const enum ActorType {
     Tree = 4,
 }
 
-export const enum ItemCategory {
-    Effect = 0x100,
-    Weapon = 0x200,
+export const enum ItemType {
+    Hp = 0,
+    Weapon = 1,
 }
 
 export interface Pos {
@@ -28,22 +28,35 @@ export interface Vel {
 }
 
 export interface Actor extends Pos, Vel {
+    // 32-bit identifier
     id_: number;
+    // 0..4
     type_: ActorType;
+    // 32-bit identifier
     client_: ClientID;
     btn_: number;
-    // stpq
-    s_: number;
-    t_: number;
-    // p?: number;
-    // q?: number;
 
+    // reload time
+    // bullet life-time
+    s_: number;
+
+    // detune counter: 0...32 (max of weapon detune-speed parameter)
+    detune_: number;
+
+    // Item, Player, Barrel : holding or contains Weapon ID
+    // Bullet : Damage value
+    // range: 0...15 currently
     weapon_?: number;
+
     hp_?: number;
+
     // 1 byte: just generated anim start point
     anim0_?: number;
-    // hit effect (4 bits: 0...15)
+
+    // Hit effect (4 bits: 0...15)
+    // For Items could not be picked up until it reach 0
     animHit_?: number;
+
     // local frame-scope state
     fstate_?: number;
 }

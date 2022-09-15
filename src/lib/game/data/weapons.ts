@@ -9,9 +9,12 @@ export const enum BulletType {
 }
 
 export interface WeaponConfig {
-    rate_: number;
+    // TODO: rename to reload-tics
+    reloadTime_: number;
     launchTime_: number;
+    // relaunch speed is steps to advance to launchTime
     relaunchSpeed_: number;
+
     spawnCount_: number;
     angleVar_: number;
     angleSpread_: number;
@@ -36,7 +39,7 @@ export interface WeaponConfig {
 }
 
 const newWeapon = (): WeaponConfig => ({
-    rate_: 1,
+    reloadTime_: 60,
     launchTime_: 0,
     relaunchSpeed_: 2,
     spawnCount_: 1,
@@ -64,13 +67,13 @@ const newWeapon = (): WeaponConfig => ({
 const createArmWeapon = (): WeaponConfig => {
     const w = newWeapon();
     w.angleSpread_ = 0.5;
-    w.launchTime_ = 0.5;
+    w.launchTime_ = 30;
     w.kickBack_ = 10;
     w.offset_ = 6;
     w.offsetZ_ = 0;
     w.velocity_ = 300;
     w.detuneSpeed_ = 16;
-    w.cameraFeedback_ = 0.02/5;
+    w.cameraFeedback_ = 0.02 / 5;
     w.cameraLookForward_ = 0.1;
     w.handsAnim_ = 12;
     w.bulletDamage_ = 2;
@@ -85,7 +88,7 @@ const createGunWeapon = (): WeaponConfig => {
     w.offset_ = 16;
     w.velocity_ = 600;
     w.detuneSpeed_ = 16;
-    w.cameraFeedback_ = 0.02/5;
+    w.cameraFeedback_ = 0.02 / 5;
     w.cameraLookForward_ = 0.2;
     w.bulletType_ = BulletType.Shell;
     w.bulletShellColor_ = 0xFFDD22;
@@ -113,13 +116,15 @@ export const weapons: WeaponConfig[] = [
 let i = 1;
 
 // 🔪
-weapons[i].rate_ = 6;
+weapons[i].reloadTime_ = 10;
+weapons[i].launchTime_ = 5;
 weapons[i].bulletDamage_ = 2;
 weapons[i].gfxRot_ = toRad(-45);
 
 // AXE
 ++i;
-weapons[i].rate_ = 2;
+weapons[i].reloadTime_ = 30;
+weapons[i].launchTime_ = 15;
 weapons[i].bulletDamage_ = 8;
 weapons[i].gfxRot_ = toRad(-45);
 
@@ -134,7 +139,7 @@ weapons[i].cameraFeedback_ = 0.02;
 
 // 🖊 light auto gun
 ++i;
-weapons[i].rate_ = 12;
+weapons[i].reloadTime_ = 5;
 weapons[i].angleSpread_ = 0.25;
 weapons[i].kickBack_ = 20;
 weapons[i].offset_ = 20;
@@ -143,7 +148,7 @@ weapons[i].cameraFeedback_ = 0.02;
 
 // ✏️ hard machine-gun?
 ++i;
-weapons[i].rate_ = 8;
+weapons[i].reloadTime_ = 8;
 weapons[i].angleSpread_ = 0.25;
 weapons[i].kickBack_ = 20;
 weapons[i].velocity_ /= 2;
@@ -182,7 +187,7 @@ weapons[i].bulletShellColor_ = 0x00FF00;
 ++i;
 weapons[i].angleSpread_ = 0.5;
 weapons[i].detuneSpeed_ = 10;
-weapons[i].rate_ = 6;
+weapons[i].reloadTime_ = 10;
 weapons[i].cameraLookForward_ = 0.3;
 weapons[i].cameraFeedback_ = 0.05;
 weapons[i].velocity_ = 420;
@@ -193,12 +198,12 @@ weapons[i].bulletShellColor_ = 0x00FFFF;
 
 // 🧵 RAIL GUN
 ++i;
-weapons[i].rate_ = 0.5;
+weapons[i].reloadTime_ = 120;
 weapons[i].cameraShake_ = 25;
 weapons[i].velocity_ = 1;
 weapons[i].cameraFeedback_ = 0.1;
 weapons[i].cameraLookForward_ = 0.4;
-weapons[i].cameraScale_ = 1.5;
+weapons[i].cameraScale_ = 1.4;
 weapons[i].bulletDamage_ = 5;
 weapons[i].bulletHp_ = 200;
 weapons[i].bulletType_ = BulletType.Ray;

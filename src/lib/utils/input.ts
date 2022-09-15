@@ -1,5 +1,5 @@
 import {audioContext} from "../audio/context";
-import {getOrCreate, recValues} from "./utils";
+import {getOrCreate} from "./utils";
 
 /// make cold id to hot id
 // const _preventDefault = (e:Event) => e.preventDefault();
@@ -177,10 +177,8 @@ export const keyboardUp: number[] = [];
 }
 // })();
 
-const resetPointer = (p: Pointer) => {
-    p.downEvent_ = false;
-    p.upEvent_ = false;
-};
+const resetPointer = (p: Pointer) =>
+    p.downEvent_ = p.upEvent_ = false;
 
 export const updateInput = () => {
     keyboardDown.length = 0;

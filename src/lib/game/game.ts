@@ -7,7 +7,17 @@ import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
-import {Actor, ActorType, Client, ClientEvent, ItemCategory, newStateData, Packet, StateData, Vel} from "./types";
+import {
+    Actor,
+    ActorType,
+    Client,
+    ClientEvent,
+    ItemType,
+    newStateData,
+    Packet,
+    StateData,
+    Vel
+} from "./types";
 import {pack, unpack} from "./packets";
 import {dec1, getLumaColor32, incTo, lerp, M, PI, PI2, reach} from "../utils/math";
 import {
@@ -136,7 +146,7 @@ const newActorObject = (type: ActorType): Actor =>
         client_: 0,
 
         s_: 0,
-        t_: 0,
+        detune_: 0,
 
         weapon_: 0,
         anim0_: rand(0x100),
@@ -144,14 +154,17 @@ const newActorObject = (type: ActorType): Actor =>
         hp_: 1,
     });
 
-const newItemRandomEffect = (): Actor => {
+const createHpItem = (): Actor => {
     const item = newActorObject(ActorType.Item);
-    item.btn_ = ItemCategory.Effect;
     pushActor(item);
     return item;
 }
 
-const requireClient = (id: ClientID): Client => getOrCreate(clients, id, ()=>({id_: id, tic_: 0, acknowledgedTic_: 0}));
+const requireClient = (id: ClientID): Client => getOrCreate(clients, id, () => ({
+    id_: id,
+    tic_: 0,
+    acknowledgedTic_: 0
+}));
 
 export const resetGame = () => {
     clients.clear();
@@ -422,7 +435,7 @@ const checkJoinSync = () => {
 }
 
 const getMinTic = (_tic = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0) => {
-    for (const [,client] of clients) {
+    for (const [, client] of clients) {
         if (_tic > client.tic_) {
             _tic = client.tic_;
         }
@@ -431,8 +444,8 @@ const getMinTic = (_tic = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0
 }
 
 // get minimum tic that already received by
-const getMinAckAndInput = (lastTic:number) => {
-    for (const [,client] of clients) {
+const getMinAckAndInput = (lastTic: number) => {
+    for (const [, client] of clients) {
         if (lastTic > client.acknowledgedTic_) {
             lastTic = client.acknowledgedTic_;
         }
@@ -606,14 +619,9 @@ const cleaningUpClients = () => {
 
 const pickItem = (item: Actor, player: Actor) => {
     if (testIntersection(item, player)) {
-        // isWeapon
-        const itemId = item.btn_ & 0xFF;
-        const itemCat = item.btn_ & 0x300;
-        if (itemCat == ItemCategory.Weapon) {
-            const playerHasNoWeapon = !player.weapon_;
-            const playerNotDropping = !(player.btn_ & ControlsFlag.Drop);
-            if (playerHasNoWeapon && playerNotDropping) {
-                player.weapon_ = itemId;
+        if (item.btn_ & ItemType.Weapon) {
+            if (!(player.weapon_ || (player.btn_ & ControlsFlag.Drop))) {
+                player.weapon_ = item.weapon_;
                 playAt(player, Snd.pick);
                 item.hp_ = item.btn_ = 0;
             }
@@ -813,14 +821,15 @@ const kill = (actor: Actor) => {
     playAt(actor, Snd.death);
     const amount = 1 + rand(3);
     for (let i = 0; i < amount; ++i) {
-        const item = newItemRandomEffect();
+        const item = createHpItem();
         copyPosFromActorCenter(item, actor);
         addVelFrom(item, actor);
         const v = 32 + rand(64);
         addRadialVelocity(item, random(PI2), v, v);
         item.animHit_ = ANIM_HIT_MAX;
         if (actor.weapon_) {
-            item.btn_ = ItemCategory.Weapon | actor.weapon_;
+            item.btn_ = ItemType.Weapon;
+            item.weapon_ = actor.weapon_;
             actor.weapon_ = 0;
         }
     }
@@ -965,7 +974,8 @@ const updatePlayer = (player: Actor) => {
             addVelFrom(item, player);
             addVelocityDir(item, lookDirX, lookDirY, 0, 64);
             // set weapon item
-            item.btn_ = ItemCategory.Weapon | player.weapon_;
+            item.btn_ = ItemType.Weapon;
+            item.weapon_ = player.weapon_;
             item.animHit_ = ANIM_HIT_OVER;
             player.weapon_ = 0;
         }
@@ -973,20 +983,21 @@ const updatePlayer = (player: Actor) => {
 
     const weapon = weapons[player.weapon_];
     if (player.btn_ & ControlsFlag.Shooting && player.weapon_) {
-        player.s_ = reach(player.s_, 0, weapon.rate_ / Const.NetFq);
+        // reload-tics = NetFq / Rate
+        player.s_ = dec1(player.s_);
         if (!player.s_) {
             if (player.client_ == clientId) {
                 cameraShake = M.max(weapon.cameraShake_, cameraShake);
                 cameraFeedback = 5;
             }
-            player.s_ = 1;
-            player.t_ = incTo(player.t_, weapon.detuneSpeed_);
+            player.s_ = weapon.reloadTime_;
+            player.detune_ = incTo(player.detune_, weapon.detuneSpeed_);
             addVelocityDir(player, lookDirX, lookDirY, -1, player.w_ > 0 ? 0 : -weapon.kickBack_);
             playAt(player, Snd.shoot);
             for (let i = 0; i < weapon.spawnCount_; ++i) {
                 const a = lookAngle +
                     weapon.angleVar_ * (random() - 0.5) +
-                    weapon.angleSpread_ * (player.t_ / weapon.detuneSpeed_) * (random() - 0.5);
+                    weapon.angleSpread_ * (player.detune_ / weapon.detuneSpeed_) * (random() - 0.5);
                 const dx = M.cos(a);
                 const dy = M.sin(a);
                 const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
@@ -1013,8 +1024,8 @@ const updatePlayer = (player: Actor) => {
             }
         }
     } else {
-        player.t_ = (player.t_ / 3) | 0;
-        player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_ / Const.NetFq);
+        player.detune_ = (player.detune_ / 3) | 0;
+        player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_);
     }
 }
 
@@ -1164,19 +1175,19 @@ const drawMapOverlay = () => {
 const drawCrosshair = () => {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
-        const len = 4 + M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) / 4 + (p0.t_ / 8) + 4 * M.min(1, p0.s_);
+        const len = 4 + M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) / 4 + (p0.detune_ / 8) + p0.s_ / 10;
         for (let i = 0; i < 4; ++i) {
             draw(img[Img.box_t1], lookAtX, lookAtY, lastFrameTs / 10 + i * PI / 2, 2, len, 0.5);
         }
     }
 }
 
-const drawItem = (item: Actor, _idx: number = item.btn_ & 0xFF) => {
-    if (item.btn_ & ItemCategory.Weapon) {
-        drawObject(item, Img.weapon0 + _idx, 2, 0.8);
+const drawItem = (item: Actor) => {
+    if (item.btn_ & ItemType.Weapon) {
+        drawObject(item, Img.weapon0 + item.weapon_, 2, 0.8);
     } else /*if (cat == ItemCategory.Effect)*/ {
         const t = lastFrameTs * 4 + item.anim0_ / 25;
-        drawObject(item, Img.item0 + _idx, BULLET_RADIUS + M.cos(t), 0.9 + 0.1 * M.sin(4 * t));
+        drawObject(item, Img.item0, BULLET_RADIUS + M.cos(t), 0.9 + 0.1 * M.sin(4 * t));
     }
 }
 
@@ -1256,7 +1267,7 @@ const drawPlayer = (p: Actor): void => {
     if (wpn.handsAnim_) {
         // const t = M.max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
-        const t = M.min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : M.max(0, (p.s_ - 0.5) * 2));
+        const t = M.min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : M.max(0, (p.s_ / wpn.reloadTime_ - 0.5) * 2));
         wd += M.sin(t * PI) * wpn.handsAnim_;
         weaponAngle -= -wx * PI * 0.25 * M.sin((1 - (1 - t) ** 2) * PI2);
     }

@@ -214,7 +214,7 @@ function mangle_types(file: string, dest: string) {
         ],
         [
             // WeaponConfig
-            "rate_",
+            "reloadTime_",
             "launchTime_",
             "relaunchSpeed_",
             "spawnCount_",
@@ -244,7 +244,7 @@ function mangle_types(file: string, dest: string) {
             "t_",
             "r_",
             "b_",
-            "flags_",
+            "isButton_",
             "pointer_",
             "r1_",
             "r2_",
@@ -274,22 +274,22 @@ function mangle_types(file: string, dest: string) {
         [
             // Actor
             "id_",
-            "type_",
             "client_",
             "btn_",
+            "type_",
             "weapon_",
             "hp_",
             "anim0_",
             "animHit_",
             "fstate_",
+            "s_",
+            "detune_",
             "x_",
             "y_",
             "z_",
             "u_",
             "v_",
             "w_",
-            "s_",
-            "t_",
         ],
         [
             // Client
