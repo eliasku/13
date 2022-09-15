@@ -8,7 +8,8 @@ export const enum Const {
 
     StartWeapon = 0,
 
-    NetPrecision = 65536,
+    NetPrecision = 1 << 16,
+    NetFloatBits = 16,
 }
 
 export let _debugLagK = 0;

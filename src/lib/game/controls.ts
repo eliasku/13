@@ -31,12 +31,12 @@ export let lookAtX = 0;
 export let lookAtY = 0;
 export let viewX = 0;
 export let viewY = 0;
-export let shootButtonDown = 0;
-export let jumpButtonDown = 0;
+export let shootButtonDown = false;
+export let jumpButtonDown = false;
 export let moveX = 0;
 export let moveY = 0;
-export let moveFast = 0;
-export let dropButton = 0;
+export let moveFast = false;
+export let dropButton = false;
 
 export const updateControls = (player: Actor) => {
     const W = gl.drawingBufferWidth;
@@ -57,52 +57,40 @@ export const updateControls = (player: Actor) => {
         viewY = 0;
     }
 
-    shootButtonDown = +((viewX || viewY) && mouse.active_);
+    shootButtonDown = (viewX || viewY) && mouse.active_;
 
-    moveX = (keyboardState.has(KeyCode.D) || keyboardState.has(KeyCode.Right)) as any
-        - ((keyboardState.has(KeyCode.A) || keyboardState.has(KeyCode.Left)) as any);
-    moveY = (keyboardState.has(KeyCode.S) || keyboardState.has(KeyCode.Down)) as any
-        - ((keyboardState.has(KeyCode.W) || keyboardState.has(KeyCode.Up)) as any);
+    moveX = (keyboardState[KeyCode.D] | keyboardState[KeyCode.Right])
+        - (keyboardState[KeyCode.A] | keyboardState[KeyCode.Left]);
+    moveY = (keyboardState[KeyCode.S] | keyboardState[KeyCode.Down])
+        - (keyboardState[KeyCode.W] | keyboardState[KeyCode.Up]);
 
-    if (moveX || moveY) {
-        moveFast = +!(keyboardState.has(KeyCode.Shift));
-    }
+    //if (moveX || moveY) {
+    moveFast = !keyboardState[KeyCode.Shift];
+    //}
 
-    jumpButtonDown = +keyboardState.has(KeyCode.Space);
-    dropButton = +keyboardState.has(KeyCode.E);
+    jumpButtonDown = !!keyboardState[KeyCode.Space];
+    dropButton = !!keyboardState[KeyCode.E];
 
-    {
-        updateVirtualPad();
+    if (updateVirtualPad()) {
         const k = gameCamera[2];
-        if (touchPadActive) {
-            {
-                const control = vpad[0];
-                const pp = control.pointer_;
-                moveX = pp ? (pp.x_ - pp.startX_) * k : 0;
-                moveY = pp ? (pp.y_ - pp.startY_) * k : 0;
-                const len = M.hypot(moveX, moveY);
-                moveFast = +(len > control.r1_);
-                jumpButtonDown = +(len > control.r2_);
-            }
-            {
-                const control = vpad[1];
-                const pp = control.pointer_;
-                viewX = pp ? (pp.x_ - pp.startX_) * k : 0;
-                viewY = pp ? (pp.y_ - pp.startY_) * k : 0;
-                const len = M.hypot(viewX, viewY);
-                lookAtX = px + viewX * 2;
-                lookAtY = py + viewY * 2;
-                shootButtonDown = +(len > control.r2_);
-            }
-            dropButton = vpad[2].pointer_ ? 1 : 0;
-        }
-    }
+        let control = vpad[0];
+        let pp = control.pointer_;
+        moveX = pp ? (pp.x_ - pp.startX_) * k : 0;
+        moveY = pp ? (pp.y_ - pp.startY_) * k : 0;
+        let len = M.hypot(moveX, moveY);
+        moveFast = len > control.r1_;
+        jumpButtonDown = len > control.r2_;
 
-    if (mousePointer.downEvent_ && touchPadActive) {
-        touchPadActive = false;
-        for (const [, p] of inputPointers) {
-            touchPadActive ||= p.active_;
-        }
+        control = vpad[1];
+        pp = control.pointer_;
+        viewX = pp ? (pp.x_ - pp.startX_) * k : 0;
+        viewY = pp ? (pp.y_ - pp.startY_) * k : 0;
+        len = M.hypot(viewX, viewY);
+        lookAtX = px + viewX * 2;
+        lookAtY = py + viewY * 2;
+        shootButtonDown = len > control.r2_;
+
+        dropButton = !!vpad[2].pointer_;
     }
 }
 
@@ -163,6 +151,13 @@ const updateVirtualPad = () => {
             }
         }
     }
+
+    if (mousePointer.downEvent_) {
+        touchPadActive = [...inputPointers.values()].some(p => p.active_);
+        // [...a.values()].some(p=>p.b);
+        // for(let [,p] of a) r|=p.v;
+    }
+    return touchPadActive;
 }
 
 export const drawVirtualPad = () => {

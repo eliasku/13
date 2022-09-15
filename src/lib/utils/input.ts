@@ -1,4 +1,5 @@
 import {audioContext} from "../audio/context";
+import {getOrCreate, recValues} from "./utils";
 
 /// make cold id to hot id
 // const _preventDefault = (e:Event) => e.preventDefault();
@@ -42,18 +43,13 @@ export const enum KeyCode {
 
 export let mousePointer: Pointer;
 export const inputPointers = new Map<number, Pointer>();
-export const keyboardState = new Set<number>();
-export const keyboardDown = new Set<number>();
-export const keyboardUp = new Set<number>();
+export const keyboardState: number[] = [];
+export const keyboardDown: number[] = [];
+export const keyboardUp: number[] = [];
 
 // LOCAL SCOPE
 {
-    const getPointer = (id: number): Pointer => {
-        if (!inputPointers.has(id)) {
-            inputPointers.set(id, newPointer(id));
-        }
-        return inputPointers.get(id);
-    }
+    const getPointer = (id: number): Pointer => getOrCreate(inputPointers, id, newPointer);
 
     const unlockAudio = () => {
         if (audioContext.state[0] == "s") {
@@ -106,7 +102,7 @@ export const keyboardUp = new Set<number>();
             ((e.clientY - _bb.y) * devicePixelRatio) | 0);
     };
 
-    const _handleTouch = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect(), _touch?:Touch) => {
+    const _handleTouch = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect(), _touch?: Touch) => {
         e.preventDefault();
         for (_touch of e.changedTouches) {
             fn(getPointer(_touch.identifier),
@@ -118,22 +114,20 @@ export const keyboardUp = new Set<number>();
 // INIT INPUT
     mousePointer = newPointer(0);
 
-    oncontextmenu = e=> e.preventDefault();
+    oncontextmenu = e => e.preventDefault();
 
     /*document.*/
     onkeydown = (e: KeyboardEvent, _kode = e.which) => {
         unlockAudio();
-        if (!keyboardState.has(_kode) && !e.repeat) {
-            keyboardDown.add(_kode);
-            keyboardState.add(_kode);
+        if (!keyboardState[_kode] && !e.repeat) {
+            keyboardDown[_kode] = keyboardState[_kode] = 1;
         }
     };
     /*document.*/
     onkeyup = (e: KeyboardEvent, _kode = e.which) => {
         e.preventDefault();
-        if (keyboardState.delete(_kode)) {
-            keyboardUp.add(_kode);
-        }
+        keyboardUp[_kode] = keyboardState[_kode];
+        keyboardState[_kode] = 0;
     };
 
     c.onmousedown = (e) => {
@@ -172,7 +166,7 @@ export const keyboardUp = new Set<number>();
         _handleTouch(e, handleMove);
         // console.info("ontouchmove");
     };
-    c.ontouchend = (e: TouchEvent, _touch?:Touch) => {
+    c.ontouchend = (e: TouchEvent, _touch?: Touch) => {
         unlockAudio();
         e.preventDefault();
         for (_touch of e.changedTouches) {
@@ -189,13 +183,13 @@ const resetPointer = (p: Pointer) => {
 };
 
 export const updateInput = () => {
-    keyboardDown.clear();
-    keyboardUp.clear();
+    keyboardDown.length = 0;
+    keyboardUp.length = 0;
     resetPointer(mousePointer);
     inputPointers.forEach(resetPointer);
 }
 
 export const isAnyKeyDown = () =>
+    keyboardDown.length ||
     mousePointer.upEvent_ ||
-    keyboardDown.size ||
     [...inputPointers.values()].some(x => x.upEvent_);

@@ -8,6 +8,9 @@ const DEBUG_SIGN = 0xdeb51a1e;
 // const _packU8 = new Uint8Array(_packI32.buffer);
 // const _rleBuffer = new Uint8Array(1024 * 16 * 4);
 
+const _i2f = (x:number) => x / Const.NetPrecision;
+const _f2i = (x:number) => x * Const.NetPrecision;
+
 export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: ClientEvent[] = [], _state?: StateData, _debug?: PacketDebug): Packet => {
     const eventsCount = i32[3];
     let event_t = i32[4];
@@ -34,11 +37,7 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
             const hdr = i32[ptr++];
             const c = i32[ptr++];
             const btn_ = i32[ptr++];
-
             const anim = i32[ptr++];
-            const anim0_ = anim & 0xFF;
-            const anim_ = (anim >> 8) & 0xFF;
-
             const p: Actor = {
                 id_: i32[ptr++],
                 type_: hdr & 0xFF,
@@ -46,8 +45,8 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                 weapon_: (hdr >> 16) & 0xFF,
                 client_: c,
                 btn_,
-                anim0_,
-                animHit_: anim_,
+                anim0_: anim & 0xFF,
+                animHit_: (anim >> 8) & 0xFF,
 
                 x_: i32[ptr++] / Const.NetPrecision,
                 y_: i32[ptr++] / Const.NetPrecision,

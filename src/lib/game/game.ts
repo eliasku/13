@@ -81,6 +81,7 @@ import {
     updateDebugInput
 } from "./debug";
 import {addToGrid, queryGridCollisions} from "./grid";
+import {getOrCreate} from "../utils/utils";
 
 const clients = new Map<ClientID, Client>()
 
@@ -150,12 +151,7 @@ const newItemRandomEffect = (): Actor => {
     return item;
 }
 
-const requireClient = (id: ClientID): Client => {
-    if (!clients.has(id)) {
-        clients.set(id, {id_: id, tic_: 0, acknowledgedTic_: 0});
-    }
-    return clients.get(id);
-}
+const requireClient = (id: ClientID): Client => getOrCreate(clients, id, ()=>({id_: id, tic_: 0, acknowledgedTic_: 0}));
 
 export const resetGame = () => {
     clients.clear();

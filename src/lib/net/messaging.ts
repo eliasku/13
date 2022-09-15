@@ -1,6 +1,7 @@
 import {ClientID, Message, MessageData, MessageField, MessageType, PostMessagesResponse} from "../../shared/types";
 import {channels_processMessage} from "./channels";
 import {rehash} from "../utils/hasher";
+import {getOrCreate} from "../utils/utils";
 
 export interface RemoteClient {
     id_: ClientID;
@@ -244,12 +245,8 @@ const setupDataChannel = (rc: RemoteClient) => {
     }
 }
 
-const requireRemoteClient = (id: ClientID): RemoteClient => {
-    if (!remoteClients.has(id)) {
-        remoteClients.set(id, newRemoteClient(id));
-    }
-    return remoteClients.get(id);
-}
+const requireRemoteClient = (id: ClientID): RemoteClient =>
+    getOrCreate(remoteClients, id, newRemoteClient);
 
 export const isPeerConnected = (rc?: RemoteClient): boolean =>
     rc?.dc_?.readyState[0] == "o" && rc?.pc_?.iceConnectionState[1] == "o";

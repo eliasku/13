@@ -82,19 +82,19 @@ export const printDebugInfo = (
 }
 
 export const updateDebugInput = () => {
-    if (keyboardDown.has(KeyCode.Digit0)) {
+    if (keyboardDown[KeyCode.Digit0]) {
         showDebugInfo = !showDebugInfo;
     }
-    if (keyboardDown.has(KeyCode.Digit1)) {
+    if (keyboardDown[KeyCode.Digit1]) {
         ++debugCheckAvatar;
     }
-    if (keyboardDown.has(KeyCode.Digit2)) {
+    if (keyboardDown[KeyCode.Digit2]) {
         drawCollisionEnabled = !drawCollisionEnabled;
     }
-    if (keyboardDown.has(KeyCode.Digit3)) {
+    if (keyboardDown[KeyCode.Digit3]) {
         setDebugLagK((_debugLagK + 1) % 3);
     }
-    if (keyboardDown.has(KeyCode.Digit4)) {
+    if (keyboardDown[KeyCode.Digit4]) {
         debugStateEnabled = !debugStateEnabled;
     }
 }
