@@ -1,10 +1,10 @@
-import {BOUNDS_SIZE} from "../assets/params";
+import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {Actor} from "./types";
 
-export const GRID_R = 16;
+export const GRID_R = 16 * WORLD_SCALE;
 export const GRID_D = GRID_R * 2;
-export const GRID_STRIDE = BOUNDS_SIZE / GRID_D;
-export const GRID_D_BITS = 5;//Math.log2(GRID_D);
+export const GRID_STRIDE = WORLD_BOUNDS_SIZE / GRID_D;
+export const GRID_D_BITS = 11;//Math.log2(GRID_D);
 export const GRID_STRIDE_BITS = 5;//Math.log2(GRID_STRIDE);
 
 // export const gridAddr = (x: number, y: number) =>

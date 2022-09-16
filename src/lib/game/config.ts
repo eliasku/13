@@ -10,7 +10,7 @@ export const enum Const {
 
     NetPrecision = 1 << 16,
     NetFloatBits = 16,
-    WorldScale = 32,
+    WorldScale = 64,
 }
 
 export let _debugLagK = 0;

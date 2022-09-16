@@ -38,6 +38,9 @@ const icons_channelState = {
     "closing": "❌",
 };
 
+const _dmin = [Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE];
+const _dmax = [Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE];
+
 export const printDebugInfo = (
     gameTic: number, netTic: number, lastFrameTs: number, prevTime: number,
     drawList: Actor[],
@@ -64,7 +67,7 @@ export const printDebugInfo = (
     text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
     text += "trees: " + trees.length + "\n";
 
-    text += `┌ ${clientName} | tic: ${gameTic}, game-net: ${netTic-gameTic}\n`;
+    text += `┌ ${clientName} | tic: ${gameTic}, game-net: ${netTic - gameTic}\n`;
     for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;
@@ -79,6 +82,30 @@ export const printDebugInfo = (
         }
         text += "\n";
     }
+
+    for (let a of [].concat(...state.actors_)) {
+        if (a.x_ < _dmin[0]) _dmin[0] = a.x_;
+        if (a.x_ > _dmax[0]) _dmax[0] = a.x_;
+        if (a.y_ < _dmin[1]) _dmin[1] = a.y_;
+        if (a.y_ > _dmax[1]) _dmax[1] = a.y_;
+        if (a.z_ < _dmin[2]) _dmin[2] = a.z_;
+        if (a.z_ > _dmax[2]) _dmax[2] = a.z_;
+
+        if (a.u_ < _dmin[0 + 3]) _dmin[0 + 3] = a.u_;
+        if (a.u_ > _dmax[0 + 3]) _dmax[0 + 3] = a.u_;
+        if (a.v_ < _dmin[1 + 3]) _dmin[1 + 3] = a.v_;
+        if (a.v_ > _dmax[1 + 3]) _dmax[1 + 3] = a.v_;
+        if (a.w_ < _dmin[2 + 3]) _dmin[2 + 3] = a.w_;
+        if (a.w_ > _dmax[2 + 3]) _dmax[2 + 3] = a.w_;
+    }
+
+    text += "x := [" + _dmin[0] + " .. " + _dmax[0] + "]\n";
+    text += "y := [" + _dmin[1] + " .. " + _dmax[1] + "]\n";
+    text += "z := [" + _dmin[2] + " .. " + _dmax[2] + "]\n";
+    text += "u := [" + _dmin[3] + " .. " + _dmax[3] + "]\n";
+    text += "v := [" + _dmin[4] + " .. " + _dmax[4] + "]\n";
+    text += "w := [" + _dmin[5] + " .. " + _dmax[5] + "]\n";
+
     termPrint(text);
 }
 

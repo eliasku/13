@@ -1,5 +1,4 @@
 import {Actor, ClientEvent, newStateData, Packet, PacketDebug, StateData} from "./types";
-import {Const} from "./config";
 import {ClientID} from "../../shared/types";
 
 const DEBUG_SIGN = 0xdeb51a1e;
@@ -29,23 +28,28 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
         for (let i = 0; i < count; ++i) {
             const hdr1 = i32[ptr++];
             const hdr2 = i32[ptr++];
+            const ux = i32[ptr++];
+            const vy = i32[ptr++];
+            const wz = i32[ptr++];
             const p: Actor = {
                 type_: hdr1 & 0xFF,
                 hp_: (hdr1 >> 8) & 0xFF,
                 weapon_: (hdr1 >> 16) & 0xFF,
                 detune_: (hdr1 >> 24) & 0xFF,
-                anim0_: hdr2  & 0xFF,
+                anim0_: hdr2 & 0xFF,
                 animHit_: (hdr2 >> 8) & 0xFF,
                 s_: (hdr2 >> 16) & 0xFF,
+
+                x_: ux & 0xFFFF,
+                y_: vy & 0xFFFF,
+                z_: wz & 0xFFFF,
+                u_: ux >> 16,
+                v_: vy >> 16,
+                w_: wz >> 16,
+
                 id_: i32[ptr++],
                 client_: i32[ptr++],
                 btn_: i32[ptr++],
-                x_: i32[ptr++] / Const.NetPrecision,
-                y_: i32[ptr++] / Const.NetPrecision,
-                z_: i32[ptr++] / Const.NetPrecision,
-                u_: i32[ptr++] / Const.NetPrecision,
-                v_: i32[ptr++] / Const.NetPrecision,
-                w_: i32[ptr++] / Const.NetPrecision,
             };
             _state.actors_[p.type_].push(p);
         }
@@ -72,25 +76,28 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                 for (let i = 0; i < count; ++i) {
                     const hdr1 = i32[ptr++];
                     const hdr2 = i32[ptr++];
+                    const ux = i32[ptr++];
+                    const vy = i32[ptr++];
+                    const wz = i32[ptr++];
                     const p: Actor = {
                         type_: hdr1 & 0xFF,
                         hp_: (hdr1 >> 8) & 0xFF,
                         weapon_: (hdr1 >> 16) & 0xFF,
                         detune_: (hdr1 >> 24) & 0xFF,
-                        anim0_: hdr2  & 0xFF,
+                        anim0_: hdr2 & 0xFF,
                         animHit_: (hdr2 >> 8) & 0xFF,
                         s_: (hdr2 >> 16) & 0xFF,
+
+                        x_: ux & 0xFFFF,
+                        y_: vy & 0xFFFF,
+                        z_: wz & 0xFFFF,
+                        u_: ux >> 16,
+                        v_: vy >> 16,
+                        w_: wz >> 16,
 
                         id_: i32[ptr++],
                         client_: i32[ptr++],
                         btn_: i32[ptr++],
-
-                        x_: i32[ptr++] / Const.NetPrecision,
-                        y_: i32[ptr++] / Const.NetPrecision,
-                        z_: i32[ptr++] / Const.NetPrecision,
-                        u_: i32[ptr++] / Const.NetPrecision,
-                        v_: i32[ptr++] / Const.NetPrecision,
-                        w_: i32[ptr++] / Const.NetPrecision,
                     };
                     _debug.state.actors_[p.type_].push(p);
                 }
@@ -117,6 +124,7 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     i32[0] = +packet.sync_ | ((!!packet.state_) as any as number << 1);
     i32[1] = packet.receivedOnSender_;
     i32[2] = packet.tic_;
+    console.info( packet.tic_ - packet.receivedOnSender_);
     const events = packet.events_;
     events.sort((a, b) => a.tic_ - b.tic_);
     let event_t = events.length ? events[0].tic_ : 0;
@@ -148,15 +156,12 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
         for (const p of list) {
             i32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16) | (p.detune_ << 24);
             i32[ptr++] = p.anim0_ | (p.animHit_ << 8) | (p.s_ << 16);
+            i32[ptr++] = (p.u_ << 16) | p.x_;
+            i32[ptr++] = (p.v_ << 16) | p.y_;
+            i32[ptr++] = (p.w_ << 16) | p.z_;
             i32[ptr++] = p.id_;
             i32[ptr++] = p.client_;
             i32[ptr++] = p.btn_;
-            i32[ptr++] = p.x_ * Const.NetPrecision;
-            i32[ptr++] = p.y_ * Const.NetPrecision;
-            i32[ptr++] = p.z_ * Const.NetPrecision;
-            i32[ptr++] = p.u_ * Const.NetPrecision;
-            i32[ptr++] = p.v_ * Const.NetPrecision;
-            i32[ptr++] = p.w_ * Const.NetPrecision;
         }
         i32[ptr++] = Object.keys(packet.state_.scores_).length;
         for (const id in packet.state_.scores_) {
@@ -181,15 +186,12 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
                 for (const p of list) {
                     i32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16) | (p.detune_ << 24);
                     i32[ptr++] = p.anim0_ | (p.animHit_ << 8) | (p.s_ << 16);
+                    i32[ptr++] = (p.u_ << 16) | p.x_;
+                    i32[ptr++] = (p.v_ << 16) | p.y_;
+                    i32[ptr++] = (p.w_ << 16) | p.z_;
                     i32[ptr++] = p.id_;
                     i32[ptr++] = p.client_;
                     i32[ptr++] = p.btn_;
-                    i32[ptr++] = p.x_ * Const.NetPrecision;
-                    i32[ptr++] = p.y_ * Const.NetPrecision;
-                    i32[ptr++] = p.z_ * Const.NetPrecision;
-                    i32[ptr++] = p.u_ * Const.NetPrecision;
-                    i32[ptr++] = p.v_ * Const.NetPrecision;
-                    i32[ptr++] = p.w_ * Const.NetPrecision;
                 }
             }
         }

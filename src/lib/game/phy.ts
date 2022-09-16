@@ -1,6 +1,6 @@
 import {Actor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
-import {dec1, M, reach} from "../utils/math";
+import {clamp, dec1, M, reach} from "../utils/math";
 import {ControlsFlag} from "./controls";
 import {Const} from "./config";
 import {
@@ -13,11 +13,11 @@ import {
     OBJECT_RADIUS,
     OBJECT_RADIUS_BY_TYPE
 } from "./data/world";
-import {BOUNDS_SIZE} from "../assets/params";
+import {WORLD_BOUNDS_SIZE} from "../assets/params";
 
 export const setRandomPosition = (actor: Actor) => {
-    actor.x_ = OBJECT_RADIUS + rand(BOUNDS_SIZE - OBJECT_RADIUS * 2);
-    actor.y_ = OBJECT_RADIUS + rand(BOUNDS_SIZE - OBJECT_RADIUS * 2);
+    actor.x_ = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);
+    actor.y_ = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);
 }
 
 export const copyPosFromActorCenter = (to: Pos, from: Actor) => {
@@ -27,13 +27,13 @@ export const copyPosFromActorCenter = (to: Pos, from: Actor) => {
 }
 
 export const updateBody = (body: Pos & Vel, gravity: number, loss: number) => {
-    addPos(body, body.u_, body.v_, body.w_, 1 / Const.NetFq);
+    addPos(body, body.u_, body.v_, body.w_);
     if (body.z_ > 0) {
         body.w_ -= gravity;
     } else {
         body.z_ = 0;
         if (body.w_ < 0) {
-            body.w_ = -(body.w_ / loss) | 0;
+            body.w_ = -body.w_ / loss;
             return true;
         }
     }
@@ -41,8 +41,7 @@ export const updateBody = (body: Pos & Vel, gravity: number, loss: number) => {
 }
 
 export const updateAnim = (actor: Actor) => {
-    actor.animHit_ = dec1(actor.animHit_);
-    actor.animHit_ = dec1(actor.animHit_);
+    actor.animHit_ = reach(actor.animHit_, 0, 2);
 }
 
 export const updateActorPhysics = (a: Actor) => {
@@ -60,8 +59,8 @@ export const collideWithBoundsA = (body: Actor): number =>
 
 export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number): number => {
     let has = 0;
-    if (body.y_ > BOUNDS_SIZE - radius) {
-        body.y_ = BOUNDS_SIZE - radius;
+    if (body.y_ > WORLD_BOUNDS_SIZE - radius) {
+        body.y_ = WORLD_BOUNDS_SIZE - radius;
         has |= 2;
         reflectVelocity(body, 0, 1, loss);
     } else if (body.y_ < radius) {
@@ -69,8 +68,8 @@ export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number)
         has |= 2;
         reflectVelocity(body, 0, 1, loss);
     }
-    if (body.x_ > BOUNDS_SIZE - radius) {
-        body.x_ = BOUNDS_SIZE - radius;
+    if (body.x_ > WORLD_BOUNDS_SIZE - radius) {
+        body.x_ = WORLD_BOUNDS_SIZE - radius;
         has |= 4;
         reflectVelocity(body, 1, 0, loss);
     } else if (body.x_ < radius) {
@@ -149,15 +148,13 @@ export const testRayWithSphere = (from: Actor, target: Actor, dx: number, dy: nu
         sqrLength3(Lx - dx * len, Ly - dy * len, target.z_ + OBJECT_HEIGHT[target.type_] - from.z_) <= R * R;
 }
 
-const f_16_16 = (x: number): number => ((x * Const.NetPrecision) | 0) / Const.NetPrecision;
-
 export const roundActors = (list: Actor[]) => {
     for (const a of list) {
-        a.x_ = f_16_16(a.x_);
-        a.y_ = f_16_16(a.y_);
-        a.z_ = f_16_16(a.z_);
-        a.u_ = f_16_16(a.u_);
-        a.v_ = f_16_16(a.v_);
-        a.w_ = f_16_16(a.w_);
+        a.x_ = a.x_ & 0xFFFF;
+        a.y_ = a.y_ & 0xFFFF;
+        a.z_ = clamp(a.z_ | 0, 0, 1 << 14);
+        a.u_ = clamp(a.u_ | 0, -1024, 1024);
+        a.v_ = clamp(a.v_ | 0, -1024, 1024);
+        a.w_ = clamp(a.w_ | 0, -1024, 1024);
     }
 }

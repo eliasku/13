@@ -12,8 +12,9 @@ export const reach = (t0: number, t1: number, v: number): number => {
     return t0;
 }
 
-/* @__PURE__ */
-export const toRad = (degrees: number): number => degrees * PI / 180;
+export const clamp = (x: number, min: number, max: number) => x > min ? (x < max ? x : max) : min;
+
+export const TO_RAD = PI / 180;
 
 /* @__PURE__ */
 export const lerp = (a: number, b: number, t: number): number => (1 - t) * a + t * b;

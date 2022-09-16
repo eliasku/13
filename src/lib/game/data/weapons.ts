@@ -1,4 +1,4 @@
-import {toRad} from "../../utils/math";
+import {TO_RAD} from "../../utils/math";
 
 export const enum BulletType {
     Melee = 0,
@@ -20,7 +20,6 @@ export interface WeaponConfig {
     angleSpread_: number;
     kickBack_: number;
     offset_: number;
-    offsetZ_: number;
     velocity_: number;
     velocityVar_: number;
     cameraShake_: number;
@@ -47,7 +46,6 @@ const newWeapon = (): WeaponConfig => ({
     angleSpread_: 0,
     kickBack_: 0,
     offset_: 0,
-    offsetZ_: 0,
     velocity_: 0,
     velocityVar_: 0,
     cameraShake_: 0,
@@ -70,7 +68,6 @@ const createArmWeapon = (): WeaponConfig => {
     w.launchTime_ = 30;
     w.kickBack_ = 10;
     w.offset_ = 6;
-    w.offsetZ_ = 0;
     w.velocity_ = 300;
     w.detuneSpeed_ = 16;
     w.cameraFeedback_ = 0.02 / 5;
@@ -119,14 +116,14 @@ let i = 1;
 weapons[i].reloadTime_ = 10;
 weapons[i].launchTime_ = 5;
 weapons[i].bulletDamage_ = 2;
-weapons[i].gfxRot_ = toRad(-45);
+weapons[i].gfxRot_ = -45;
 
 // AXE
 ++i;
 weapons[i].reloadTime_ = 30;
 weapons[i].launchTime_ = 15;
 weapons[i].bulletDamage_ = 8;
-weapons[i].gfxRot_ = toRad(-45);
+weapons[i].gfxRot_ = -45;
 
 // 🔫
 ++i;
@@ -200,7 +197,7 @@ weapons[i].bulletShellColor_ = 0x00FFFF;
 ++i;
 weapons[i].reloadTime_ = 120;
 weapons[i].cameraShake_ = 25;
-weapons[i].velocity_ = 1;
+weapons[i].velocity_ = 1000;
 weapons[i].cameraFeedback_ = 0.1;
 weapons[i].cameraLookForward_ = 0.4;
 weapons[i].cameraScale_ = 1.4;

@@ -222,7 +222,6 @@ function mangle_types(file: string, dest: string) {
             "angleSpread_",
             "kickBack_",
             "offset_",
-            "offsetZ_",
             "velocity_",
             "velocityVar_",
             "cameraShake_",

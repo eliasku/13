@@ -7,7 +7,7 @@ import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
 import {mapTexture} from "../assets/map";
-import {BOUNDS_SIZE} from "../assets/params";
+import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 
 export const newParticle = (): Particle => ({
     x_: 0,
@@ -41,7 +41,7 @@ export const updateParticle = (p: Particle): boolean => {
             const v = M.hypot(p.u_, p.v_, p.w_);
             if (v < 4 || p.splashEachJump_) {
                 const d = 1 + p.splashScaleOnVelocity_ * v;
-                splats.push(p.splashImg_, p.x_, p.y_, p.a_, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
+                splats.push(p.splashImg_, p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.a_, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
             }
             if (v < 4) {
                 return true;
@@ -110,11 +110,11 @@ export const drawParticle = (p: Particle) => {
     const scale = p.scale_;
     const angle = velocityAngle + p.a_;
     if (p.z_ > 1) {
-        const s = 0.5 - p.z_ / 256;
+        const s = 0.5 - (p.z_ / WORLD_SCALE) / 256;
         const t = (1 - p.lifeTime_ / p.lifeMax_);
-        draw(img[Img.circle_4], p.x_, p.y_, 0, s, s / 4, 0.4 * t, 0);
+        draw(img[Img.circle_4], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
     }
-    draw(img[p.img_], p.x_, p.y_ - p.z_, angle, scale * velocityScale, scale, 1, p.color_);
+    draw(img[p.img_], p.x_ / WORLD_SCALE, (p.y_ - p.z_) / WORLD_SCALE, angle, scale * velocityScale, scale, 1, p.color_);
 }
 
 //////

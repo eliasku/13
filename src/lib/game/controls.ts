@@ -2,7 +2,13 @@ import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../u
 import {draw, gl} from "../graphics/draw2d";
 import {Actor} from "./types";
 import {img, Img} from "../assets/gfx";
-import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "../assets/params";
+import {
+    PAD_FIRE_RADIUS_0,
+    PAD_FIRE_RADIUS_1,
+    PAD_MOVE_RADIUS_0,
+    PAD_MOVE_RADIUS_1,
+    WORLD_SCALE
+} from "../assets/params";
 import {COLOR_WHITE} from "./data/colors";
 import {getScreenScale} from "./game";
 import {M} from "../utils/math";
@@ -44,8 +50,8 @@ export const updateControls = (player: Actor) => {
 
     const mouse = mousePointer;
 
-    const px = player.x_;
-    const py = player.y_ - player.z_ - 10;
+    const px = (player.x_) / WORLD_SCALE;
+    const py = (player.y_ - player.z_) / WORLD_SCALE - 10;
 
     if (mouse.x_ >= 0 && mouse.x_ < W && mouse.y_ >= 0 && mouse.y_ < H) {
         lookAtX = (mouse.x_ - W / 2) * gameCamera[2] + gameCamera[0];
