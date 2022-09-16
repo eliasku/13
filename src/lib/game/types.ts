@@ -30,14 +30,17 @@ export interface Vel {
 export interface Actor extends Pos, Vel {
     // 32-bit identifier
     id_: number;
-    // 0..4
-    type_: ActorType;
     // 32-bit identifier
     client_: ClientID;
+
+    // 0..4
+    type_: ActorType;
+
     btn_: number;
 
     // reload time
     // bullet life-time
+    // 8-bit
     s_: number;
 
     // detune counter: 0...32 (max of weapon detune-speed parameter)
@@ -48,9 +51,10 @@ export interface Actor extends Pos, Vel {
     // range: 0...15 currently
     weapon_?: number;
 
+    // 8-bit
     hp_?: number;
 
-    // 1 byte: just generated anim start point
+    // 8-bit: just generated anim start point
     anim0_?: number;
 
     // Hit effect (4 bits: 0...15)

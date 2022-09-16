@@ -74,7 +74,8 @@ export const printDebugInfo = (
         text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
             text += `+${cl.tic_ - (gameTic - 1)}`;
-            text += "| x" + getChannelPacketSize(remoteClient).toString(16);
+            text += "| x" + getChannelPacketSize(remoteClient).toString(16) +
+                "";//" max: " + JSON.stringify(pc.localDescription.toJSON());
         }
         text += "\n";
     }
@@ -180,7 +181,7 @@ const assertStateEquality = (label: string, a: StateData, b: StateData) => {
                     "v_",
                     "w_",
                     "s_",
-                    "t_",
+                    "detune_",
                     "id_",
                     "type_",
                     "client_",
