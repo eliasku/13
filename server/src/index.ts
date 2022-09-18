@@ -171,7 +171,7 @@ const HANDLERS: any = {
 };
 
 createServer((req: IncomingMessage, res: ServerResponse) => {
-    (HANDLERS[req.method[0]][req.url.at(-1)] ?? error)(req, res);
+    (HANDLERS[req.method[0]]?.[req.url.at(-1)] ?? error)(req, res);
 }).listen(+process.env.PORT || 8080);
 
 // console will be dropped for prod build
