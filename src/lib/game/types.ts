@@ -27,6 +27,13 @@ export interface Vel {
     w_: number;
 }
 
+/* {
+    type: 3,
+    detune: 5,
+    anim-hit: 5
+    weapon: 4,
+    hp: 5,
+ */
 export interface Actor extends Pos, Vel {
     // 32-bit identifier
     id_: number;
@@ -51,13 +58,13 @@ export interface Actor extends Pos, Vel {
     // range: 0...15 currently
     weapon_?: number;
 
-    // 8-bit
+    // all objects HP are < 32
     hp_?: number;
 
     // 8-bit: just generated anim start point
     anim0_?: number;
 
-    // Hit effect (4 bits: 0...15)
+    // Hit effect (5 bits: 0...31)
     // For Items could not be picked up until it reach 0
     animHit_?: number;
 
@@ -111,7 +118,7 @@ export interface Packet {
     sync_: boolean;
     // confirm the last tic we received from Sender
     receivedOnSender_: number;
-    // packet contains info tic and before
+    // packet contains info tic and before, 22 bits, for 19 hr of game session
     tic_: number;
     // events are not confirmed
     events_: ClientEvent[];

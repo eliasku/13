@@ -18,6 +18,12 @@ import {M} from "../utils/math";
 // TODO: return mouse control
 // TODO: combine pad + keyboard
 
+/*
+    First 19 bits
+    [ ..... LA-LA-LA-LA-LA-LA-LA MA-MA-MA-MA-MA-MA Sp Dr Sh Ju Ru Mo ]
+
+    Next high 13 bits not used
+ */
 export const enum ControlsFlag {
     Move = 0x1,
     Run = 0x2,
@@ -26,8 +32,10 @@ export const enum ControlsFlag {
     Drop = 0x10,
     Spawn = 0x20,
 
+    // 6-bits for Move angle (64 directions)
     MoveAngleMax = 0x40,
     MoveAngleBit = 6,
+    // 7-bits for Look angle (128 directions)
     LookAngleMax = 0x80,
     LookAngleBit = 12,
 }

@@ -4,10 +4,10 @@ import {ClientID} from "../../shared/types";
 const DEBUG_SIGN = 0xdeb51a1e;
 
 export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: ClientEvent[] = [], _state?: StateData, _debug?: PacketDebug): Packet => {
-    const eventsCount = i32[3];
-    let event_t = i32[4];
+    const eventsCount = i32[2] >> 22;
+    let event_t = i32[2] & 0x3fffff;
     // 10
-    let ptr = 5;
+    let ptr = 3;
     for (let i = 0; i < eventsCount; ++i) {
         const btn = i32[ptr++];
         if (btn != -1) {
@@ -18,7 +18,7 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
             });
         }
     }
-    if (i32[0] & 2) {
+    if (i32[1] & 2) {
         _state = newStateData();
         _state.nextId_ = i32[ptr++];
         _state.tic_ = i32[ptr++];
@@ -26,26 +26,25 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
         _state.mapSeed_ = i32[ptr++] >>> 0;
         const count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
-            const hdr1 = i32[ptr++];
-            const hdr2 = i32[ptr++];
+            const hdr = i32[ptr++];
             const ux = i32[ptr++];
             const vy = i32[ptr++];
             const wz = i32[ptr++];
             const p: Actor = {
-                type_: hdr1 & 0xFF,
-                hp_: (hdr1 >> 8) & 0xFF,
-                weapon_: (hdr1 >> 16) & 0xFF,
-                detune_: (hdr1 >> 24) & 0xFF,
-                anim0_: hdr2 & 0xFF,
-                animHit_: (hdr2 >> 8) & 0xFF,
-                s_: (hdr2 >> 16) & 0xFF,
+                type_: hdr & 7,
+                weapon_: (hdr >> 3) & 15,
+                s_: (hdr >> 7) & 0xFF,
+                anim0_: (hdr >> 15) & 0xFF,
+                hp_: (ux >> 16) & 31,
+                detune_: (vy >> 16) & 31,
+                animHit_: (wz >> 16) & 31,
 
                 x_: ux & 0xFFFF,
                 y_: vy & 0xFFFF,
                 z_: wz & 0xFFFF,
-                u_: ux >> 16,
-                v_: vy >> 16,
-                w_: wz >> 16,
+                u_: ux >> 21,
+                v_: vy >> 21,
+                w_: wz >> 21,
 
                 id_: i32[ptr++],
                 client_: i32[ptr++],
@@ -74,26 +73,25 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
 
                 const count = i32[ptr++];
                 for (let i = 0; i < count; ++i) {
-                    const hdr1 = i32[ptr++];
-                    const hdr2 = i32[ptr++];
+                    const hdr = i32[ptr++];
                     const ux = i32[ptr++];
                     const vy = i32[ptr++];
                     const wz = i32[ptr++];
                     const p: Actor = {
-                        type_: hdr1 & 0xFF,
-                        hp_: (hdr1 >> 8) & 0xFF,
-                        weapon_: (hdr1 >> 16) & 0xFF,
-                        detune_: (hdr1 >> 24) & 0xFF,
-                        anim0_: hdr2 & 0xFF,
-                        animHit_: (hdr2 >> 8) & 0xFF,
-                        s_: (hdr2 >> 16) & 0xFF,
+                        type_: hdr & 7,
+                        weapon_: (hdr >> 3) & 15,
+                        s_: (hdr >> 7) & 0xFF,
+                        anim0_: (hdr >> 15) & 0xFF,
+                        hp_: (ux >> 16) & 31,
+                        detune_: (vy >> 16) & 31,
+                        animHit_: (wz >> 16) & 31,
 
                         x_: ux & 0xFFFF,
                         y_: vy & 0xFFFF,
                         z_: wz & 0xFFFF,
-                        u_: ux >> 16,
-                        v_: vy >> 16,
-                        w_: wz >> 16,
+                        u_: ux >> 21,
+                        v_: vy >> 21,
+                        w_: wz >> 21,
 
                         id_: i32[ptr++],
                         client_: i32[ptr++],
@@ -109,9 +107,9 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
         }
     }
     return {
-        sync_: (i32[0] & 1) as any as boolean,
-        receivedOnSender_: i32[1],
-        tic_: i32[2],
+        sync_: (i32[1] & 1) as any as boolean,
+        tic_: i32[0],
+        receivedOnSender_: i32[0] + (i32[1] >> 16),
         events_: _events,
         state_: _state,
         debug: _debug,
@@ -119,20 +117,17 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
 }
 
 export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
+    i32[0] = packet.tic_;
     // 1 - sync
     // 2 - init-packet
-    i32[0] = +packet.sync_ | ((!!packet.state_) as any as number << 1);
-    i32[1] = packet.receivedOnSender_;
-    i32[2] = packet.tic_;
-    console.info( packet.tic_ - packet.receivedOnSender_);
+    i32[1] = ((packet.receivedOnSender_ - packet.tic_) << 16) | (packet.sync_ as any) | (!!packet.state_ as any << 1);
     const events = packet.events_;
     events.sort((a, b) => a.tic_ - b.tic_);
     let event_t = events.length ? events[0].tic_ : 0;
     const event_end = events.length ? events[events.length - 1].tic_ : -1;
-    i32[3] = event_end - event_t + 1;
-    i32[4] = event_t;
+    i32[2] = event_t | ((event_end - event_t + 1) << 22);
 
-    let ptr = 5;
+    let ptr = 3;
     let i = 0;
     // const debug :number[] = [];
     while (event_t <= event_end) {
@@ -143,9 +138,7 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
         } else {
             i32[ptr++] = -1;
         }
-        // debug.push(e.btn_);
     }
-    // console.info(JSON.stringify(debug));
     if (packet.state_) {
         i32[ptr++] = packet.state_.nextId_;
         i32[ptr++] = packet.state_.tic_;
@@ -154,11 +147,15 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
         const list: Actor[] = [].concat(...packet.state_.actors_);
         i32[ptr++] = list.length;
         for (const p of list) {
-            i32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16) | (p.detune_ << 24);
-            i32[ptr++] = p.anim0_ | (p.animHit_ << 8) | (p.s_ << 16);
-            i32[ptr++] = (p.u_ << 16) | p.x_;
-            i32[ptr++] = (p.v_ << 16) | p.y_;
-            i32[ptr++] = (p.w_ << 16) | p.z_;
+            // type: 3
+            // weapon: 4
+            // hp: 5
+            // detune: 5
+            // animHit: 5
+            i32[ptr++] = p.type_ | (p.weapon_ << 3) | (p.s_ << 7) | (p.anim0_ << 15);
+            i32[ptr++] = (p.u_ << 21) | (p.hp_ << 16) | p.x_;
+            i32[ptr++] = (p.v_ << 21) | (p.detune_ << 16) | p.y_;
+            i32[ptr++] = (p.w_ << 21) | (p.animHit_ << 16) | p.z_;
             i32[ptr++] = p.id_;
             i32[ptr++] = p.client_;
             i32[ptr++] = p.btn_;
@@ -184,11 +181,15 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
                 const list: Actor[] = [].concat(...packet.debug.state.actors_);
                 i32[ptr++] = list.length;
                 for (const p of list) {
-                    i32[ptr++] = p.type_ | (p.hp_ << 8) | (p.weapon_ << 16) | (p.detune_ << 24);
-                    i32[ptr++] = p.anim0_ | (p.animHit_ << 8) | (p.s_ << 16);
-                    i32[ptr++] = (p.u_ << 16) | p.x_;
-                    i32[ptr++] = (p.v_ << 16) | p.y_;
-                    i32[ptr++] = (p.w_ << 16) | p.z_;
+                    // type: 3
+                    // weapon: 4
+                    // hp: 5
+                    // detune: 5
+                    // animHit: 5
+                    i32[ptr++] = p.type_ | (p.weapon_ << 3) | (p.s_ << 7) | (p.anim0_ << 15);
+                    i32[ptr++] = (p.u_ << 21) | (p.hp_ << 16) | p.x_;
+                    i32[ptr++] = (p.v_ << 21) | (p.detune_ << 16) | p.y_;
+                    i32[ptr++] = (p.w_ << 21) | (p.animHit_ << 16) | p.z_;
                     i32[ptr++] = p.id_;
                     i32[ptr++] = p.client_;
                     i32[ptr++] = p.btn_;
