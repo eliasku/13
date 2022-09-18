@@ -4,19 +4,19 @@ import {ClientID} from "../../shared/types";
 const DEBUG_SIGN = 0xdeb51a1e;
 
 export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: ClientEvent[] = [], _state?: StateData, _debug?: PacketDebug): Packet => {
-    const eventsCount = i32[2] >> 22;
-    let event_t = i32[2] & 0x3fffff;
+    let event_t = i32[2];
     // 10
     let ptr = 3;
-    for (let i = 0; i < eventsCount; ++i) {
-        const btn = i32[ptr++];
-        if (btn != -1) {
-            _events.push({
-                tic_: event_t + i,
-                client_: client,
-                btn_: btn,
-            });
-        }
+    for(;event_t;) {
+        const v = i32[ptr++];
+        let c = v >> 19;
+        _events.push({
+            tic_: event_t,
+            client_: client,
+            btn_: v & 0x7ffff,
+        });
+        event_t += c;
+        if(!c) break;
     }
     if (i32[1] & 2) {
         _state = newStateData();
@@ -124,20 +124,13 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     const events = packet.events_;
     events.sort((a, b) => a.tic_ - b.tic_);
     let event_t = events.length ? events[0].tic_ : 0;
-    const event_end = events.length ? events[events.length - 1].tic_ : -1;
-    i32[2] = event_t | ((event_end - event_t + 1) << 22);
-
+    i32[2] = event_t;
     let ptr = 3;
     let i = 0;
-    // const debug :number[] = [];
-    while (event_t <= event_end) {
-        const e = packet.events_[i];
-        if (event_t++ == e.tic_) {
-            ++i;
-            i32[ptr++] = e.btn_ ?? -1;
-        } else {
-            i32[ptr++] = -1;
-        }
+    while (i < events.length) {
+        const e = events[i++];
+        const c = events[i] ? (events[i].tic_ - e.tic_) : 0;
+        i32[ptr++] = (c << 19) | e.btn_;
     }
     if (packet.state_) {
         i32[ptr++] = packet.state_.nextId_;

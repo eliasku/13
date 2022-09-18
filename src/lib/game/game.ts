@@ -505,6 +505,7 @@ const sendInput = () => {
                     tic_: inputTic,
                     events_: localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= inputTic),
                 };
+                //console.log(JSON.stringify(packet.events_));
                 if (!cl.ready_ && joined) {
                     packet.state_ = state;
                     cl.tic_ = state.tic_;
