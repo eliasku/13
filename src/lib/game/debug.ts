@@ -10,7 +10,7 @@ import {Img, img} from "../assets/gfx";
 import {ClientID} from "../../shared/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
-import {M} from "../utils/math";
+import {min} from "../utils/math";
 
 //// DEBUG UTILITIES ////
 
@@ -52,7 +52,7 @@ export const printDebugInfo = (
 
     let text = gameTic > prevSimulatedTic ? "🌐" : "🥶";
     const ticsAhead = (lastFrameTs - prevTime) * Const.NetFq | 0;
-    const ticsPrediction = M.min(Const.PredictionMax, ticsAhead);
+    const ticsPrediction = min(Const.PredictionMax, ticsAhead);
     if (ticsPrediction) text += "🔮";
     text += `~ ${ticsPrediction} of ${ticsAhead}\n`;
     prevSimulatedTic = gameTic;

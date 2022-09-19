@@ -1,6 +1,6 @@
 import {Actor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
-import {clamp, dec1, M, reach} from "../utils/math";
+import {clamp, cos, reach, sin, sqrt} from "../utils/math";
 import {ControlsFlag} from "./controls";
 import {Const} from "./config";
 import {
@@ -81,7 +81,7 @@ export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number)
 }
 
 export const addRadialVelocity = (vel: Vel, a: number, velXYLen: number, velZ: number) =>
-    addVelocityDir(vel, velXYLen * M.cos(a), velXYLen * M.sin(a) / 2, velZ);
+    addVelocityDir(vel, velXYLen * cos(a), velXYLen * sin(a) / 2, velZ);
 
 export const reflectVelocity = (v: Vel, nx: number, ny: number, loss: number) => {
     // r = d - 2(d⋅n)n
@@ -93,7 +93,7 @@ export const reflectVelocity = (v: Vel, nx: number, ny: number, loss: number) =>
 export const applyGroundFriction = (p: Actor, amount: number) => {
     let v0 = p.u_ * p.u_ + p.v_ * p.v_;
     if (v0 > 0) {
-        v0 = M.sqrt(v0);
+        v0 = sqrt(v0);
         v0 = reach(v0, 0, amount) / v0;
         p.u_ *= v0;
         p.v_ *= v0;
@@ -133,7 +133,7 @@ export const checkBodyCollision = (a: Actor, b: Actor) => {
     const sqrDist = sqrLength3(nx, ny, nz);
     const D = OBJECT_RADIUS_BY_TYPE[a.type_] + OBJECT_RADIUS_BY_TYPE[b.type_];
     if (sqrDist < D * D && sqrDist > 0) {
-        const pen = (D / M.sqrt(sqrDist) - 1) / 2;
+        const pen = (D / sqrt(sqrDist) - 1) / 2;
         addPos(a, nx, ny, nz, OBJECT_IMASS[a.type_] * pen);
         addPos(b, nx, ny, nz, -OBJECT_IMASS[b.type_] * pen);
     }

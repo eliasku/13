@@ -11,7 +11,7 @@ import {
 } from "../assets/params";
 import {COLOR_WHITE} from "./data/colors";
 import {getScreenScale} from "./game";
-import {M} from "../utils/math";
+import {hypot} from "../utils/math";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -91,7 +91,7 @@ export const updateControls = (player: Actor) => {
         let pp = control.pointer_;
         moveX = pp ? (pp.x_ - pp.startX_) * k : 0;
         moveY = pp ? (pp.y_ - pp.startY_) * k : 0;
-        let len = M.hypot(moveX, moveY);
+        let len = hypot(moveX, moveY);
         moveFast = len > control.r1_;
         jumpButtonDown = len > control.r2_;
 
@@ -99,7 +99,7 @@ export const updateControls = (player: Actor) => {
         pp = control.pointer_;
         viewX = pp ? (pp.x_ - pp.startX_) * k : 0;
         viewY = pp ? (pp.y_ - pp.startY_) * k : 0;
-        len = M.hypot(viewX, viewY);
+        len = hypot(viewX, viewY);
         lookAtX = px + viewX * 2;
         lookAtY = py + viewY * 2;
         shootButtonDown = len > control.r2_;

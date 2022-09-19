@@ -2,7 +2,7 @@ import {img, Img} from "../assets/gfx";
 import {beginRender, draw, flush, gl, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {getLumaColor32, M, PI} from "../utils/math";
+import {atan2, getLumaColor32, hypot, PI} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
@@ -38,7 +38,7 @@ export const updateParticle = (p: Particle): boolean => {
 
     if (updateBody(p, GRAVITY, 2)) {
         if (p.splashImg_) {
-            const v = M.hypot(p.u_, p.v_, p.w_);
+            const v = hypot(p.u_, p.v_, p.w_);
             if (v < 4 || p.splashEachJump_) {
                 const d = 1 + p.splashScaleOnVelocity_ * v;
                 splats.push(p.splashImg_, p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.a_, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
@@ -105,8 +105,8 @@ export const drawParticles = () => {
 }
 
 export const drawParticle = (p: Particle) => {
-    const velocityScale = 1 - p.followVelocity_ + p.followScale_ * M.hypot(p.u_, p.v_, p.w_);
-    const velocityAngle = p.followVelocity_ * M.atan2(p.v_ - p.w_, p.u_);
+    const velocityScale = 1 - p.followVelocity_ + p.followScale_ * hypot(p.u_, p.v_, p.w_);
+    const velocityAngle = p.followVelocity_ * atan2(p.v_ - p.w_, p.u_);
     const scale = p.scale_;
     const angle = velocityAngle + p.a_;
     if (p.z_ > 1) {

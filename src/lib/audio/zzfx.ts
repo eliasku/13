@@ -1,5 +1,6 @@
 import {audioContext} from "./context";
-import {M, PI2, sign} from "../utils/math";
+import {abs, clamp, cos, PI2, round, sign, sin, tan} from "../utils/math";
+import {fxRandom} from "../utils/rnd";
 
 export const zzfx = (code: number[]): AudioBuffer => zzfxG(...code);
 
@@ -14,7 +15,7 @@ const zzfxG = (
 ): AudioBuffer => {
     // init parameters
     let startSlide = slide *= 500 * PI2 / zzfxR / zzfxR,
-        startFrequency = frequency *= (1 + randomness * 2 * M.random() - randomness)
+        startFrequency = frequency *= (1 + randomness * 2 * fxRandom() - randomness)
             * PI2 / zzfxR,
         b = [], t = 0, tm = 0, i = 0, j = 1, r = 0, c = 0, s = 0, f, length;
 
@@ -36,16 +37,16 @@ const zzfxG = (
         if (!(++c % (bitCrush * 100 | 0)))                      // bit crush
         {
             s = shape ? shape > 1 ? shape > 2 ? shape > 3 ?         // wave shape
-                            M.sin((t % PI2) ** 3) :                    // 4 noise
-                            M.max(M.min(M.tan(t), 1), -1) :     // 3 tan
+                            sin((t % PI2) ** 3) :                    // 4 noise
+                            clamp(tan(t), -1, 1) :     // 3 tan
                         1 - (2 * t / PI2 % 2 + 2) % 2 :                        // 2 saw
-                    1 - 4 * M.abs(M.round(t / PI2) - t / PI2) :    // 1 triangle
-                M.sin(t);                              // 0 sin
+                    1 - 4 * abs(round(t / PI2) - t / PI2) :    // 1 triangle
+                sin(t);                              // 0 sin
 
             s = (repeatTime ?
-                    1 - tremolo + tremolo * M.sin(PI2 * i / repeatTime) // tremolo
+                    1 - tremolo + tremolo * sin(PI2 * i / repeatTime) // tremolo
                     : 1) *
-                sign(s) * (M.abs(s) ** shapeCurve) *       // curve 0=square, 2=pointy
+                sign(s) * (abs(s) ** shapeCurve) *       // curve 0=square, 2=pointy
                 volume * zzfxV * (                        // envelope
                     i < attack ? i / attack :                   // attack
                         i < attack + decay ?                      // decay
@@ -63,8 +64,8 @@ const zzfxG = (
         }
 
         f = (frequency += slide += deltaSlide) *          // frequency
-            M.cos(modulation * tm++);                    // modulation
-        t += f - f * noise * (1 - (M.sin(i) + 1) * 1e9 % 2);     // noise
+            cos(modulation * tm++);                    // modulation
+        t += f - f * noise * (1 - (sin(i) + 1) * 1e9 % 2);     // noise
 
         if (j && ++j > pitchJumpTime)       // pitch jump
         {

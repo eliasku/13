@@ -1,10 +1,6 @@
 import {audioContext} from "../audio/context";
 import {getOrCreate} from "./utils";
 
-/// make cold id to hot id
-// const _preventDefault = (e:Event) => e.preventDefault();
-// const _whichKey = (e:KeyboardEvent) => e.which;
-
 export interface Pointer {
     id_: number;
     startX_: number;
@@ -175,7 +171,6 @@ export const keyboardUp: number[] = [];
         // console.info("ontouchend");
     };
 }
-// })();
 
 const resetPointer = (p: Pointer) =>
     p.downEvent_ = p.upEvent_ = false;

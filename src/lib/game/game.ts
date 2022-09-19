@@ -9,7 +9,21 @@ import {Const} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {Actor, ActorType, Client, ClientEvent, ItemType, newStateData, Packet, StateData, Vel} from "./types";
 import {pack, unpack} from "./packets";
-import {dec1, getLumaColor32, incTo, lerp, M, PI, PI2, reach, TO_RAD} from "../utils/math";
+import {
+    atan2,
+    clamp,
+    cos,
+    dec1,
+    getLumaColor32, hypot,
+    lerp,
+    max,
+    min,
+    PI,
+    PI2,
+    reach,
+    sin, sqrt,
+    TO_RAD
+} from "../utils/math";
 import {
     ControlsFlag,
     drawVirtualPad,
@@ -234,8 +248,8 @@ export const createSplashState = () => {
         actor.anim0_ = i + rand(10) * Img.num_avatars;
         actor.btn_ = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
         const D = 80 + rand(20);
-        actor.x_ = (BOUNDS_SIZE / 2 + D * M.cos(k * PI2)) * WORLD_SCALE;
-        actor.y_ = (BOUNDS_SIZE / 2 + D * M.sin(k * PI2) + 10) * WORLD_SCALE;
+        actor.x_ = (BOUNDS_SIZE / 2 + D * cos(k * PI2)) * WORLD_SCALE;
+        actor.y_ = (BOUNDS_SIZE / 2 + D * sin(k * PI2) + 10) * WORLD_SCALE;
         pushActor(actor);
     }
     gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
@@ -325,7 +339,7 @@ const getLocalEvent = (tic: number, _e?: ClientEvent): ClientEvent => {
 }
 
 const getNextInputTic = (tic: number) =>
-    tic + M.max(
+    tic + max(
         Const.InputDelay,
         ((lastFrameTs - prevTime) * Const.NetFq) | 0
     );
@@ -630,14 +644,14 @@ const updateGameCamera = () => {
         const l = state.actors_[ActorType.Player].filter(p => p.client_);
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
     }
-    let cameraScale = BASE_RESOLUTION / M.min(gl.drawingBufferWidth, gl.drawingBufferHeight);
+    let cameraScale = BASE_RESOLUTION / min(gl.drawingBufferWidth, gl.drawingBufferHeight);
     let cameraX = gameCamera[0];
     let cameraY = gameCamera[1];
     if (clientId) {
         const p0 = getMyPlayer() ?? getRandomPlayer();
         if (p0?.client_) {
             const wpn = weapons[p0.weapon_];
-            const viewM = 100 * wpn.cameraFeedback_ * cameraFeedback / (M.hypot(viewX, viewY) + 0.001);
+            const viewM = 100 * wpn.cameraFeedback_ * cameraFeedback / (hypot(viewX, viewY) + 0.001);
             const px = p0.x_ / WORLD_SCALE;
             const py = p0.y_ / WORLD_SCALE;
             cameraX = px + wpn.cameraLookForward_ * (lookAtX - px) - viewM * viewX;
@@ -781,7 +795,7 @@ const simulateTic = () => {
         spawnFleshParticles({
             x_: fxRand(WORLD_BOUNDS_SIZE),
             y_: fxRand(WORLD_BOUNDS_SIZE),
-            z_: fxRand(128),
+            z_: fxRand(128) * WORLD_SCALE,
             type_: 0
         } as any as Actor, 128, 1);
     }
@@ -900,7 +914,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
         if (bullet.hp_) {
             let nx = bullet.x_ - actor.x_;
             let ny = bullet.y_ - actor.y_;
-            const dist = M.sqrt(nx * nx + ny * ny);
+            const dist = sqrt(nx * nx + ny * ny);
             if (dist > 0) {
                 nx /= dist;
                 ny /= dist;
@@ -920,7 +934,7 @@ const packAngleByte = (a: number, res: number) =>
     (res * a) & (res - 1);
 
 const packDirByte = (x: number, y: number, res: number) =>
-    packAngleByte((PI + M.atan2(y, x)) / PI2, res);
+    packAngleByte((PI + atan2(y, x)) / PI2, res);
 
 const updateAI = (player: Actor) => {
     const md = rand(ControlsFlag.MoveAngleMax);
@@ -945,10 +959,10 @@ const updatePlayer = (player: Actor) => {
     const c = (grounded ? 16 : 8) / Const.NetFq;
     const moveAngle = unpackAngleByte(player.btn_ >> ControlsFlag.MoveAngleBit, ControlsFlag.MoveAngleMax);
     const lookAngle = unpackAngleByte(player.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
-    const moveDirX = M.cos(moveAngle);
-    const moveDirY = M.sin(moveAngle);
-    const lookDirX = M.cos(lookAngle);
-    const lookDirY = M.sin(lookAngle);
+    const moveDirX = cos(moveAngle);
+    const moveDirY = sin(moveAngle);
+    const lookDirX = cos(lookAngle);
+    const lookDirY = sin(lookAngle);
     if (player.btn_ & ControlsFlag.Move) {
         const speed = (player.btn_ & ControlsFlag.Run) ? 2 : 1;
         const vel = speed * 60;
@@ -983,19 +997,19 @@ const updatePlayer = (player: Actor) => {
         player.s_ = dec1(player.s_);
         if (!player.s_) {
             if (player.client_ == clientId) {
-                cameraShake = M.max(weapon.cameraShake_, cameraShake);
+                cameraShake = max(weapon.cameraShake_, cameraShake);
                 cameraFeedback = 5;
             }
             player.s_ = weapon.reloadTime_;
-            player.detune_ = incTo(player.detune_, weapon.detuneSpeed_);
+            player.detune_ = reach(player.detune_, weapon.detuneSpeed_, 1);
             addVelocityDir(player, lookDirX, lookDirY, -1, player.w_ > 0 ? 0 : -weapon.kickBack_);
             playAt(player, Snd.shoot);
             for (let i = 0; i < weapon.spawnCount_; ++i) {
                 const a = lookAngle +
                     weapon.angleVar_ * (random() - 0.5) +
                     weapon.angleSpread_ * (player.detune_ / weapon.detuneSpeed_) * (random() - 0.5);
-                const dx = M.cos(a);
-                const dy = M.sin(a);
+                const dx = cos(a);
+                const dy = sin(a);
                 const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
                 const bullet = newActorObject(ActorType.Bullet);
                 bullet.client_ = player.client_;
@@ -1030,10 +1044,7 @@ export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, 
 }
 
 const cloneState = (_state: StateData = state): StateData => ({
-    nextId_: _state.nextId_,
-    tic_: _state.tic_,
-    seed_: _state.seed_,
-    mapSeed_: _state.mapSeed_,
+    ..._state,
     actors_: _state.actors_.map(list => list.map(a => ({...a}))),
     scores_: {..._state.scores_}
 });
@@ -1043,7 +1054,7 @@ const beginPrediction = (): boolean => {
     if (!Const.Prediction) return false;
 
     // global state
-    let frames = M.min(Const.PredictionMax, (lastFrameTs - prevTime) * Const.NetFq | 0);
+    let frames = min(Const.PredictionMax, (lastFrameTs - prevTime) * Const.NetFq | 0);
     if (!frames) return false;
 
     // save particles
@@ -1099,7 +1110,7 @@ const drawGame = () => {
 
     if (!clientId) {
         for (let i = 10; i > 0; --i) {
-            let a = 0.5 * M.sin(i / 4 + lastFrameTs * 16);
+            let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
             const add = ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16;
             const scale = 1 + i / 100;
             const angle = a * i / 100;
@@ -1113,7 +1124,7 @@ const drawGame = () => {
     flush();
 }
 
-export const getScreenScale = () => M.min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
+export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
 const drawOverlay = () => {
     beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
     drawVirtualPad();
@@ -1173,7 +1184,7 @@ const drawMapOverlay = () => {
 const drawCrosshair = () => {
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
-        const len = 4 + M.sin(2 * lastFrameTs) * M.cos(4 * lastFrameTs) / 4 + (p0.detune_ / 8) + p0.s_ / 10;
+        const len = 4 + sin(2 * lastFrameTs) * cos(4 * lastFrameTs) / 4 + (p0.detune_ / 8) + p0.s_ / 10;
         for (let i = 0; i < 4; ++i) {
             drawAt(Img.box_t1, lookAtX, lookAtY, 2, len, lastFrameTs / 10 + i * PI / 2, 0.5);
         }
@@ -1185,7 +1196,7 @@ const drawItem = (item: Actor) => {
         drawObject(item, Img.weapon0 + item.weapon_, 2, 0.8);
     } else /*if (cat == ItemCategory.Effect)*/ {
         const t = lastFrameTs * 4 + item.anim0_ / 25;
-        drawObject(item, Img.item0, BULLET_RADIUS / WORLD_SCALE + M.cos(t), 0.9 + 0.1 * M.sin(4 * t));
+        drawObject(item, Img.item0, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
     }
 }
 
@@ -1204,13 +1215,13 @@ const drawBullet = (actor: Actor) => {
 
     const x = actor.x_ / WORLD_SCALE;
     const y = (actor.y_ - actor.z_) / WORLD_SCALE;
-    const a = M.atan2(actor.v_, actor.u_);
+    const a = atan2(actor.v_, actor.u_);
     const type = actor.btn_;
     const color = fxRandElement(BULLET_COLOR[type] as number[]);
     const longing = BULLET_LENGTH[type];
     const longing2 = BULLET_LENGTH_LIGHT[type];
     const sz = BULLET_SIZE[type] +
-        BULLET_PULSE[type] * M.sin(32 * lastFrameTs + actor.anim0_) / 2;
+        BULLET_PULSE[type] * sin(32 * lastFrameTs + actor.anim0_) / 2;
     let res = type * 3;
 
     drawAt(BULLET_IMAGE[res++], x, y, sz * longing, sz, a, 0.1, COLOR_WHITE, 1);
@@ -1231,14 +1242,14 @@ const drawPlayer = (p: Actor): void => {
     const colorBody = colorC;
     const x = p.x_ / WORLD_SCALE;
     const y = (p.y_ - p.z_) / WORLD_SCALE;
-    const speed = M.hypot(p.u_, p.v_, p.w_);
+    const speed = hypot(p.u_, p.v_, p.w_);
     const runK = (p.btn_ & ControlsFlag.Run) ? 1 : 0.8;
-    const walk = M.min(1, speed / 100);
-    let base = -0.5 * walk * 0.5 * (1.0 + M.sin(40 * runK * basePhase));
-    const idle_base = (1 - walk) * ((1 + M.sin(10 * basePhase) ** 2) / 4);
+    const walk = min(1, speed / 100);
+    let base = -0.5 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
+    const idle_base = (1 - walk) * ((1 + sin(10 * basePhase) ** 2) / 4);
     base = base + idle_base;
-    const leg1 = 5 - 4 * walk * 0.5 * (1.0 + M.sin(40 * runK * basePhase));
-    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + M.sin(40 * runK * basePhase + PI));
+    const leg1 = 5 - 4 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
+    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase + PI));
 
     /////
 
@@ -1249,9 +1260,9 @@ const drawPlayer = (p: Actor): void => {
     const weaponBaseScaleY = 1;
     let weaponX = x;
     let weaponY = y - PLAYER_HANDS_PX_Z;
-    let weaponAngle = M.atan2(
-        y + 1000 * M.sin(viewAngle) - weaponY,
-        x + 1000 * M.cos(viewAngle) - weaponX
+    let weaponAngle = atan2(
+        y + 1000 * sin(viewAngle) - weaponY,
+        x + 1000 * cos(viewAngle) - weaponX
     );
     let weaponSX = weaponBaseScaleX;
     let weaponSY = weaponBaseScaleY;
@@ -1260,21 +1271,21 @@ const drawPlayer = (p: Actor): void => {
         weaponBack = 1;
         //weaponY -= 16 * 4;
     }
-    const A = M.sin(weaponAngle - PI);
+    const A = sin(weaponAngle - PI);
     let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
     let wx = 1;
     if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
         wx = -1;
     }
     if (wpn.handsAnim_) {
-        // const t = M.max(0, (p.s - 0.8) * 5);
+        // const t = max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
-        const t = M.min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : M.max(0, (p.s_ / wpn.reloadTime_ - 0.5) * 2));
-        wd += M.sin(t * PI) * wpn.handsAnim_;
-        weaponAngle -= -wx * PI * 0.25 * M.sin((1 - (1 - t) ** 2) * PI2);
+        const t = min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : max(0, (p.s_ / wpn.reloadTime_ - 0.5) * 2));
+        wd += sin(t * PI) * wpn.handsAnim_;
+        weaponAngle -= -wx * PI * 0.25 * sin((1 - (1 - t) ** 2) * PI2);
     }
-    weaponX += wd * M.cos(weaponAngle);
-    weaponY += wd * M.sin(weaponAngle);
+    weaponX += wd * cos(weaponAngle);
+    weaponY += wd * sin(weaponAngle);
 
     if (wx < 0) {
         weaponSX *= wx;
@@ -1301,17 +1312,17 @@ const drawPlayer = (p: Actor): void => {
     const rArmX = x + 4;
     const lArmX = x - 4;
     const armY = y - PLAYER_HANDS_PX_Z + base * 2;
-    const rArmRot = M.atan2(weaponY - armY, weaponX - rArmX);
-    const lArmRot = M.atan2(weaponY - armY, weaponX - lArmX);
-    const lArmLen = M.hypot(weaponX - lArmX, weaponY - armY) - 1;
-    const rArmLen = M.hypot(weaponX - rArmX, weaponY - armY) - 1;
+    const rArmRot = atan2(weaponY - armY, weaponX - rArmX);
+    const lArmRot = atan2(weaponY - armY, weaponX - lArmX);
+    const lArmLen = hypot(weaponX - lArmX, weaponY - armY) - 1;
+    const rArmLen = hypot(weaponX - rArmX, weaponY - armY) - 1;
 
     if (p.weapon_) {
         drawAt(Img.box_l, x + 4, y - 10 + base, rArmLen, 2, rArmRot, 1, colorArm, 0, co);
         drawAt(Img.box_l, x - 4, y - 10 + base, lArmLen, 2, lArmRot, 1, colorArm, 0, co);
     } else {
-        let sw1 = walk * M.sin(20 * runK * basePhase);
-        let sw2 = walk * M.cos(20 * runK * basePhase);
+        let sw1 = walk * sin(20 * runK * basePhase);
+        let sw2 = walk * cos(20 * runK * basePhase);
         let armLen = 5;
         if (!p.client_ && p.hp_ < 10) {
             sw1 -= PI / 2;
@@ -1328,7 +1339,7 @@ const drawPlayer = (p: Actor): void => {
 }
 
 const getHitColorOffset = (anim: number) =>
-    getLumaColor32(0xFF * M.min(1, 2 * anim / ANIM_HIT_MAX));
+    getLumaColor32(0xFF * min(1, 2 * anim / ANIM_HIT_MAX));
 
 const drawObject = (p: Actor, id: Img, z: number = 0, scale: number = 1) =>
     drawAt(id, p.x_ / WORLD_SCALE, (p.y_ - p.z_) / WORLD_SCALE - z, scale, scale, 0, 1, COLOR_WHITE, 0, getHitColorOffset(p.animHit_));
@@ -1361,9 +1372,9 @@ const playAt = (actor: Actor, id: Snd) => {
     if (gameTic > lastAudioTic) {
         const dx = (actor.x_ - gameCamera[0]) / (256 * WORLD_SCALE);
         const dy = (actor.y_ - gameCamera[1]) / (256 * WORLD_SCALE);
-        const v = 1 - M.hypot(dx, dy);
+        const v = 1 - hypot(dx, dy);
         if (v > 0) {
-            play(snd[id], v, M.max(-1, M.min(1, dx)));
+            play(snd[id], v, clamp(dx, -1, 1));
         }
     }
 }
