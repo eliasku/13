@@ -117,12 +117,12 @@ execSync(`terser build/client1.js -f wrap_func_args=false --toplevel --module --
 
 report.push("TERSER: " + sz("build/client2.js", "build/server2.js", "public/index.html"));
 
-rehashWebAPI("build/client2.js", "build/client2.js");
+rehashWebAPI("build/client2.js", "build/client3.js");
 
-report.push("REHASH: " + sz("build/client2.js", "build/server2.js", "public/index.html"));
+report.push("REHASH: " + sz("build/client3.js", "build/server2.js", "public/index.html"));
 
 copyFileSync("build/server2.js", "public/s.js");
-copyFileSync("build/client2.js", "public/c.js");
+copyFileSync("build/client3.js", "public/c.js");
 
 console.info("release build ready... " + sz(...files));
 
@@ -130,8 +130,8 @@ let options = "";
 if(process.argv.indexOf("--max") > 0) {
     options = "-O2";
 }
-// execSync(`roadroller -O2 -- build/client2.js -o public/c.js`);
-execSync(`roadroller ${options} -- build/client2.js -o public/c.js`);
+
+execSync(`roadroller ${options} -- build/client3.js -o public/c.js`);
 
 report.push("ROADROLL: " + sz(...files));
 
