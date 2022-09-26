@@ -9,18 +9,22 @@ import {rehashWebAPI} from "./doRehash.js";
 let report: string[] = [];
 
 const zip = (label: string, ...files: string[]) => {
-    const zipname = label + ".zip";
     const size0 = sz(...files);
-    try {
-        execSync(`advzip --shrink-insane --iter=1000 --add ${zipname} ${files.join(" ")}`);
-        execSync(`./tools/vendor/ect -z -9 -strip ${zipname}`);
-        const size1 = sz(zipname);
-        const free = 13 * 1024 - size1;
-        report.push(label + ":\t" + size0 + "\t| " + size1 + "\t| " + free);
-    } catch {
-        console.warn("please install `advancecomp`");
-        report.push(label + ":\t" + size0);
+    let size1 = size0;
+    if (process.argv.indexOf("--zip") >= 0) {
+        try {
+            const zipname = "build/" + label + ".zip";
+            console.log("estimate zip...");
+            execSync(`advzip --shrink-insane --iter=1000 --add ${zipname} ${files.join(" ")}`);
+            execSync(`./tools/vendor/ect -z -9 -strip ${zipname}`);
+            size1 = sz(zipname);
+        } catch {
+            console.warn("zip not found. please install `advancecomp`");
+        }
     }
+    const free = 13 * 1024 - size1;
+    console.info(label + ":\t" + size0 + "\t| " + size1 + "\t| " + free);
+    report.push(label + ":\t" + size0 + "\t| " + size1 + "\t| " + free);
 };
 
 const roadroller = async () => {
