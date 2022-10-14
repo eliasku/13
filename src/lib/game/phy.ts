@@ -105,7 +105,7 @@ export const addVelFrom = (to: Vel, from: Vel, scale: number = 1) =>
 export const addVelocityDir = (v: Vel, x: number, y: number, z: number, scale: number = 1) => {
     v.u_ += scale * x;
     v.v_ += scale * y;
-    v.w_ += scale * z;
+    v.w_ += z == 0 ? scale * z : 0;
 }
 
 export const addPos = (to: Pos, x: number, y: number, z: number, scale: number = 1) => {
