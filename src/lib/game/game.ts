@@ -1002,7 +1002,9 @@ const updatePlayer = (player: Actor) => {
             }
             player.s_ = weapon.reloadTime_;
             player.detune_ = reach(player.detune_, weapon.detuneSpeed_, 1);
-            addVelocityDir(player, lookDirX, lookDirY, -1, player.w_ > 0 ? 0 : -weapon.kickBack_);
+            if(player.z_ <= 0) {
+                addVelocityDir(player, lookDirX, lookDirY, -1, -weapon.kickBack_);
+            }
             playAt(player, Snd.shoot);
             for (let i = 0; i < weapon.spawnCount_; ++i) {
                 const a = lookAngle +
