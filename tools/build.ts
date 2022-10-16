@@ -227,10 +227,17 @@ zip("rr", "build/index.html", "build/client4.js", "build/server2.js");
     // inject source code to HTML (remove client.js file)
     let html = readFileSync("build/index.html", "utf8");
     let client = readFileSync("build/client4.js", "utf8");
-    html = html.replace(`<script></script>`, `<script>${client}</script>`);
-    writeFileSync("public/index.html", html);
-
-    zip("game", "public/index.html", "public/s.js");
+    if (process.argv.indexOf("--rr") > 0) {
+        html = html.replace(`<script></script>`, `<script>${client}</script>`);
+        writeFileSync("public/index.html", html);
+        zip("game", "public/index.html", "public/s.js");
+    }
+    else {
+        html = html.replace(`<script></script>`, `<script src="c.js"></script>`);
+        writeFileSync("public/index.html", html);
+        writeFileSync("public/c.js", client);
+        zip("game", "public/index.html", "public/s.js", "public/c.js");
+    }
 }
 
 console.info(report.join("\n"));
