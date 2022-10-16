@@ -34,27 +34,33 @@ const zip = (label: string, ...files: string[]) => {
 };
 
 const roadroller = async () => {
-    console.info("roadroller");
-    const inputs: Input[] = [
-        {
-            data: readFileSync("build/client3.js", "utf8"),
-            type: InputType.JS,
-            action: InputAction.Eval,
-        },
-    ];
-    const options: PackerOptions = {};
-    const packer = new Packer(inputs, options);
-    let i = 0;
-    await packer.optimize(process.argv.indexOf("--max") > 0 ? 2 : 1,
-        (): any => {
-            const i0 = i++ % 11;
-            const i1 = (10 - i0);
-            process.stdout.write("[" + ".".repeat(i0) + " ".repeat(i1) + "]");
-            readline.cursorTo(process.stdout, 0);
-        });
+    if (process.argv.indexOf("--rr") > 0) {
+        console.info("run roadroller");
+        const inputs: Input[] = [
+            {
+                data: readFileSync("build/client3.js", "utf8"),
+                type: InputType.JS,
+                action: InputAction.Eval,
+            },
+        ];
+        const options: PackerOptions = {};
+        const packer = new Packer(inputs, options);
+        let i = 0;
+        await packer.optimize(process.argv.indexOf("--max") > 0 ? 2 : 1,
+            (): any => {
+                const i0 = i++ % 11;
+                const i1 = (10 - i0);
+                process.stdout.write("[" + ".".repeat(i0) + " ".repeat(i1) + "]");
+                readline.cursorTo(process.stdout, 0);
+            });
 
-    const {firstLine, secondLine} = packer.makeDecoder();
-    writeFileSync("build/client4.js", firstLine + secondLine);
+        const {firstLine, secondLine} = packer.makeDecoder();
+        writeFileSync("build/client4.js", firstLine + secondLine);
+    }
+    else {
+        console.info("skip roadroller");
+        copyFileSync("build/client3.js", "build/client4.js");
+    }
 };
 
 const isProd = process.argv.indexOf("--dev") < 0;
