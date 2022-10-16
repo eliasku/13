@@ -28,14 +28,10 @@ const enum StartState {
     if (!clientName) {
         setUserName(prompt("your name") || "guest");
     }
-    if (confirm("load emoji")) {
-        new FontFace("e", "url(e.ttf)").load().then((font) => {
-            document.fonts.add(font);
-            state = StartState.Loaded;
-        });
-    } else {
+    new FontFace("e", "url(e.ttf)").load().then((font) => {
+        document.fonts.add(font);
         state = StartState.Loaded;
-    }
+    });
     const _states: ((ts?: number) => void | undefined)[] = [
         ,
         () => {
