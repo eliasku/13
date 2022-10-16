@@ -6,9 +6,10 @@ Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https
 <img src="./images/13logo.gif">
 </p>
 
-## `next` branch and test room
-
-- [Join `🚪 next13` room](https://next13.herokuapp.com) to play [`next` branch](https://github.com/eliasku/13/tree/next) version. `next` branch contains **improvements after the final date, but still fits `13k`!!!**
+- 🎖️ **7-th place** winner!
+- 🥇 **1-st place** in **Server** category
+- 🥉 **3-rd place** in **Mobile** category
+- Check out [13 game post-mortem](https://eliasku.hashnode.dev/13-game)
 
 ## 📖 How to play
 
