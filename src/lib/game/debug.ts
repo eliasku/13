@@ -10,7 +10,7 @@ import {Img, img} from "../assets/gfx";
 import {ClientID} from "../../shared/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
-import {M} from "../utils/math";
+import {min} from "../utils/math";
 
 //// DEBUG UTILITIES ////
 
@@ -38,6 +38,9 @@ const icons_channelState = {
     "closing": "❌",
 };
 
+const _dmin = [Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE];
+const _dmax = [Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE, Number.MIN_VALUE];
+
 export const printDebugInfo = (
     gameTic: number, netTic: number, lastFrameTs: number, prevTime: number,
     drawList: Actor[],
@@ -49,7 +52,7 @@ export const printDebugInfo = (
 
     let text = gameTic > prevSimulatedTic ? "🌐" : "🥶";
     const ticsAhead = (lastFrameTs - prevTime) * Const.NetFq | 0;
-    const ticsPrediction = M.min(Const.PredictionMax, ticsAhead);
+    const ticsPrediction = min(Const.PredictionMax, ticsAhead);
     if (ticsPrediction) text += "🔮";
     text += `~ ${ticsPrediction} of ${ticsAhead}\n`;
     prevSimulatedTic = gameTic;
@@ -64,7 +67,7 @@ export const printDebugInfo = (
     text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
     text += "trees: " + trees.length + "\n";
 
-    text += `┌ ${clientName} | game: ${gameTic}, net: ${netTic}\n`;
+    text += `┌ ${clientName} | tic: ${gameTic}, game-net: ${netTic - gameTic}\n`;
     for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;
@@ -74,27 +77,52 @@ export const printDebugInfo = (
         text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
             text += `+${cl.tic_ - (gameTic - 1)}`;
-            text += "| x" + getChannelPacketSize(remoteClient).toString(16);
+            text += "| x" + getChannelPacketSize(remoteClient).toString(16) +
+                "";//" max: " + JSON.stringify(pc.localDescription.toJSON());
         }
         text += "\n";
     }
+
+    for (let a of [].concat(...state.actors_)) {
+        if (a.x_ < _dmin[0]) _dmin[0] = a.x_;
+        if (a.x_ > _dmax[0]) _dmax[0] = a.x_;
+        if (a.y_ < _dmin[1]) _dmin[1] = a.y_;
+        if (a.y_ > _dmax[1]) _dmax[1] = a.y_;
+        if (a.z_ < _dmin[2]) _dmin[2] = a.z_;
+        if (a.z_ > _dmax[2]) _dmax[2] = a.z_;
+
+        if (a.u_ < _dmin[0 + 3]) _dmin[0 + 3] = a.u_;
+        if (a.u_ > _dmax[0 + 3]) _dmax[0 + 3] = a.u_;
+        if (a.v_ < _dmin[1 + 3]) _dmin[1 + 3] = a.v_;
+        if (a.v_ > _dmax[1 + 3]) _dmax[1 + 3] = a.v_;
+        if (a.w_ < _dmin[2 + 3]) _dmin[2 + 3] = a.w_;
+        if (a.w_ > _dmax[2 + 3]) _dmax[2 + 3] = a.w_;
+    }
+
+    text += "x := [" + _dmin[0] + " .. " + _dmax[0] + "]\n";
+    text += "y := [" + _dmin[1] + " .. " + _dmax[1] + "]\n";
+    text += "z := [" + _dmin[2] + " .. " + _dmax[2] + "]\n";
+    text += "u := [" + _dmin[3] + " .. " + _dmax[3] + "]\n";
+    text += "v := [" + _dmin[4] + " .. " + _dmax[4] + "]\n";
+    text += "w := [" + _dmin[5] + " .. " + _dmax[5] + "]\n";
+
     termPrint(text);
 }
 
 export const updateDebugInput = () => {
-    if (keyboardDown.has(KeyCode.Digit0)) {
+    if (keyboardDown[KeyCode.Digit0]) {
         showDebugInfo = !showDebugInfo;
     }
-    if (keyboardDown.has(KeyCode.Digit1)) {
+    if (keyboardDown[KeyCode.Digit1]) {
         ++debugCheckAvatar;
     }
-    if (keyboardDown.has(KeyCode.Digit2)) {
+    if (keyboardDown[KeyCode.Digit2]) {
         drawCollisionEnabled = !drawCollisionEnabled;
     }
-    if (keyboardDown.has(KeyCode.Digit3)) {
+    if (keyboardDown[KeyCode.Digit3]) {
         setDebugLagK((_debugLagK + 1) % 3);
     }
-    if (keyboardDown.has(KeyCode.Digit4)) {
+    if (keyboardDown[KeyCode.Digit4]) {
         debugStateEnabled = !debugStateEnabled;
     }
 }
@@ -180,7 +208,7 @@ const assertStateEquality = (label: string, a: StateData, b: StateData) => {
                     "v_",
                     "w_",
                     "s_",
-                    "t_",
+                    "detune_",
                     "id_",
                     "type_",
                     "client_",

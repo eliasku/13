@@ -1,5 +1,5 @@
 import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d";
-import {PI2, toRad} from "../utils/math";
+import {PI2, TO_RAD} from "../utils/math";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./params";
 import {GL} from "../graphics/gl";
 import {rehash} from "../utils/hasher";
@@ -91,7 +91,7 @@ export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasR
 const circle = (ctx: CanvasRenderingContext2D, r: number) => {
     ctx.beginPath();
     ctx.arc(0, 0, r - 0.3, 0, PI2);
-    ctx.closePath();
+    //ctx.closePath();
 }
 
 export const loadAtlas = (): void => {
@@ -138,7 +138,7 @@ export const loadAtlas = (): void => {
         temp.clearRect(0, 0, canvaSize, canvaSize);
         temp.font = Font(emojiSize);
         temp.translate(canvaSize / 2, canvaSize / 2);
-        temp.rotate(toRad(a));
+        temp.rotate(a * TO_RAD);
         temp.scale(sx, sy);
         temp.fillText(emoji, 0, 0);
         temp.resetTransform();

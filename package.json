@@ -24,6 +24,7 @@
     "html-minifier": "^4.0.0",
     "roadroller": "^2.1.0",
     "terser": "^5.14.2",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "ts-morph": "^16.0.0"
   }
 }

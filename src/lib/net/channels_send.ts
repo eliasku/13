@@ -1,6 +1,7 @@
 import {_debugLagK} from "../game/config";
 import {isPeerConnected, RemoteClient} from "./messaging";
-import {lerp, M} from "../utils/math";
+import {lerp} from "../utils/math";
+import {fxRandom} from "../utils/rnd";
 
 const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
     client.debugPacketByteLength = data.byteLength;
@@ -14,7 +15,7 @@ const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
     const loss = 0.05 * (10 ** (_debugLagK - 1));
     const lagMin = 20 * (10 ** (_debugLagK - 1));
     const lagMax = 200 * (10 ** (_debugLagK - 1));
-    if (M.random() > loss * loss) {
+    if (fxRandom() > loss * loss) {
         if (document.hidden) {
             // can't simulate lag when tab in background because of setTimeout stall
             try {
@@ -23,7 +24,7 @@ const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
                 console.warn("DataChannel send error:", e)
             }
         } else {
-            const delay = lerp(lagMin, lagMax, M.random()) / 4;
+            const delay = lerp(lagMin, lagMax, fxRandom()) / 4;
             setTimeout(() => {
                 if (isPeerConnected(client)) {
                     try {

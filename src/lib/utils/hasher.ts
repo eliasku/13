@@ -1,4 +1,4 @@
-import {M} from "./math";
+import {imul} from "./math";
 
 const enum Hash {
     Seed = 48639327,
@@ -7,7 +7,7 @@ const enum Hash {
 
 const H = (str: string, i = Hash.Seed, a = "################################", c?: string) => {
     for (c of str) {
-        i = (M.imul(i, 23131) + c.charCodeAt(0)) >>> 0;
+        i = (imul(i, 23131) + c.charCodeAt(0)) >>> 0;
     }
     i %= Hash.Mod;
     return a[i % 32] + (i < 32 ? [] : a[i >> 5]);

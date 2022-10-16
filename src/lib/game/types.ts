@@ -10,13 +10,9 @@ export const enum ActorType {
     Tree = 4,
 }
 
-export const enum ItemCategory {
-    Effect = 0x100,
-    Weapon = 0x200,
-}
-
-export const enum EffectItemType {
-    Health = 0,
+export const enum ItemType {
+    Hp = 0,
+    Weapon = 1,
 }
 
 export interface Pos {
@@ -31,23 +27,49 @@ export interface Vel {
     w_: number;
 }
 
+/* {
+    type: 3,
+    detune: 5,
+    anim-hit: 5
+    weapon: 4,
+    hp: 5,
+ */
 export interface Actor extends Pos, Vel {
+    // 32-bit identifier
     id_: number;
-    type_: ActorType;
+    // 32-bit identifier
     client_: ClientID;
-    btn_: number;
-    // stpq
-    s_: number;
-    t_: number;
-    // p?: number;
-    // q?: number;
 
+    // 0..4
+    type_: ActorType;
+
+    btn_: number;
+
+    // reload time
+    // bullet life-time
+    // 8-bit
+    s_: number;
+
+    // detune counter: 0...32 (max of weapon detune-speed parameter)
+    detune_: number;
+
+    // Item, Player, Barrel : holding or contains Weapon ID
+    // Bullet : Damage value
+    // range: 0...15 currently
     weapon_?: number;
+
+    // all objects HP are < 32
     hp_?: number;
-    // 1 byte: just generated anim start point
+
+    // 8-bit: just generated anim start point
     anim0_?: number;
-    // hit effect (4 bits: 0...15)
+
+    // Hit effect (5 bits: 0...31)
+    // For Items could not be picked up until it reach 0
     animHit_?: number;
+
+    // local frame-scope state
+    fstate_?: number;
 }
 
 export interface Client {
@@ -96,7 +118,7 @@ export interface Packet {
     sync_: boolean;
     // confirm the last tic we received from Sender
     receivedOnSender_: number;
-    // packet contains info tic and before
+    // packet contains info tic and before, 22 bits, for 19 hr of game session
     tic_: number;
     // events are not confirmed
     events_: ClientEvent[];

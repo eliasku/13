@@ -2,12 +2,12 @@ import {img, Img} from "../assets/gfx";
 import {beginRender, draw, flush, gl, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {getLumaColor32, M, PI} from "../utils/math";
+import {atan2, getLumaColor32, hypot, PI} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
 import {mapTexture} from "../assets/map";
-import {BOUNDS_SIZE} from "../assets/params";
+import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 
 export const newParticle = (): Particle => ({
     x_: 0,
@@ -38,13 +38,13 @@ export const updateParticle = (p: Particle): boolean => {
 
     if (updateBody(p, GRAVITY, 2)) {
         if (p.splashImg_) {
-            const v = M.hypot(p.u_, p.v_, p.w_);
+            const v = hypot(p.u_, p.v_, p.w_);
             if (v < 4 || p.splashEachJump_) {
                 const d = 1 + p.splashScaleOnVelocity_ * v;
-                splats.push(p.splashImg_, p.x_, p.y_, p.a_, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
+                splats.push(p.splashImg_, p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.a_, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
             }
             if (v < 4) {
-                return false;
+                return true;
             }
         }
         p.u_ /= 2;
@@ -54,19 +54,18 @@ export const updateParticle = (p: Particle): boolean => {
 
     collideWithBounds(p, 4, 2);
 
-    return p.lifeTime_ < p.lifeMax_;
+    return p.lifeTime_ > p.lifeMax_;
 }
 
-export const updateParticles = () => {
-    for (let i = 0; i < particles.length;) {
-        const p = particles[i];
-        if (updateParticle(p)) {
-            ++i;
-        } else {
-            particles.splice(i, 1);
+const updateParticleList = (list: Particle[], i = 0) => {
+    for (; i < list.length;) {
+        if (updateParticle(list[i++])) {
+            list.splice(--i, 1);
         }
     }
 }
+
+export const updateParticles = () => updateParticleList(particles);
 
 let seed0: number;
 let particles0: Particle[];
@@ -84,18 +83,17 @@ export const restoreParticles = () => {
     splats.length = 0;
 }
 
-export const drawSplats = () => {
-    let i = 0;
-    while (i < splats.length) {
+export const drawSplats = (list = splats, i = 0) => {
+    for (; i < list.length;) {
         draw(
-            img[splats[i++]],
-            splats[i++],
-            splats[i++],
-            splats[i++],
-            splats[i++],
-            splats[i++],
+            img[list[i++]],
+            list[i++],
+            list[i++],
+            list[i++],
+            list[i++],
+            list[i++],
             1,
-            splats[i++]
+            list[i++]
         );
     }
 }
@@ -107,16 +105,16 @@ export const drawParticles = () => {
 }
 
 export const drawParticle = (p: Particle) => {
-    const velocityScale = 1 - p.followVelocity_ + p.followScale_ * M.hypot(p.u_, p.v_, p.w_);
-    const velocityAngle = p.followVelocity_ * M.atan2(p.v_ - p.w_, p.u_);
+    const velocityScale = 1 - p.followVelocity_ + p.followScale_ * hypot(p.u_, p.v_, p.w_);
+    const velocityAngle = p.followVelocity_ * atan2(p.v_ - p.w_, p.u_);
     const scale = p.scale_;
     const angle = velocityAngle + p.a_;
     if (p.z_ > 1) {
-        const s = 0.5 - p.z_ / 256;
+        const s = 0.5 - (p.z_ / WORLD_SCALE) / 256;
         const t = (1 - p.lifeTime_ / p.lifeMax_);
-        draw(img[Img.circle_4], p.x_, p.y_, 0, s, s / 4, 0.4 * t, 0);
+        draw(img[Img.circle_4], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
     }
-    draw(img[p.img_], p.x_, p.y_ - p.z_, angle, scale * velocityScale, scale, 1, p.color_);
+    draw(img[p.img_], p.x_ / WORLD_SCALE, (p.y_ - p.z_) / WORLD_SCALE, angle, scale * velocityScale, scale, 1, p.color_);
 }
 
 //////

@@ -1,5 +1,5 @@
 import {GL} from "./gl";
-import {M} from "../utils/math";
+import {cos, sin} from "../utils/math";
 import {rehash} from "../utils/hasher";
 
 export const gl = rehash(c.getContext("webgl", {
@@ -228,8 +228,8 @@ export const setupProjection = (
     const x = posX - width * pivotX;
     const y = posY - height * pivotY;
 
-    const c = scale * M.cos(angle);
-    const s = scale * M.sin(angle);
+    const c = scale * cos(angle);
+    const s = scale * sin(angle);
 
     const w = 2 / width;
     const h = -2 / height;
