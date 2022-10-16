@@ -1,10 +1,16 @@
 import {execSync} from "child_process";
-import {copyFileSync, readFileSync, rmSync, writeFileSync} from "fs";
+import {copyFileSync, readFileSync, rmSync, writeFileSync, mkdirSync} from "fs";
 import {Input, InputAction, InputType, Packer, PackerOptions} from "roadroller";
 import {minify} from "terser";
 import * as readline from "readline";
 import {mergeProps} from "./mergeProps.js";
 import {rehashWebAPI} from "./doRehash.js";
+
+// create build dir
+try {
+    mkdirSync("build");
+} catch {
+}
 
 let report: string[] = [];
 
