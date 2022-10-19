@@ -69,7 +69,7 @@ const enum StartState {
         //** DO FRAME **//
         updateSong(state != StartState.Connected);
         if (state > StartState.Loaded) {
-            l.innerText = updateFpsMeter(ts) + "\n";
+            l.innerText = `FPS: ${updateFpsMeter(ts)}\n`;
             updateTestGame(ts);
         }
         _states[state]?.(ts);
