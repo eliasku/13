@@ -2,7 +2,6 @@ import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/
 import {PI2, TO_RAD} from "../utils/math";
 import {PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1} from "./params";
 import {GL} from "../graphics/gl";
-import {rehash} from "../utils/hasher";
 
 export const enum Img {
     box = 0,
@@ -81,7 +80,7 @@ export const img: Texture[] = [];
 export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasRenderingContext2D): CanvasRenderingContext2D => {
     _canvas = document.createElement("canvas");
     _canvas.width = _canvas.height = size;
-    _canvas = rehash(_canvas.getContext("2d"));
+    _canvas = _canvas.getContext("2d");
     _canvas.fillStyle = _canvas.strokeStyle = "#fff";
     _canvas.textAlign = "center";
     _canvas.textBaseline = "middle";
@@ -287,7 +286,7 @@ export const loadAtlas = (): void => {
     {
         const ctx = createCanvas(64);
         ctx.translate(32, 32);
-        const grd = rehash(ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32));
+        const grd = ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32);
         grd.addColorStop(0, "rgba(255,255,255,1)");
         grd.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = grd;

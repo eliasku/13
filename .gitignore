@@ -1,11 +1,8 @@
 .idea/
 node_modules/
+build/
 public/*.js
 public/*.js.map
-public/index.html
-public/debug.html
-zip/*.js
-zip/*.html
-dump/
-build/
-
+public/index*.html
+public/debug*.html
+server.js

@@ -1,7 +1,7 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {readFile} from "fs";
 
-import {ClientID, MessageField, Request, ServerEventName} from "../../src/shared/types";
+import {BuildVersion, ClientID, MessageField, Request, ServerEventName} from "../../src/shared/types";
 
 interface ClientState {
     id_: ClientID;
@@ -81,6 +81,12 @@ const removeClient = (client: ClientState) => {
 }
 
 const processServerEvents = (req: IncomingMessage, res: ServerResponse) => {
+    const query = new URLSearchParams(req.url.split("?")[1] ?? "");
+    if (query.get("v") !== BuildVersion) {
+        res.writeHead(500);
+        return;
+    }
+
     res.writeHead(200, HDR._);
 
     // create new client connection
@@ -145,7 +151,7 @@ const processIncomeMessages = (req: IncomingMessage, res: ServerResponse) =>
 
 const serveStatic = (file: string, res: ServerResponse, mime: OutgoingHttpHeaders) =>
     readFile(
-        "." + file,
+        "./public" + file,
         (err, data) => {
             res.writeHead(err ? 404 : 200, mime);
             res.end(data);
@@ -158,21 +164,35 @@ const error = (req: IncomingMessage, res: ServerResponse) => {
 }
 
 const HANDLERS: any = {
-    G: {
+    GET: {
         "/": (req: IncomingMessage, res: ServerResponse) => serveStatic("/index.html", res, HDR.l),
         _: processServerEvents,
         l: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.l),
         f: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.f),
         s: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.s),
     },
-    P: {
+    POST: {
         _: processIncomeMessages,
     }
 };
 
 createServer((req: IncomingMessage, res: ServerResponse) => {
-    (HANDLERS[req.method[0]]?.[req.url.at(-1)] ?? error)(req, res);
+    try {
+        const handler = HANDLERS[req.method];
+        if (handler) {
+            const url = req.url.split("?")[0];
+            const pathnameId = url.at(-1);
+            handler[pathnameId](req, res);
+        } else {
+            error(req, res);
+        }
+    }
+    catch(e) {
+        console.warn("Request error");
+        console.trace(e);
+        error(req, res);
+    }
 }).listen(+process.env.PORT || 8080);
 
 // console will be dropped for prod build
-console.log("Local server http://localhost:8080");
+console.log(`Server ${BuildVersion} http://localhost:8080`);

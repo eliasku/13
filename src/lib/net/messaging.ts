@@ -1,6 +1,13 @@
-import {ClientID, Message, MessageData, MessageField, MessageType, PostMessagesResponse} from "../../shared/types";
+import {
+    BuildVersion,
+    ClientID,
+    Message,
+    MessageData,
+    MessageField,
+    MessageType,
+    PostMessagesResponse
+} from "../../shared/types";
 import {channels_processMessage} from "./channels";
-import {rehash} from "../utils/hasher";
 import {getOrCreate} from "../utils/utils";
 
 export interface RemoteClient {
@@ -10,9 +17,6 @@ export interface RemoteClient {
     name_?: string;
     debugPacketByteLength?: number;
 }
-
-rehash(RTCPeerConnection.prototype);
-rehash(RTCDataChannel.prototype);
 
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
@@ -155,7 +159,7 @@ export const connect = () => {
         messageUploading = false;
         messagesToPost = [];
         callbacks = [];
-        eventSource = rehash(new EventSource(/*EventSourceUrl*/ "_"));
+        eventSource = new EventSource(/*EventSourceUrl*/ "_?v=" + BuildVersion);
         eventSource.onerror = disconnect;
         // eventSource.onerror = (e) => {
         //     console.warn("server-event error");

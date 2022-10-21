@@ -4,17 +4,15 @@
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
-    "start": "cd public && node s.js",
-    "start-watch": "npx nodemon ./public/s.js",
+    "start": "node server.js",
+    "start-watch": "npx nodemon ./server.js",
     "build-ts-server": "tsc -p server/tsconfig.json",
     "build-ts-client": "tsc -p tsconfig.json",
     "build": "ts-node --esm tools/build.ts",
-    "build-dev": "ts-node --esm tools/build.ts --dev",
-    "build-max": "ts-node --esm tools/build.ts --rr --max",
-    "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/c.js",
-    "debug-watch": "esbuild src/lib/index.ts --tsconfig=tsconfig.json --watch --bundle --define:process.env.NODE_ENV='\"development\"' --format=esm --sourcemap --outfile=public/debug.js",
+    "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/client.js",
+    "debug-watch": "esbuild src/lib/index.ts --tsconfig=tsconfig.json --watch --bundle --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/debug.js",
     "typecheck": "tsc -p tsconfig.json --watch --noEmit",
-    "server-watch": "esbuild server/src/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --platform=node --target=node16 --format=esm --outfile=public/s.js"
+    "server-watch": "esbuild server/src/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --platform=node --target=node16 --format=esm --outfile=server.js"
   },
   "author": "eliasku",
   "license": "ISC",
@@ -23,7 +21,6 @@
     "@types/node": "^18.7.1",
     "esbuild": "^0.15.0",
     "html-minifier": "^4.0.0",
-    "roadroller": "^2.1.0",
     "terser": "^5.14.2",
     "ts-node": "^10.9.1",
     "ts-morph": "^16.0.0"

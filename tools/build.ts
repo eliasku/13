@@ -1,10 +1,7 @@
 import {execSync} from "child_process";
-import {copyFileSync, readFileSync, rmSync, writeFileSync, mkdirSync} from "fs";
-import {Input, InputAction, InputType, Packer, PackerOptions} from "roadroller";
+import {copyFileSync, readFileSync, writeFileSync, mkdirSync} from "fs";
 import {minify} from "terser";
-import * as readline from "readline";
 import {mergeProps} from "./mergeProps.js";
-import {rehashWebAPI} from "./doRehash.js";
 
 // create build dir
 try {
@@ -13,70 +10,20 @@ try {
 }
 
 let report: string[] = [];
+let buildVersion = "0.0.0";
 
-const zip = (label: string, ...files: string[]) => {
-    const size0 = sz(...files);
-    let size1 = size0;
-    if (process.argv.indexOf("--zip") >= 0) {
-        try {
-            const zipname = "build/" + label + ".zip";
-            console.log("estimate zip...");
-            execSync(`advzip --shrink-insane --iter=1000 --add ${zipname} ${files.join(" ")}`);
-            execSync(`./tools/vendor/ect -z -9 -strip ${zipname}`);
-            size1 = sz(zipname);
-        } catch {
-            console.warn("zip not found. please install `advancecomp`");
-        }
-    }
-    const free = 13 * 1024 - size1;
-    console.info(label + ":\t" + size0 + "\t| " + size1 + "\t| " + free);
-    report.push(label + ":\t" + size0 + "\t| " + size1 + "\t| " + free);
-};
-
-const roadroller = async () => {
-    if (process.argv.indexOf("--rr") > 0) {
-        console.info("run roadroller");
-        const inputs: Input[] = [
-            {
-                data: readFileSync("build/client3.js", "utf8"),
-                type: InputType.JS,
-                action: InputAction.Eval,
-            },
-        ];
-        const options: PackerOptions = {};
-        const packer = new Packer(inputs, options);
-        let i = 0;
-        await packer.optimize(process.argv.indexOf("--max") > 0 ? 2 : 1,
-            (): any => {
-                const i0 = i++ % 11;
-                const i1 = (10 - i0);
-                process.stdout.write("[" + ".".repeat(i0) + " ".repeat(i1) + "]");
-                readline.cursorTo(process.stdout, 0);
-            });
-
-        const {firstLine, secondLine} = packer.makeDecoder();
-        writeFileSync("build/client4.js", firstLine + secondLine);
-    }
-    else {
-        console.info("skip roadroller");
-        copyFileSync("build/client3.js", "build/client4.js");
-    }
-};
-
-const isProd = process.argv.indexOf("--dev") < 0;
-
-// build special debug.js and debug.html
-const buildDebugVersion = process.argv.indexOf("--debug") >= 0;
-const envDef = isProd ? "production" : "development";
-
-function del(...files: string[]) {
-    for (const file of files) {
-        try {
-            rmSync(file);
-        } catch {
-        }
-    }
+try {
+    const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { version: string };
+    buildVersion = pkg.version;
+    console.info("build version: " + buildVersion);
 }
+catch {}
+
+const printSize = (label: string, ...files: string[]) => {
+    const size = sz(...files);
+    console.info(label + ":\t" + size);
+    report.push(label + ":\t" + size);
+};
 
 function sz(...files: string[]) {
     let total = 0;
@@ -91,53 +38,46 @@ function sz(...files: string[]) {
     return total;
 }
 
-del("game.zip");
-//del(...files);
-
 execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o build/index.html html/index.html`);
 
-if (buildDebugVersion) {
-    console.info("build debug");
-    execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --outfile=build/debug.js`);
+{
+    console.info("build debug version");
+    execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"${buildVersion}\"' --outfile=build/debug.js`);
     copyFileSync("html/index4.html", "public/index4.html");
     copyFileSync("html/debug4.html", "public/debug4.html");
     copyFileSync("html/debug.html", "public/debug.html");
 }
 
 {
-    console.info("build");
-    const esbuildArgs: string[] = [];
-    if (isProd) {
-        // esbuildArgs.push("--minify");
-        esbuildArgs.push("--drop:console");
+    const getBuildArgs = (name:string) => {
+        const esbuildArgs: string[] = [];
         esbuildArgs.push("--drop:debugger");
-        // esbuildArgs.push("--ignore-annotations");
-        // esbuildArgs.push("--charset=utf8");
-        // esbuildArgs.push("--tree-shaking=true");
-        // esbuildArgs.push("--minify-whitespace");
-        // esbuildArgs.push("--minify-identifiers");
+        if(name !== "server") {
+            esbuildArgs.push("--drop:console");
+        }
         esbuildArgs.push("--minify-syntax");
-        // esbuildArgs.push("--mangle-props=" + manglePropsRegex);
-        //esbuildArgs.push("--analyze");
+        esbuildArgs.push(`--define:__VERSION__='\"${buildVersion}\"'`);
+        esbuildArgs.push(`--define:process.env.NODE_ENV='\"production\"'`);
+        return esbuildArgs.join(" ");
     }
 
-    execSync(`esbuild server/src/index.ts --tsconfig=server/tsconfig.json ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --platform=node --target=node16 --outfile=build/server0.js --metafile=build/server0-build.json`, {
+    execSync(`esbuild server/src/index.ts --tsconfig=server/tsconfig.json ${getBuildArgs("server")} --bundle --format=esm --platform=node --target=node16 --outfile=build/server0.js --metafile=build/server0-build.json`, {
         encoding: "utf8",
         stdio: "inherit"
     });
-    execSync(`esbuild src/lib/index.ts --tsconfig=tsconfig.json ${esbuildArgs.join(" ")} --bundle --format=esm --define:process.env.NODE_ENV='\"${envDef}\"' --outfile=build/client0.js --metafile=build/client0-build.json`, {
+    execSync(`esbuild src/lib/index.ts --tsconfig=tsconfig.json ${getBuildArgs("client")} --bundle --format=esm --outfile=build/client0.js --metafile=build/client0-build.json`, {
         encoding: "utf8",
         stdio: "inherit"
     });
 
-    zip("build", "build/index.html", "build/client0.js", "build/server0.js");
+    printSize("build", "build/index.html", "build/client0.js", "build/server0.js");
 }
 
 {
     console.info("merge properties");
     mergeProps("tsconfig.json", "build/client0.js", "build/client1.js");
     mergeProps("server/tsconfig.json", "build/server0.js", "build/server1.js");
-    zip("merge", "build/index.html", "build/client1.js", "build/server1.js");
+    printSize("merge", "build/index.html", "build/client1.js", "build/server1.js");
 }
 
 {
@@ -198,46 +138,12 @@ if (buildDebugVersion) {
         terser("build/server1.js", "build/server2.js"),
         terser("build/client1.js", "build/client2.js")
     ]);
-    zip("terser", "build/index.html", "build/client2.js", "build/server2.js");
+    printSize("terser", "build/index.html", "build/client2.js", "build/server2.js");
 }
 
-{
-    console.info("rehash");
-    rehashWebAPI("build/client2.js", "build/client3.js");
-    zip("rehash", "build/index.html", "build/client3.js", "build/server2.js");
-}
-
-{
-    console.info("inject html");
-    // inject source code to HTML (remove client.js file)
-    let html = readFileSync("build/index.html", "utf8");
-    let client = readFileSync("build/client3.js", "utf8");
-    html = html.replace(`<script></script>`, `<script>${client}</script>`);
-    writeFileSync("public/index.html", html);
-}
-
-copyFileSync("build/server2.js", "public/s.js");
-
-console.info("release build ready... " + sz("public/index.html", "public/s.js"));
-
-await roadroller();
-zip("rr", "build/index.html", "build/client4.js", "build/server2.js");
-
-{
-    // inject source code to HTML (remove client.js file)
-    let html = readFileSync("build/index.html", "utf8");
-    let client = readFileSync("build/client4.js", "utf8");
-    if (process.argv.indexOf("--rr") > 0) {
-        html = html.replace(`<script></script>`, `<script>${client}</script>`);
-        writeFileSync("public/index.html", html);
-        zip("game", "public/index.html", "public/s.js");
-    }
-    else {
-        html = html.replace(`<script></script>`, `<script src="c.js"></script>`);
-        writeFileSync("public/index.html", html);
-        writeFileSync("public/c.js", client);
-        zip("game", "public/index.html", "public/s.js", "public/c.js");
-    }
-}
+copyFileSync("build/server2.js", "server.js");
+copyFileSync("build/client2.js", "public/client.js");
+copyFileSync("build/index.html", "public/index.html");
+printSize("game", "public/index.html", "server.js", "public/client.js");
 
 console.info(report.join("\n"));

@@ -1,6 +1,4 @@
-import {rehash} from "../utils/hasher";
-
-export const audioContext = rehash(new AudioContext());
+export const audioContext = new AudioContext();
 
 export const play = (audioBuffer: AudioBuffer,
                      vol: number | StereoPannerNode,

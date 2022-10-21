@@ -4,7 +4,9 @@ export type MessageData = any;
 export type MessageTypeID = number;
 
 export const EventSourceUrl = "/_";
-export const VersionsId = 1;
+
+declare var __VERSION__: string;
+export const BuildVersion = __VERSION__;
 
 export const enum ServerEventName {
     Close = 0,

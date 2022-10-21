@@ -1,11 +1,10 @@
 import {GL} from "./gl";
 import {cos, sin} from "../utils/math";
-import {rehash} from "../utils/hasher";
 
-export const gl = rehash(c.getContext("webgl", {
+export const gl = c.getContext("webgl", {
     antialias: false,
-}));
-const instancedArrays = rehash(gl.getExtension('ANGLE_instanced_arrays')!);
+});
+const instancedArrays = gl.getExtension('ANGLE_instanced_arrays')!;
 
 if (process.env.NODE_ENV === "development") {
     if (!gl || !instancedArrays) {
