@@ -24,8 +24,10 @@ let messageUploading = false;
 let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
-export const setUserName = (name: string) =>
-    localStorage.setItem("l3name", clientName = name);
+export const setUserName = (name: string|null|undefined) => {
+    clientName = (name || "guest").trim().substring(0,32).trim();
+    localStorage.setItem("l3name", clientName);
+}
 
 const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>
     messagesToPost.push([clientId, to, type, call, data]);

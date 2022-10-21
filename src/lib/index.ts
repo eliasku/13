@@ -26,7 +26,7 @@ const enum StartState {
     }
 
     if (!clientName) {
-        setUserName(prompt("your name") || "guest");
+        setUserName(prompt("your name"));
     }
     new FontFace("e", "url(e.ttf)").load().then((font) => {
         document.fonts.add(font);
