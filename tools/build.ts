@@ -2,6 +2,7 @@ import {execSync} from "child_process";
 import {copyFileSync, readFileSync, writeFileSync, mkdirSync} from "fs";
 import {minify} from "terser";
 import {mergeProps} from "./mergeProps.js";
+import {build, BuildOptions} from 'esbuild';
 
 // create build dir
 try {
@@ -16,8 +17,8 @@ try {
     const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { version: string };
     buildVersion = pkg.version;
     console.info("build version: " + buildVersion);
+} catch {
 }
-catch {}
 
 const printSize = (label: string, ...files: string[]) => {
     const size = sz(...files);
@@ -38,38 +39,67 @@ function sz(...files: string[]) {
     return total;
 }
 
-execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o build/index.html html/index.html`);
-
 {
-    console.info("build debug version");
-    execSync(`esbuild src/lib/index.ts --bundle --format=esm --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"${buildVersion}\"' --outfile=build/debug.js`);
+    // copy html
+    console.info("build html files");
+    execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o build/index.html html/index.html`);
     copyFileSync("html/index4.html", "public/index4.html");
     copyFileSync("html/debug4.html", "public/debug4.html");
     copyFileSync("html/debug.html", "public/debug.html");
 }
 
 {
-    const getBuildArgs = (name:string) => {
-        const esbuildArgs: string[] = [];
-        esbuildArgs.push("--drop:debugger");
-        if(name !== "server") {
-            esbuildArgs.push("--drop:console");
+    console.info("esbuild: server, client, debug");
+
+    const addBuildOptions = (opts: BuildOptions, debug: boolean = false): BuildOptions => {
+        opts.bundle = true;
+        opts.format = "esm";
+        if (!debug) {
+            opts.drop = ["debugger"];
+            if ((opts.entryPoints as string[])[0] !== "server/src/index.ts") {
+                opts.drop.push("console");
+            }
+            opts.minifySyntax = true;
         }
-        esbuildArgs.push("--minify-syntax");
-        esbuildArgs.push(`--define:__VERSION__='\"${buildVersion}\"'`);
-        esbuildArgs.push(`--define:process.env.NODE_ENV='\"production\"'`);
-        return esbuildArgs.join(" ");
+        opts.define = {
+            __VERSION__: `"${buildVersion}"`,
+            "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
+        };
+        return opts;
     }
 
-    execSync(`esbuild server/src/index.ts --tsconfig=server/tsconfig.json ${getBuildArgs("server")} --bundle --format=esm --platform=node --target=node16 --outfile=build/server0.js --metafile=build/server0-build.json`, {
-        encoding: "utf8",
-        stdio: "inherit"
-    });
-    execSync(`esbuild src/lib/index.ts --tsconfig=tsconfig.json ${getBuildArgs("client")} --bundle --format=esm --outfile=build/client0.js --metafile=build/client0-build.json`, {
-        encoding: "utf8",
-        stdio: "inherit"
-    });
+    const esbuildTasks = [
+        build(addBuildOptions({
+            entryPoints: ["server/src/index.ts"],
+            outfile: "build/server0.js",
+            tsconfig: "server/tsconfig.json",
+            platform: "node",
+            target: "node16",
+        })).catch(e => {
+            console.warn(e);
+            process.exit(1);
+        }),
+        build(addBuildOptions({
+            entryPoints: ["src/lib/index.ts"],
+            outfile: "build/client0.js",
+            tsconfig: "tsconfig.json",
+            plugins: [],
+        })).catch(e => {
+            console.warn(e);
+            process.exit(1);
+        }),
+        build(addBuildOptions({
+            entryPoints: ["src/lib/index.ts"],
+            outfile: "build/debug.js",
+            tsconfig: "tsconfig.json",
+            plugins: [],
+        }, true)).catch(e => {
+            console.warn(e);
+            process.exit(1);
+        }),
+    ]
 
+    await Promise.all(esbuildTasks);
     printSize("build", "build/index.html", "build/client0.js", "build/server0.js");
 }
 

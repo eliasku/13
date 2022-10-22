@@ -147,7 +147,7 @@ const processIncomeMessages = (req: IncomingMessage, res: ServerResponse) =>
         }
     }).catch(() => {
         console.warn("error handle income message /_");
-    })
+    });
 
 const serveStatic = (file: string, res: ServerResponse, mime: OutgoingHttpHeaders) =>
     readFile(
