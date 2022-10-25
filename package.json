@@ -1,6 +1,6 @@
 {
   "name": "@eliasku/js13k-2022",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
@@ -8,8 +8,9 @@
     "start-watch": "npx nodemon ./server.js",
     "build-ts-server": "tsc -p server/tsconfig.json",
     "build-ts-client": "tsc -p tsconfig.json",
-    "build": "ts-node --esm tools/build.ts",
-    "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/client.js",
+    "build": "ts-node --esm --swc tools/build.ts",
+    "client-watch-dev": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/client.js",
+    "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"production\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/client.js",
     "debug-watch": "esbuild src/lib/index.ts --tsconfig=tsconfig.json --watch --bundle --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/debug.js",
     "typecheck": "tsc -p tsconfig.json --watch --noEmit",
     "server-watch": "esbuild server/src/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --platform=node --target=node16 --format=esm --outfile=server.js"
@@ -23,6 +24,7 @@
     "html-minifier": "^4.0.0",
     "terser": "^5.14.2",
     "ts-node": "^10.9.1",
-    "ts-morph": "^16.0.0"
+    "ts-morph": "^16.0.0",
+    "@swc/core": "^1.3.10"
   }
 }

@@ -99,12 +99,9 @@ Shaders are minified in TypeScript source code by [GLSLX - online minifier](http
 ```shell
 npm i
 npm run build
-npm run start
+npm start
 ```
 
 Navigate to [localhost:8080](http://localhost:8080)
 
-Use `npm run build --debug` to generate `debug.js` and `index4.html` / `debug4.html` to enable testing 4-players on a page.
-
-Use `npm run build --rr --max` to enable road-roller compression
-
+Use `npm run build --dev` build development ⅓ version

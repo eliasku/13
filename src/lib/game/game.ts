@@ -97,6 +97,8 @@ import {
 } from "./debug";
 import {addToGrid, queryGridCollisions} from "./grid";
 import {getOrCreate} from "../utils/utils";
+import {drawText, fnt, updateFonts} from "../graphics/font";
+import {fps} from "../utils/fpsMeter";
 
 const clients = new Map<ClientID, Client>()
 
@@ -247,7 +249,7 @@ export const createSplashState = () => {
         actor.weapon_ = 1 + (i % (weapons.length - 1));
         actor.anim0_ = i + rand(10) * Img.num_avatars;
         actor.btn_ = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
-        const D = 80 + rand(20);
+        const D = 80 + 20 * sqrt(random());
         actor.x_ = (BOUNDS_SIZE / 2 + D * cos(k * PI2)) * WORLD_SCALE;
         actor.y_ = (BOUNDS_SIZE / 2 + D * sin(k * PI2) + 10) * WORLD_SCALE;
         pushActor(actor);
@@ -283,10 +285,6 @@ export const updateTestGame = (ts: number) => {
         }
         sendInput();
         cleaningUpClients();
-    }
-    printStatus();
-    if (process.env.NODE_ENV === "development") {
-        printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 }
 
@@ -676,7 +674,7 @@ const normalizeState = () => {
 const checkBulletCollision = (bullet: Actor, actor: Actor) => {
     if (bullet.hp_ &&
         bullet.weapon_ &&
-        (bullet.client_ - actor.client_) &&
+        (bullet.client_ > 0 ? (bullet.client_ - actor.client_) : (-bullet.client_ - actor.id_)) &&
         testIntersection(bullet, actor)) {
         hitWithBullet(actor, bullet);
     }
@@ -834,7 +832,7 @@ const kill = (actor: Actor) => {
         const item = createHpItem();
         copyPosFromActorCenter(item, actor);
         addVelFrom(item, actor);
-        const v = 32 + rand(64);
+        const v = 32 + 64 * sqrt(random());
         addRadialVelocity(item, random(PI2), v, v);
         item.animHit_ = ANIM_HIT_MAX;
         if (actor.weapon_) {
@@ -865,6 +863,8 @@ const BULLET_COLOR = [
     [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF]
 ];
 
+const getNameByClientId = (client: ClientID) => client === clientId ? clientName : remoteClients.get(client)?.name_;
+
 const hitWithBullet = (actor: Actor, bullet: Actor) => {
 
     addVelFrom(actor, bullet, 0.1);
@@ -883,13 +883,12 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
             kill(actor);
 
             const killerID = bullet.client_;
-            if (killerID && !actor.type_) {
+            if (killerID > 0 && !actor.type_) {
                 state.scores_[killerID] = (state.scores_[killerID] | 0) +
                     (actor.client_ ? 10 : 1);
 
-                const getNameById = (client: ClientID) => client == clientId ? clientName : remoteClients.get(client)?.name_;
-                const a = getNameById(killerID);
-                const b = getNameById(actor.client_);
+                const a = getNameByClientId(killerID);
+                const b = getNameByClientId(actor.client_);
                 if (a) {
                     let t = b ? [
                         a + " CRUSHED " + b,
@@ -937,16 +936,47 @@ const packDirByte = (x: number, y: number, res: number) =>
     packAngleByte((PI + atan2(y, x)) / PI2, res);
 
 const updateAI = (player: Actor) => {
-    const md = rand(ControlsFlag.MoveAngleMax);
-    player.btn_ = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
+    let walking = !player.weapon_;
+    if (!walking) {
+        const players = state.actors_[ActorType.Player];
+        let minDistEnemy: Actor | null = null;
+        let minDist = 100000.0;
+        for (const enemy of players) {
+            if (enemy === player) {
+                continue;
+            }
+            const dist = hypot(enemy.x_ - player.x_, enemy.y_ - player.y_);
+            if (dist < minDist) {
+                minDistEnemy = enemy;
+                minDist = dist;
+            }
+        }
+        if (minDistEnemy) {
+            const dx = minDistEnemy.x_ - player.x_;
+            const dy = minDistEnemy.y_ - player.y_;
+            const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
+            const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
+            player.btn_ = (ld << ControlsFlag.LookAngleBit) |
+                (md << ControlsFlag.MoveAngleBit) |
+                ControlsFlag.Move |
+                ControlsFlag.Shooting |
+                ControlsFlag.Run;
+        } else {
+            walking = true;
+        }
+    }
+    if (walking) {
+        const md = rand(ControlsFlag.MoveAngleMax);
+        player.btn_ = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
+        if (!rand(20) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
+    }
     if (player.hp_ < 10) {
         player.btn_ |= ControlsFlag.Drop | ControlsFlag.Run;
     }
-    if (!rand(20) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
 }
 
 const updatePlayer = (player: Actor) => {
-    if (!player.client_) updateAI(player);
+    if (!player.client_ && clientId) updateAI(player);
     let grounded = player.z_ == 0 && player.w_ == 0;
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
@@ -1002,7 +1032,7 @@ const updatePlayer = (player: Actor) => {
             }
             player.s_ = weapon.reloadTime_;
             player.detune_ = reach(player.detune_, weapon.detuneSpeed_, 1);
-            if(player.z_ <= 0) {
+            if (player.z_ <= 0) {
                 addVelocityDir(player, lookDirX, lookDirY, -1, -weapon.kickBack_);
             }
             playAt(player, Snd.shoot);
@@ -1014,7 +1044,7 @@ const updatePlayer = (player: Actor) => {
                 const dy = sin(a);
                 const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
                 const bullet = newActorObject(ActorType.Bullet);
-                bullet.client_ = player.client_;
+                bullet.client_ = player.client_ || -player.id_;
                 copyPosFromActorCenter(bullet, player);
                 addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon.offset_);
                 bullet.z_ += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
@@ -1130,7 +1160,15 @@ export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferH
 const drawOverlay = () => {
     beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
     drawVirtualPad();
-    flush()
+
+    drawText(fnt[0], "FPS: " + fps, 5, 2, 5, 0, 0);
+
+    printStatus();
+    if (process.env.NODE_ENV === "development") {
+        printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
+    }
+
+    flush();
 }
 
 const drawShadows = () => {
@@ -1338,6 +1376,13 @@ const drawPlayer = (p: Actor): void => {
     if (!weaponBack && p.weapon_) {
         drawAt(Img.weapon0 + p.weapon_, weaponX, weaponY, weaponSX, weaponSY, weaponAngle);
     }
+
+    if(p.client_ > 0) {
+        const name = getNameByClientId(p.client_);
+        if(name ) {
+            drawText(fnt[0], name, 6, x - (name.length * 3) / 2, y - 28, 0, 0);
+        }
+    }
 }
 
 const getHitColorOffset = (anim: number) =>
@@ -1372,8 +1417,8 @@ const drawObjects = () => {
 
 const playAt = (actor: Actor, id: Snd) => {
     if (gameTic > lastAudioTic) {
-        const dx = (actor.x_ - gameCamera[0]) / (256 * WORLD_SCALE);
-        const dy = (actor.y_ - gameCamera[1]) / (256 * WORLD_SCALE);
+        const dx = (actor.x_ / WORLD_SCALE - gameCamera[0]) / 256;
+        const dy = (actor.y_ / WORLD_SCALE - gameCamera[1]) / 256;
         const v = 1 - hypot(dx, dy);
         if (v > 0) {
             play(snd[id], v, clamp(dx, -1, 1));

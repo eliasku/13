@@ -2,7 +2,7 @@ import {img, Img} from "../assets/gfx";
 import {beginRender, draw, flush, gl, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {atan2, getLumaColor32, hypot, PI} from "../utils/math";
+import {atan2, getLumaColor32, hypot, PI, sqrt} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
@@ -126,7 +126,7 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
         if (vel) {
             addVelFrom(particle, vel, random1(0.5));
         }
-        addRadialVelocity(particle, random1n(PI), random1(explVel), 0);
+        addRadialVelocity(particle, random1n(PI), explVel * sqrt(random1()), 0);
         particle.color_ = (0x60 + random1(0x30)) << 16;
         particle.img_ = Img.particle_shell;
         particle.splashImg_ = Img.circle_4;
@@ -148,7 +148,7 @@ export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
         if (vel) {
             addVelFrom(particle, vel, random1(0.5));
         }
-        addRadialVelocity(particle, random1n(PI), random1n(64), random1(128));
+        addRadialVelocity(particle, random1n(PI), 64 - 128 * sqrt(random1()), random1(128));
         const i = random1() < .3 ? Img.particle_flesh0 : Img.particle_flesh1;
         particle.img_ = i;
         particle.splashImg_ = i;
@@ -199,7 +199,7 @@ export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, color
         const particle = newParticle();
         copyPosFromActorCenter(particle, actor);
         addVelFrom(particle, vel, -random1(0.2));
-        addRadialVelocity(particle, random1n(PI), random1(32), 0);
+        addRadialVelocity(particle, random1n(PI), 32 * sqrt(random1()), 0);
         particle.color_ = colors[random1i(colors.length)];
         particle.img_ = Img.box_l;
         particle.scale_ = 1 + random1(1);

@@ -83,7 +83,7 @@ export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasR
     _canvas = _canvas.getContext("2d");
     _canvas.fillStyle = _canvas.strokeStyle = "#fff";
     _canvas.textAlign = "center";
-    _canvas.textBaseline = "middle";
+    _canvas.textBaseline = "alphabetic";
     return _canvas;
 }
 
@@ -139,7 +139,7 @@ export const loadAtlas = (): void => {
         temp.translate(canvaSize / 2, canvaSize / 2);
         temp.rotate(a * TO_RAD);
         temp.scale(sx, sy);
-        temp.fillText(emoji, 0, 0);
+        temp.fillText(emoji, 0, emojiSize * 0.3);
         temp.resetTransform();
         pushSprite(w, h);
         // atlas.imageSmoothingEnabled = false;
@@ -248,8 +248,8 @@ export const loadAtlas = (): void => {
         circle(atlas, r1);
         atlas.stroke();
 
-        atlas.fillText(text0, 0, -r0 - 5);
-        atlas.fillText(text1, 0, -r1 - 5);
+        atlas.fillText(text0, 0, -r0 - 3);
+        atlas.fillText(text1, 0, -r1 - 3);
 
         atlas.resetTransform();
 
@@ -263,13 +263,13 @@ export const loadAtlas = (): void => {
 
     pushSprite(72, 64);
     atlas.font = Font(72);
-    atlas.fillText("13", x + 72 / 2, y + 28);
+    atlas.fillText("13", x + 72 / 2, y + 50);
     cutAlpha();
     saveImage();
 
     pushSprite(200, 24);
     atlas.font = Font(24);
-    atlas.fillText("TAP TO START", x + 100, y + 12);
+    atlas.fillText("TAP TO START", x + 100, y + 20);
     cutAlpha();
     saveImage();
 

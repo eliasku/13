@@ -1,3 +1,5 @@
+// client ID is positive for all real users.
+// NPC are using entity identifier, negative (-entity.id)
 export type ClientID = number;
 export type CallID = number;
 export type MessageData = any;

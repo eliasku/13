@@ -2,7 +2,6 @@ import {Actor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
 import {clamp, cos, reach, sin, sqrt} from "../utils/math";
 import {ControlsFlag} from "./controls";
-import {Const} from "./config";
 import {
     GRAVITY,
     GRAVITY_WEAK,
@@ -80,8 +79,9 @@ export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number)
     return has;
 }
 
-export const addRadialVelocity = (vel: Vel, a: number, velXYLen: number, velZ: number) =>
+export const addRadialVelocity = (vel: Vel, a: number, velXYLen: number, velZ: number) => {
     addVelocityDir(vel, velXYLen * cos(a), velXYLen * sin(a) / 2, velZ);
+}
 
 export const reflectVelocity = (v: Vel, nx: number, ny: number, loss: number) => {
     // r = d - 2(d⋅n)n
