@@ -79,7 +79,6 @@ const enum StartState {
     const raf = (ts: DOMHighResTimeStamp) => {
         ts /= 1000;
         updateFpsMeter(ts);
-        l.innerText = "";
         //** DO FRAME **//
         updateSong(state != StartState.Connected);
         if (state > StartState.Loaded) {
