@@ -1,3 +1,6 @@
+## 1.0.2 (unreleased)
+- Add map themes
+
 ## 1.0.1
 - NPC are also fighting
 - Simple text rendering

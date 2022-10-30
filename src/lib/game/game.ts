@@ -202,13 +202,13 @@ export const resetGame = () => {
 const recreateMap = () => {
     // generate map
     _SEEDS[0] = state.mapSeed_;
-    generateMapBackground();
+    const theme = generateMapBackground();
     trees.length = 0;
     treesGrid.length = 0;
     const nextId = state.nextId_;
     for (let i = 0; i < 64; ++i) {
         const tree = newActorObject(ActorType.Tree);
-        tree.btn_ = rand(2);
+        tree.btn_ = theme.treeGfx[rand(theme.treeGfx.length)];
         tree.hp_ = 0;
         setRandomPosition(tree);
         trees.push(tree);
