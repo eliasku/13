@@ -14,14 +14,16 @@ import {
     clamp,
     cos,
     dec1,
-    getLumaColor32, hypot,
+    getLumaColor32,
+    hypot,
     lerp,
     max,
     min,
     PI,
     PI2,
     reach,
-    sin, sqrt,
+    sin,
+    sqrt,
     TO_RAD
 } from "../utils/math";
 import {
@@ -97,7 +99,7 @@ import {
 } from "./debug";
 import {addToGrid, queryGridCollisions} from "./grid";
 import {getOrCreate} from "../utils/utils";
-import {drawText, fnt, updateFonts} from "../graphics/font";
+import {drawText, fnt} from "../graphics/font";
 import {fps} from "../utils/fpsMeter";
 
 const clients = new Map<ClientID, Client>()
@@ -968,9 +970,12 @@ const updateAI = (player: Actor) => {
     if (walking) {
         const md = rand(ControlsFlag.MoveAngleMax);
         player.btn_ = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
-        if (!rand(20) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
+        if (!rand(30) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
+        if (player.hp_ < 10) {
+            player.btn_ |= ControlsFlag.Run
+        }
     }
-    if (player.hp_ < 10) {
+    if (player.hp_ < 5) {
         player.btn_ |= ControlsFlag.Drop | ControlsFlag.Run;
     }
 }
@@ -1377,9 +1382,9 @@ const drawPlayer = (p: Actor): void => {
         drawAt(Img.weapon0 + p.weapon_, weaponX, weaponY, weaponSX, weaponSY, weaponAngle);
     }
 
-    if(p.client_ > 0) {
+    if (p.client_ > 0) {
         const name = getNameByClientId(p.client_);
-        if(name ) {
+        if (name) {
             drawText(fnt[0], name, 6, x - (name.length * 3) / 2, y - 28, 0, 0);
         }
     }

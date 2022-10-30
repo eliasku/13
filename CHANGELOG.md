@@ -1,5 +1,6 @@
 ## 1.0.2 (unreleased)
 - Add map themes
+- NPC don't drop weapon until HP level above 5, then NPC start panic as before
 
 ## 1.0.1
 - NPC are also fighting
