@@ -2,6 +2,7 @@
 - Add map themes #19
 - NPC don't drop weapon until HP level above 5, then NPC start panic as before #
 - Add simple mini-map #10
+- Add "change name" button #14
 
 ## 1.0.1
 - NPC are also fighting

@@ -1,14 +1,13 @@
-import {_sseState, connect, clientName, setUserName, processMessages} from "./net/messaging";
+import {_sseState, clientName, connect, processMessages, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
-import {resetPrinter, termPrint} from "./graphics/ui";
+import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
 import {createSplashState, getScreenScale, resetGame, updateTestGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
-import {fps, updateFpsMeter} from "./utils/fpsMeter";
+import {updateFpsMeter} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
 import {drawText, fnt, updateFonts} from "./graphics/font";
 import {beginRenderToMain, flush, gl} from "./graphics/draw2d";
-import {drawVirtualPad} from "./game/controls";
 import {BuildVersion} from "../shared/types";
 
 const enum StartState {
@@ -38,7 +37,7 @@ const enum StartState {
     });
     const _states: ((ts?: number) => void | undefined)[] = [
         ,
-        (ts:number) => {
+        (ts: number) => {
             beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
             drawText(fnt[0], "press any key...", 10 + Math.sin(ts), 2, 10, 0, 0);
             flush();
@@ -49,14 +48,28 @@ const enum StartState {
         },
         () => {
             const scale = getScreenScale();
-            beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
-            drawText(fnt[0], "version: " + BuildVersion, 7, 2, gl.drawingBufferHeight / scale - 1, 0, 0);
-            flush();
-            if (isAnyKeyDown()) {
-                state = StartState.Connecting;
-                resetGame();
-                connect();
+            beginRenderToMain(0, 0, 0, 0, 0, scale);
+
+            ui_begin(scale);
+            {
+                drawText(fnt[0], "name: " + clientName, 7, 2, 14, 0, 0);
+                if (button("change_name", "change name", 2, 20)) {
+                    setUserName(prompt("your name", clientName));
+                }
+
+                const centerX = (gl.drawingBufferWidth / scale) >> 1;
+                const centerY = (gl.drawingBufferHeight / scale) >> 1;
+                if (button("start", "[ START ]", centerX - 100, centerY + 90, {w: 200, h: 48, visible: false})) {
+                    state = StartState.Connecting;
+                    resetGame();
+                    connect();
+                }
+
+                drawText(fnt[0], "version: " + BuildVersion, 7, 2, gl.drawingBufferHeight / scale - 1, 0, 0);
             }
+            ui_finish();
+
+            flush();
         },
         (ts: number) => {
             beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());

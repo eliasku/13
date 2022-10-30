@@ -277,7 +277,7 @@ export const loadAtlas = (): void => {
 
     pushSprite(200, 24);
     atlas.font = Font(24);
-    atlas.fillText("TAP TO START", x + 100, y + 20);
+    atlas.fillText("[ START ]", x + 100, y + 20);
     cutAlpha();
     saveImage();
 
