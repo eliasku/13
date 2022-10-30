@@ -150,7 +150,6 @@ const readMetrics = (fa: FontAtlas, metrics: TextMetrics) => {
             && 'actualBoundingBoxAscent' in metrics
             && 'actualBoundingBoxDescent' in metrics) ? 2 : 1;
     }
-    console.info(bb.supported);
     if (bb.supported === 2) {
         bb.left = metrics.actualBoundingBoxLeft;
         bb.right = metrics.actualBoundingBoxRight;
@@ -163,7 +162,6 @@ const readMetrics = (fa: FontAtlas, metrics: TextMetrics) => {
         bb.ascent = Math.ceil(0.7 * size);
         bb.descent = Math.ceil(0.3 * size);
     }
-    console.trace(bb);
     return bb;
 }
 
@@ -179,7 +177,6 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
     const metrics = ctx.measureText(character);
     const bb = readMetrics(fa, metrics);
     const padding = fa.border + fa.strokeWidth * fa.scale;
-    console.info("padding", padding);
     const w = bb.right + bb.left + 2 * padding;
     const h = bb.descent + bb.ascent + 2 * padding;
     let x = fa.nextSheetX;

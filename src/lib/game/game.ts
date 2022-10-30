@@ -101,6 +101,7 @@ import {addToGrid, queryGridCollisions} from "./grid";
 import {getOrCreate} from "../utils/utils";
 import {drawText, fnt} from "../graphics/font";
 import {fps} from "../utils/fpsMeter";
+import {drawMiniMap} from "./minimap";
 
 const clients = new Map<ClientID, Client>()
 
@@ -1163,7 +1164,11 @@ const drawGame = () => {
 
 export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
 const drawOverlay = () => {
-    beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
+    const scale = getScreenScale();
+    beginRenderToMain(0, 0, 0, 0, 0, scale);
+    if (clientId) {
+        drawMiniMap(state, trees, gl.drawingBufferWidth / scale, 0);
+    }
     drawVirtualPad();
 
     drawText(fnt[0], "FPS: " + fps, 5, 2, 5, 0, 0);
