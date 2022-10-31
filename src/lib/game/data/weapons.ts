@@ -35,6 +35,9 @@ export interface WeaponConfig {
     bulletLifetime_: number;
     bulletHp_: number;
     bulletShellColor_?: number;
+
+    clipSize_: number;
+    clipReload_: number;
 }
 
 const newWeapon = (): WeaponConfig => ({
@@ -59,7 +62,9 @@ const newWeapon = (): WeaponConfig => ({
     bulletType_: BulletType.Melee,
     bulletDamage_: 1,
     bulletLifetime_: 0,
-    bulletHp_: 1
+    bulletHp_: 1,
+    clipSize_: 0,
+    clipReload_: 0,
 });
 
 const createArmWeapon = (): WeaponConfig => {
@@ -89,6 +94,8 @@ const createGunWeapon = (): WeaponConfig => {
     w.cameraLookForward_ = 0.2;
     w.bulletType_ = BulletType.Shell;
     w.bulletShellColor_ = 0xFFDD22;
+    w.clipSize_ = 30;
+    w.clipReload_ = 60;
     return w;
 };
 
@@ -133,6 +140,7 @@ weapons[i].velocity_ /= 2;
 weapons[i].relaunchSpeed_ = 16;
 weapons[i].detuneSpeed_ = 16;
 weapons[i].cameraFeedback_ = 0.02;
+weapons[i].clipSize_ = 7;
 
 // 🖊 light auto gun
 ++i;
@@ -167,6 +175,7 @@ weapons[i].angleVar_ = 0.5;
 weapons[i].bulletHp_ = 2;
 weapons[i].bulletDamage_ = 2;
 weapons[i].bulletShellColor_ = 0xAA0000;
+weapons[i].clipSize_ = 7;
 
 // CROSS BOW ⛏
 ++i;
@@ -179,6 +188,7 @@ weapons[i].handsAnim_ = 1;
 weapons[i].bulletDamage_ = 5;
 weapons[i].bulletType_ = BulletType.Arrow;
 weapons[i].bulletShellColor_ = 0x00FF00;
+weapons[i].clipSize_ = 1;
 
 // 🔌 plasma shock
 ++i;
@@ -192,6 +202,7 @@ weapons[i].bulletDamage_ = 1;
 weapons[i].bulletHp_ = 2;
 weapons[i].bulletType_ = BulletType.Plasma;
 weapons[i].bulletShellColor_ = 0x00FFFF;
+weapons[i].clipSize_ = 35;
 
 // 🧵 RAIL GUN
 ++i;
@@ -206,3 +217,4 @@ weapons[i].bulletHp_ = 200;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10;
 weapons[i].bulletShellColor_ = 0x990099;
+weapons[i].clipSize_ = 1;

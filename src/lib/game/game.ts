@@ -7,7 +7,18 @@ import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
-import {Actor, ActorType, Client, ClientEvent, ItemType, newStateData, Packet, StateData, Vel} from "./types";
+import {
+    Actor,
+    ActorType,
+    Client,
+    ClientEvent,
+    ItemType,
+    newStateData,
+    Packet,
+    PlayerStat,
+    StateData,
+    Vel
+} from "./types";
 import {pack, unpack} from "./packets";
 import {
     atan2,
@@ -162,10 +173,12 @@ const newActorObject = (type: ActorType): Actor =>
         anim0_: rand(0x100),
         animHit_: 31,
         hp_: 1,
+        sp_: 0,
     });
 
-const createHpItem = (): Actor => {
+const createRandomItem = (): Actor => {
     const item = newActorObject(ActorType.Item);
+    item.btn_ = rand(5);
     pushActor(item);
     return item;
 }
@@ -175,6 +188,8 @@ const requireClient = (id: ClientID): Client => getOrCreate(clients, id, () => (
     tic_: 0,
     acknowledgedTic_: 0
 }));
+
+const requireStats = (id: ClientID): PlayerStat => getOrCreate(state.stats_, id, () => ({frags_: 0, scores_: 0}));
 
 export const resetGame = () => {
     clients.clear();
@@ -267,7 +282,7 @@ const updateFrameTime = (ts: number) => {
     }
 }
 
-export const updateTestGame = (ts: number) => {
+export const updateGame = (ts: number) => {
     updateFrameTime(ts);
 
     if (clientId && startTic < 0 && !remoteClients.size) {
@@ -297,14 +312,23 @@ const printStatus = () => {
             const p0 = getMyPlayer();
             if (p0) {
                 let str = "";
+                const hp = p0.hp_;
                 for (let i = 0; i < 10;) {
-                    const half = p0.hp_ > i++;
-                    const full = p0.hp_ > i++;
-                    str += full ? "❤️" : (half ? "💔" : "🖤");
+                    const o2 = hp > i++;
+                    const o1 = hp > i++;
+                    str += o1 ? "❤️" : (o2 ? "💔" : "🖤");
+                }
+                const sp = p0.sp_;
+                for (let i = 0; i < 10;) {
+                    const o2 = sp > i++;
+                    const o1 = sp > i++;
+                    str += o1 ? "🛡" : (o2 ? "🪖️️" : "");
                 }
                 termPrint(str);
                 if (p0.weapon_) {
-                    termPrint(EMOJI[Img.weapon0 + p0.weapon_]);
+                    const weapon = weapons[p0.weapon_];
+                    const ammoStats = weapon.clipSize_ ? p0.clipAmmo_ + "/∞" : "∞";
+                    termPrint(EMOJI[Img.weapon0 + p0.weapon_] + " " + ammoStats);
                 }
             } else {
                 termPrint("tap to respawn");
@@ -317,10 +341,15 @@ const printStatus = () => {
             const player = getPlayerByClient(id);
             return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
         }
+        const getPlayerStatInfo = (id?: ClientID): string => {
+            const stat = state.stats_.get(clientId);
+            // 💎🪙
+            return `|☠${stat?.frags_ ?? 0}|🪙${stat?.scores_ ?? 0}`;
+        }
 
-        termPrint(getPlayerIcon(clientId) + " " + clientName + " | ☠️" + (state.scores_[clientId] | 0));
+        termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
         for (const [id, rc] of remoteClients) {
-            termPrint((isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + " " + rc.name_ + " | ☠️" + (state.scores_[id] | 0));
+            termPrint((isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc.name_ + getPlayerStatInfo(clientId));
         }
     }
 }
@@ -624,18 +653,51 @@ const cleaningUpClients = () => {
 
 /// Game logic
 
+const setCurrentWeapon = (player: Actor, weaponId: number) => {
+    player.weapon_ = weaponId;
+    const weapon = weapons[weaponId];
+    if (weapon) {
+        player.clipReload_ = 0;
+        player.clipAmmo_ = weapon.clipSize_;
+    }
+}
+
 const pickItem = (item: Actor, player: Actor) => {
     if (testIntersection(item, player)) {
         if (item.btn_ & ItemType.Weapon) {
             if (!(player.weapon_ || (player.btn_ & ControlsFlag.Drop))) {
-                player.weapon_ = item.weapon_;
+                setCurrentWeapon(player, item.weapon_);
                 playAt(player, Snd.pick);
                 item.hp_ = item.btn_ = 0;
             }
-        } else if (player.hp_ < 10) {
-            ++player.hp_;
-            playAt(player, Snd.heal);
-            item.hp_ = item.btn_ = 0;
+        } else {
+            if (item.btn_ === ItemType.Hp) {
+                if (player.hp_ < 10) {
+                    ++player.hp_;
+                    playAt(player, Snd.heal);
+                    item.hp_ = item.btn_ = 0;
+                }
+            } else if (item.btn_ === ItemType.Coin || item.btn_ === ItemType.Diamond) {
+                if (player.client_) {
+                    const stat = requireStats(player.client_);
+                    stat.scores_ += item.btn_ === ItemType.Coin ? 1 : 5;
+                    playAt(player, Snd.pick);
+                    item.hp_ = item.btn_ = 0;
+                }
+            } else if (item.btn_ === ItemType.Ammo) {
+                // TODO: currently acts like health-kit
+                if (player.hp_ < 10) {
+                    player.hp_ = min(10, player.hp_ + 2);
+                    playAt(player, Snd.heal);
+                    item.hp_ = item.btn_ = 0;
+                }
+            } else if (item.btn_ === ItemType.Shield) {
+                if (player.sp_ < 10) {
+                    ++player.sp_;
+                    playAt(player, Snd.med);
+                    item.hp_ = item.btn_ = 0;
+                }
+            }
         }
     }
 }
@@ -701,11 +763,10 @@ const simulateTic = () => {
                         gameCamera[0] = p.x_ / WORLD_SCALE;
                         gameCamera[1] = p.y_ / WORLD_SCALE;
                     }
-                    // p.x_ /= 10;
-                    // p.y_ /= 10;
                     p.hp_ = 10;
                     p.btn_ = cmd.btn_;
-                    p.weapon_ = 1 + rand(3);//Const.StartWeapon;
+                    //Const.StartWeapon;
+                    setCurrentWeapon(p, 1 + rand(3));
                     pushActor(p);
                 }
             }
@@ -757,7 +818,7 @@ const simulateTic = () => {
             bullet.hp_ = 0;
         }
     }
-    state.actors_ = state.actors_.map(list => list.filter(x => x.hp_));
+    state.actors_ = state.actors_.map(list => list.filter(x => x.hp_ > 0));
 
     for (const a of state.actors_[ActorType.Player]) {
         a.fstate_ = 0;
@@ -784,12 +845,23 @@ const simulateTic = () => {
     cameraFeedback = dec1(cameraFeedback);
 
     if (clientId) {
-        if (!(gameTic & 0x1ff)) {
-            const p = newActorObject(ActorType.Player);
-            setRandomPosition(p);
-            p.hp_ = 10;
-            p.weapon_ = rand(weapons.length);
-            pushActor(p);
+        const NPC_PERIOD = 10;
+        const NPC_PERIOD_MASK = (1 << NPC_PERIOD) - 1;
+        const NPC_MAX = (1 << NPC_PERIOD) - 1;
+        if ((gameTic & NPC_PERIOD_MASK) === 0) {
+            let count = 0;
+            for (const actor of state.actors_[ActorType.Player]) {
+                if (!actor.client_) {
+                    ++count;
+                }
+            }
+            if (count < NPC_MAX) {
+                const p = newActorObject(ActorType.Player);
+                setRandomPosition(p);
+                p.hp_ = 10;
+                setCurrentWeapon(p, rand(weapons.length));
+                pushActor(p);
+            }
         }
     } else {
         // SPLASH SCREEN
@@ -832,7 +904,7 @@ const kill = (actor: Actor) => {
     playAt(actor, Snd.death);
     const amount = 1 + rand(3);
     for (let i = 0; i < amount; ++i) {
-        const item = createHpItem();
+        const item = createRandomItem();
         copyPosFromActorCenter(item, actor);
         addVelFrom(item, actor);
         const v = 32 + 64 * sqrt(random());
@@ -849,7 +921,8 @@ const kill = (actor: Actor) => {
         copyPosFromActorCenter(grave, actor);
         addVelFrom(grave, actor);
         grave.w_ += 32;
-        grave.hp_ = 20;
+        grave.hp_ = 15;
+        grave.sp_ = 4;
         grave.btn_ = 2;
         pushActor(grave);
 
@@ -875,37 +948,61 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
     addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
     playAt(actor, Snd.hit);
     if (actor.hp_) {
-        actor.hp_ -= bullet.weapon_;
-        if (!actor.type_) {
-            addFleshParticles(16, actor, 64, bullet);
-            playAt(actor, Snd.hurt);
+        let damage = bullet.weapon_;
+        if (actor.sp_ > 0) {
+            const q = clamp(damage, 0, actor.sp_);
+            actor.sp_ -= q;
+            damage -= q;
         }
-        if (actor.hp_ <= 0) {
+        if (damage) {
+            const q = clamp(damage, 0, actor.hp_);
+            if (q > 0) {
+                actor.hp_ -= q;
+                damage -= q;
+                if (actor.type_ === ActorType.Player) {
+                    addFleshParticles(16, actor, 64, bullet);
+                    playAt(actor, Snd.hurt);
+                }
+            }
+        }
+        if (damage) {
+            // over-damage effect
+        }
+
+        if (!actor.hp_) {
             // could be effect if damage is big
-            actor.hp_ = 0;
             kill(actor);
+            if (actor.type_ === ActorType.Player) {
+                // reset frags on death
+                const killed = state.stats_.get(actor.client_);
+                if (killed) {
+                    killed.frags_ = 0;
+                }
 
-            const killerID = bullet.client_;
-            if (killerID > 0 && !actor.type_) {
-                state.scores_[killerID] = (state.scores_[killerID] | 0) +
-                    (actor.client_ ? 10 : 1);
+                const killerID = bullet.client_;
+                if (killerID > 0 && !actor.type_) {
+                    const stat = state.stats_.get(killerID) ?? {scores_: 0, frags_: 0};
+                    stat.scores_ += actor.client_ > 0 ? 5 : 1;
+                    ++stat.frags_;
+                    state.stats_.set(killerID, stat);
 
-                const a = getNameByClientId(killerID);
-                const b = getNameByClientId(actor.client_);
-                if (a) {
-                    let t = b ? [
-                        a + " CRUSHED " + b,
-                        a + " destroyed " + b,
-                        a + " killed " + b,
-                        a + " took " + b + " life",
-                    ] : [
-                        "warm-up for " + a,
-                        a + " killed someone",
-                        "death by " + a,
-                        a + " sows DEATH",
-                    ];
-                    if (gameTic > lastAudioTic) {
-                        speak(fxRandElement(t));
+                    const a = getNameByClientId(killerID);
+                    const b = getNameByClientId(actor.client_);
+                    if (a) {
+                        let t = b ? [
+                            a + " CRUSHED " + b,
+                            a + " destroyed " + b,
+                            a + " killed " + b,
+                            a + " took " + b + " life",
+                        ] : [
+                            "warm-up for " + a,
+                            a + " killed someone",
+                            "death by " + a,
+                            a + " sows DEATH",
+                        ];
+                        if (gameTic > lastAudioTic) {
+                            speak(fxRandElement(t));
+                        }
                     }
                 }
             }
@@ -971,12 +1068,16 @@ const updateAI = (player: Actor) => {
     if (walking) {
         const md = rand(ControlsFlag.MoveAngleMax);
         player.btn_ = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
-        if (!rand(30) && player.hp_ < 7) player.btn_ |= ControlsFlag.Jump;
-        if (player.hp_ < 10) {
-            player.btn_ |= ControlsFlag.Run
+        if (!player.sp_) {
+            if (!rand(30) && player.hp_ < 7) {
+                player.btn_ |= ControlsFlag.Jump;
+            }
+            if (player.hp_ < 10) {
+                player.btn_ |= ControlsFlag.Run
+            }
         }
     }
-    if (player.hp_ < 5) {
+    if (!player.sp_ && player.hp_ < 5) {
         player.btn_ |= ControlsFlag.Drop | ControlsFlag.Run;
     }
 }
@@ -1028,52 +1129,67 @@ const updatePlayer = (player: Actor) => {
     }
 
     const weapon = weapons[player.weapon_];
-    if (player.btn_ & ControlsFlag.Shooting && player.weapon_) {
-        // reload-tics = NetFq / Rate
-        player.s_ = dec1(player.s_);
-        if (!player.s_) {
-            if (player.client_ == clientId) {
-                cameraShake = max(weapon.cameraShake_, cameraShake);
-                cameraFeedback = 5;
-            }
-            player.s_ = weapon.reloadTime_;
-            player.detune_ = reach(player.detune_, weapon.detuneSpeed_, 1);
-            if (player.z_ <= 0) {
-                addVelocityDir(player, lookDirX, lookDirY, -1, -weapon.kickBack_);
-            }
-            playAt(player, Snd.shoot);
-            for (let i = 0; i < weapon.spawnCount_; ++i) {
-                const a = lookAngle +
-                    weapon.angleVar_ * (random() - 0.5) +
-                    weapon.angleSpread_ * (player.detune_ / weapon.detuneSpeed_) * (random() - 0.5);
-                const dx = cos(a);
-                const dy = sin(a);
-                const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
-                const bullet = newActorObject(ActorType.Bullet);
-                bullet.client_ = player.client_ || -player.id_;
-                copyPosFromActorCenter(bullet, player);
-                addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon.offset_);
-                bullet.z_ += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
-                addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
-                bullet.weapon_ = weapon.bulletDamage_;
-                bullet.btn_ = weapon.bulletType_;
-                bullet.hp_ = weapon.bulletHp_;
-                bullet.s_ = weapon.bulletLifetime_;
-                pushActor(bullet);
-
-                if (weapon.bulletType_ == BulletType.Ray) {
-                    castRayBullet(bullet, dx, dy);
-                    bullet.weapon_ = 0;
-                }
-            }
-
-            if (weapon.bulletType_) {
-                addShellParticle(player, PLAYER_HANDS_Z, weapon.bulletShellColor_);
+    if (player.weapon_) {
+        if (weapon.clipSize_ && player.clipReload_) {
+            --player.clipReload_;
+            if (!player.clipReload_) {
+                player.clipAmmo_ = weapon.clipSize_;
             }
         }
-    } else {
-        player.detune_ = (player.detune_ / 3) | 0;
-        player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_);
+        if (player.btn_ & ControlsFlag.Shooting) {
+            // reload-tics = NetFq / Rate
+            player.s_ = dec1(player.s_);
+            const loaded = !weapon.clipSize_ || (!player.clipReload_ && player.clipAmmo_);
+            if (!player.s_ && loaded) {
+                if (weapon.clipSize_) {
+                    --player.clipAmmo_;
+                    if (!player.clipAmmo_) {
+                        player.clipReload_ = weapon.clipReload_;
+                    }
+                }
+                if (player.client_ == clientId) {
+                    cameraShake = max(weapon.cameraShake_, cameraShake);
+                    cameraFeedback = 5;
+                }
+                player.s_ = weapon.reloadTime_;
+                player.detune_ = reach(player.detune_, weapon.detuneSpeed_, 1);
+                if (player.z_ <= 0) {
+                    addVelocityDir(player, lookDirX, lookDirY, -1, -weapon.kickBack_);
+                }
+                playAt(player, Snd.shoot);
+                for (let i = 0; i < weapon.spawnCount_; ++i) {
+                    const a = lookAngle +
+                        weapon.angleVar_ * (random() - 0.5) +
+                        weapon.angleSpread_ * (player.detune_ / weapon.detuneSpeed_) * (random() - 0.5);
+                    const dx = cos(a);
+                    const dy = sin(a);
+                    const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
+                    const bullet = newActorObject(ActorType.Bullet);
+                    bullet.client_ = player.client_ || -player.id_;
+                    copyPosFromActorCenter(bullet, player);
+                    addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon.offset_);
+                    bullet.z_ += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
+                    addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
+                    bullet.weapon_ = weapon.bulletDamage_;
+                    bullet.btn_ = weapon.bulletType_;
+                    bullet.hp_ = weapon.bulletHp_;
+                    bullet.s_ = weapon.bulletLifetime_;
+                    pushActor(bullet);
+
+                    if (weapon.bulletType_ == BulletType.Ray) {
+                        castRayBullet(bullet, dx, dy);
+                        bullet.weapon_ = 0;
+                    }
+                }
+
+                if (weapon.bulletType_) {
+                    addShellParticle(player, PLAYER_HANDS_Z, weapon.bulletShellColor_);
+                }
+            }
+        } else {
+            player.detune_ = (player.detune_ / 3) | 0;
+            player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_);
+        }
     }
 }
 
@@ -1084,7 +1200,7 @@ export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, 
 const cloneState = (_state: StateData = state): StateData => ({
     ..._state,
     actors_: _state.actors_.map(list => list.map(a => ({...a}))),
-    scores_: {..._state.scores_}
+    stats_: new Map(_state.stats_.entries()),
 });
 
 const beginPrediction = (): boolean => {
@@ -1246,7 +1362,7 @@ const drawItem = (item: Actor) => {
         drawObject(item, Img.weapon0 + item.weapon_, 2, 0.8);
     } else /*if (cat == ItemCategory.Effect)*/ {
         const t = lastFrameTs * 4 + item.anim0_ / 25;
-        drawObject(item, Img.item0, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
+        drawObject(item, Img.item0 + item.btn_, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
     }
 }
 
@@ -1374,7 +1490,7 @@ const drawPlayer = (p: Actor): void => {
         let sw1 = walk * sin(20 * runK * basePhase);
         let sw2 = walk * cos(20 * runK * basePhase);
         let armLen = 5;
-        if (!p.client_ && p.hp_ < 10) {
+        if (!p.client_ && p.hp_ < 10 && !p.sp_) {
             sw1 -= PI / 2;
             sw2 += PI / 2;
             armLen += 4;

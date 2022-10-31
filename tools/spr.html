@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>pencil</title>
+    <link rel="icon" href="https://fav.farm/💀"/>
+</head>
+<body style="margin:0;height:100vh;overflow:hidden;background:#AAA">
+<script>
+    let output = "";
+
+    function start() {
+        const config = {
+            // WEAPONS
+            "🔪": {size: 12, a: -50, x: 0.3},
+            "🪓": {size: 16, sx: -1, a: 45, x: 0.3},
+            "🔫": {size: 12, sx: -1, x: 0.3},
+            "🖊️": {size: 16, sx: -1, a: 45 - 90},
+            "✏️️": {size: 16, sx: -1, a: 44.5},
+            "🪥": {size: 16, sy: -1, a: 45},
+            "⛏": {size: 16, a: 90 + 45},
+            "🔌": {size: 16, sx: -1, a: 45},
+            "🧵": {size: 16, a: 90, x: 0.3, y: 0.4},
+            // avatars
+            "💀": {},
+            "👹": {},
+            "🤡": {},
+            "🤖": {},
+            "🎃": {},
+            "🦝": {},
+            "🐙": {},
+            "🐰": {size: 20, y: 0.65},
+            "🦌": {size: 20, y: 0.67},
+            "🐺": {size: 20},
+            "🐵": {size: 20},
+            "🦊": {size: 20},
+            "🐭": {size: 20},
+            "🦍": {size: 20},
+            // NPC
+            "🍅": {},
+            "😐": {},
+            "🐷": {},
+
+            // barrels
+            "🛢":{size: 20, y: 0.95},
+            "📦":{size: 20, y: 0.85},
+            "🪦":{size: 20, y: 0.95},
+            // items
+            "❤️":{size: 12},
+            "💊":{size: 10},
+            "💎":{size: 12},
+            "🪙":{size: 12},
+            "🛡️":{size: 12},
+            // trees
+            "🌳":{size: 28, cut: 0x88, y: 0.95},
+            "🌲":{size: 28, cut: 0x88, y: 0.95},
+            "🌵":{size: 28, cut: 0x88, y: 0.95},
+            "🌴":{size: 28, cut: 0x88, y: 0.95},
+            "🎄":{size: 28, cut: 0x88, y: 0.95},
+            "⛄":{size: 28, cut: 0x88, y: 0.95},
+            // particles
+            "🥓":{size: 16, a: -45},
+            "🦴":{size: 16, a: -45},
+        };
+        for (const img in config) {
+            preview2(img, config[img]);
+        }
+        console.info(output);
+    }
+
+    const font = new FontFace("e", `url(/e.ttf)`);
+    font.load().then(() => {
+        document.fonts.add(font);
+        start();
+    });
+
+    function preview(emoji, opts) {
+        let x = 0;
+        let y = 0;
+        const emojiSize = opts.size ?? 16;
+        const w_ = emojiSize + 4; // 14->16
+        const h_ = emojiSize + 6; // 14 -> 20
+        const canvas = document.createElement("canvas");
+        canvas.style.border = "solid 1px blue";
+        canvas.width = w_;
+        canvas.height = h_;
+        const ctx = canvas.getContext("2d");//, {alpha: true});
+        ctx.font = emojiSize + "px e";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const comp = 1 + (emojiSize / 5);
+        const ty = y + (h_ / 2 + comp) | 0;
+
+        ctx.translate(x + (w_ >>> 1), ty);
+        ctx.rotate((opts.a ?? 0) * Math.PI / 180);
+        ctx.scale(opts.sx ?? 1, opts.sy ?? 1);
+        ctx.fillStyle = "white";
+        ctx.fillText(emoji, 0, 0);
+
+        ctx.resetTransform();
+        ctx.fillStyle = "rgba(255,0,0,0.5)";
+        ctx.fillRect(x + w_ * (opts.x ?? 0.5), y + h_ * (opts.y ?? 0.5), 1, 1);
+
+        const bmp = ctx.getImageData(x, y, w_, h_);
+        for (let i = 0; i < bmp.data.length; i += 4) {
+            let a = bmp.data[i + 3];
+            if (a > 0x7F) {
+                bmp.data[i + 3] = 0xFF;
+            } else {
+                bmp.data[i + 3] = 0;
+            }
+        }
+        ctx.putImageData(bmp, x, y);
+
+        {
+            const lc = document.createElement("canvas");
+            lc.style.border = "solid 1px blue";
+            lc.width = w_ * 4;
+            lc.height = h_ * 4;
+            const ctx2 = lc.getContext("2d");
+            ctx2.imageSmoothingEnabled = false;
+            ctx2.scale(4, 4);
+            ctx2.drawImage(canvas, 0, 0);
+            document.body.appendChild(lc);
+        }
+    }
+
+    // let anchorX = 0.5;
+    // let anchorY = 0.5;
+    function preview2(emoji, opts) {
+        preview(emoji, opts);
+        let x = 0;
+        let y = 0;
+        const scaleUp = 8;
+        const emojiSize = ((opts.size ?? 16) * scaleUp) | 0;
+        const maxSize = 512;
+        const w_ = maxSize; // 14->16
+        const h_ = maxSize; // 14 -> 20
+        const canvas = document.createElement("canvas");
+        canvas.width = w_;
+        canvas.height = h_;
+        const ctx = canvas.getContext("2d", {alpha: true});
+        // ctx.imageSmoothingEnabled = false;
+        ctx.font = emojiSize + "px e";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.translate(w_ / 2, h_ / 2);
+        ctx.rotate(Math.PI * (opts.a ?? 0) / 180);
+        ctx.scale(opts.sx ?? 1, opts.sy ?? 1);
+        ctx.fillText(emoji, 0, 0);
+
+        const bmp = ctx.getImageData(x, y, w_, h_);
+        const bounds = scanBounds(bmp);
+        ctx.putImageData(bmp, x, y);
+        // document.body.appendChild(canvas);
+        {
+            const lc = document.createElement("canvas");
+            const scale = 1 / scaleUp;
+            const cut2 = opts.cut ?? 0x80;
+            lc.width = 1 + (bounds.w * scale + 2) | 0;
+            lc.height = 1 + (bounds.h * scale + 2) | 0;
+            const ctx2 = lc.getContext("2d");
+            ctx2.imageSmoothingEnabled = false;
+            ctx2.scale(scale, scale);
+            ctx2.translate(-bounds.x, -bounds.y);
+            ctx2.drawImage(canvas, 1 / scale, 1 / scale);
+            ctx2.resetTransform();
+            const bmp = ctx2.getImageData(x, y, w_, h_);
+            for (let i = 0; i < bmp.data.length; i += 4) {
+                let a = bmp.data[i + 3];
+                if (a >= cut2) {
+                    bmp.data[i + 3] = 0xFF;
+                } else {
+                    bmp.data[i + 3] = 0;
+                }
+            }
+            ctx2.putImageData(bmp, x, y);
+            ctx2.fillStyle = "rgba(255,0,0,0.5)";
+            ctx2.fillRect((lc.width * (opts.x ?? 0.5)) | 0, (lc.height * (opts.y ?? 0.5)) | 0, 1, 1);
+            // document.body.appendChild(lc);
+            {
+                const previewCanvas = document.createElement("canvas");
+                previewCanvas.style.border = "solid 1px blue";
+                previewCanvas.width = lc.width * 4;
+                previewCanvas.height = lc.height * 4;
+                const previewCtx = previewCanvas.getContext("2d");
+                previewCtx.imageSmoothingEnabled = false;
+                previewCtx.scale(4, 4);
+                previewCtx.drawImage(lc, 0, 0);
+                document.body.appendChild(previewCanvas);
+            }
+
+            const rsize = (opts.size ?? 16) - 16;
+            // output += `/* ${emoji} */ [[${[...emoji].map(x=>x.codePointAt(0)).join(",")}], ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${rsize || ""}, ${opts.a ?? ""}, ${opts.sx ?? ""}, ${opts.sy ?? ""}, ${opts.cut ?? ""}, ${opts.x ?? ""}, ${opts.y ?? ""}],\n`;
+            output += `/* ${emoji} */ ["${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${rsize || ""}, ${opts.a ?? ""}, ${opts.sx ?? ""}, ${opts.sy ?? ""}, ${opts.cut ?? ""}, ${opts.x ?? ""}, ${opts.y ?? ""}],\n`;
+            return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut, opts.x ?? 0.5, opts.y ?? 0.5];
+        }
+    }
+
+    // emojiSize = 20;
+    // `🛢️,📦`.split(",").map(createEmoji);
+
+
+    // SCAN BOUNDS
+
+    // finds the first y coord in imgData that is not white
+    function scanY(fromTop, imgWidth, imgHeight, imgData) {
+        const offset = fromTop ? 1 : -1
+        const firstCol = fromTop ? 0 : imgHeight - 1
+
+        // loop through each row
+        for (let y = firstCol; fromTop ? (y < imgHeight) : (y > -1); y += offset) {
+            // loop through each column
+            for (let x = 0; x < imgWidth; x++) {
+                // if not white, return col
+                if (getAlpha(x, y, imgWidth, imgData)) {
+                    return y;
+                }
+            }
+        }
+
+        // the whole image is white already
+        return 0;
+    }
+
+    // finds the first x coord in imgData that is not white
+    function scanX(fromLeft, imgWidth, imgHeight, imgData) {
+        const offset = fromLeft ? 1 : -1
+        const firstRow = fromLeft ? 0 : imgWidth - 1
+
+        // loop through each column
+        for (let x = firstRow; fromLeft ? (x < imgWidth) : (x > -1); x += offset) {
+            // loop through each row
+            for (let y = 0; y < imgHeight; y++) {
+                // if not white, return row
+                if (getAlpha(x, y, imgWidth, imgData)) {
+                    return x;
+                }
+            }
+        }
+
+        // the whole image is white already
+        return 0;
+    }
+
+    function getAlpha(x, y, imgWidth, imgData) {
+        return imgData.data[(y * imgWidth + x) * 4 + 3];
+    }
+
+    // https://github.com/agilgur5/trim-canvas
+    function scanBounds(bmp) {
+        // get the corners of the relevant content (everything that's not white)
+        const cropTop = scanY(true, bmp.width, bmp.height, bmp);
+        const cropBottom = scanY(false, bmp.width, bmp.height, bmp);
+        const cropLeft = scanX(true, bmp.width, bmp.height, bmp);
+        const cropRight = scanX(false, bmp.width, bmp.height, bmp);
+        return {
+            x: cropLeft,
+            y: cropTop,
+            w: cropRight - cropLeft + 1,
+            h: cropBottom - cropTop + 1
+        };
+    }
+
+    setInterval(() => {
+        const c = (Math.random() * 0x80) | 0;
+        document.body.style.background = `rgba(${c},${c},${c},1)`;
+    }, 500);
+
+</script>
+</body>
+</html>

@@ -12,7 +12,12 @@ export const enum ActorType {
 
 export const enum ItemType {
     Hp = 0,
-    Weapon = 1,
+    Ammo = 1,
+    Diamond = 2,
+    Coin = 3,
+    Shield = 4,
+    // FLAG
+    Weapon = 8,
 }
 
 export interface Pos {
@@ -58,8 +63,10 @@ export interface Actor extends Pos, Vel {
     // range: 0...15 currently
     weapon_?: number;
 
-    // all objects HP are < 32
+    // all objects HP (0..15)
     hp_?: number;
+    // all objects SP (0..15)
+    sp_?: number;
 
     // 8-bit: just generated anim start point
     anim0_?: number;
@@ -70,6 +77,10 @@ export interface Actor extends Pos, Vel {
 
     // local frame-scope state
     fstate_?: number;
+
+    // big player stats state
+    clipAmmo_?: number;
+    clipReload_?: number;
 }
 
 export interface Client {
@@ -95,13 +106,18 @@ export interface ClientEvent {
     client_: ClientID;
 }
 
+export interface PlayerStat {
+    scores_: number;
+    frags_: number;
+}
+
 export interface StateData {
     nextId_: number;
     tic_: number;
     seed_: number;
     mapSeed_: number;
     actors_: Actor[][];
-    scores_: Record<number, number>;
+    stats_: Map<ClientID, PlayerStat>;
 }
 
 export const newStateData = (): StateData => ({
@@ -110,7 +126,7 @@ export const newStateData = (): StateData => ({
     seed_: 0,
     mapSeed_: 0,
     actors_: [[], [], [], []],
-    scores_: {},
+    stats_: new Map(),
 });
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]

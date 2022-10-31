@@ -35,7 +35,8 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                 weapon_: (hdr >> 3) & 15,
                 s_: (hdr >> 7) & 0xFF,
                 anim0_: (hdr >> 15) & 0xFF,
-                hp_: (ux >> 16) & 31,
+                hp_: (hdr >> 23) & 15,
+                sp_: (ux >> 16) & 15,
                 detune_: (vy >> 16) & 31,
                 animHit_: (wz >> 16) & 31,
 
@@ -49,12 +50,18 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                 id_: i32[ptr++],
                 client_: i32[ptr++],
                 btn_: i32[ptr++],
+
+                clipAmmo_: i32[ptr++],
+                clipReload_: i32[ptr++],
             };
             _state.actors_[p.type_].push(p);
         }
-        const scoreCount = i32[ptr++];
-        for (let i = 0; i < scoreCount; ++i) {
-            _state.scores_[i32[ptr++]] = i32[ptr++];
+        const statMapSize = i32[ptr++];
+        for (let i = 0; i < statMapSize; ++i) {
+            _state.stats_.set(i32[ptr++], {
+                frags_: i32[ptr++],
+                scores_: i32[ptr++],
+            });
         }
     }
     if (process.env.NODE_ENV === "development") {
@@ -82,7 +89,8 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                         weapon_: (hdr >> 3) & 15,
                         s_: (hdr >> 7) & 0xFF,
                         anim0_: (hdr >> 15) & 0xFF,
-                        hp_: (ux >> 16) & 31,
+                        hp_: (hdr >> 23) & 15,
+                        sp_: (ux >> 16) & 15,
                         detune_: (vy >> 16) & 31,
                         animHit_: (wz >> 16) & 31,
 
@@ -96,12 +104,17 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
                         id_: i32[ptr++],
                         client_: i32[ptr++],
                         btn_: i32[ptr++],
+                        clipAmmo_: i32[ptr++],
+                        clipReload_: i32[ptr++],
                     };
                     _debug.state.actors_[p.type_].push(p);
                 }
-                const scoreCount = i32[ptr++];
-                for (let i = 0; i < scoreCount; ++i) {
-                    _state.scores_[i32[ptr++]] = i32[ptr++];
+                const statMapSize = i32[ptr++];
+                for (let i = 0; i < statMapSize; ++i) {
+                    _debug.state.stats_.set(i32[ptr++], {
+                        frags_: i32[ptr++],
+                        scores_: i32[ptr++],
+                    });
                 }
             }
         }
@@ -145,18 +158,21 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
             // hp: 5
             // detune: 5
             // animHit: 5
-            i32[ptr++] = p.type_ | (p.weapon_ << 3) | (p.s_ << 7) | (p.anim0_ << 15);
-            i32[ptr++] = (p.u_ << 21) | (p.hp_ << 16) | p.x_;
+            i32[ptr++] = p.type_ | (p.weapon_ << 3) | (p.s_ << 7) | (p.anim0_ << 15) | (p.hp_ << 23);
+            i32[ptr++] = (p.u_ << 21) | (p.sp_ << 16) | p.x_;
             i32[ptr++] = (p.v_ << 21) | (p.detune_ << 16) | p.y_;
             i32[ptr++] = (p.w_ << 21) | (p.animHit_ << 16) | p.z_;
             i32[ptr++] = p.id_;
             i32[ptr++] = p.client_;
             i32[ptr++] = p.btn_;
+            i32[ptr++] = p.clipAmmo_;
+            i32[ptr++] = p.clipReload_;
         }
-        i32[ptr++] = Object.keys(packet.state_.scores_).length;
-        for (const id in packet.state_.scores_) {
-            i32[ptr++] = id as any;
-            i32[ptr++] = packet.state_.scores_[id];
+        i32[ptr++] = packet.state_.stats_.size;
+        for (const [id, stat] of packet.state_.stats_) {
+            i32[ptr++] = id;
+            i32[ptr++] = stat.frags_;
+            i32[ptr++] = stat.scores_;
         }
     }
     if (process.env.NODE_ENV === "development") {
@@ -179,13 +195,21 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
                     // hp: 5
                     // detune: 5
                     // animHit: 5
-                    i32[ptr++] = p.type_ | (p.weapon_ << 3) | (p.s_ << 7) | (p.anim0_ << 15);
-                    i32[ptr++] = (p.u_ << 21) | (p.hp_ << 16) | p.x_;
+                    i32[ptr++] = p.type_ | (p.weapon_ << 3) | (p.s_ << 7) | (p.anim0_ << 15) | (p.hp_ << 23);
+                    i32[ptr++] = (p.u_ << 21) | (p.sp_ << 16) | p.x_;
                     i32[ptr++] = (p.v_ << 21) | (p.detune_ << 16) | p.y_;
                     i32[ptr++] = (p.w_ << 21) | (p.animHit_ << 16) | p.z_;
                     i32[ptr++] = p.id_;
                     i32[ptr++] = p.client_;
                     i32[ptr++] = p.btn_;
+                    i32[ptr++] = p.clipAmmo_;
+                    i32[ptr++] = p.clipReload_;
+                }
+                i32[ptr++] = packet.debug.state.stats_.size;
+                for (const [id, stat] of packet.debug.state.stats_) {
+                    i32[ptr++] = id;
+                    i32[ptr++] = stat.frags_;
+                    i32[ptr++] = stat.scores_;
                 }
             }
         }

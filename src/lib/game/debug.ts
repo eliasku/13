@@ -215,6 +215,7 @@ const assertStateEquality = (label: string, a: StateData, b: StateData) => {
                     "btn_",
                     "weapon_",
                     "hp_",
+                    "sp_",
                     "anim0_",
                     "animHit_",
                 ];

@@ -80,6 +80,15 @@ const removeClient = (client: ClientState) => {
     console.info("broadcast client " + client.id_ + " removed ");
 }
 
+const processGameInfo = (req: IncomingMessage, res: ServerResponse) => {
+    res.writeHead(200, {
+        "content-type": "application/json",
+        "cache-control": "no-cache",
+    });
+    res.write(`{"on":${clients.size}}`);
+    res.end();
+};
+
 const processServerEvents = (req: IncomingMessage, res: ServerResponse) => {
     const query = new URLSearchParams(req.url.split("?")[1] ?? "");
     if (query.get("v") !== BuildVersion) {
@@ -173,6 +182,7 @@ const HANDLERS: any = {
     },
     POST: {
         _: processIncomeMessages,
+        i: processGameInfo,
     }
 };
 

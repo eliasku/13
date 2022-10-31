@@ -1,7 +1,7 @@
 import {_sseState, clientName, connect, processMessages, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
-import {createSplashState, getScreenScale, resetGame, updateTestGame} from "./game/game";
+import {createSplashState, getScreenScale, resetGame, updateGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateFpsMeter} from "./utils/fpsMeter";
@@ -19,6 +19,7 @@ const enum StartState {
 }
 
 {
+    let usersOnline = 0;
     let state = StartState.Loading;
 
     const goToSplash = () => {
@@ -45,6 +46,10 @@ const enum StartState {
                 loadAtlas();
                 goToSplash();
             }
+            fetch("i", {method: "POST"})
+                .then(r => r.json())
+                .then(j => usersOnline = Number.parseInt(j?.on))
+                .catch(() => usersOnline = 0);
         },
         () => {
             const scale = getScreenScale();
@@ -56,6 +61,9 @@ const enum StartState {
                 if (button("change_name", "change name", 2, 20)) {
                     setUserName(prompt("your name", clientName));
                 }
+                // if(usersOnline) {
+                drawText(fnt[0], "online: " + usersOnline, 7, 2, 48, 0, 0);
+                // }
 
                 const centerX = (gl.drawingBufferWidth / scale) >> 1;
                 const centerY = (gl.drawingBufferHeight / scale) >> 1;
@@ -95,7 +103,7 @@ const enum StartState {
         //** DO FRAME **//
         updateSong(state != StartState.Connected);
         if (state > StartState.Loaded) {
-            updateTestGame(ts);
+            updateGame(ts);
         }
         _states[state]?.(ts);
         updateFonts();

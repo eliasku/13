@@ -5,15 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "start-watch": "npx nodemon ./server.js",
-    "build-ts-server": "tsc -p server/tsconfig.json",
-    "build-ts-client": "tsc -p tsconfig.json",
     "build": "ts-node --esm --swc tools/build.ts",
-    "client-watch-dev": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/client.js",
-    "client-watch": "esbuild src/lib/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"production\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/client.js",
-    "debug-watch": "esbuild src/lib/index.ts --tsconfig=tsconfig.json --watch --bundle --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --format=esm --sourcemap --outfile=public/debug.js",
-    "typecheck": "tsc -p tsconfig.json --watch --noEmit",
-    "server-watch": "esbuild server/src/index.ts --watch --bundle --minify --mangle-props=._$ --define:process.env.NODE_ENV='\"development\"' --define:__VERSION__='\"1.0.0\"' --platform=node --target=node16 --format=esm --outfile=server.js"
+    "watch": "ts-node --esm --swc tools/watch.ts",
+    "typecheck-client": "tsc -p tsconfig.json --watch --noEmit",
+    "typecheck-server": "tsc -p server/tsconfig.json --watch --noEmit"
   },
   "author": "eliasku",
   "license": "ISC",
