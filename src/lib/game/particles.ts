@@ -2,12 +2,13 @@ import {img, Img} from "../assets/gfx";
 import {beginRender, draw, flush, gl, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {atan2, getLumaColor32, hypot, PI, sqrt} from "../utils/math";
+import {atan2, hypot, PI, sqrt} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
 import {mapTexture} from "../assets/map";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
+import {getLumaColor32} from "../utils/utils";
 
 export const newParticle = (): Particle => ({
     x_: 0,

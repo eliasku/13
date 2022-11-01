@@ -24,6 +24,8 @@ export const enum KeyCode {
     Down = 40,
     Shift = 16,
     E = 69,
+    R = 82,
+    Q = 81,
 
     Digit0 = 48,
     Digit1,

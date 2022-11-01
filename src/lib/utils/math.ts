@@ -11,9 +11,6 @@ export const TO_RAD = PI / 180;
 export const lerp = (a: number, b: number, t: number): number => (1 - t) * a + t * b;
 
 /* @__PURE__ */
-export const getLumaColor32 = (luma: number): number => (luma << 16) | (luma << 8) | luma;
-
-/* @__PURE__ */
 export const dec1 = (x:number) => x ? --x : x;
 
 /* @__PURE__ */

@@ -12,10 +12,11 @@ export const enum ActorType {
 
 export const enum ItemType {
     Hp = 0,
-    Ammo = 1,
-    Diamond = 2,
-    Coin = 3,
+    Hp2 = 1,
+    Credit = 2,
+    Credit2 = 3,
     Shield = 4,
+    Ammo = 5,
     // FLAG
     Weapon = 8,
 }
@@ -61,12 +62,20 @@ export interface Actor extends Pos, Vel {
     // Item, Player, Barrel : holding or contains Weapon ID
     // Bullet : Damage value
     // range: 0...15 currently
+    // 4 bits
     weapon_?: number;
 
     // all objects HP (0..15)
+    // 4 bits
     hp_?: number;
+
     // all objects SP (0..15)
+    // 4 bits
     sp_?: number;
+
+    // Magazines (0..15)
+    // 4 bits
+    mags_?: number;
 
     // 8-bit: just generated anim start point
     anim0_?: number;
@@ -78,9 +87,22 @@ export interface Actor extends Pos, Vel {
     // local frame-scope state
     fstate_?: number;
 
-    // big player stats state
+    // 0...63 (max_weapon_clip_size)
+    // 6 bits
     clipAmmo_?: number;
+
+    // 0...63 (max_weapon_clip_reload)
+    // 6 bits
     clipReload_?: number;
+
+    // 4 bits
+    weapon2_?: number;
+
+    // 6 bits
+    clipAmmo2_?: number;
+
+    // oh... check down trigger 2 bits
+    trig_?: number;
 }
 
 export interface Client {

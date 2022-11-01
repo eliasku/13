@@ -5,6 +5,7 @@ import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {GL} from "../graphics/gl";
 import {clientId} from "../net/messaging";
 import {sin} from "../utils/math";
+import {RGB} from "../utils/utils";
 
 const FOG_DOWNSCALE = 4;
 const FOG_SIZE = BOUNDS_SIZE / FOG_DOWNSCALE;
@@ -31,4 +32,4 @@ export const renderFogObjects = (list: Actor[]) => {
 }
 
 export const renderFog = (t: number, add: number) =>
-    draw(fogTexture, 0, 0, 0, FOG_DOWNSCALE, FOG_DOWNSCALE, 0.7, (0x40 + 0x20 * sin(t)) << 16 | 0x1133, 0, add & 0x990000);
+    draw(fogTexture, 0, 0, 0, FOG_DOWNSCALE, FOG_DOWNSCALE, 0.7, RGB(0x40 + 0x20 * sin(t), 0x11, 0x33), 0, add & 0x990000);

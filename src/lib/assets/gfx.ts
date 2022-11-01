@@ -54,6 +54,7 @@ export const enum Img {
     item2,
     item3,
     item4,
+    item5,
 
     tree0,
     tree1,
@@ -69,6 +70,8 @@ export const enum Img {
     joy0,
     joy1,
     joy2,
+    joy3,
+    joy4,
 
     logo_title,
     logo_start,
@@ -227,9 +230,10 @@ export const loadAtlas = (): void => {
 
         /* ❤️ */ ["❤️", 208, 194, 15, 13, -4, , , , , , ],
         /* 💊 */ ["💊", 216, 200, 13, 13, -6, , , , , , ],
-        /* 💎 */ ["💎", 208, 197, 15, 13, -4, , , , , , ],
         /* 🪙 */ ["🪙", 211, 189, 14, 15, -4, , , , , , ],
+        /* 💎 */ ["💎", 208, 197, 15, 13, -4, , , , , , ],
         /* 🛡 */ ["🛡", 213, 189, 13, 15, -4, , , , , , ],
+        /* 🧱 */ ["🧱", 209, 200, 14, 12, -4, , , , , , ],
 
         /* 🌳 */ ["🌳", 156, 99, 28, 31, 12, , , , 136, , 0.95],
         /* 🌲 */ ["🌲", 162, 99, 26, 31, 12, , , , 136, , 0.95],
@@ -279,6 +283,8 @@ export const loadAtlas = (): void => {
     renderJoy(PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1, "RUN", "JUMP");
     renderJoy(PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, "AIM", "FIRE");
     renderJoy(16, 16, "DROP", "");
+    renderJoy(16, 16, "RELOAD", "");
+    renderJoy(16, 16, "SWAP", "");
 
     pushSprite(72, 64);
     atlas.font = Font(72);

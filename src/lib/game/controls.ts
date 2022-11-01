@@ -12,6 +12,7 @@ import {
 import {COLOR_WHITE} from "./data/colors";
 import {getScreenScale} from "./game";
 import {hypot} from "../utils/math";
+import {weapons} from "./data/weapons";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -30,14 +31,16 @@ export const enum ControlsFlag {
     Jump = 0x4,
     Shooting = 0x8,
     Drop = 0x10,
-    Spawn = 0x20,
+    Reload = 0x20,
+    Swap = 0x40,
+    Spawn = 0x80,
 
-    // 6-bits for Move angle (64 directions)
-    MoveAngleMax = 0x40,
-    MoveAngleBit = 6,
-    // 7-bits for Look angle (128 directions)
-    LookAngleMax = 0x80,
-    LookAngleBit = 12,
+    // 5-bits for Move angle (32 directions)
+    MoveAngleMax = 0x20,
+    MoveAngleBit = 8,
+    // 8-bits for Look angle (256 directions)
+    LookAngleMax = 0x100,
+    LookAngleBit = 13,
 }
 
 export const gameCamera: number[] = [0, 0, 1];
@@ -51,6 +54,17 @@ export let moveX = 0;
 export let moveY = 0;
 export let moveFast = false;
 export let dropButton = false;
+export let reloadButton = false;
+export let swapButton = false;
+
+export const couldBeReloadedManually = (player: Actor): boolean => {
+    const weapon = weapons[player.weapon_];
+    return weapon && !player.clipReload_ && weapon.clipSize_ && player.clipAmmo_ < weapon.clipSize_;
+}
+
+export const couldSwapWeaponSlot = (player: Actor): boolean => {
+    return !!player.weapon2_;
+}
 
 export const updateControls = (player: Actor) => {
     const W = gl.drawingBufferWidth;
@@ -84,7 +98,11 @@ export const updateControls = (player: Actor) => {
 
     jumpButtonDown = !!keyboardState[KeyCode.Space];
     dropButton = !!keyboardState[KeyCode.E];
+    reloadButton = !!keyboardState[KeyCode.R];
+    swapButton = !!keyboardState[KeyCode.Q];
 
+    vpad[3].hidden_ = !couldBeReloadedManually(player);
+    vpad[4].hidden_ = !couldSwapWeaponSlot(player);
     if (updateVirtualPad()) {
         const k = gameCamera[2];
         let control = vpad[0];
@@ -105,6 +123,8 @@ export const updateControls = (player: Actor) => {
         shootButtonDown = len > control.r2_;
 
         dropButton = !!vpad[2].pointer_;
+        reloadButton = !!vpad[3].pointer_;
+        swapButton = !!vpad[4].pointer_;
     }
 }
 
@@ -115,6 +135,7 @@ interface VPadControl {
     b_: number;
     isButton_?: number;
     pointer_?: Pointer | undefined;
+    hidden_?: boolean;
     // any len > undefined = false (undefined is NaN)
     r1_?: number | undefined;
     r2_?: number | undefined;
@@ -123,7 +144,9 @@ interface VPadControl {
 const vpad: VPadControl[] = [
     {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: PAD_MOVE_RADIUS_0, r2_: PAD_MOVE_RADIUS_1},
     {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: PAD_FIRE_RADIUS_0, r2_: PAD_FIRE_RADIUS_1},
-    {l_: 0.5, t_: 0, r_: 1, b_: 0.5, isButton_: 1},
+    {l_: 0.5, t_: 0.25, r_: 0.66, b_: 0.5, isButton_: 1},
+    {l_: 0.66, t_: 0.25, r_: 0.82, b_: 0.5, isButton_: 1},
+    {l_: 0.82, t_: 0.25, r_: 1, b_: 0.5, isButton_: 1},
 ];
 let touchPadActive = false;
 
@@ -183,18 +206,20 @@ export const drawVirtualPad = () => {
     const k = 1 / getScreenScale();
     let i = Img.joy0;
     for (const control of vpad) {
-        const w_ = W * (control.r_ - control.l_);
-        const h_ = H * (control.b_ - control.t_);
-        let cx = k * (W * control.l_ + w_ / 2);
-        let cy = k * (H * control.t_ + h_ / 2);
-        // draw(img[Img.box], cx, cy, 0, w_ * k, h_ * k, 0.1, 0);
-        const pp = control.pointer_;
-        if (!control.isButton_ && pp) {
-            cx = pp.startX_ * k;
-            cy = pp.startY_ * k;
-            draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
+        if (!control.hidden_) {
+            const w_ = W * (control.r_ - control.l_);
+            const h_ = H * (control.b_ - control.t_);
+            let cx = k * (W * control.l_ + w_ / 2);
+            let cy = k * (H * control.t_ + h_ / 2);
+            // draw(img[Img.box], cx, cy, 0, w_ * k, h_ * k, 0.1, 0);
+            const pp = control.pointer_;
+            if (!control.isButton_ && pp) {
+                cx = pp.startX_ * k;
+                cy = pp.startY_ * k;
+                draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
+            }
+            draw(img[i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
         }
-        draw(img[i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
         ++i;
     }
 }

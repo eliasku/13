@@ -7,8 +7,12 @@
 - Slower NPC spawning
 - Add coin and diamond items for scores
 - Add shield item and health-kit to add +2 hp
+- Add ammo magazine item
+- Add loot item lifetime, all items will be removed in 10 seconds #5
 - Add online users info in the main menu
-- Add time to reload weapon mag
+- Add weapon reloading mechanics #11
+- Add [R] button - reload button to apply new ammo magazine #11
+- Add [Q] button - swap secondary weapon slot #13 
 
 ## 1.0.1
 - NPC are also fighting

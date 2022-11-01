@@ -134,7 +134,7 @@ weapons[i].gfxRot_ = -45;
 
 // 🔫
 ++i;
-weapons[i].bulletDamage_ = 2;
+weapons[i].bulletDamage_ = 3;
 weapons[i].angleSpread_ = 0.1;
 weapons[i].velocity_ /= 2;
 weapons[i].relaunchSpeed_ = 16;
@@ -188,7 +188,7 @@ weapons[i].handsAnim_ = 1;
 weapons[i].bulletDamage_ = 5;
 weapons[i].bulletType_ = BulletType.Arrow;
 weapons[i].bulletShellColor_ = 0x00FF00;
-weapons[i].clipSize_ = 1;
+weapons[i].clipSize_ = 7;
 
 // 🔌 plasma shock
 ++i;
@@ -213,8 +213,8 @@ weapons[i].cameraFeedback_ = 0.1;
 weapons[i].cameraLookForward_ = 0.4;
 weapons[i].cameraScale_ = 1.4;
 weapons[i].bulletDamage_ = 5;
-weapons[i].bulletHp_ = 200;
+weapons[i].bulletHp_ = 15;
 weapons[i].bulletType_ = BulletType.Ray;
 weapons[i].bulletLifetime_ = 10;
 weapons[i].bulletShellColor_ = 0x990099;
-weapons[i].clipSize_ = 1;
+weapons[i].clipSize_ = 5;

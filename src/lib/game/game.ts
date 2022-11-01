@@ -5,7 +5,7 @@ import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
-import {Const} from "./config";
+import {Const, GAME_CFG} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {
     Actor,
@@ -20,25 +20,10 @@ import {
     Vel
 } from "./types";
 import {pack, unpack} from "./packets";
-import {
-    atan2,
-    clamp,
-    cos,
-    dec1,
-    getLumaColor32,
-    hypot,
-    lerp,
-    max,
-    min,
-    PI,
-    PI2,
-    reach,
-    sin,
-    sqrt,
-    TO_RAD
-} from "../utils/math";
+import {atan2, clamp, cos, dec1, hypot, lerp, max, min, PI, PI2, reach, sin, sqrt, TO_RAD} from "../utils/math";
 import {
     ControlsFlag,
+    couldBeReloadedManually,
     drawVirtualPad,
     dropButton,
     gameCamera,
@@ -48,7 +33,9 @@ import {
     moveFast,
     moveX,
     moveY,
+    reloadButton,
     shootButtonDown,
+    swapButton,
     updateControls,
     viewX,
     viewY
@@ -109,7 +96,7 @@ import {
     updateDebugInput
 } from "./debug";
 import {addToGrid, queryGridCollisions} from "./grid";
-import {getOrCreate} from "../utils/utils";
+import {getLumaColor32, getOrCreate, RGB} from "../utils/utils";
 import {drawText, fnt} from "../graphics/font";
 import {fps} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
@@ -174,11 +161,13 @@ const newActorObject = (type: ActorType): Actor =>
         animHit_: 31,
         hp_: 1,
         sp_: 0,
+        mags_: 0,
     });
 
 const createRandomItem = (): Actor => {
     const item = newActorObject(ActorType.Item);
-    item.btn_ = rand(5);
+    item.btn_ = rand(6);
+    item.clipReload_ = GAME_CFG.items.lifetime;
     pushActor(item);
     return item;
 }
@@ -325,11 +314,28 @@ const printStatus = () => {
                     str += o1 ? "🛡" : (o2 ? "🪖️️" : "");
                 }
                 termPrint(str);
+                let wpnInfo = "";
                 if (p0.weapon_) {
                     const weapon = weapons[p0.weapon_];
-                    const ammoStats = weapon.clipSize_ ? p0.clipAmmo_ + "/∞" : "∞";
-                    termPrint(EMOJI[Img.weapon0 + p0.weapon_] + " " + ammoStats);
+                    if (weapon) {
+                        wpnInfo += EMOJI[Img.weapon0 + p0.weapon_];
+                        if (weapon.clipSize_) {
+                            if (p0.clipReload_) {
+                                wpnInfo += ((100 * (weapon.clipReload_ - p0.clipReload_) / weapon.clipReload_) | 0) + "%";
+                            } else {
+                                wpnInfo += p0.clipAmmo_;
+                            }
+                        } else {
+                            wpnInfo += "∞";
+                        }
+                        wpnInfo += " / ";
+                    }
                 }
+                wpnInfo += `🧱${p0.mags_}`;
+                if (p0.weapon2_) {
+                    wpnInfo += " | " + EMOJI[Img.weapon0 + p0.weapon2_] + " " + p0.clipAmmo2_;
+                }
+                termPrint(wpnInfo);
             } else {
                 termPrint("tap to respawn");
             }
@@ -342,14 +348,13 @@ const printStatus = () => {
             return player ? EMOJI[Img.avatar0 + player.anim0_ % Img.num_avatars] : "👁️";
         }
         const getPlayerStatInfo = (id?: ClientID): string => {
-            const stat = state.stats_.get(clientId);
-            // 💎🪙
+            const stat = state.stats_.get(id);
             return `|☠${stat?.frags_ ?? 0}|🪙${stat?.scores_ ?? 0}`;
         }
 
         termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
         for (const [id, rc] of remoteClients) {
-            termPrint((isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc.name_ + getPlayerStatInfo(clientId));
+            termPrint((isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc.name_ + getPlayerStatInfo(id));
         }
     }
 }
@@ -417,6 +422,14 @@ const checkPlayerInput = () => {
 
         if (dropButton) {
             btn |= ControlsFlag.Drop;
+        }
+
+        if (reloadButton) {
+            btn |= ControlsFlag.Reload;
+        }
+
+        if (swapButton) {
+            btn |= ControlsFlag.Swap;
         }
     }
 
@@ -665,30 +678,37 @@ const setCurrentWeapon = (player: Actor, weaponId: number) => {
 const pickItem = (item: Actor, player: Actor) => {
     if (testIntersection(item, player)) {
         if (item.btn_ & ItemType.Weapon) {
-            if (!(player.weapon_ || (player.btn_ & ControlsFlag.Drop))) {
-                setCurrentWeapon(player, item.weapon_);
-                playAt(player, Snd.pick);
-                item.hp_ = item.btn_ = 0;
+            if (!(player.btn_ & ControlsFlag.Drop)) {
+                if (!(player.weapon_ && player.weapon2_)) {
+                    if (player.weapon_) {
+                        swapWeaponSlot(player);
+                    }
+                    setCurrentWeapon(player, item.weapon_);
+                    player.mags_ = min(10, player.mags_ + item.mags_);
+                    player.clipAmmo_ = item.clipAmmo_;
+                    playAt(player, Snd.pick);
+                    item.hp_ = item.btn_ = 0;
+                }
             }
         } else {
-            if (item.btn_ === ItemType.Hp) {
+            if (item.btn_ === ItemType.Hp || item.btn_ === ItemType.Hp2) {
                 if (player.hp_ < 10) {
-                    ++player.hp_;
+                    const qty = item.btn_ === ItemType.Hp2 ? 2 : 1;
+                    player.hp_ = min(10, player.hp_ + qty);
                     playAt(player, Snd.heal);
                     item.hp_ = item.btn_ = 0;
                 }
-            } else if (item.btn_ === ItemType.Coin || item.btn_ === ItemType.Diamond) {
+            } else if (item.btn_ === ItemType.Credit || item.btn_ === ItemType.Credit2) {
                 if (player.client_) {
                     const stat = requireStats(player.client_);
-                    stat.scores_ += item.btn_ === ItemType.Coin ? 1 : 5;
+                    stat.scores_ += item.btn_ === ItemType.Credit2 ? 5 : 1;
                     playAt(player, Snd.pick);
                     item.hp_ = item.btn_ = 0;
                 }
             } else if (item.btn_ === ItemType.Ammo) {
-                // TODO: currently acts like health-kit
-                if (player.hp_ < 10) {
-                    player.hp_ = min(10, player.hp_ + 2);
-                    playAt(player, Snd.heal);
+                if (player.mags_ < 10) {
+                    player.mags_ = min(10, player.mags_ + 1);
+                    playAt(player, Snd.pick);
                     item.hp_ = item.btn_ = 0;
                 }
             } else if (item.btn_ === ItemType.Shield) {
@@ -764,6 +784,7 @@ const simulateTic = () => {
                         gameCamera[1] = p.y_ / WORLD_SCALE;
                     }
                     p.hp_ = 10;
+                    p.mags_ = 1;
                     p.btn_ = cmd.btn_;
                     //Const.StartWeapon;
                     setCurrentWeapon(p, 1 + rand(3));
@@ -800,6 +821,12 @@ const simulateTic = () => {
         updateActorPhysics(a);
         if (!a.animHit_) {
             queryGridCollisions(a, playersGrid, pickItem);
+        }
+        if (a.hp_ && a.clipReload_) {
+            --a.clipReload_;
+            if (!a.clipReload_) {
+                a.hp_ = 0;
+            }
         }
     }
 
@@ -845,9 +872,7 @@ const simulateTic = () => {
     cameraFeedback = dec1(cameraFeedback);
 
     if (clientId) {
-        const NPC_PERIOD = 10;
-        const NPC_PERIOD_MASK = (1 << NPC_PERIOD) - 1;
-        const NPC_MAX = (1 << NPC_PERIOD) - 1;
+        const NPC_PERIOD_MASK = (1 << GAME_CFG.npc.period) - 1;
         if ((gameTic & NPC_PERIOD_MASK) === 0) {
             let count = 0;
             for (const actor of state.actors_[ActorType.Player]) {
@@ -855,10 +880,11 @@ const simulateTic = () => {
                     ++count;
                 }
             }
-            if (count < NPC_MAX) {
+            if (count < GAME_CFG.npc.max) {
                 const p = newActorObject(ActorType.Player);
                 setRandomPosition(p);
                 p.hp_ = 10;
+                p.mags_ = 1;
                 setCurrentWeapon(p, rand(weapons.length));
                 pushActor(p);
             }
@@ -913,7 +939,22 @@ const kill = (actor: Actor) => {
         if (actor.weapon_) {
             item.btn_ = ItemType.Weapon;
             item.weapon_ = actor.weapon_;
+            //item.clipAmmo_ = actor.clipAmmo_;
+            const weapon = weapons[actor.weapon_];
+            item.clipAmmo_ = weapon.clipSize_;
+            item.mags_ = weapon.clipSize_ ? 1 : 0;
+            item.clipReload_ = GAME_CFG.items.lifetime;
             actor.weapon_ = 0;
+        }
+        else if (actor.weapon2_) {
+            item.btn_ = ItemType.Weapon;
+            item.weapon_ = actor.weapon2_;
+            //item.clipAmmo_ = actor.clipAmmo2_;
+            const weapon = weapons[actor.weapon2_];
+            item.clipAmmo_ = weapon.clipSize_;
+            item.mags_ = weapon.clipSize_ ? 1 : 0;
+            item.clipReload_ = GAME_CFG.items.lifetime;
+            actor.weapon2_ = 0;
         }
     }
     if (actor.type_ == ActorType.Player) {
@@ -1082,6 +1123,15 @@ const updateAI = (player: Actor) => {
     }
 }
 
+const swapWeaponSlot = (player: Actor) => {
+    const weapon = player.weapon_;
+    const ammo = player.clipAmmo_;
+    player.weapon_ = player.weapon2_;
+    player.clipAmmo_ = player.clipAmmo2_;
+    player.weapon2_ = weapon;
+    player.clipAmmo2_ = ammo;
+}
+
 const updatePlayer = (player: Actor) => {
     if (!player.client_ && clientId) updateAI(player);
     let grounded = player.z_ == 0 && player.w_ == 0;
@@ -1113,26 +1163,60 @@ const updatePlayer = (player: Actor) => {
     }
 
     if (player.btn_ & ControlsFlag.Drop) {
-        if (player.weapon_) {
-            const item = newActorObject(ActorType.Item);
-            pushActor(item);
-            copyPosFromActorCenter(item, player);
-            addPos(item, lookDirX, lookDirY, 0, OBJECT_RADIUS);
-            addVelFrom(item, player);
-            addVelocityDir(item, lookDirX, lookDirY, 0, 64);
-            // set weapon item
-            item.btn_ = ItemType.Weapon;
-            item.weapon_ = player.weapon_;
-            item.animHit_ = ANIM_HIT_OVER;
-            player.weapon_ = 0;
+        if (!(player.trig_ & 1)) {
+            player.trig_ |= 1;
+            if (player.weapon_) {
+                const item = newActorObject(ActorType.Item);
+                pushActor(item);
+                copyPosFromActorCenter(item, player);
+                addPos(item, lookDirX, lookDirY, 0, OBJECT_RADIUS);
+                addVelFrom(item, player);
+                addVelocityDir(item, lookDirX, lookDirY, 0, 64);
+                // set weapon item
+                item.btn_ = ItemType.Weapon;
+                item.weapon_ = player.weapon_;
+                item.clipAmmo_ = player.clipAmmo_;
+                item.mags_ = 0;
+                item.clipReload_ = GAME_CFG.items.lifetime;
+                item.animHit_ = ANIM_HIT_OVER;
+                player.weapon_ = 0;
+                if (player.weapon2_) {
+                    swapWeaponSlot(player);
+                }
+            }
         }
+    } else {
+        player.trig_ &= ~1;
+    }
+
+    if (player.btn_ & ControlsFlag.Swap) {
+        if (!(player.trig_ & 2)) {
+            player.trig_ |= 2;
+            if (player.weapon2_) {
+                swapWeaponSlot(player);
+            }
+        }
+    } else {
+        player.trig_ &= ~2;
     }
 
     const weapon = weapons[player.weapon_];
+
     if (player.weapon_) {
-        if (weapon.clipSize_ && player.clipReload_) {
+        // Reload button
+        if (player.btn_ & ControlsFlag.Reload) {
+            if (couldBeReloadedManually(player)) {
+                if (player.mags_) {
+                    player.clipReload_ = weapon.clipReload_;
+                } else {
+                    // TODO: effect "out of ammo!"
+                }
+            }
+        }
+        if (weapon.clipSize_ && player.clipReload_ && player.mags_) {
             --player.clipReload_;
             if (!player.clipReload_) {
+                --player.mags_;
                 player.clipAmmo_ = weapon.clipSize_;
             }
         }
@@ -1265,7 +1349,7 @@ const drawGame = () => {
     if (!clientId) {
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
-            const add = ((0x20 * (11 - i) + 0x20 * a) & 0xFF) << 16;
+            const add = RGB((0x20 * (11 - i) + 0x20 * a) & 0xFF, 0, 0);
             const scale = 1 + i / 100;
             const angle = a * i / 100;
             const i4 = i / 4;
@@ -1358,7 +1442,20 @@ const drawCrosshair = () => {
 }
 
 const drawItem = (item: Actor) => {
+    if (item.clipReload_) {
+        const limit = 5 * Const.NetFq;
+        if (item.clipReload_ < limit) {
+            const f = 1 - item.clipReload_ / limit;
+            const fr = 8 + 16 * f;
+            if (sin(fr * (limit - item.clipReload_) / Const.NetFq) >= 0.5) {
+                return;
+            }
+        }
+    }
     if (item.btn_ & ItemType.Weapon) {
+        if (item.mags_) {
+            drawObject(item, Img.item0 + ItemType.Ammo, 6, 0.8);
+        }
         drawObject(item, Img.weapon0 + item.weapon_, 2, 0.8);
     } else /*if (cat == ItemCategory.Effect)*/ {
         const t = lastFrameTs * 4 + item.anim0_ / 25;
