@@ -12,8 +12,7 @@ export const setDebugLagK = (a: number) => _debugLagK = a;
 export const GAME_CFG = {
     npc: {
         period: 10,
-        // max: 8
-        max: 0
+        max: 8,
     },
     items: {
         lifetime: 10 * Const.NetFq
