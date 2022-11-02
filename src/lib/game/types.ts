@@ -1,5 +1,6 @@
 import {ClientID} from "../../shared/types";
 import {Img} from "../assets/gfx";
+import {atan2, PI, PI2} from "../utils/math";
 
 export const enum ActorType {
     Player = 0,
@@ -195,3 +196,13 @@ export interface Particle extends Pos, Vel {
     followVelocity_: number;
     followScale_: number;
 }
+
+export const unpackAngleByte = (angleByte: number, res: number) =>
+    PI2 * (angleByte & (res - 1)) / res - PI;
+
+export const packAngleByte = (a: number, res: number) =>
+    (res * a) & (res - 1);
+
+export const packDirByte = (x: number, y: number, res: number) =>
+    packAngleByte((PI + atan2(y, x)) / PI2, res);
+

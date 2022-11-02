@@ -260,7 +260,7 @@ export const resetFonts = () => fnt.forEach(fa => resetFontAtlas(fa));
 /// drawing
 
 const LF = "\n".codePointAt(0);
-export const drawText = (font: FontAtlas, text: string, size: number, x: number, y: number, lineHeight: number, lineSpacing: number) => {
+export const drawText = (font: FontAtlas, text: string, size: number, x: number, y: number, lineHeight: number, lineSpacing: number, color: number = 0xFFFFFF) => {
     const sc = size / font.size;
     const startX = x;
     let cx = x;
@@ -275,7 +275,7 @@ export const drawText = (font: FontAtlas, text: string, size: number, x: number,
 
         const gdata = getCharacter(font, code);
         if (gdata.tex) {
-            draw(gdata.tex, cx + sc * gdata.x, cy + sc * gdata.y, 0, sc, sc);
+            draw(gdata.tex, cx + sc * gdata.x, cy + sc * gdata.y, 0, sc, sc, 1, color);
         }
         cx += sc * gdata.a; // advance
     }

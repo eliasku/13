@@ -13,14 +13,30 @@ import {
     Client,
     ClientEvent,
     ItemType,
-    newStateData,
+    newStateData, packAngleByte, packDirByte,
     Packet,
     PlayerStat,
-    StateData,
+    StateData, unpackAngleByte,
     Vel
 } from "./types";
 import {pack, unpack} from "./packets";
-import {atan2, clamp, cos, dec1, hypot, lerp, max, min, PI, PI2, reach, sin, sqrt, TO_RAD} from "../utils/math";
+import {
+    atan2,
+    clamp,
+    cos,
+    dec1,
+    hypot,
+    lerp,
+    lerpLog,
+    max,
+    min,
+    PI,
+    PI2,
+    reach,
+    sin,
+    sqrt,
+    TO_RAD
+} from "../utils/math";
 import {
     ControlsFlag,
     couldBeReloadedManually,
@@ -100,6 +116,7 @@ import {getLumaColor32, getOrCreate, RGB} from "../utils/utils";
 import {drawText, fnt} from "../graphics/font";
 import {fps} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
+import {updateAI} from "./ai";
 
 const clients = new Map<ClientID, Client>()
 
@@ -126,6 +143,7 @@ let trees: Actor[] = [];
 let playersGrid: Actor[][] = [];
 let barrelsGrid: Actor[][] = [];
 let treesGrid: Actor[][] = [];
+let hotUsable: Actor | null = null;
 
 // dynamic state
 let state: StateData = newStateData();
@@ -295,6 +313,24 @@ export const updateGame = (ts: number) => {
     }
 }
 
+const getWeaponInfoHeader = (wpn: number, ammo: number, reload: number = 0): string => {
+    if (wpn) {
+        const weapon = weapons[wpn];
+        let txt = EMOJI[Img.weapon0 + wpn];
+        if (weapon.clipSize_) {
+            if (reload) {
+                txt += ((100 * (weapon.clipReload_ - reload) / weapon.clipReload_) | 0) + "%";
+            } else {
+                txt += ammo;
+            }
+        } else {
+            txt += "∞";
+        }
+        return txt;
+    }
+    return "";
+}
+
 const printStatus = () => {
     if (clientId) {
         if (joined) {
@@ -314,28 +350,14 @@ const printStatus = () => {
                     str += o1 ? "🛡" : (o2 ? "🪖️️" : "");
                 }
                 termPrint(str);
-                let wpnInfo = "";
-                if (p0.weapon_) {
-                    const weapon = weapons[p0.weapon_];
-                    if (weapon) {
-                        wpnInfo += EMOJI[Img.weapon0 + p0.weapon_];
-                        if (weapon.clipSize_) {
-                            if (p0.clipReload_) {
-                                wpnInfo += ((100 * (weapon.clipReload_ - p0.clipReload_) / weapon.clipReload_) | 0) + "%";
-                            } else {
-                                wpnInfo += p0.clipAmmo_;
-                            }
-                        } else {
-                            wpnInfo += "∞";
-                        }
-                        wpnInfo += " / ";
+                {
+                    let wpnInfo = getWeaponInfoHeader(p0.weapon_, p0.clipAmmo_, p0.clipReload_);
+                    if (p0.weapon2_) {
+                        wpnInfo += " | " + getWeaponInfoHeader(p0.weapon2_, p0.clipAmmo2_);
                     }
+                    termPrint(wpnInfo);
                 }
-                wpnInfo += `🧱${p0.mags_}`;
-                if (p0.weapon2_) {
-                    wpnInfo += " | " + EMOJI[Img.weapon0 + p0.weapon2_] + " " + p0.clipAmmo2_;
-                }
-                termPrint(wpnInfo);
+                termPrint(`🧱${p0.mags_}`);
             } else {
                 termPrint("tap to respawn");
             }
@@ -675,21 +697,78 @@ const setCurrentWeapon = (player: Actor, weaponId: number) => {
     }
 }
 
+const dropWeapon1 = (player: Actor) => {
+    const lookAngle = unpackAngleByte(player.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
+    const lookDirX = cos(lookAngle);
+    const lookDirY = sin(lookAngle);
+
+    const item = newActorObject(ActorType.Item);
+    pushActor(item);
+    copyPosFromActorCenter(item, player);
+    addPos(item, lookDirX, lookDirY, 0, OBJECT_RADIUS);
+    addVelFrom(item, player);
+    addVelocityDir(item, lookDirX, lookDirY, 0, 64);
+    // set weapon item
+    item.btn_ = ItemType.Weapon;
+    item.weapon_ = player.weapon_;
+    item.clipAmmo_ = player.clipAmmo_;
+    item.mags_ = 0;
+    item.clipReload_ = GAME_CFG.items.lifetime;
+    item.animHit_ = ANIM_HIT_OVER;
+    player.weapon_ = 0;
+    player.clipAmmo_ = 0;
+}
+
+const lateUpdateDropButton = (player: Actor) => {
+    if (player.btn_ & ControlsFlag.Drop) {
+        if (!(player.trig_ & 1)) {
+            player.trig_ |= 1;
+            if (player.weapon_) {
+                dropWeapon1(player);
+                if (player.weapon2_) {
+                    swapWeaponSlot(player);
+                }
+            }
+        }
+    } else {
+        player.trig_ &= ~1;
+    }
+}
+
+const updateWeaponPickup = (item: Actor, player: Actor) => {
+    if (player.btn_ & ControlsFlag.Drop) {
+        if (!(player.trig_ & 1)) {
+            player.trig_ |= 1;
+            if (!player.weapon2_) {
+                swapWeaponSlot(player);
+            } else {
+                // if 2 slot occupied - replace 1-st weapon
+                dropWeapon1(player);
+            }
+            setCurrentWeapon(player, item.weapon_);
+            player.mags_ = min(10, player.mags_ + item.mags_);
+            player.clipAmmo_ = item.clipAmmo_;
+            playAt(player, Snd.pick);
+            item.hp_ = item.btn_ = 0;
+        }
+    }
+}
+
 const pickItem = (item: Actor, player: Actor) => {
     if (testIntersection(item, player)) {
         if (item.btn_ & ItemType.Weapon) {
-            if (!(player.btn_ & ControlsFlag.Drop)) {
-                if (!(player.weapon_ && player.weapon2_)) {
-                    if (player.weapon_) {
-                        swapWeaponSlot(player);
-                    }
-                    setCurrentWeapon(player, item.weapon_);
-                    player.mags_ = min(10, player.mags_ + item.mags_);
-                    player.clipAmmo_ = item.clipAmmo_;
-                    playAt(player, Snd.pick);
-                    item.hp_ = item.btn_ = 0;
-                }
+            if (player.client_ === clientId && !hotUsable) {
+                hotUsable = item;
             }
+            // suck in mags
+            if (item.mags_ && player.mags_ < 10) {
+                const freeQty = 10 - player.mags_;
+                const qty = clamp(0, item.mags_, freeQty);
+                item.mags_ -= qty;
+                player.mags_ = min(10, player.mags_ + qty);
+                playAt(player, Snd.pick);
+            }
+            updateWeaponPickup(item, player);
         } else {
             if (item.btn_ === ItemType.Hp || item.btn_ === ItemType.Hp2) {
                 if (player.hp_ < 10) {
@@ -744,7 +823,7 @@ const updateGameCamera = () => {
     }
     gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
     gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
-    gameCamera[2] = lerp(gameCamera[2], cameraScale, 0.05);
+    gameCamera[2] = lerpLog(gameCamera[2], cameraScale, 0.05);
 }
 
 const normalizeState = () => {
@@ -817,6 +896,7 @@ const simulateTic = () => {
         a.fstate_ = 1;
     }
 
+    hotUsable = null;
     for (const a of state.actors_[ActorType.Item]) {
         updateActorPhysics(a);
         if (!a.animHit_) {
@@ -828,6 +908,10 @@ const simulateTic = () => {
                 a.hp_ = 0;
             }
         }
+    }
+
+    for (const a of state.actors_[ActorType.Player]) {
+        lateUpdateDropButton(a);
     }
 
     for (const bullet of state.actors_[ActorType.Bullet]) {
@@ -880,6 +964,7 @@ const simulateTic = () => {
                     ++count;
                 }
             }
+            // while (count < GAME_CFG.npc.max) {
             if (count < GAME_CFG.npc.max) {
                 const p = newActorObject(ActorType.Player);
                 setRandomPosition(p);
@@ -887,6 +972,7 @@ const simulateTic = () => {
                 p.mags_ = 1;
                 setCurrentWeapon(p, rand(weapons.length));
                 pushActor(p);
+                ++count;
             }
         }
     } else {
@@ -945,8 +1031,7 @@ const kill = (actor: Actor) => {
             item.mags_ = weapon.clipSize_ ? 1 : 0;
             item.clipReload_ = GAME_CFG.items.lifetime;
             actor.weapon_ = 0;
-        }
-        else if (actor.weapon2_) {
+        } else if (actor.weapon2_) {
             item.btn_ = ItemType.Weapon;
             item.weapon_ = actor.weapon2_;
             //item.clipAmmo_ = actor.clipAmmo2_;
@@ -1067,62 +1152,6 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
     }
 }
 
-const unpackAngleByte = (angleByte: number, res: number) =>
-    PI2 * (angleByte & (res - 1)) / res - PI;
-
-const packAngleByte = (a: number, res: number) =>
-    (res * a) & (res - 1);
-
-const packDirByte = (x: number, y: number, res: number) =>
-    packAngleByte((PI + atan2(y, x)) / PI2, res);
-
-const updateAI = (player: Actor) => {
-    let walking = !player.weapon_;
-    if (!walking) {
-        const players = state.actors_[ActorType.Player];
-        let minDistEnemy: Actor | null = null;
-        let minDist = 100000.0;
-        for (const enemy of players) {
-            if (enemy === player) {
-                continue;
-            }
-            const dist = hypot(enemy.x_ - player.x_, enemy.y_ - player.y_);
-            if (dist < minDist) {
-                minDistEnemy = enemy;
-                minDist = dist;
-            }
-        }
-        if (minDistEnemy) {
-            const dx = minDistEnemy.x_ - player.x_;
-            const dy = minDistEnemy.y_ - player.y_;
-            const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
-            const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
-            player.btn_ = (ld << ControlsFlag.LookAngleBit) |
-                (md << ControlsFlag.MoveAngleBit) |
-                ControlsFlag.Move |
-                ControlsFlag.Shooting |
-                ControlsFlag.Run;
-        } else {
-            walking = true;
-        }
-    }
-    if (walking) {
-        const md = rand(ControlsFlag.MoveAngleMax);
-        player.btn_ = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
-        if (!player.sp_) {
-            if (!rand(30) && player.hp_ < 7) {
-                player.btn_ |= ControlsFlag.Jump;
-            }
-            if (player.hp_ < 10) {
-                player.btn_ |= ControlsFlag.Run
-            }
-        }
-    }
-    if (!player.sp_ && player.hp_ < 5) {
-        player.btn_ |= ControlsFlag.Drop | ControlsFlag.Run;
-    }
-}
-
 const swapWeaponSlot = (player: Actor) => {
     const weapon = player.weapon_;
     const ammo = player.clipAmmo_;
@@ -1132,8 +1161,26 @@ const swapWeaponSlot = (player: Actor) => {
     player.clipAmmo2_ = ammo;
 }
 
+const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
+    if (player.weapon_ && !player.clipReload_) {
+        const weapon = weapons[player.weapon_];
+        if (weapon.clipSize_ && !player.clipAmmo_) {
+            if (player.mags_) {
+                // start auto reload
+                player.clipReload_ = weapon.clipReload_;
+            }
+            // auto swap to available full weapon
+            else if (player.weapon2_ && (player.clipAmmo2_ || !weapons[player.weapon2_].clipSize_)) {
+                swapWeaponSlot(player);
+            }
+        }
+    }
+}
+
 const updatePlayer = (player: Actor) => {
-    if (!player.client_ && clientId) updateAI(player);
+    if (!player.client_ && clientId) {
+        updateAI(state, player);
+    }
     let grounded = player.z_ == 0 && player.w_ == 0;
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
@@ -1160,33 +1207,6 @@ const updatePlayer = (player: Actor) => {
         }
     } else {
         applyGroundFriction(player, 32 * c);
-    }
-
-    if (player.btn_ & ControlsFlag.Drop) {
-        if (!(player.trig_ & 1)) {
-            player.trig_ |= 1;
-            if (player.weapon_) {
-                const item = newActorObject(ActorType.Item);
-                pushActor(item);
-                copyPosFromActorCenter(item, player);
-                addPos(item, lookDirX, lookDirY, 0, OBJECT_RADIUS);
-                addVelFrom(item, player);
-                addVelocityDir(item, lookDirX, lookDirY, 0, 64);
-                // set weapon item
-                item.btn_ = ItemType.Weapon;
-                item.weapon_ = player.weapon_;
-                item.clipAmmo_ = player.clipAmmo_;
-                item.mags_ = 0;
-                item.clipReload_ = GAME_CFG.items.lifetime;
-                item.animHit_ = ANIM_HIT_OVER;
-                player.weapon_ = 0;
-                if (player.weapon2_) {
-                    swapWeaponSlot(player);
-                }
-            }
-        }
-    } else {
-        player.trig_ &= ~1;
     }
 
     if (player.btn_ & ControlsFlag.Swap) {
@@ -1223,51 +1243,54 @@ const updatePlayer = (player: Actor) => {
         if (player.btn_ & ControlsFlag.Shooting) {
             // reload-tics = NetFq / Rate
             player.s_ = dec1(player.s_);
-            const loaded = !weapon.clipSize_ || (!player.clipReload_ && player.clipAmmo_);
-            if (!player.s_ && loaded) {
-                if (weapon.clipSize_) {
-                    --player.clipAmmo_;
-                    if (!player.clipAmmo_) {
-                        player.clipReload_ = weapon.clipReload_;
+            if (!player.s_) {
+                needReloadWeaponIfOutOfAmmo(player);
+                const loaded = !weapon.clipSize_ || (!player.clipReload_ && player.clipAmmo_);
+                if (loaded) {
+                    if (weapon.clipSize_) {
+                        --player.clipAmmo_;
+                        if (!player.clipAmmo_) {
+                            needReloadWeaponIfOutOfAmmo(player);
+                        }
                     }
-                }
-                if (player.client_ == clientId) {
-                    cameraShake = max(weapon.cameraShake_, cameraShake);
-                    cameraFeedback = 5;
-                }
-                player.s_ = weapon.reloadTime_;
-                player.detune_ = reach(player.detune_, weapon.detuneSpeed_, 1);
-                if (player.z_ <= 0) {
-                    addVelocityDir(player, lookDirX, lookDirY, -1, -weapon.kickBack_);
-                }
-                playAt(player, Snd.shoot);
-                for (let i = 0; i < weapon.spawnCount_; ++i) {
-                    const a = lookAngle +
-                        weapon.angleVar_ * (random() - 0.5) +
-                        weapon.angleSpread_ * (player.detune_ / weapon.detuneSpeed_) * (random() - 0.5);
-                    const dx = cos(a);
-                    const dy = sin(a);
-                    const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
-                    const bullet = newActorObject(ActorType.Bullet);
-                    bullet.client_ = player.client_ || -player.id_;
-                    copyPosFromActorCenter(bullet, player);
-                    addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon.offset_);
-                    bullet.z_ += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
-                    addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
-                    bullet.weapon_ = weapon.bulletDamage_;
-                    bullet.btn_ = weapon.bulletType_;
-                    bullet.hp_ = weapon.bulletHp_;
-                    bullet.s_ = weapon.bulletLifetime_;
-                    pushActor(bullet);
-
-                    if (weapon.bulletType_ == BulletType.Ray) {
-                        castRayBullet(bullet, dx, dy);
-                        bullet.weapon_ = 0;
+                    if (player.client_ == clientId) {
+                        cameraShake = max(weapon.cameraShake_, cameraShake);
+                        cameraFeedback = 5;
                     }
-                }
+                    player.s_ = weapon.reloadTime_;
+                    player.detune_ = reach(player.detune_, weapon.detuneSpeed_, 1);
+                    if (player.z_ <= 0) {
+                        addVelocityDir(player, lookDirX, lookDirY, -1, -weapon.kickBack_);
+                    }
+                    playAt(player, Snd.shoot);
+                    for (let i = 0; i < weapon.spawnCount_; ++i) {
+                        const a = lookAngle +
+                            weapon.angleVar_ * (random() - 0.5) +
+                            weapon.angleSpread_ * (player.detune_ / weapon.detuneSpeed_) * (random() - 0.5);
+                        const dx = cos(a);
+                        const dy = sin(a);
+                        const bulletVelocity = weapon.velocity_ + weapon.velocityVar_ * (random() - 0.5);
+                        const bullet = newActorObject(ActorType.Bullet);
+                        bullet.client_ = player.client_ || -player.id_;
+                        copyPosFromActorCenter(bullet, player);
+                        addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon.offset_);
+                        bullet.z_ += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
+                        addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
+                        bullet.weapon_ = weapon.bulletDamage_;
+                        bullet.btn_ = weapon.bulletType_;
+                        bullet.hp_ = weapon.bulletHp_;
+                        bullet.s_ = weapon.bulletLifetime_;
+                        pushActor(bullet);
 
-                if (weapon.bulletType_) {
-                    addShellParticle(player, PLAYER_HANDS_Z, weapon.bulletShellColor_);
+                        if (weapon.bulletType_ == BulletType.Ray) {
+                            castRayBullet(bullet, dx, dy);
+                            bullet.weapon_ = 0;
+                        }
+                    }
+
+                    if (weapon.bulletType_) {
+                        addShellParticle(player, PLAYER_HANDS_Z, weapon.bulletShellColor_);
+                    }
                 }
             }
         } else {
@@ -1600,7 +1623,7 @@ const drawPlayer = (p: Actor): void => {
         drawAt(Img.weapon0 + p.weapon_, weaponX, weaponY, weaponSX, weaponSY, weaponAngle);
     }
 
-    if (p.client_ > 0) {
+    if (p.client_ > 0 && p.client_ !== clientId) {
         const name = getNameByClientId(p.client_);
         if (name) {
             drawText(fnt[0], name, 6, x - (name.length * 3) / 2, y - 28, 0, 0);
@@ -1625,6 +1648,25 @@ const DRAW_BY_TYPE: ((p: Actor) => void)[] = [
     drawTree,
 ];
 
+const drawHotUsableHint = () => {
+    if (hotUsable) {
+        if (hotUsable.btn_ & ItemType.Weapon) {
+            const weapon = weapons[hotUsable.weapon_];
+            let text = weapon.name_ + " " + EMOJI[Img.weapon0 + hotUsable.weapon_];
+            if (weapon.clipSize_) {
+                text += hotUsable.clipAmmo_;
+            }
+            const x = hotUsable.x_ / WORLD_SCALE;
+            const y = hotUsable.y_ / WORLD_SCALE;
+            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 27, 0, 0, 0);
+            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 28, 0, 0);
+            text = "Pick [E]";
+            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 19, 0, 0, 0);
+            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 20, 0, 0);
+        }
+    }
+};
+
 const drawObjects = () => {
     drawSplats();
     drawParticles();
@@ -1635,6 +1677,7 @@ const drawObjects = () => {
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor.type_](actor);
     }
+    drawHotUsableHint();
 }
 /// SOUND ENV ///
 

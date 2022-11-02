@@ -27,7 +27,7 @@ Select room, share the link and wait friends to play:
 - Push Mouse button to shoot
 - Use `W A S D` / `↑ ← ↓ →` to move
 - Hold `Shift` to slow down moving
-- Press `E` to drop the weapon
+- Press `E` to to PICK weapon on the map or DROP your current weapon
 - Press `Space` to jump
 - Press `R` to reload weapon
 - Press `Q` to switch secondary weapon slot
@@ -35,7 +35,7 @@ Select room, share the link and wait friends to play:
 #### 📱 Touch-screen
 - Use Left Joystick to walk-run-jump
 - Use Right Joystick to aim-shoot (Move around aim-shoot zones to trigger some weapons like Pistol)
-- Use `DROP` button to drop the weapon
+- Use `DROP` button to pick weapon on the map or drop your current weapon
 - Use `RELOAD` button to reload the weapon
 - Use `SWAP` button to swap the secondary weapon slot
 

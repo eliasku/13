@@ -12,7 +12,11 @@
 - Add online users info in the main menu
 - Add weapon reloading mechanics #11
 - Add [R] button - reload button to apply new ammo magazine #11
-- Add [Q] button - swap secondary weapon slot #13 
+- Add [Q] button - swap secondary weapon slot #13
+- Change [E] button to PICK weapon on the map or DROP your current weapon
+- Draw only enemy name label
+- Add Santa Claus NPC skin
+- Add AI min-max shooting radius, searching for ammo
 
 ## 1.0.1
 - NPC are also fighting

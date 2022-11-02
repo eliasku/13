@@ -1,5 +1,5 @@
 /* @__PURE__ */
-export const {max, min, abs, sin, cos, atan2, hypot, PI, sqrt, tan, imul, round} = Math;
+export const {max, min, abs, sin, cos, atan2, hypot, PI, sqrt, tan, imul, round, exp, log} = Math;
 
 /* @__PURE__ */
 export const PI2 = 2 * PI;
@@ -11,10 +11,13 @@ export const TO_RAD = PI / 180;
 export const lerp = (a: number, b: number, t: number): number => (1 - t) * a + t * b;
 
 /* @__PURE__ */
-export const dec1 = (x:number) => x ? --x : x;
+export const lerpLog = (a: number, b: number, t: number): number => exp(lerp(log(a), log(b), t));
 
 /* @__PURE__ */
-export const clamp = (x: number, _min: number, _max: number) => min(_max,max(x, _min));
+export const dec1 = (x: number) => x ? --x : x;
+
+/* @__PURE__ */
+export const clamp = (x: number, _min: number, _max: number) => min(_max, max(x, _min));
 
 /* @__PURE__ */
 export const sign = (v: number) => v > 0 ? 1 : -1;

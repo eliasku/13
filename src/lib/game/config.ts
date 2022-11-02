@@ -12,6 +12,7 @@ export const setDebugLagK = (a: number) => _debugLagK = a;
 export const GAME_CFG = {
     npc: {
         period: 10,
+        // period: 9,
         max: 8,
     },
     items: {
