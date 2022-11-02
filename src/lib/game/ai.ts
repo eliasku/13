@@ -3,6 +3,9 @@ import {hypot} from "../utils/math";
 import {ControlsFlag} from "./controls";
 import {rand} from "../utils/rnd";
 import {weapons} from "./data/weapons";
+import {sqrDistXY} from "./phy";
+import {WORLD_BOUNDS_SIZE} from "../assets/params";
+import {OBJECT_RADIUS_BY_TYPE} from "./data/world";
 
 const hasAmmo = (player: Actor) => {
     if (player.weapon_) {
@@ -12,70 +15,90 @@ const hasAmmo = (player: Actor) => {
     return false;
 }
 
-export const updateAI = (state: StateData, player: Actor) => {
-    let walking = false;
-    if (hasAmmo(player)) {
-        const players = state.actors_[ActorType.Player];
-        let minDistActor: Actor | null = null;
-        let minDist = 100000.0;
-        for (const enemy of players) {
-            if (enemy === player) {
-                continue;
-            }
-            const dist = hypot(enemy.x_ - player.x_, enemy.y_ - player.y_);
-            if (dist < minDist) {
-                minDistActor = enemy;
-                minDist = dist;
+const findClosestActor = (player: Actor, actors: Actor[], pred: (item: Actor) => boolean): Actor | null => {
+    let minDistActor: Actor | null = null;
+    let minDistSqr = WORLD_BOUNDS_SIZE * WORLD_BOUNDS_SIZE;
+    for (const a of actors) {
+        if (pred(a)) {
+            const distSqr = sqrDistXY(player, a);
+            if (distSqr < minDistSqr) {
+                minDistActor = a;
+                minDistSqr = distSqr;
             }
         }
-        if (minDistActor) {
-            let dx = minDistActor.x_ - player.x_;
-            let dy = minDistActor.y_ - player.y_;
-            let move = 0;
-            let shoot = 0;
-            let mx = 0;
-            let my = 0;
-            const weapon = weapons[player.weapon_];
-            if (minDist < weapon.ai_shootDistanceMin_) {
-                mx = -dx;
-                my = -dy;
-                move = ControlsFlag.Move | ControlsFlag.Run;
-            } else if (minDist > weapon.ai_shootDistanceMax_) {
-                mx = dx;
-                my = dy;
-                move = ControlsFlag.Move | ControlsFlag.Run;
+    }
+    return minDistActor;
+}
+
+export const updateAI = (state: StateData, player: Actor) => {
+    let walking = false;
+    if (player.weapon_) {
+        if (hasAmmo(player)) {
+            const players = state.actors_[ActorType.Player];
+            const target = findClosestActor(player, players, (a) => a !== player);
+            if (target) {
+                let dx = target.x_ - player.x_;
+                let dy = target.y_ - player.y_;
+                let move = 0;
+                let shoot = 0;
+                let mx = 0;
+                let my = 0;
+                const weapon = weapons[player.weapon_];
+                const dist = hypot(dx, dy);
+                if (dist < weapon.ai_shootDistanceMin_) {
+                    mx = -dx;
+                    my = -dy;
+                    move = ControlsFlag.Move | ControlsFlag.Run;
+                } else if (dist > weapon.ai_shootDistanceMax_) {
+                    mx = dx;
+                    my = dy;
+                    move = ControlsFlag.Move | ControlsFlag.Run;
+                } else {
+                    shoot = ControlsFlag.Shooting;
+                }
+                const md = packDirByte(mx, my, ControlsFlag.MoveAngleMax);
+                const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
+                player.btn_ = (ld << ControlsFlag.LookAngleBit) |
+                    (md << ControlsFlag.MoveAngleBit) |
+                    move | shoot;
             } else {
-                shoot = ControlsFlag.Shooting;
+                walking = true;
             }
-            const md = packDirByte(mx, my, ControlsFlag.MoveAngleMax);
-            const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
-            player.btn_ = (ld << ControlsFlag.LookAngleBit) |
-                (md << ControlsFlag.MoveAngleBit) |
-                move | shoot;
+
         } else {
-            walking = true;
+            const items = state.actors_[ActorType.Item];
+            const target = findClosestActor(player, items, (a) =>
+                a.btn_ === ItemType.Ammo || a.mags_ > 0);
+            if (target) {
+                let dx = target.x_ - player.x_;
+                let dy = target.y_ - player.y_;
+                const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
+                const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
+                player.btn_ = (ld << ControlsFlag.LookAngleBit) |
+                    (md << ControlsFlag.MoveAngleBit) |
+                    ControlsFlag.Move | ControlsFlag.Run;
+            } else {
+                walking = true;
+            }
         }
     } else {
         const items = state.actors_[ActorType.Item];
-        let minDistActor: Actor | null = null;
-        let minDist = 100000.0;
-        for (const item of items) {
-            if (item.btn_ === ItemType.Ammo || item.mags_) {
-                const dist = hypot(item.x_ - player.x_, item.y_ - player.y_);
-                if (dist < minDist) {
-                    minDistActor = item;
-                    minDist = dist;
-                }
-            }
-        }
-        if (minDistActor) {
-            let dx = minDistActor.x_ - player.x_;
-            let dy = minDistActor.y_ - player.y_;
+        const target = findClosestActor(player, items, (a) =>
+            !!(a.btn_ & ItemType.Weapon));
+        if (target) {
+            let dx = target.x_ - player.x_;
+            let dy = target.y_ - player.y_;
+            const dist = hypot(dx, dy);
             const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
             const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
+            let drop = 0;
+            if(dist < OBJECT_RADIUS_BY_TYPE[ActorType.Item] + OBJECT_RADIUS_BY_TYPE[ActorType.Player] &&
+                !(player.trig_ & 1)) {
+                drop = ControlsFlag.Drop;
+            }
             player.btn_ = (ld << ControlsFlag.LookAngleBit) |
                 (md << ControlsFlag.MoveAngleBit) |
-                ControlsFlag.Move | ControlsFlag.Run;
+                ControlsFlag.Move | ControlsFlag.Run | drop;
         } else {
             walking = true;
         }
