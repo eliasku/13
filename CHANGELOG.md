@@ -1,4 +1,4 @@
-## 1.0.2 (unreleased)
+## 1.0.2
 
 ### NPC
 - NPC don't drop weapon until HP level above 5, then NPC start panic as before
