@@ -41,6 +41,9 @@ export const enum ControlsFlag {
     // 8-bits for Look angle (256 directions)
     LookAngleMax = 0x100,
     LookAngleBit = 13,
+
+    DownEvent_Drop = 1,
+    DownEvent_Swap = 2,
 }
 
 export const gameCamera: number[] = [0, 0, 1];

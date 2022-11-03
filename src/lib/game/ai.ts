@@ -93,7 +93,7 @@ export const updateAI = (state: StateData, player: Actor) => {
             const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
             let drop = 0;
             if(dist < OBJECT_RADIUS_BY_TYPE[ActorType.Item] + OBJECT_RADIUS_BY_TYPE[ActorType.Player] &&
-                !(player.trig_ & 1)) {
+                !(player.trig_ & ControlsFlag.DownEvent_Drop)) {
                 drop = ControlsFlag.Drop;
             }
             player.btn_ = (ld << ControlsFlag.LookAngleBit) |

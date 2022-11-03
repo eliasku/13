@@ -102,7 +102,7 @@ export interface Actor extends Pos, Vel {
     // 6 bits
     clipAmmo2_?: number;
 
-    // oh... check down trigger 2 bits
+    // oh... check down trigger 3 bits
     trig_?: number;
 }
 
@@ -195,6 +195,12 @@ export interface Particle extends Pos, Vel {
     splashImg_: number;
     followVelocity_: number;
     followScale_: number;
+}
+
+export interface TextParticle extends Pos {
+    text_: string;
+    lifetime_: number;
+    time_: number;
 }
 
 export const unpackAngleByte = (angleByte: number, res: number) =>

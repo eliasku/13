@@ -1,4 +1,4 @@
-import {drawText, fnt} from "./font";
+import {drawText, drawTextShadowCenter, fnt} from "./font";
 import {inputPointers, mousePointer, Pointer} from "../utils/input";
 import {Img, img} from "../assets/gfx";
 import {draw} from "./draw2d";
@@ -91,7 +91,7 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
         draw(img[Img.box_lt], x + 2, y + 2, 0, w, h, 1, 0);
         draw(img[Img.box_lt], x + offset, y + offset, 0, w, h, 1, color);
 
-        drawText(fnt[0], text, 8, x + 4 + offset, y + h / 1.5 + offset, 8, 1);
+        drawTextShadowCenter(fnt[0], text, 8, x + w / 2 + offset, y + h / 1.5 + offset);
     }
     // If button is hot and active, but mouse button is not
     // down, the user must have clicked the button.

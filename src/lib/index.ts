@@ -6,7 +6,7 @@ import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateFpsMeter} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
-import {drawText, fnt, updateFonts} from "./graphics/font";
+import {drawText, drawTextShadow, drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
 import {beginRenderToMain, flush, gl} from "./graphics/draw2d";
 import {BuildVersion} from "../shared/types";
 
@@ -30,7 +30,7 @@ const enum StartState {
     }
 
     if (!clientName) {
-        setUserName(prompt("your name"));
+        setUserName("Guest " + ((Math.random() * 1000) | 0));
     }
     new FontFace("e", "url(e.ttf)").load().then((font) => {
         document.fonts.add(font);
@@ -57,23 +57,25 @@ const enum StartState {
 
             ui_begin(scale);
             {
-                drawText(fnt[0], "name: " + clientName, 7, 2, 14, 0, 0);
-                if (button("change_name", "change name", 2, 20)) {
+                const W = (gl.drawingBufferWidth / scale) | 0;
+                const H = (gl.drawingBufferHeight / scale) | 0;
+                const centerX = W >> 1;
+                const centerY = H >> 1;
+                drawTextShadowCenter(fnt[0], "Welcome back,", 7, centerX, 14);
+                if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
                     setUserName(prompt("your name", clientName));
                 }
-                // if(usersOnline) {
-                drawText(fnt[0], "online: " + usersOnline, 7, 2, 48, 0, 0);
-                // }
+                drawTextShadowCenter(fnt[0], usersOnline + " playing right now", 7, centerX, centerY - 40);
 
-                const centerX = (gl.drawingBufferWidth / scale) >> 1;
-                const centerY = (gl.drawingBufferHeight / scale) >> 1;
-                if (button("start", "[ START ]", centerX - 100, centerY + 90, {w: 200, h: 48, visible: false})) {
+                if (button("start", "[ START ]", centerX - 100, centerY + 70, {w: 200, h: 48, visible: false})) {
                     state = StartState.Connecting;
                     resetGame();
                     connect();
                 }
 
-                drawText(fnt[0], "version: " + BuildVersion, 7, 2, gl.drawingBufferHeight / scale - 1, 0, 0);
+                if (button("version-link", "v" + BuildVersion + " 🔗", 2, H - 16, {w: 48, h: 14, visible: true})) {
+                    open("https://github.com/eliasku/13", "_blank");
+                }
             }
             ui_finish();
 
@@ -81,7 +83,7 @@ const enum StartState {
         },
         (ts: number) => {
             beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
-            drawText(fnt[0], "connecting" + ".".repeat((ts * 7) & 7), 10 + Math.sin(ts), 2, 10, 0, 0);
+            drawTextShadow(fnt[0], "connecting" + ".".repeat((ts * 7) & 7), 10 + Math.sin(ts), 2, 10);
             flush();
             if (_sseState == 3) {
                 state = StartState.Connected;

@@ -1,4 +1,5 @@
 import {createTexture, draw, getSubTexture, Texture, uploadTexture} from "./draw2d";
+import {max} from "../utils/math";
 
 const SPACE_REGEX = /\s/gm;
 const SPACE_CODE = ' '.codePointAt(0);
@@ -279,4 +280,33 @@ export const drawText = (font: FontAtlas, text: string, size: number, x: number,
         }
         cx += sc * gdata.a; // advance
     }
+}
+
+export const measureTextWidth = (font: FontAtlas, text: string, size: number): number => {
+    const sc = size / font.size;
+    let x = 0;
+    let w = 0;
+    for (const ch of text) {
+        const code = ch.codePointAt(0);
+        if (code === LF) {
+            x = 0;
+            continue;
+        }
+        const gdata = getCharacter(font, code);
+        x += sc * gdata.a;
+        if (x > w) {
+            w = x;
+        }
+    }
+    return w;
+}
+
+export const drawTextShadow = (font: FontAtlas, text: string, size: number, x: number, y: number, color: number = 0xFFFFFF) => {
+    drawText(font, text, size, x, y + 1, 0, 0, 0);
+    drawText(font, text, size, x, y, 0, 0, color);
+}
+
+export const drawTextShadowCenter = (font: FontAtlas, text: string, size: number, x: number, y: number, color: number = 0xFFFFFF) => {
+    x -= measureTextWidth(font, text, size) / 2;
+    drawTextShadow(font, text, size, x, y, color);
 }

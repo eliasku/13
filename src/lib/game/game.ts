@@ -13,10 +13,13 @@ import {
     Client,
     ClientEvent,
     ItemType,
-    newStateData, packAngleByte, packDirByte,
+    newStateData,
+    packAngleByte,
+    packDirByte,
     Packet,
     PlayerStat,
-    StateData, unpackAngleByte,
+    StateData,
+    unpackAngleByte,
     Vel
 } from "./types";
 import {pack, unpack} from "./packets";
@@ -113,10 +116,11 @@ import {
 } from "./debug";
 import {addToGrid, queryGridCollisions} from "./grid";
 import {getLumaColor32, getOrCreate, RGB} from "../utils/utils";
-import {drawText, fnt} from "../graphics/font";
+import {drawText, drawTextShadowCenter, fnt} from "../graphics/font";
 import {fps} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai";
+import {addTextParticle, drawTextParticles, updateTextParticles} from "./textParticle";
 
 const clients = new Map<ClientID, Client>()
 
@@ -721,8 +725,8 @@ const dropWeapon1 = (player: Actor) => {
 
 const lateUpdateDropButton = (player: Actor) => {
     if (player.btn_ & ControlsFlag.Drop) {
-        if (!(player.trig_ & 1)) {
-            player.trig_ |= 1;
+        if (!(player.trig_ & ControlsFlag.DownEvent_Drop)) {
+            player.trig_ |= ControlsFlag.DownEvent_Drop;
             if (player.weapon_) {
                 dropWeapon1(player);
                 if (player.weapon2_) {
@@ -731,14 +735,14 @@ const lateUpdateDropButton = (player: Actor) => {
             }
         }
     } else {
-        player.trig_ &= ~1;
+        player.trig_ &= ~ControlsFlag.DownEvent_Drop;
     }
 }
 
 const updateWeaponPickup = (item: Actor, player: Actor) => {
     if (player.btn_ & ControlsFlag.Drop) {
-        if (!(player.trig_ & 1)) {
-            player.trig_ |= 1;
+        if (!(player.trig_ & ControlsFlag.DownEvent_Drop)) {
+            player.trig_ |= ControlsFlag.DownEvent_Drop;
             if (!player.weapon2_) {
                 swapWeaponSlot(player);
             } else {
@@ -767,6 +771,9 @@ const pickItem = (item: Actor, player: Actor) => {
                 item.mags_ -= qty;
                 player.mags_ = min(10, player.mags_ + qty);
                 playAt(player, Snd.pick);
+                if (player.client_ === clientId) {
+                    addTextParticle(item, `+${qty} mags`);
+                }
             }
             updateWeaponPickup(item, player);
         } else {
@@ -774,27 +781,42 @@ const pickItem = (item: Actor, player: Actor) => {
                 if (player.hp_ < 10) {
                     const qty = item.btn_ === ItemType.Hp2 ? 2 : 1;
                     player.hp_ = min(10, player.hp_ + qty);
-                    playAt(player, Snd.heal);
                     item.hp_ = item.btn_ = 0;
+                    playAt(player, Snd.heal);
+                    if (player.client_ === clientId) {
+                        addTextParticle(item, `+${qty} hp`);
+                    }
                 }
             } else if (item.btn_ === ItemType.Credit || item.btn_ === ItemType.Credit2) {
                 if (player.client_) {
                     const stat = requireStats(player.client_);
-                    stat.scores_ += item.btn_ === ItemType.Credit2 ? 5 : 1;
-                    playAt(player, Snd.pick);
+                    const qty = item.btn_ === ItemType.Credit2 ? 5 : 1;
+                    stat.scores_ += qty;
                     item.hp_ = item.btn_ = 0;
+                    playAt(player, Snd.pick);
+                    if (player.client_ === clientId) {
+                        addTextParticle(item, `+${qty} cr`);
+                    }
                 }
             } else if (item.btn_ === ItemType.Ammo) {
                 if (player.mags_ < 10) {
-                    player.mags_ = min(10, player.mags_ + 1);
-                    playAt(player, Snd.pick);
+                    const qty = 1;
+                    player.mags_ = min(10, player.mags_ + qty);
                     item.hp_ = item.btn_ = 0;
+                    playAt(player, Snd.pick);
+                    if (player.client_ === clientId) {
+                        addTextParticle(item, `+${qty} mags`);
+                    }
                 }
             } else if (item.btn_ === ItemType.Shield) {
                 if (player.sp_ < 10) {
+                    const qty = 1;
                     ++player.sp_;
-                    playAt(player, Snd.med);
                     item.hp_ = item.btn_ = 0;
+                    playAt(player, Snd.med);
+                    if (player.client_ === clientId) {
+                        addTextParticle(item, `+${qty} cr`);
+                    }
                 }
             }
         }
@@ -1170,8 +1192,14 @@ const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
                 player.clipReload_ = weapon.clipReload_;
             }
             // auto swap to available full weapon
-            else if (player.weapon2_ && (player.clipAmmo2_ || !weapons[player.weapon2_].clipSize_)) {
-                swapWeaponSlot(player);
+            else {
+                if (player.weapon2_ && (player.clipAmmo2_ || !weapons[player.weapon2_].clipSize_)) {
+                    swapWeaponSlot(player);
+                }
+                if (player.client_ === clientId) {
+                    addTextParticle(player, "EMPTY!");
+                }
+                player.s_ = weapon.reloadTime_;
             }
         }
     }
@@ -1210,26 +1238,27 @@ const updatePlayer = (player: Actor) => {
     }
 
     if (player.btn_ & ControlsFlag.Swap) {
-        if (!(player.trig_ & 2)) {
-            player.trig_ |= 2;
+        if (!(player.trig_ & ControlsFlag.DownEvent_Swap)) {
+            player.trig_ |= ControlsFlag.DownEvent_Swap;
             if (player.weapon2_) {
                 swapWeaponSlot(player);
             }
         }
     } else {
-        player.trig_ &= ~2;
+        player.trig_ &= ~ControlsFlag.DownEvent_Swap;
     }
 
-    const weapon = weapons[player.weapon_];
-
     if (player.weapon_) {
+        const weapon = weapons[player.weapon_];
         // Reload button
         if (player.btn_ & ControlsFlag.Reload) {
             if (couldBeReloadedManually(player)) {
                 if (player.mags_) {
                     player.clipReload_ = weapon.clipReload_;
                 } else {
-                    // TODO: effect "out of ammo!"
+                    if (player.client_ === clientId) {
+                        addTextParticle(player, "NO MAGS!");
+                    }
                 }
             }
         }
@@ -1377,11 +1406,16 @@ const drawGame = () => {
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-            drawAt(Img.logo_start, gameCamera[0] + fxRandomNorm(i4), 110 + y1 + fxRandomNorm(i4), scale, scale, angle, 1, add);
+            drawAt(Img.logo_start, gameCamera[0] + fxRandomNorm(i4), 90 + y1 + fxRandomNorm(i4), scale, scale, angle, 1, add);
             drawAt(Img.logo_title, gameCamera[0] + fxRandomNorm(i4), y1 + fxRandomNorm(i4), scale, scale, angle, 1, add);
         }
     }
     drawCrosshair();
+
+    updateTextParticles();
+    drawTextParticles();
+    drawHotUsableHint();
+
     flush();
 }
 
@@ -1626,7 +1660,7 @@ const drawPlayer = (p: Actor): void => {
     if (p.client_ > 0 && p.client_ !== clientId) {
         const name = getNameByClientId(p.client_);
         if (name) {
-            drawText(fnt[0], name, 6, x - (name.length * 3) / 2, y - 28, 0, 0);
+            drawTextShadowCenter(fnt[0], name, 6, x, y - 28);
         }
     }
 }
@@ -1658,11 +1692,8 @@ const drawHotUsableHint = () => {
             }
             const x = hotUsable.x_ / WORLD_SCALE;
             const y = hotUsable.y_ / WORLD_SCALE;
-            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 27, 0, 0, 0);
-            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 28, 0, 0);
-            text = "Pick [E]";
-            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 19, 0, 0, 0);
-            drawText(fnt[0], text, 7, x - (text.length * 3) / 2, y - 20, 0, 0);
+            drawTextShadowCenter(fnt[0], text, 7, x, y - 28);
+            drawTextShadowCenter(fnt[0], "Pick [E]", 7, x, y - 20);
         }
     }
 };
@@ -1677,7 +1708,6 @@ const drawObjects = () => {
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor.type_](actor);
     }
-    drawHotUsableHint();
 }
 /// SOUND ENV ///
 

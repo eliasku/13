@@ -33,7 +33,7 @@ export const newParticle = (): Particle => ({
     splashScaleOnVelocity_: 0,
 });
 
-export const updateParticle = (p: Particle): boolean => {
+const updateParticle = (p: Particle): boolean => {
     p.a_ += p.r_;
     ++p.lifeTime_;
 
