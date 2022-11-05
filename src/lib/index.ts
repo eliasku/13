@@ -45,11 +45,11 @@ const enum StartState {
             if (isAnyKeyDown()) {
                 loadAtlas();
                 goToSplash();
+                fetch("i", {method: "POST"})
+                    .then(r => r.json())
+                    .then(j => usersOnline = Number.parseInt(j?.on))
+                    .catch(() => usersOnline = 0);
             }
-            fetch("i", {method: "POST"})
-                .then(r => r.json())
-                .then(j => usersOnline = Number.parseInt(j?.on))
-                .catch(() => usersOnline = 0);
         },
         () => {
             const scale = getScreenScale();
@@ -65,7 +65,7 @@ const enum StartState {
                 if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
                     setUserName(prompt("your name", clientName));
                 }
-                drawTextShadowCenter(fnt[0], usersOnline + " playing right now", 7, centerX, centerY - 40);
+                drawTextShadowCenter(fnt[0], usersOnline + " playing right now", 7, centerX, centerY - 50);
 
                 if (button("start", "[ START ]", centerX - 100, centerY + 70, {w: 200, h: 48, visible: false})) {
                     state = StartState.Connecting;
@@ -73,7 +73,7 @@ const enum StartState {
                     connect();
                 }
 
-                if (button("version-link", "v" + BuildVersion + " 🔗", 2, H - 16, {w: 48, h: 14, visible: true})) {
+                if (button("version-tag", "v" + BuildVersion + " 🏷", 2, H - 16, {w: 48, h: 14, visible: true})) {
                     open("https://github.com/eliasku/13", "_blank");
                 }
             }

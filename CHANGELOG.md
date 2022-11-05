@@ -1,3 +1,9 @@
+## 1.0.3
+
+- Change version label text to `v1.0.3 🏷`
+- Fix server spam in `loaded` state before main menu
+- Enable `POST` method to load `index.html`
+
 ## 1.0.2
 
 ### NPC

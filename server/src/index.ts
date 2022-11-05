@@ -181,6 +181,7 @@ const HANDLERS: any = {
         s: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.s),
     },
     POST: {
+        "/": (req: IncomingMessage, res: ServerResponse) => serveStatic("/index.html", res, HDR.l),
         _: processIncomeMessages,
         i: processGameInfo,
     }
