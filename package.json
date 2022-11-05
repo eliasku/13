@@ -7,8 +7,8 @@
     "start": "node server.js",
     "build": "ts-node --esm --swc tools/build.ts",
     "watch": "ts-node --esm --swc tools/watch.ts",
-    "typecheck-client": "tsc -p tsconfig.json --watch --noEmit",
-    "typecheck-server": "tsc -p server/tsconfig.json --watch --noEmit"
+    "typecheck-client": "tsc -p tsconfig.json --noEmit",
+    "typecheck-server": "tsc -p server/tsconfig.json --noEmit"
   },
   "author": "eliasku",
   "license": "ISC",
