@@ -1,3 +1,7 @@
+## 1.0.4
+
+
+
 ## 1.0.3
 
 - Change version label text to `v1.0.3 🏷`
