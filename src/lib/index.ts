@@ -1,4 +1,4 @@
-import {_sseState, clientName, connect, processMessages, setUserName} from "./net/messaging";
+import {_sseState, clientName, connect, loadCurrentOnlineUsers, processMessages, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
 import {createSplashState, getScreenScale, resetGame, updateGame} from "./game/game";
@@ -45,10 +45,9 @@ const enum StartState {
             if (isAnyKeyDown()) {
                 loadAtlas();
                 goToSplash();
-                fetch("i", {method: "POST"})
-                    .then(r => r.json())
-                    .then(j => usersOnline = Number.parseInt(j?.on))
-                    .catch(() => usersOnline = 0);
+                loadCurrentOnlineUsers().then((count) => {
+                    usersOnline = count;
+                });
             }
         },
         () => {

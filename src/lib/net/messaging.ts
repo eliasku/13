@@ -9,6 +9,7 @@ import {
 } from "../../shared/types";
 import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
+import {iceServers} from "./iceServers";
 
 export interface RemoteClient {
     id_: ClientID;
@@ -17,6 +18,9 @@ export interface RemoteClient {
     name_?: string;
     debugPacketByteLength?: number;
 }
+
+// const getUrl = (endpoint:string) => "https://next13.herokuapp.com/" + endpoint;
+const getUrl = (endpoint:string) => endpoint;
 
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
@@ -28,8 +32,15 @@ let messageUploading = false;
 let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
-export const setUserName = (name: string|null|undefined) => {
-    clientName = (name || "guest").trim().substring(0,32).trim();
+export const loadCurrentOnlineUsers = () => {
+    return fetch("i", {method: "POST"})
+        .then(r => r.json())
+        .then(j => Number.parseInt(j?.on))
+        .catch(() => 0);
+}
+
+export const setUserName = (name: string | null | undefined) => {
+    clientName = (name || "guest").trim().substring(0, 32).trim();
     localStorage.setItem("l3name", clientName);
 }
 
@@ -107,7 +118,7 @@ export const processMessages = () => {
 };
 
 const _post = (messages: Message[]): Promise<PostMessagesResponse> =>
-    fetch(/*EventSourceUrl*/"_", {
+    fetch(getUrl("_"), {
         method: "POST",
         body: JSON.stringify([clientId, messages])
     }).then(response => response.json() as Promise<PostMessagesResponse>);
@@ -182,7 +193,7 @@ const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
         id_: id,
-        pc_: _pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]}),
+        pc_: _pc = new RTCPeerConnection({iceServers}),
     };
 
     _pc.onicecandidate = (e) => {
