@@ -1,6 +1,7 @@
 ## 1.0.4
 
-
+- Change to OpenRelay STUN and TURN servers for WebRTC connection
+- Changes in AI low-hp branch 
 
 ## 1.0.3
 

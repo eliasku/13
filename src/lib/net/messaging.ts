@@ -33,7 +33,7 @@ let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
 export const loadCurrentOnlineUsers = () => {
-    return fetch("i", {method: "POST"})
+    return fetch(getUrl("i"), {method: "POST"})
         .then(r => r.json())
         .then(j => Number.parseInt(j?.on))
         .catch(() => 0);
@@ -170,7 +170,7 @@ export const connect = () => {
         messageUploading = false;
         messagesToPost = [];
         callbacks = [];
-        eventSource = new EventSource(/*EventSourceUrl*/ "_?v=" + BuildVersion);
+        eventSource = new EventSource(/*EventSourceUrl*/ getUrl("_?v=" + BuildVersion));
         eventSource.onerror = disconnect;
         // eventSource.onerror = (e) => {
         //     console.warn("server-event error");
