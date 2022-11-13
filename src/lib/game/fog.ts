@@ -16,6 +16,8 @@ initFramebuffer(fogTexture);
 export const beginFogRender = () => {
     beginRenderToTexture(fogTexture);
     clear(1, 1, 1, 1);
+    gl.disable(GL.DEPTH_TEST);
+    gl.depthMask(false);
     gl.blendFunc(GL.ZERO, GL.ONE_MINUS_SRC_ALPHA);
 }
 

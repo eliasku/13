@@ -179,7 +179,7 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
 }
 
 export const flushSplatsToMap = () => {
-    if (splats.length) {
+    if (splats.length > 16) {
         gl.bindFramebuffer(GL.FRAMEBUFFER, mapTexture.fbo_);
         beginRender();
         setupProjection(
@@ -189,6 +189,9 @@ export const flushSplatsToMap = () => {
             BOUNDS_SIZE, -BOUNDS_SIZE
         );
         gl.viewport(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
+        gl.scissor(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
+        gl.disable(GL.DEPTH_TEST);
+        gl.depthMask(false);
         drawSplats();
         splats.length = 0;
         flush();

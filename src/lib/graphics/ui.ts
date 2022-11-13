@@ -1,7 +1,7 @@
 import {drawText, drawTextShadowCenter, fnt} from "./font";
 import {inputPointers, mousePointer, Pointer} from "../utils/input";
 import {Img, img} from "../assets/gfx";
-import {draw} from "./draw2d";
+import {draw, setDrawZ} from "./draw2d";
 
 let y = 15;
 export const resetPrinter = () => {
@@ -33,6 +33,7 @@ export const ui_begin = (scale: number) => {
     captureInputPointer();
     pointerScale = scale;
     hotItem = "";
+    setDrawZ(1000);
 }
 
 export const ui_finish = () => {
@@ -90,7 +91,6 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
         }
         draw(img[Img.box_lt], x + 2, y + 2, 0, w, h, 1, 0);
         draw(img[Img.box_lt], x + offset, y + offset, 0, w, h, 1, color);
-
         drawTextShadowCenter(fnt[0], text, 8, x + w / 2 + offset, y + h / 1.5 + offset);
     }
     // If button is hot and active, but mouse button is not

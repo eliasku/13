@@ -1,9 +1,27 @@
 import {GL} from "./gl";
 import {cos, sin} from "../utils/math";
+import {
+    SHADER_FRAGMENT,
+    SHADER_A_COLOR_MUL,
+    SHADER_A_LOCATION,
+    SHADER_U_MVP,
+    SHADER_A_COLOR_ADD,
+    SHADER_A_ROTATION,
+    SHADER_A_SCALE,
+    SHADER_A_UVS,
+    SHADER_U_TEX,
+    SHADER_A_Z,
+    SHADER_VERTEX, SHADER_A_ANCHOR, SHADER_A_TRANSLATION
+} from "./shader";
 
 export const gl = c.getContext("webgl", {
     antialias: false,
+    // defaults:
+    // alpha: true, - don't emulate RGB24
+    depth: true,
+    // stencil: false
 });
+
 const instancedArrays = gl.getExtension('ANGLE_instanced_arrays')!;
 
 if (process.env.NODE_ENV === "development") {
@@ -14,7 +32,6 @@ if (process.env.NODE_ENV === "development") {
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
-//export let DPR = 1;
 (onresize = (_?: any,
              w: number = innerWidth,
              h: number = innerHeight,
@@ -30,66 +47,29 @@ const maxBatch = 65535;
 // const depth = 1;
 // TODO: move to scope
 
-const floatSize = 2 + 2 + 1 + 2 + 4 + 1 + 1 + 1;
+const floatSize = 2 + 2 + 1 + 1 + 2 + 4 + 1 + 1 + 1;
 const byteSize = floatSize * 4;
 // maxBatch * byteSize
 // const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
 const floatView = new Float32Array(1 << 20);
 const uintView = new Uint32Array(floatView.buffer);
-// let program: WebGLProgram | null = gl.createProgram();
-let quadCount = 0;
-let quadProgram: WebGLProgram;
-let quadTexture: WebGLTexture;
 
-const shader = `attribute vec2 g;
-attribute vec2 a;
-attribute vec2 t;
-attribute float r;
-attribute vec2 s;
-attribute vec4 u;
-attribute vec4 c;
-attribute vec4 o;
-uniform sampler2D x;
-uniform mat4 m;
-varying vec2 v;
-varying vec4 i;
-varying vec3 j;
-
-export void vertex() {
-  v = u.xy + g * u.zw;
-  i = vec4(c.bgr * c.a, (1.0 - o.a) * c.a);
-  j = o.bgr;
-  vec2 p = (g - a) * s;
-  float q = cos(r);
-  float w = sin(r);
-  p = vec2(p.x * q - p.y * w, p.x * w + p.y * q);
-  p += a + t;
-  gl_Position = m * vec4(p, 0, 1);
+interface Program {
+    program: WebGLProgram;
+    u_mvp: WebGLUniformLocation;
+    u_tex0: WebGLUniformLocation;
+    a_location: GLint,
+    a_anchor: GLint,
+    a_scale: GLint,
+    a_translation: GLint,
+    a_uvs: GLint,
+    a_z: GLint;
+    a_rotation: GLint;
+    a_colorMul: GLint;
+    a_colorAdd: GLint;
 }
 
-export void fragment() {
-  vec4 c = i * texture2D(x, v);
-  gl_FragColor = c + vec4(j * c.a, 0.0);
-}
-`;
-
-// shaders minified with https://evanw.github.io/glslx/
-const GLSLX_SOURCE_VERTEX = "attribute float b;attribute vec2 e,f,o,j;attribute vec4 k,g,l;uniform mat4 p;varying vec2 c;varying vec4 d;varying vec3 h;void main(){c=k.xy+e*k.zw,d=vec4(g.bgr*g.a,(1.-l.a)*g.a),h=l.bgr;vec2 a=(e-f)*j;float i=cos(b),m=sin(b);a=vec2(a.x*i-a.y*m,a.x*m+a.y*i),a+=f+o,gl_Position=p*vec4(a,0,1);}";
-// still need to add `precision mediump float;` manually
-const GLSLX_SOURCE_FRAGMENT = "precision mediump float;uniform sampler2D n;varying vec2 c;varying vec4 d;varying vec3 h;void main(){vec4 a=d*texture2D(n,c);gl_FragColor=a+vec4(h*a.a,0.);}";
-
-const GLSLX_NAME_R = "b";
-const GLSLX_NAME_G = "e";
-const GLSLX_NAME_A = "f";
-const GLSLX_NAME_C = "g";
-const GLSLX_NAME_S = "j";
-const GLSLX_NAME_U = "k";
-const GLSLX_NAME_O = "l";
-const GLSLX_NAME_X = "n";
-const GLSLX_NAME_T = "o";
-const GLSLX_NAME_M = "p";
-
-{
+const createProgram = (vs: string, fs: string): Program => {
     const compileShader = (source: string, shader: GLenum | WebGLShader): WebGLShader => {
         shader = gl.createShader(shader as GLenum);
         gl.shaderSource(shader, source);
@@ -110,8 +90,7 @@ const GLSLX_NAME_M = "p";
         gl.bufferData(type, src, usage);
     }
 
-    const bindAttrib = (name: string | GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
-        name = gl.getAttribLocation(quadProgram, name as string);
+    const bindAttrib = (prg: WebGLProgram, name: GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
         gl.enableVertexAttribArray(name);
         gl.vertexAttribPointer(name, size, type, norm, stride, offset);
         if (divisor) {
@@ -119,46 +98,63 @@ const GLSLX_NAME_M = "p";
         }
     }
 
-    quadProgram = gl.createProgram();
-    gl.attachShader(quadProgram, compileShader(GLSLX_SOURCE_VERTEX, GL.VERTEX_SHADER));
-    gl.attachShader(quadProgram, compileShader(GLSLX_SOURCE_FRAGMENT, GL.FRAGMENT_SHADER));
-    gl.linkProgram(quadProgram);
+    const vertShader = compileShader(vs, GL.VERTEX_SHADER);
+    const fragShader = compileShader(fs, GL.FRAGMENT_SHADER);
+    const program = gl.createProgram();
+    gl.attachShader(program, vertShader);
+    gl.attachShader(program, fragShader);
+    gl.linkProgram(program);
 
     if (process.env.NODE_ENV === "development") {
-        if (!gl.getProgramParameter(quadProgram, GL.LINK_STATUS)) {
-            const error = gl.getProgramInfoLog(quadProgram);
-            gl.deleteProgram(quadProgram);
+        if (!gl.getProgramParameter(program, GL.LINK_STATUS)) {
+            const error = gl.getProgramInfoLog(program);
+            gl.deleteProgram(program);
             console.error(error);
         }
     }
 
-// indicesBuffer
-    createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
+    gl.deleteShader(vertShader);
+    gl.deleteShader(fragShader);
 
-// vertexBuffer
+    const p:Program = {
+        program,
+        u_mvp: gl.getUniformLocation(program, SHADER_U_MVP),
+        u_tex0: gl.getUniformLocation(program, SHADER_U_TEX),
+
+        a_location: gl.getAttribLocation(program, SHADER_A_LOCATION),
+        a_anchor: gl.getAttribLocation(program, SHADER_A_ANCHOR),
+        a_rotation: gl.getAttribLocation(program, SHADER_A_ROTATION),
+        a_scale: gl.getAttribLocation(program, SHADER_A_SCALE),
+        a_translation: gl.getAttribLocation(program, SHADER_A_TRANSLATION),
+        a_uvs: gl.getAttribLocation(program, SHADER_A_UVS),
+        a_z: gl.getAttribLocation(program, SHADER_A_Z),
+        a_colorMul: gl.getAttribLocation(program, SHADER_A_COLOR_MUL),
+        a_colorAdd: gl.getAttribLocation(program, SHADER_A_COLOR_ADD),
+    };
+    // static quad indices and vertices
+    createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
     createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
 
-// vertexLocation
-    bindAttrib(GLSLX_NAME_G, 2, 0, 0, 0, GL.FLOAT, false);
+    bindAttrib(program, p.a_location, 2, 0, 0, 0, GL.FLOAT, false);
 
-// dynamicBuffer
+    // dynamic buffer
     createBuffer(GL.ARRAY_BUFFER, floatView, GL.DYNAMIC_DRAW);
 
-// anchorLocation
-    bindAttrib(GLSLX_NAME_A, 2, byteSize, 1, 0, GL.FLOAT, false);
-// scaleLocation
-    bindAttrib(GLSLX_NAME_S, 2, byteSize, 1, 8, GL.FLOAT, false);
-// rotationLocation
-    bindAttrib(GLSLX_NAME_R, 1, byteSize, 1, 16, GL.FLOAT, false);
-// translationLocation
-    bindAttrib(GLSLX_NAME_T, 2, byteSize, 1, 20, GL.FLOAT, false);
-// uvsLocation
-    bindAttrib(GLSLX_NAME_U, 4, byteSize, 1, 28, GL.FLOAT, false);
-// colorLocation
-    bindAttrib(GLSLX_NAME_C, 4, byteSize, 1, 44, GL.UNSIGNED_BYTE, true);
-// colorOffsetLocation
-    bindAttrib(GLSLX_NAME_O, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
+    bindAttrib(program, p.a_anchor, 2, byteSize, 1, 0, GL.FLOAT, false);
+    bindAttrib(program, p.a_scale, 2, byteSize, 1, 8, GL.FLOAT, false);
+    bindAttrib(program, p.a_rotation, 1, byteSize, 1, 16, GL.FLOAT, false);
+    bindAttrib(program, p.a_z, 1, byteSize, 1, 20, GL.FLOAT, false);
+    bindAttrib(program, p.a_translation, 2, byteSize, 1, 24, GL.FLOAT, false);
+    bindAttrib(program, p.a_uvs, 4, byteSize, 1, 32, GL.FLOAT, false);
+    bindAttrib(program, p.a_colorMul, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
+    bindAttrib(program, p.a_colorAdd, 4, byteSize, 1, 52, GL.UNSIGNED_BYTE, true);
+
+    return p;
 }
+
+let quadCount = 0;
+let quadTexture: WebGLTexture;
+const program = createProgram(SHADER_VERTEX, SHADER_FRAGMENT);
 
 export interface Texture {
     texture_?: WebGLTexture;
@@ -254,22 +250,23 @@ export const setupProjection = (
     |           0|           0| -1/depth| 0|
     | -2x/width-1| 2y/height+1|        0| 1|
     */
-    gl.uniformMatrix4fv(gl.getUniformLocation(quadProgram, GLSLX_NAME_M), false, [
+    const depth = 1e5;
+    gl.uniformMatrix4fv(program.u_mvp, false, [
         c * w, s * h, 0, 0,
         -s * w, c * h, 0, 0,
-        0, 0, -1, 0,
+        0, 0, -1 / depth, 0,
         (posX * (1 - c) + posY * s) * w - 2 * x / width - 1,
         (posY * (1 - c) - posX * s) * h + 2 * y / height + 1,
         0, 1,
     ]);
 
-    gl.uniform1i(gl.getUniformLocation(quadProgram, GLSLX_NAME_X), 0);
+    gl.uniform1i(program.u_tex0, 0);
 }
 
 export const beginRender = () => {
     gl.enable(GL.BLEND);
     gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
-    gl.useProgram(quadProgram);
+    gl.useProgram(program.program);
 }
 
 export const clear = (r: number, g: number, b: number, a: number) => {
@@ -279,9 +276,12 @@ export const clear = (r: number, g: number, b: number, a: number) => {
 
 export const beginRenderToTexture = (texture: Texture) => {
     beginRender();
-    setupProjection(0, 0, 0, 1, 0, 1, texture.w_, -texture.h_);
+    const w = texture.w_;
+    const h = texture.h_;
+    setupProjection(0, 0, 0, 1, 0, 1, w, -h);
     gl.bindFramebuffer(GL.FRAMEBUFFER, texture.fbo_);
-    gl.viewport(0, 0, texture.w_, texture.h_);
+    gl.viewport(0, 0, w, h);
+    gl.scissor(0, 0, w, h);
 }
 
 export const beginRenderToMain = (x: number, y: number, px: number, py: number, angle: number, scale: number,
@@ -291,6 +291,8 @@ export const beginRenderToMain = (x: number, y: number, px: number, py: number, 
     setupProjection(x, y, px, py, angle, scale, w, h);
     gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     gl.viewport(0, 0, w, h);
+    gl.enable(GL.SCISSOR_TEST);
+    gl.scissor(0, 0, w, h);
 }
 
 export const flush = (_count = quadCount) => {
@@ -301,6 +303,9 @@ export const flush = (_count = quadCount) => {
         quadCount = 0;
     }
 }
+
+let drawZ = 0;
+export const setDrawZ = (z: number) => drawZ = z;
 
 export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) => {
     if (quadTexture != texture.texture_ || quadCount == maxBatch) {
@@ -313,6 +318,7 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
     floatView[i++] = sx * texture.w_;
     floatView[i++] = sy * texture.h_;
     floatView[i++] = r;
+    floatView[i++] = drawZ;
     floatView[i++] = x;
     floatView[i++] = y;
     floatView[i++] = texture.u0_;

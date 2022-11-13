@@ -1,7 +1,7 @@
 import {ClientID} from "../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
-import {beginRenderToMain, clear, draw, flush, gl} from "../graphics/draw2d";
+import {beginRenderToMain, clear, draw, flush, gl, setDrawZ} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
@@ -121,6 +121,7 @@ import {fps} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai";
 import {addTextParticle, drawTextParticles, updateTextParticles} from "./textParticle";
+import {GL} from "../graphics/gl";
 
 const clients = new Map<ClientID, Client>()
 
@@ -306,10 +307,12 @@ export const updateGame = (ts: number) => {
         if (!document.hidden) {
             const predicted = beginPrediction();
             drawGame();
+            drawOverlay();
+
             // check input before overlay, or save camera settings
             checkPlayerInput();
             checkJoinSync();
-            drawOverlay();
+
             if (predicted) endPrediction();
         }
         sendInput();
@@ -1386,18 +1389,37 @@ const drawGame = () => {
         fxRandomNorm(cameraShake / (8 * 50)),
         1 / gameCamera[2]
     );
-    clear(0.2, 0.2, 0.2, 1);
 
+    gl.clear(GL.DEPTH_BUFFER_BIT);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LESS);
+    gl.depthMask(true);
+
+    setDrawZ(100);
+    drawCrosshair();
+
+    setDrawZ(2);
     drawMapBackground();
+
+    setDrawZ(1);
+    // skybox
+    draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, BOUNDS_SIZE + 2000, 1, 0x221100);
+
+    setDrawZ(3);
+
+    //gl.disable(GL.DEPTH_TEST);
+    gl.depthMask(false);
     drawObjects();
     drawMapOverlay();
 
+    setDrawZ(5);
     renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
+
+    setDrawZ(100);
 
     if (process.env.NODE_ENV === "development") {
         drawCollisions(drawList);
     }
-
     if (!clientId) {
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
@@ -1410,10 +1432,9 @@ const drawGame = () => {
             drawAt(Img.logo_title, gameCamera[0] + fxRandomNorm(i4), y1 + fxRandomNorm(i4), scale, scale, angle, 1, add);
         }
     }
-    drawCrosshair();
-
     updateTextParticles();
     drawTextParticles();
+
     drawHotUsableHint();
 
     flush();
@@ -1421,12 +1442,13 @@ const drawGame = () => {
 
 export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
 const drawOverlay = () => {
+    setDrawZ(1000);
     const scale = getScreenScale();
     beginRenderToMain(0, 0, 0, 0, 0, scale);
+
     if (clientId) {
         drawMiniMap(state, trees, gl.drawingBufferWidth / scale, 0);
     }
-    drawVirtualPad();
 
     drawText(fnt[0], "FPS: " + fps, 5, 2, 5, 0, 0);
 
@@ -1434,6 +1456,8 @@ const drawOverlay = () => {
     if (process.env.NODE_ENV === "development") {
         printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
+
+    drawVirtualPad();
 
     flush();
 }
@@ -1493,7 +1517,7 @@ const drawCrosshair = () => {
     if (p0 && (viewX || viewY)) {
         const len = 4 + sin(2 * lastFrameTs) * cos(4 * lastFrameTs) / 4 + (p0.detune_ / 8) + p0.s_ / 10;
         for (let i = 0; i < 4; ++i) {
-            drawAt(Img.box_t1, lookAtX, lookAtY, 2, len, lastFrameTs / 10 + i * PI / 2, 0.5);
+            drawAt(Img.box_t1, lookAtX, lookAtY, 2, len, lastFrameTs / 10 + i * PI / 2);
         }
     }
 }

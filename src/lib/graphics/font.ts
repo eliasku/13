@@ -69,7 +69,7 @@ export const makeFontAtlas = (family: string,
     // canvas.style.left = "0px";
     // document.body.appendChild(canvas);
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", {willReadFrequently: true});
     const fallback = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif';
     const fa: FontAtlas = {
         fallback, style, size, scale, family, ctx,
@@ -79,7 +79,6 @@ export const makeFontAtlas = (family: string,
         sheetLineHeight: 0,
         characters: "",
         border: Math.ceil(scale),
-
         characterMap: new Map<number, CharacterData>(),
         lineSize: 1.3,
 
@@ -210,12 +209,17 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
     const px = x + bb.left + padding;
     const py = y + bb.ascent + padding;
     if (fa.strokeWidth > 0) {
-        ctx.strokeStyle = fa.strokeColor;
-        ctx.lineWidth = fa.strokeWidth * fa.scale;
+        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+        ctx.lineWidth = 2 * fa.strokeWidth * fa.scale;
         ctx.lineJoin = 'round';
         ctx.strokeText(character, px, py);
+        ctx.strokeText(character, px, py + 1);
     }
+    // ctx.fillStyle = "#000";
+    // ctx.fillText(character, px, py + 3);
+    ctx.fillStyle = "#fff";
     ctx.fillText(character, px, py);
+
     //
     {
         const imageData = ctx.getImageData(x, y, w, h);
@@ -251,7 +255,7 @@ const updateTexture = (fa: FontAtlas) => {
 
 
 export const fnt: FontAtlas[] = [
-    makeFontAtlas("monospace,e", 24, 1, {strokeWidth: 4})
+    makeFontAtlas("monospace,e", 24, 1, {strokeWidth: 3})
 ];
 
 export const updateFonts = () => fnt.forEach(updateTexture);
@@ -302,7 +306,7 @@ export const measureTextWidth = (font: FontAtlas, text: string, size: number): n
 }
 
 export const drawTextShadow = (font: FontAtlas, text: string, size: number, x: number, y: number, color: number = 0xFFFFFF) => {
-    drawText(font, text, size, x, y + 1, 0, 0, 0);
+    //drawText(font, text, size, x, y + 1, 0, 0, 0);
     drawText(font, text, size, x, y, 0, 0, color);
 }
 

@@ -1,7 +1,15 @@
+## 1.0.5
+
+### Graphics
+
+- Font glyph combined with shadow
+- Render pass allow Z-buffer usage
+- Change Cross-hair to be opaque 
+
 ## 1.0.4
 
 - Change to OpenRelay STUN and TURN servers for WebRTC connection
-- Changes in AI low-hp branch 
+- Change AI low-hp behaviour
 
 ## 1.0.3
 

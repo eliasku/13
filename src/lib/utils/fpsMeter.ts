@@ -4,7 +4,7 @@ export let fps = 0;
 
 export const updateFpsMeter = (ts: number) => {
     ++fpsAcc;
-    const div = .2;
+    const div = 1;
     if ((ts - fpsTime) >= div) {
         fps = fpsAcc / div;
         fpsAcc = 0;

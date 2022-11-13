@@ -1,7 +1,7 @@
 import {Actor, ActorType, StateData} from "./types";
 import {draw} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
-import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
+import {WORLD_BOUNDS_SIZE} from "../assets/params";
 import {clientId} from "../net/messaging";
 import {PI} from "../utils/math";
 import {parseRGB} from "../utils/utils";

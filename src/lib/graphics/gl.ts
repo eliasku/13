@@ -3,6 +3,7 @@ export const enum GL {
 
     BLEND = 0x0BE2,
     DEPTH_TEST = 0x0B71,
+    SCISSOR_TEST = 0x0C11,
     DITHER = 0x0BD0,
 
     POINTS = 0x0000,
