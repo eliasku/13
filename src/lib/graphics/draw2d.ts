@@ -13,6 +13,8 @@ import {
     SHADER_A_Z,
     SHADER_VERTEX, SHADER_A_ANCHOR, SHADER_A_TRANSLATION
 } from "./shader";
+import {Mat4} from "../utils/mat4";
+import {stats} from "../utils/fpsMeter";
 
 export const gl = c.getContext("webgl", {
     antialias: false,
@@ -51,7 +53,9 @@ const floatSize = 2 + 2 + 1 + 1 + 2 + 4 + 1 + 1 + 1;
 const byteSize = floatSize * 4;
 // maxBatch * byteSize
 // const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
-const floatView = new Float32Array(1 << 20);
+// TODO:
+// const floatView = new Float32Array(1 << 20);
+const floatView = new Float32Array(1 << 18);
 const uintView = new Uint32Array(floatView.buffer);
 
 interface Program {
@@ -69,35 +73,37 @@ interface Program {
     a_colorAdd: GLint;
 }
 
-const createProgram = (vs: string, fs: string): Program => {
-    const compileShader = (source: string, shader: GLenum | WebGLShader): WebGLShader => {
-        shader = gl.createShader(shader as GLenum);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
+const compileShader = (source: string, shader: GLenum | WebGLShader): WebGLShader => {
+    shader = gl.createShader(shader as GLenum);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
 
-        if (process.env.NODE_ENV === "development") {
-            if (!gl.getShaderParameter(shader, GL.COMPILE_STATUS)) {
-                const error = gl.getShaderInfoLog(shader);
-                gl.deleteShader(shader);
-                console.error(error);
-            }
-        }
-        return shader;
-    }
-
-    const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
-        gl.bindBuffer(type, gl.createBuffer());
-        gl.bufferData(type, src, usage);
-    }
-
-    const bindAttrib = (prg: WebGLProgram, name: GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
-        gl.enableVertexAttribArray(name);
-        gl.vertexAttribPointer(name, size, type, norm, stride, offset);
-        if (divisor) {
-            instancedArrays.vertexAttribDivisorANGLE(name, divisor);
+    if (process.env.NODE_ENV === "development") {
+        if (!gl.getShaderParameter(shader, GL.COMPILE_STATUS)) {
+            const error = gl.getShaderInfoLog(shader);
+            gl.deleteShader(shader);
+            console.error(error);
         }
     }
+    return shader;
+}
 
+const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(type, buffer);
+    gl.bufferData(type, src, usage);
+    return buffer;
+}
+
+const bindAttrib = (name: GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
+    gl.enableVertexAttribArray(name);
+    gl.vertexAttribPointer(name, size, type, norm, stride, offset);
+    if (divisor) {
+        instancedArrays.vertexAttribDivisorANGLE(name, divisor);
+    }
+}
+
+const createProgram = (vs: string, fs: string): WebGLProgram => {
     const vertShader = compileShader(vs, GL.VERTEX_SHADER);
     const fragShader = compileShader(fs, GL.FRAGMENT_SHADER);
     const program = gl.createProgram();
@@ -116,45 +122,60 @@ const createProgram = (vs: string, fs: string): Program => {
     gl.deleteShader(vertShader);
     gl.deleteShader(fragShader);
 
-    const p:Program = {
-        program,
-        u_mvp: gl.getUniformLocation(program, SHADER_U_MVP),
-        u_tex0: gl.getUniformLocation(program, SHADER_U_TEX),
-
-        a_location: gl.getAttribLocation(program, SHADER_A_LOCATION),
-        a_anchor: gl.getAttribLocation(program, SHADER_A_ANCHOR),
-        a_rotation: gl.getAttribLocation(program, SHADER_A_ROTATION),
-        a_scale: gl.getAttribLocation(program, SHADER_A_SCALE),
-        a_translation: gl.getAttribLocation(program, SHADER_A_TRANSLATION),
-        a_uvs: gl.getAttribLocation(program, SHADER_A_UVS),
-        a_z: gl.getAttribLocation(program, SHADER_A_Z),
-        a_colorMul: gl.getAttribLocation(program, SHADER_A_COLOR_MUL),
-        a_colorAdd: gl.getAttribLocation(program, SHADER_A_COLOR_ADD),
-    };
-    // static quad indices and vertices
-    createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
-    createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
-
-    bindAttrib(program, p.a_location, 2, 0, 0, 0, GL.FLOAT, false);
-
-    // dynamic buffer
-    createBuffer(GL.ARRAY_BUFFER, floatView, GL.DYNAMIC_DRAW);
-
-    bindAttrib(program, p.a_anchor, 2, byteSize, 1, 0, GL.FLOAT, false);
-    bindAttrib(program, p.a_scale, 2, byteSize, 1, 8, GL.FLOAT, false);
-    bindAttrib(program, p.a_rotation, 1, byteSize, 1, 16, GL.FLOAT, false);
-    bindAttrib(program, p.a_z, 1, byteSize, 1, 20, GL.FLOAT, false);
-    bindAttrib(program, p.a_translation, 2, byteSize, 1, 24, GL.FLOAT, false);
-    bindAttrib(program, p.a_uvs, 4, byteSize, 1, 32, GL.FLOAT, false);
-    bindAttrib(program, p.a_colorMul, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
-    bindAttrib(program, p.a_colorAdd, 4, byteSize, 1, 52, GL.UNSIGNED_BYTE, true);
-
-    return p;
+    return program;
 }
 
 let quadCount = 0;
 let quadTexture: WebGLTexture;
-const program = createProgram(SHADER_VERTEX, SHADER_FRAGMENT);
+const gl_program = createProgram(SHADER_VERTEX, SHADER_FRAGMENT);
+const program = {
+    program: gl_program,
+    u_mvp: gl.getUniformLocation(gl_program, SHADER_U_MVP),
+    u_tex0: gl.getUniformLocation(gl_program, SHADER_U_TEX),
+
+    a_location: gl.getAttribLocation(gl_program, SHADER_A_LOCATION),
+    a_anchor: gl.getAttribLocation(gl_program, SHADER_A_ANCHOR),
+    a_rotation: gl.getAttribLocation(gl_program, SHADER_A_ROTATION),
+    a_scale: gl.getAttribLocation(gl_program, SHADER_A_SCALE),
+    a_translation: gl.getAttribLocation(gl_program, SHADER_A_TRANSLATION),
+    a_uvs: gl.getAttribLocation(gl_program, SHADER_A_UVS),
+    a_z: gl.getAttribLocation(gl_program, SHADER_A_Z),
+    a_colorMul: gl.getAttribLocation(gl_program, SHADER_A_COLOR_MUL),
+    a_colorAdd: gl.getAttribLocation(gl_program, SHADER_A_COLOR_ADD),
+};
+
+// static quad indices and vertices
+const instanceIB = createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
+const instanceVB = createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
+
+bindAttrib(program.a_location, 2, 0, 0, 0, GL.FLOAT, false);
+
+// dynamic buffer
+const streamVB = [
+    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
+    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
+    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
+    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
+];
+let streamVBi = 0;
+let streamVBf = 0;
+
+export const completeFrame = () => {
+    streamVBi = 0;
+    streamVBf = (streamVBf + 1) & 3;
+}
+
+function bindProgramBuffers(program: Program, buffer: WebGLBuffer) {
+    gl.bindBuffer(GL.ARRAY_BUFFER, buffer);
+    bindAttrib(program.a_anchor, 2, byteSize, 1, 0, GL.FLOAT, false);
+    bindAttrib(program.a_scale, 2, byteSize, 1, 8, GL.FLOAT, false);
+    bindAttrib(program.a_rotation, 1, byteSize, 1, 16, GL.FLOAT, false);
+    bindAttrib(program.a_z, 1, byteSize, 1, 20, GL.FLOAT, false);
+    bindAttrib(program.a_translation, 2, byteSize, 1, 24, GL.FLOAT, false);
+    bindAttrib(program.a_uvs, 4, byteSize, 1, 32, GL.FLOAT, false);
+    bindAttrib(program.a_colorMul, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
+    bindAttrib(program.a_colorAdd, 4, byteSize, 1, 52, GL.UNSIGNED_BYTE, true);
+}
 
 export interface Texture {
     texture_?: WebGLTexture;
@@ -284,6 +305,10 @@ export const beginRenderToTexture = (texture: Texture) => {
     gl.scissor(0, 0, w, h);
 }
 
+export function setMVP(m:Mat4) {
+    gl.uniformMatrix4fv(program.u_mvp, false, m);
+}
+
 export const beginRenderToMain = (x: number, y: number, px: number, py: number, angle: number, scale: number,
                                   w = gl.drawingBufferWidth,
                                   h = gl.drawingBufferHeight) => {
@@ -298,9 +323,18 @@ export const beginRenderToMain = (x: number, y: number, px: number, py: number, 
 export const flush = (_count = quadCount) => {
     if (_count) {
         gl.bindTexture(GL.TEXTURE_2D, quadTexture);
+        const streamBuffers = streamVB[streamVBf];
+        let vb = streamBuffers[streamVBi++];
+        if(!vb) {
+            vb = createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW);
+            streamBuffers.push(vb);
+        }
+        bindProgramBuffers(program, vb);
         gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, _count * floatSize));
+
         instancedArrays.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, _count);
         quadCount = 0;
+        ++stats.frameDrawCalls;
     }
 }
 

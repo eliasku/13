@@ -1,7 +1,7 @@
 import {ClientID} from "../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
-import {beginRenderToMain, clear, draw, flush, gl, setDrawZ} from "../graphics/draw2d";
+import {beginRenderToMain, draw, flush, gl, setDrawZ, setMVP} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
@@ -117,11 +117,19 @@ import {
 import {addToGrid, queryGridCollisions} from "./grid";
 import {getLumaColor32, getOrCreate, RGB} from "../utils/utils";
 import {drawText, drawTextShadowCenter, fnt} from "../graphics/font";
-import {fps} from "../utils/fpsMeter";
+import {stats} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai";
 import {addTextParticle, drawTextParticles, updateTextParticles} from "./textParticle";
 import {GL} from "../graphics/gl";
+import {
+    Mat4,
+    mat4_create,
+    mat4_makeXRotation,
+    mat4_makeZRotation,
+    mat4_mul,
+    mat4_orthoProjectionLH
+} from "../utils/mat4";
 
 const clients = new Map<ClientID, Client>()
 
@@ -1390,32 +1398,68 @@ const drawGame = () => {
         1 / gameCamera[2]
     );
 
+    {
+        const fboWidth = gl.drawingBufferWidth;
+        const fboHeight = gl.drawingBufferHeight;
+        const cameraCenterX = gameCamera[0] + fxRandomNorm(cameraShake / 5) | 0;
+        const cameraCenterY = gameCamera[1] + fxRandomNorm(cameraShake / 5) | 0;
+        const projection = mat4_create();
+        mat4_orthoProjectionLH(projection, 0, fboWidth, fboHeight, 0, 1e5, -1e5);
+        const mvp = mat4_create();
+        const translateNorm: Mat4 = new Float32Array([
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            -cameraCenterX, -cameraCenterY, 0, 1
+        ]);
+        const viewScale = 1 / gameCamera[2];
+        const translateScale: Mat4 = new Float32Array([
+            viewScale, 0, 0, 0,
+            0, viewScale * Math.sqrt(2), 0, 0,
+            0, 0, viewScale, 0,
+            fboWidth / 2, fboHeight / 2, 0, 1
+        ]);
+
+        const rotX = mat4_create();
+        const rotZ = mat4_create();
+        // const f = 0.5 + 0.5 * Math.sin(lastFrameTs);
+        const fx = fxRandomNorm(cameraShake / (2 * 50));
+        const fz = fxRandomNorm(cameraShake / (8 * 50));
+        mat4_makeXRotation(rotX, Math.PI / 4 + fx);
+        mat4_makeZRotation(rotZ, fz);
+        mat4_mul(mvp, rotZ, translateNorm);
+        mat4_mul(mvp, rotX, mvp);
+        mat4_mul(mvp, translateScale, mvp);
+        mat4_mul(mvp, projection, mvp);
+        setMVP(mvp);
+    }
+
     gl.clear(GL.DEPTH_BUFFER_BIT);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LESS);
     gl.depthMask(true);
 
-    setDrawZ(100);
+    setDrawZ(1);
     drawCrosshair();
 
-    setDrawZ(2);
+    setDrawZ(0);
     drawMapBackground();
 
-    setDrawZ(1);
     // skybox
+    setDrawZ(-1);
     draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, BOUNDS_SIZE + 2000, 1, 0x221100);
 
-    setDrawZ(3);
-
-    //gl.disable(GL.DEPTH_TEST);
+    flush();
+    // gl.disable(GL.DEPTH_TEST);
     gl.depthMask(false);
+    setDrawZ(0.1);
     drawObjects();
     drawMapOverlay();
 
-    setDrawZ(5);
+    //setDrawZ(2);
     renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
 
-    setDrawZ(100);
+    //setDrawZ(2);
 
     if (process.env.NODE_ENV === "development") {
         drawCollisions(drawList);
@@ -1432,6 +1476,7 @@ const drawGame = () => {
             drawAt(Img.logo_title, gameCamera[0] + fxRandomNorm(i4), y1 + fxRandomNorm(i4), scale, scale, angle, 1, add);
         }
     }
+
     updateTextParticles();
     drawTextParticles();
 
@@ -1450,14 +1495,14 @@ const drawOverlay = () => {
         drawMiniMap(state, trees, gl.drawingBufferWidth / scale, 0);
     }
 
-    drawText(fnt[0], "FPS: " + fps, 5, 2, 5, 0, 0);
-
     printStatus();
     if (process.env.NODE_ENV === "development") {
         printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 
     drawVirtualPad();
+
+    drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls}`, 5, 2, 5, 0, 0);
 
     flush();
 }
@@ -1503,11 +1548,11 @@ const collectVisibleActors = (...lists: Actor[][]) => {
 const drawMapBackground = () => {
     draw(mapTexture, 0, 0);
     // draw(img[Img.box_lt], 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
-    draw(img[Img.box_lt], 0, -OBJECT_RADIUS * 3 / WORLD_SCALE, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4 / WORLD_SCALE, 0.5, 0);
+    // draw(img[Img.box_lt], 0, -OBJECT_RADIUS * 3 / WORLD_SCALE, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4 / WORLD_SCALE, 0.5, 0);
 }
 
 const drawMapOverlay = () => {
-    draw(img[Img.box_lt], 0, BOUNDS_SIZE - OBJECT_RADIUS * 2 / WORLD_SCALE, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4 / WORLD_SCALE, 1, 0x333333);
+    // draw(img[Img.box_lt], 0, BOUNDS_SIZE - OBJECT_RADIUS * 2 / WORLD_SCALE, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4 / WORLD_SCALE, 1, 0x333333);
     // draw(img[Img.box_lt], -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
     // draw(img[Img.box_lt], boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
 }

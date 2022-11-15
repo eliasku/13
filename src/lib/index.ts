@@ -4,10 +4,10 @@ import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
 import {createSplashState, getScreenScale, resetGame, updateGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
-import {updateFpsMeter} from "./utils/fpsMeter";
+import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
 import {drawText, drawTextShadow, drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
-import {beginRenderToMain, flush, gl} from "./graphics/draw2d";
+import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {BuildVersion} from "../shared/types";
 
 const enum StartState {
@@ -100,7 +100,7 @@ const enum StartState {
 
     const raf = (ts: DOMHighResTimeStamp) => {
         ts /= 1000;
-        updateFpsMeter(ts);
+        updateStats(ts);
         //** DO FRAME **//
         updateSong(state != StartState.Connected);
         if (state > StartState.Loaded) {
@@ -111,6 +111,8 @@ const enum StartState {
         resetPrinter();
         updateInput();
         processMessages();
+
+        completeFrame();
         requestAnimationFrame(raf);
     }
 
