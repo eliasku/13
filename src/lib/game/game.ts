@@ -1426,10 +1426,12 @@ const drawGame = () => {
 
         const rotX = mat4_create();
         const rotZ = mat4_create();
-        const fsplashx = Math.sin(lastFrameTs);
-        const fsplashz = Math.cos(lastFrameTs);
-        const fx = fxRandomNorm(cameraShake / (2 * 50)) + 0.1 * fsplashx;
-        const fz = fxRandomNorm(cameraShake / (8 * 50)) + 0.05 * fsplashz;
+        let fx = fxRandomNorm(cameraShake / (2 * 50));
+        let fz = fxRandomNorm(cameraShake / (8 * 50));
+        if(!clientId) {
+            fx += 0.1 * Math.sin(lastFrameTs);
+            fz += 0.05 * Math.cos(lastFrameTs);
+        }
         mat4_makeXRotation(rotX, Math.PI / 4 + fx);
         mat4_makeZRotation(rotZ, fz);
         mat4_mul(mvp, rotZ, translateNorm);
@@ -1477,7 +1479,7 @@ const drawGame = () => {
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-            drawBillboard(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), y1 + 90 + fxRandomNorm(i4), 20, angle, scale, scale, 1, add);
+            drawBillboard(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), y1 + 130 + fxRandomNorm(i4), 40, angle, scale, scale, 1, add);
             drawBillboard(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 40, angle, scale, scale, 1, add);
         }
     }
