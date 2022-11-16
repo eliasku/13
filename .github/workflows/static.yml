@@ -44,16 +44,11 @@ jobs:
 
       - name: Build with Jekyll
         # Outputs to the './_site' directory by default
-        run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
+#        run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
+        run: bundle exec jekyll build
         working-directory: ./pages/site
         env:
           JEKYLL_ENV: production
-
-#      - uses: helaili/jekyll-action@v2
-#        with:
-#          jekyll_src: './pages/site'
-#          build_dir: './pages/site/_site'
-#          build_only: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
