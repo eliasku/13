@@ -1,3 +1,7 @@
+---
+permalink: help
+---
+
 # ‍☠️ Game 13 ‍☠️
 
 ## 📖 How to play

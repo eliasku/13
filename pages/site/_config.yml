@@ -1,5 +1,11 @@
 title: "13"
 domain: eliasku.github.io
 url: https://eliasku.github.io
-baseurl: /13/
+baseurl: /13
 markdown: kramdown
+twitter_username: eliaskuvoice
+github_username:  eliasku
+theme: minima
+plugins:
+  - jekyll-feed
+

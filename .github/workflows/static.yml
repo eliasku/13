@@ -37,14 +37,13 @@ jobs:
       - uses: helaili/jekyll-action@v2
         with:
           jekyll_src: './pages/site'
+#          build_dir: './pages/_site'
           build_only: true
-          gem_src: './pages'
-          build_dir: './pages/_site'
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: './pages/_site'
+          path: './pages/site/_site'
 
       - name: Deploy to GitHub Pages
         id: deployment
