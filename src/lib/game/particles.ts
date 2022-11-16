@@ -113,8 +113,7 @@ export const drawOpaqueParticles = () => {
     }
 }
 
-export const drawParticleShadows = () => {
-    setDrawZ(0.1);
+const drawListShadows = (particles: Particle[]) => {
     for (const p of particles) {
         if (p.z_ > 1) {
             const s = 0.5 - (p.z_ / WORLD_SCALE) / 256;
@@ -122,6 +121,12 @@ export const drawParticleShadows = () => {
             draw(img[Img.circle_4], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
         }
     }
+}
+
+export const drawParticleShadows = () => {
+    setDrawZ(0.1);
+    drawListShadows(particles);
+    drawListShadows(opaqueParticles);
 }
 
 export const drawParticles = () => {
