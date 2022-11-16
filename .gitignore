@@ -1,8 +1,5 @@
 .idea/
 node_modules/
 build/
-public/*.js
-public/*.js.map
-public/index*.html
-public/debug*.html
+public/
 server.js

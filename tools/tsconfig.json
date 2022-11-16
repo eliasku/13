@@ -7,7 +7,7 @@
     "removeComments": false,
     "preserveConstEnums": false,
     "sourceMap": false,
-    "outDir": "../build/server",
+    "outDir": "../build/tools",
     "lib": ["es2021"]
   },
   "include": ["./*.ts"],

@@ -7,7 +7,6 @@
     "removeComments": false,
     "preserveConstEnums": false,
     "sourceMap": true,
-//    "downlevelIteration": true,
     "outDir": "../build/server"
   },
   "include": ["src/**/*.ts"],

@@ -7,6 +7,7 @@
     "start": "node server.js",
     "build": "ts-node --esm --swc tools/build.ts",
     "watch": "ts-node --esm --swc tools/watch.ts",
+    "clean": "ts-node --esm --swc tools/clean.ts",
     "typecheck-client": "tsc -p tsconfig.json --noEmit",
     "typecheck-server": "tsc -p server/tsconfig.json --noEmit"
   },

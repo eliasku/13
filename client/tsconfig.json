@@ -7,7 +7,7 @@
     "removeComments": false,
     "preserveConstEnums": false,
     "sourceMap": true,
-    "outDir": "build/client"
+    "outDir": "../build/client"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]

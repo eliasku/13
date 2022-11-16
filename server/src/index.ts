@@ -1,7 +1,7 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {readFile} from "fs";
 
-import {BuildVersion, ClientID, MessageField, Request, ServerEventName} from "../../src/shared/types";
+import {BuildVersion, ClientID, MessageField, Request, ServerEventName} from "../../shared/types";
 
 interface ClientState {
     id_: ClientID;

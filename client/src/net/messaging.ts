@@ -6,7 +6,7 @@ import {
     MessageField,
     MessageType,
     PostMessagesResponse
-} from "../../shared/types";
+} from "../../../shared/types";
 import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
 import {iceServers} from "./iceServers";

@@ -8,7 +8,7 @@ import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
 import {drawText, drawTextShadow, drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {BuildVersion} from "../shared/types";
+import {BuildVersion} from "../../shared/types";
 
 const enum StartState {
     Loading = 0,

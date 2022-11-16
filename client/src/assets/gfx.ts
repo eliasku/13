@@ -298,7 +298,7 @@ export const loadAtlas = (): void => {
 
     pushSprite(72, 64);
     atlas.font = Font(72);
-    atlas.fillText("13", x + 72 / 2, y + 50);
+    atlas.fillText("13", x + 72 / 2, y + 51);
     cutAlpha();
     saveImage();
 

@@ -1,24 +1,14 @@
-import {execSync} from "child_process";
-import {copyFileSync, readFileSync, writeFileSync, mkdirSync} from "fs";
+import {copyFileSync, readFileSync, writeFileSync} from "fs";
 import {minify} from "terser";
 import {mergeProps} from "./mergeProps.js";
 import {build, BuildOptions} from 'esbuild';
+import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
 
-// create build dir
-try {
-    mkdirSync("build");
-} catch {
-}
+prepareFolders();
+copyPublicAssets();
+const buildVersion = resolveVersion();
 
 let report: string[] = [];
-let buildVersion = "0.0.0";
-
-try {
-    const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { version: string };
-    buildVersion = pkg.version;
-    console.info("build version: " + buildVersion);
-} catch {
-}
 
 const printSize = (label: string, ...files: string[]) => {
     const size = sz(...files);
@@ -37,15 +27,6 @@ function sz(...files: string[]) {
         }
     }
     return total;
-}
-
-{
-    // copy html
-    console.info("build html files");
-    execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o build/index.html html/index.html`);
-    copyFileSync("html/index4.html", "public/index4.html");
-    copyFileSync("html/debug4.html", "public/debug4.html");
-    copyFileSync("html/debug.html", "public/debug.html");
 }
 
 {
@@ -80,18 +61,18 @@ function sz(...files: string[]) {
             process.exit(1);
         }),
         build(addBuildOptions({
-            entryPoints: ["src/lib/index.ts"],
+            entryPoints: ["client/src/index.ts"],
             outfile: "build/client0.js",
-            tsconfig: "tsconfig.json",
+            tsconfig: "client/tsconfig.json",
             plugins: [],
         })).catch(e => {
             console.warn(e);
             process.exit(1);
         }),
         build(addBuildOptions({
-            entryPoints: ["src/lib/index.ts"],
+            entryPoints: ["client/src/index.ts"],
             outfile: "build/debug.js",
-            tsconfig: "tsconfig.json",
+            tsconfig: "client/tsconfig.json",
             plugins: [],
         }, true)).catch(e => {
             console.warn(e);
@@ -105,7 +86,7 @@ function sz(...files: string[]) {
 
 {
     console.info("merge properties");
-    mergeProps("tsconfig.json", "build/client0.js", "build/client1.js");
+    mergeProps("client/tsconfig.json", "build/client0.js", "build/client1.js");
     mergeProps("server/tsconfig.json", "build/server0.js", "build/server1.js");
     printSize("merge", "build/index.html", "build/client1.js", "build/server1.js");
 }
