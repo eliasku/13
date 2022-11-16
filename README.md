@@ -3,7 +3,7 @@
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
 
 <p align="center">
-<img src="./images/13logo.gif">
+<img src="./pages/13logo.gif">
 </p>
 
 - 🎖️ **7-th place** winner!
@@ -79,7 +79,7 @@ Destroy objects 🛢 | 📦 | 🪦 to get items
 - **Fast mobile device or desktop** to not lag other clients
 - `NodeJS` 16 or higher is required for server
 - WebAudio `AudioContext` support is required (available from Safari iOS 14.5, April 2021)
-- WebGL context and instanced arrays ANGLE extension are required
+- WebGL context is required
 - Modern JS syntax support
 - Checked in the latest Chrome, Safari, Firefox on iOS, Android and Mac.
 
@@ -92,18 +92,6 @@ Emoji Font [Twemoji Mozilla](https://github.com/mozilla/twemoji-colr/releases) i
 2D graphics rendering is started from [js13k-2d](https://github.com/kutuluk/js13k-2d) and highly rewritten for what I need.
 
 Sound Effects - [ZZFX](https://github.com/KilledByAPixel/ZzFX).
-
-## 💾 Build compression
-
-Shaders are minified in TypeScript source code by [GLSLX - online minifier](https://evanw.github.io/glslx/)
-
-1. [html-minifier](https://github.com/kangax/html-minifier) minifies `index.html`
-2. [esbuild](https://github.com/evanw/esbuild) creates bundle from TypeScript source-code
-3. Merge and rename properties which are non-overlapping in scope of Type.
-4. [terser](https://github.com/terser/terser) is used to minify and mangle javascript files
-5. Rehash properties for selected Web API classes (`WebGLRenderingContext`, `CanvasRenderingContext2D`, `AudioContext`, etc)
-6. Pack client with [RoadRoller](https://github.com/lifthrasiir/roadroller) is used for final compression
-7. Zip with [AdvanceCOMP](https://www.advancemame.it/comp-readme.html)
 
 ## Build instructions
 
