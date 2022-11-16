@@ -1,5 +1,5 @@
 import {img, Img} from "../assets/gfx";
-import {beginRender, draw, flush, gl, setupProjection} from "../graphics/draw2d";
+import {beginRender, draw, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
 import {atan2, hypot, PI, sqrt} from "../utils/math";
@@ -66,25 +66,33 @@ const updateParticleList = (list: Particle[], i = 0) => {
     }
 }
 
-export const updateParticles = () => updateParticleList(particles);
+export function updateParticles() {
+    updateParticleList(opaqueParticles);
+    updateParticleList(particles);
+}
 
 let seed0: number;
 let particles0: Particle[];
 let particles: Particle[] = [];
+let opaqueParticles0: Particle[];
+let opaqueParticles: Particle[] = [];
 let splats: number[] = [];
 
 export const saveParticles = () => {
     seed0 = _SEEDS[1];
     particles0 = particles.map(x => ({...x}));
+    opaqueParticles0 = opaqueParticles.map(x => ({...x}));
 }
 
 export const restoreParticles = () => {
     _SEEDS[1] = seed0;
     particles = particles0;
+    opaqueParticles = opaqueParticles0;
     splats.length = 0;
 }
 
 export const drawSplats = (list = splats, i = 0) => {
+    setDrawZ(0.1);
     for (; i < list.length;) {
         draw(
             img[list[i++]],
@@ -99,6 +107,23 @@ export const drawSplats = (list = splats, i = 0) => {
     }
 }
 
+export const drawOpaqueParticles = () => {
+    for (const p of opaqueParticles) {
+        drawParticle(p);
+    }
+}
+
+export const drawParticleShadows = () => {
+    setDrawZ(0.1);
+    for (const p of particles) {
+        if (p.z_ > 1) {
+            const s = 0.5 - (p.z_ / WORLD_SCALE) / 256;
+            const t = (1 - p.lifeTime_ / p.lifeMax_);
+            draw(img[Img.circle_4], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
+        }
+    }
+}
+
 export const drawParticles = () => {
     for (const p of particles) {
         drawParticle(p);
@@ -110,12 +135,8 @@ export const drawParticle = (p: Particle) => {
     const velocityAngle = p.followVelocity_ * atan2(p.v_ - p.w_, p.u_);
     const scale = p.scale_;
     const angle = velocityAngle + p.a_;
-    if (p.z_ > 1) {
-        const s = 0.5 - (p.z_ / WORLD_SCALE) / 256;
-        const t = (1 - p.lifeTime_ / p.lifeMax_);
-        draw(img[Img.circle_4], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
-    }
-    draw(img[p.img_], p.x_ / WORLD_SCALE, (p.y_ - p.z_) / WORLD_SCALE, angle, scale * velocityScale, scale, 1, p.color_);
+    setDrawZ(p.z_ / WORLD_SCALE + 0.1);
+    draw(img[p.img_], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, angle, scale * velocityScale, scale, 1, p.color_);
 }
 
 //////
@@ -138,7 +159,7 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
         particle.scale_ = (1 + random1()) / 2;
         particle.followVelocity_ = 1;
         particle.followScale_ = 0.02;
-        particles.push(particle);
+        opaqueParticles.push(particle);
     }
 }
 
@@ -152,7 +173,6 @@ export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
         addRadialVelocity(particle, random1n(PI), 64 - 128 * sqrt(random1()), random1(128));
         const i = random1() < .3 ? Img.particle_flesh0 : Img.particle_flesh1;
         particle.img_ = i;
-        particle.splashImg_ = i;
         particle.splashImg_ = i;
         particle.scale_ = 0.5 + random1(0.25);
         particle.splashSizeX_ = particle.scale_;
@@ -175,7 +195,7 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
     particle.r_ = random1n(0.25);
     particle.a_ = random1n(PI);
     addRadialVelocity(particle, random1n(PI), 16 + random1(32), 32);
-    particles.push(particle);
+    opaqueParticles.push(particle);
 }
 
 export const flushSplatsToMap = () => {
@@ -210,7 +230,7 @@ export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, color
         particle.followVelocity_ = 1;
         particle.followScale_ = 0.02;
         particle.lifeMax_ = 2 + random1(16);
-        particles.push(particle);
+        opaqueParticles.push(particle);
     }
 }
 

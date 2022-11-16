@@ -1,7 +1,7 @@
 import {ClientID} from "../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
-import {beginRenderToMain, draw, flush, gl, setDrawZ, setMVP} from "../graphics/draw2d";
+import {beginRenderToMain, draw, drawBillboard, flush, gl, setDrawZ, setMVP} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
@@ -66,8 +66,8 @@ import {
     addBoneParticles,
     addFleshParticles,
     addImpactParticles,
-    addShellParticle,
-    drawParticles,
+    addShellParticle, drawOpaqueParticles,
+    drawParticles, drawParticleShadows,
     drawSplats,
     flushSplatsToMap,
     restoreParticles,
@@ -1384,6 +1384,10 @@ const endPrediction = () => {
 /*** DRAWING ***/
 
 const drawGame = () => {
+    // prepare objects draw list first
+    collectVisibleActors(trees, ...state.actors_);
+    drawList.sort((a, b) => WORLD_BOUNDS_SIZE * (a.y_ - b.y_) + a.x_ - b.x_);
+
     beginFogRender();
     renderFogObjects(state.actors_[ActorType.Player]);
     renderFogObjects(state.actors_[ActorType.Bullet]);
@@ -1422,9 +1426,10 @@ const drawGame = () => {
 
         const rotX = mat4_create();
         const rotZ = mat4_create();
-        // const f = 0.5 + 0.5 * Math.sin(lastFrameTs);
-        const fx = fxRandomNorm(cameraShake / (2 * 50));
-        const fz = fxRandomNorm(cameraShake / (8 * 50));
+        const fsplashx = Math.sin(lastFrameTs);
+        const fsplashz = Math.cos(lastFrameTs);
+        const fx = fxRandomNorm(cameraShake / (2 * 50)) + 0.1 * fsplashx;
+        const fz = fxRandomNorm(cameraShake / (8 * 50)) + 0.05 * fsplashz;
         mat4_makeXRotation(rotX, Math.PI / 4 + fx);
         mat4_makeZRotation(rotZ, fz);
         mat4_mul(mvp, rotZ, translateNorm);
@@ -1439,24 +1444,24 @@ const drawGame = () => {
     gl.depthFunc(GL.LESS);
     gl.depthMask(true);
 
-    setDrawZ(1);
     drawCrosshair();
+    drawOpaqueParticles();
+    drawOpaqueObjects();
 
     setDrawZ(0);
-    drawMapBackground();
+    draw(mapTexture, 0, 0);
 
     // skybox
     setDrawZ(-1);
     draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, BOUNDS_SIZE + 2000, 1, 0x221100);
 
     flush();
-    // gl.disable(GL.DEPTH_TEST);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
     gl.depthMask(false);
-    setDrawZ(0.1);
     drawObjects();
-    drawMapOverlay();
 
-    //setDrawZ(2);
+    setDrawZ(0.1);
     renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
 
     //setDrawZ(2);
@@ -1472,11 +1477,14 @@ const drawGame = () => {
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-            drawAt(Img.logo_start, gameCamera[0] + fxRandomNorm(i4), 90 + y1 + fxRandomNorm(i4), scale, scale, angle, 1, add);
-            drawAt(Img.logo_title, gameCamera[0] + fxRandomNorm(i4), y1 + fxRandomNorm(i4), scale, scale, angle, 1, add);
+            drawBillboard(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), y1 + 90 + fxRandomNorm(i4), 20, angle, scale, scale, 1, add);
+            drawBillboard(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 40, angle, scale, scale, 1, add);
         }
     }
+    flush();
 
+    gl.disable(GL.DEPTH_TEST);
+    setDrawZ(1);
     updateTextParticles();
     drawTextParticles();
 
@@ -1545,19 +1553,8 @@ const collectVisibleActors = (...lists: Actor[][]) => {
     }
 }
 
-const drawMapBackground = () => {
-    draw(mapTexture, 0, 0);
-    // draw(img[Img.box_lt], 0, -objectRadiusUnit * 5, 0, boundsSize + 2, objectRadiusUnit * 4, 1, 0x666666);
-    // draw(img[Img.box_lt], 0, -OBJECT_RADIUS * 3 / WORLD_SCALE, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4 / WORLD_SCALE, 0.5, 0);
-}
-
-const drawMapOverlay = () => {
-    // draw(img[Img.box_lt], 0, BOUNDS_SIZE - OBJECT_RADIUS * 2 / WORLD_SCALE, 0, BOUNDS_SIZE + 2, OBJECT_RADIUS * 4 / WORLD_SCALE, 1, 0x333333);
-    // draw(img[Img.box_lt], -objectRadiusUnit * 2, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
-    // draw(img[Img.box_lt], boundsSize, -objectRadiusUnit * 2, 0, objectRadiusUnit * 2, boundsSize + objectRadiusUnit * 4, 1, 0x666666);
-}
-
 const drawCrosshair = () => {
+    setDrawZ(1);
     const p0 = getMyPlayer();
     if (p0 && (viewX || viewY)) {
         const len = 4 + sin(2 * lastFrameTs) * cos(4 * lastFrameTs) / 4 + (p0.detune_ / 8) + p0.s_ / 10;
@@ -1589,6 +1586,37 @@ const drawItem = (item: Actor) => {
     }
 }
 
+const drawBulletOpaque = (actor: Actor) => {
+    // const BULLET_LENGTH = [0.2, 2, 1, 8, 512];
+    // const BULLET_LENGTH_LIGHT = [0.1, 2, 2, 2, 512];
+    // const BULLET_SIZE = [6, 3 / 2, 2, 4, 12];
+    // const BULLET_PULSE = [0, 0, 1, 0, 0];
+    // const BULLET_IMAGE = [
+    //     Img.circle_4_60p, Img.circle_4_70p, Img.box,
+    //     Img.circle_4_60p, Img.circle_4_70p, Img.box,
+    //     Img.circle_4_60p, Img.circle_4_70p, Img.box,
+    //     Img.box_r, Img.box_r, Img.box_r,
+    //     Img.box_l, Img.box_l, Img.box_l,
+    // ];
+    //
+    // const x = actor.x_ / WORLD_SCALE;
+    // const y = actor.y_ / WORLD_SCALE;
+    // const z = actor.z_ / WORLD_SCALE;
+    // const a = atan2(actor.v_, actor.u_);
+    // const type = actor.btn_;
+    // const color = fxRandElement(BULLET_COLOR[type] as number[]);
+    // const longing = BULLET_LENGTH[type];
+    // const longing2 = BULLET_LENGTH_LIGHT[type];
+    // const sz = BULLET_SIZE[type] +
+    //     BULLET_PULSE[type] * sin(32 * lastFrameTs + actor.anim0_) / 2;
+    // let res = type * 3;
+    //
+    // setDrawZ(z);
+    // // draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
+    // draw(img[BULLET_IMAGE[res++]], x, y + 0.1, a, sz * longing / 2, sz / 2, 1, color);
+    // draw(img[BULLET_IMAGE[res++]], x, y + 0.1, a, 2 * longing2, 2);
+}
+
 const drawBullet = (actor: Actor) => {
     const BULLET_LENGTH = [0.2, 2, 1, 8, 512];
     const BULLET_LENGTH_LIGHT = [0.1, 2, 2, 2, 512];
@@ -1603,7 +1631,8 @@ const drawBullet = (actor: Actor) => {
     ];
 
     const x = actor.x_ / WORLD_SCALE;
-    const y = (actor.y_ - actor.z_) / WORLD_SCALE;
+    const y = actor.y_ / WORLD_SCALE;
+    const z = actor.z_ / WORLD_SCALE;
     const a = atan2(actor.v_, actor.u_);
     const type = actor.btn_;
     const color = fxRandElement(BULLET_COLOR[type] as number[]);
@@ -1613,13 +1642,95 @@ const drawBullet = (actor: Actor) => {
         BULLET_PULSE[type] * sin(32 * lastFrameTs + actor.anim0_) / 2;
     let res = type * 3;
 
-    drawAt(BULLET_IMAGE[res++], x, y, sz * longing, sz, a, 0.1, COLOR_WHITE, 1);
-    drawAt(BULLET_IMAGE[res++], x, y, sz * longing / 2, sz / 2, a, 1, color);
-    drawAt(BULLET_IMAGE[res++], x, y, 2 * longing2, 2, a);
+    setDrawZ(z);
+    draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
+    draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing / 2, sz / 2, 1, color);
+    draw(img[BULLET_IMAGE[res++]], x, y, a, 2 * longing2, 2);
 }
 
 const drawAt = (i: Img, x: number, y: number, sx: number = 1, sy: number = 1, rotation?: number, alpha?: number, color?: number, additive?: number, offset?: number) => {
     draw(img[i], x, y, rotation, sx, sy, alpha, color, additive, offset);
+}
+
+function drawPlayerOpaque(p: Actor): void {
+    const co = getHitColorOffset(p.animHit_);
+    const basePhase = p.anim0_ + lastFrameTs;
+    const colorC = COLOR_BODY[p.anim0_ % COLOR_BODY.length];
+    const colorArm = colorC;
+    const colorBody = colorC;
+    const x = p.x_ / WORLD_SCALE;
+    const y = p.y_ / WORLD_SCALE;
+    const z = p.z_ / WORLD_SCALE;
+    const speed = hypot(p.u_, p.v_, p.w_);
+    const runK = (p.btn_ & ControlsFlag.Run) ? 1 : 0.8;
+    const walk = min(1, speed / 100);
+    let base = -0.5 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
+    const idle_base = (1 - walk) * ((1 + sin(10 * basePhase) ** 2) / 4);
+    base = base + idle_base;
+    const leg1 = 5 - 4 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
+    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase + PI));
+
+    /////
+
+    const wpn = weapons[p.weapon_];
+    let viewAngle = unpackAngleByte(p.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
+    let weaponX = x;
+    let weaponY = y;
+    let weaponZ = z + PLAYER_HANDS_PX_Z;
+    let weaponAngle = atan2(
+        y + 1000 * sin(viewAngle) - weaponY + weaponZ,
+        x + 1000 * cos(viewAngle) - weaponX
+    );
+    let weaponBack = 0;
+    if (weaponAngle < -0.2 && weaponAngle > -PI + 0.2) {
+        weaponBack = 1;
+        //weaponY -= 16 * 4;
+    }
+    const A = sin(weaponAngle - PI);
+    let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
+    let wx = 1;
+    if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
+        wx = -1;
+    }
+    if (wpn.handsAnim_) {
+        // const t = max(0, (p.s - 0.8) * 5);
+        // anim := 1 -> 0
+        const t = min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : max(0, (p.s_ / wpn.reloadTime_ - 0.5) * 2));
+        wd += sin(t * PI) * wpn.handsAnim_;
+        weaponAngle -= -wx * PI * 0.25 * sin((1 - (1 - t) ** 2) * PI2);
+    }
+    weaponX += wd * cos(weaponAngle);
+    weaponY += wd * sin(weaponAngle);
+
+    drawBillboard(img[Img.box_t], x - 3, y, z + 5, 0, 2, leg1, 1, colorArm, 0, co);
+    drawBillboard(img[Img.box_t], x + 3, y, z + 5, 0, 2, leg2, 1, colorArm, 0, co);
+    drawBillboard(img[Img.box], x, y, z + 7 - base, 0, 8, 6, 1, colorBody, 0, co);
+
+    // DRAW HANDS
+    const rArmX = x + 4;
+    const lArmX = x - 4;
+    const armAY = y - z - PLAYER_HANDS_PX_Z + base * 2;
+    const weaponAY = weaponY - weaponZ;
+    const rArmRot = atan2(-armAY + weaponAY, weaponX - rArmX);
+    const lArmRot = atan2(-armAY + weaponAY, weaponX - lArmX);
+    const lArmLen = hypot(weaponX - lArmX, weaponAY - armAY) - 1;
+    const rArmLen = hypot(weaponX - rArmX, weaponAY - armAY) - 1;
+
+    if (p.weapon_) {
+        drawBillboard(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, rArmRot, rArmLen, 2, 1, colorArm, 0, co);
+        drawBillboard(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, lArmRot, lArmLen, 2, 1, colorArm, 0, co);
+    } else {
+        let sw1 = walk * sin(20 * runK * basePhase);
+        let sw2 = walk * cos(20 * runK * basePhase);
+        let armLen = 5;
+        if (!p.client_ && p.hp_ < 10 && !p.sp_) {
+            sw1 -= PI / 2;
+            sw2 += PI / 2;
+            armLen += 4;
+        }
+        drawBillboard(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, sw1 + PI / 4, armLen, 2, 1, colorArm, 0, co);
+        drawBillboard(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, sw2 + PI - PI / 4, armLen, 2, 1, colorArm, 0, co);
+    }
 }
 
 const drawPlayer = (p: Actor): void => {
@@ -1630,7 +1741,8 @@ const drawPlayer = (p: Actor): void => {
     const colorArm = colorC;
     const colorBody = colorC;
     const x = p.x_ / WORLD_SCALE;
-    const y = (p.y_ - p.z_) / WORLD_SCALE;
+    const y = p.y_ / WORLD_SCALE;
+    const z = p.z_ / WORLD_SCALE;
     const speed = hypot(p.u_, p.v_, p.w_);
     const runK = (p.btn_ & ControlsFlag.Run) ? 1 : 0.8;
     const walk = min(1, speed / 100);
@@ -1648,9 +1760,10 @@ const drawPlayer = (p: Actor): void => {
     const weaponBaseScaleX = wpn.gfxSx_;
     const weaponBaseScaleY = 1;
     let weaponX = x;
-    let weaponY = y - PLAYER_HANDS_PX_Z;
+    let weaponY = y;
+    let weaponZ = z + PLAYER_HANDS_PX_Z;
     let weaponAngle = atan2(
-        y + 1000 * sin(viewAngle) - weaponY,
+        y + 1000 * sin(viewAngle) - weaponY + weaponZ,
         x + 1000 * cos(viewAngle) - weaponX
     );
     let weaponSX = weaponBaseScaleX;
@@ -1684,46 +1797,47 @@ const drawPlayer = (p: Actor): void => {
     weaponAngle += weaponBaseAngle;
 
     if (weaponBack && p.weapon_) {
-        drawAt(Img.weapon0 + p.weapon_, weaponX, weaponY, weaponSX, weaponSY, weaponAngle);
+        drawBillboard(img[Img.weapon0 + p.weapon_], weaponX, weaponY - 1, weaponZ, weaponAngle, weaponSX, weaponSY);
     }
-
-    drawAt(Img.box_t, x - 3, y - 5, 2, leg1, 0, 1, colorArm, 0, co);
-    drawAt(Img.box_t, x + 3, y - 5, 2, leg2, 0, 1, colorArm, 0, co);
-    drawAt(Img.box, x, y - 7 + base, 8, 6, 0, 1, colorBody, 0, co);
+    //
+    // drawBillboard(img[Img.box_t], x - 3, y, z + 5, 0, 2, leg1, 1, colorArm, 0, co);
+    // drawBillboard(img[Img.box_t], x + 3, y, z + 5, 0, 2, leg2, 1, colorArm, 0, co);
+    // drawBillboard(img[Img.box], x, y, z + 7 - base, 0, 8, 6, 1, colorBody, 0, co);
 
     {
         const s = p.w_ / 500;
         const a = p.u_ / 500;
-        drawAt(imgHead, x, y - 16 + base * 2, 1 - s, 1 + s, a, 1, COLOR_WHITE, 0, co);
+        drawBillboard(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, COLOR_WHITE, 0, co);
     }
 
     // DRAW HANDS
     const rArmX = x + 4;
     const lArmX = x - 4;
-    const armY = y - PLAYER_HANDS_PX_Z + base * 2;
-    const rArmRot = atan2(weaponY - armY, weaponX - rArmX);
-    const lArmRot = atan2(weaponY - armY, weaponX - lArmX);
-    const lArmLen = hypot(weaponX - lArmX, weaponY - armY) - 1;
-    const rArmLen = hypot(weaponX - rArmX, weaponY - armY) - 1;
-
-    if (p.weapon_) {
-        drawAt(Img.box_l, x + 4, y - 10 + base, rArmLen, 2, rArmRot, 1, colorArm, 0, co);
-        drawAt(Img.box_l, x - 4, y - 10 + base, lArmLen, 2, lArmRot, 1, colorArm, 0, co);
-    } else {
-        let sw1 = walk * sin(20 * runK * basePhase);
-        let sw2 = walk * cos(20 * runK * basePhase);
-        let armLen = 5;
-        if (!p.client_ && p.hp_ < 10 && !p.sp_) {
-            sw1 -= PI / 2;
-            sw2 += PI / 2;
-            armLen += 4;
-        }
-        drawAt(Img.box_l, x + 4, y - 10 + base, armLen, 2, sw1 + PI / 4, 1, colorArm, 0, co);
-        drawAt(Img.box_l, x - 4, y - 10 + base, armLen, 2, sw2 + PI - PI / 4, 1, colorArm, 0, co);
-    }
+    const armAY = y - z - PLAYER_HANDS_PX_Z + base * 2;
+    const weaponAY = weaponY - weaponZ;
+    const rArmRot = atan2(-armAY + weaponAY, weaponX - rArmX);
+    const lArmRot = atan2(-armAY + weaponAY, weaponX - lArmX);
+    const lArmLen = hypot(weaponX - lArmX, weaponAY - armAY) - 1;
+    const rArmLen = hypot(weaponX - rArmX, weaponAY - armAY) - 1;
+    //
+    // if (p.weapon_) {
+    //     drawBillboard(img[Img.box_l], x + 4, y, z + 10 - base, rArmRot, rArmLen, 2, 1, colorArm, 0, co);
+    //     drawBillboard(img[Img.box_l], x - 4, y, z + 10 - base, lArmRot, lArmLen, 2, 1, colorArm, 0, co);
+    // } else {
+    //     let sw1 = walk * sin(20 * runK * basePhase);
+    //     let sw2 = walk * cos(20 * runK * basePhase);
+    //     let armLen = 5;
+    //     if (!p.client_ && p.hp_ < 10 && !p.sp_) {
+    //         sw1 -= PI / 2;
+    //         sw2 += PI / 2;
+    //         armLen += 4;
+    //     }
+    //     drawBillboard(img[Img.box_l], x + 4, y, z + 10 - base, sw1 + PI / 4, armLen, 2, 1, colorArm, 0, co);
+    //     drawBillboard(img[Img.box_l], x - 4, y, z + 10 - base, sw2 + PI - PI / 4, armLen, 2, 1, colorArm, 0, co);
+    // }
 
     if (!weaponBack && p.weapon_) {
-        drawAt(Img.weapon0 + p.weapon_, weaponX, weaponY, weaponSX, weaponSY, weaponAngle);
+        drawBillboard(img[Img.weapon0 + p.weapon_], weaponX, weaponY + 1, weaponZ, weaponAngle, weaponSX, weaponSY);
     }
 
     if (p.client_ > 0 && p.client_ !== clientId) {
@@ -1738,17 +1852,26 @@ const getHitColorOffset = (anim: number) =>
     getLumaColor32(0xFF * min(1, 2 * anim / ANIM_HIT_MAX));
 
 const drawObject = (p: Actor, id: Img, z: number = 0, scale: number = 1) =>
-    drawAt(id, p.x_ / WORLD_SCALE, (p.y_ - p.z_) / WORLD_SCALE - z, scale, scale, 0, 1, COLOR_WHITE, 0, getHitColorOffset(p.animHit_));
+    drawBillboard(img[id], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.z_ / WORLD_SCALE + z, 0, scale, scale, 1, COLOR_WHITE, 0, getHitColorOffset(p.animHit_));
 
 const drawBarrel = (p: Actor): void => drawObject(p, p.btn_ + Img.barrel0);
 const drawTree = (p: Actor): void => drawObject(p, p.btn_ + Img.tree0);
 
-const DRAW_BY_TYPE: ((p: Actor) => void)[] = [
+type ActorDrawFunction = (p: Actor) => void;
+const DRAW_BY_TYPE: (ActorDrawFunction)[] = [
     drawPlayer,
     drawBarrel,
     drawBullet,
     drawItem,
     drawTree,
+];
+
+const DRAW_OPAQUE_BY_TYPE: (ActorDrawFunction|undefined)[] = [
+    drawPlayerOpaque,
+    ,
+    drawBulletOpaque,
+    ,
+    ,
 ];
 
 const drawHotUsableHint = () => {
@@ -1767,13 +1890,20 @@ const drawHotUsableHint = () => {
     }
 };
 
+function drawOpaqueObjects() {
+    for (let i = drawList.length - 1; i >= 0; --i) {
+        const actor = drawList[i];
+        DRAW_OPAQUE_BY_TYPE[actor.type_]?.(actor);
+    }
+}
+
 const drawObjects = () => {
     drawSplats();
     drawParticles();
-    collectVisibleActors(trees, ...state.actors_);
-    // TODO: check sort, scale to floats and compare
-    drawList.sort((a, b) => WORLD_BOUNDS_SIZE * (a.y_ - b.y_) + a.x_ - b.x_);
+    setDrawZ(0.1);
+
     drawShadows();
+    drawParticleShadows();
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor.type_](actor);
     }

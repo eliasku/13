@@ -3,8 +3,7 @@
 ### Graphics
 
 - Font glyph combined with shadow
-- Render pass allow Z-buffer usage
-- Change Cross-hair to be opaque 
+- Render more depth
 
 ## 1.0.4
 

@@ -3,15 +3,10 @@ import {cos, sin} from "../utils/math";
 import {
     SHADER_FRAGMENT,
     SHADER_A_COLOR_MUL,
-    SHADER_A_LOCATION,
     SHADER_U_MVP,
     SHADER_A_COLOR_ADD,
-    SHADER_A_ROTATION,
-    SHADER_A_SCALE,
-    SHADER_A_UVS,
     SHADER_U_TEX,
-    SHADER_A_Z,
-    SHADER_VERTEX, SHADER_A_ANCHOR, SHADER_A_TRANSLATION
+    SHADER_VERTEX, SHADER_A_POSITION, SHADER_A_TEX_COORD
 } from "./shader";
 import {Mat4} from "../utils/mat4";
 import {stats} from "../utils/fpsMeter";
@@ -24,13 +19,13 @@ export const gl = c.getContext("webgl", {
     // stencil: false
 });
 
-const instancedArrays = gl.getExtension('ANGLE_instanced_arrays')!;
-
-if (process.env.NODE_ENV === "development") {
-    if (!gl || !instancedArrays) {
-        alert("WebGL is required");
-    }
-}
+// const instancedArrays = gl.getExtension('ANGLE_instanced_arrays')!;
+//
+// if (process.env.NODE_ENV === "development") {
+//     if (!gl || !instancedArrays) {
+//         alert("WebGL is required");
+//     }
+// }
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
@@ -49,26 +44,22 @@ const maxBatch = 65535;
 // const depth = 1;
 // TODO: move to scope
 
-const floatSize = 2 + 2 + 1 + 1 + 2 + 4 + 1 + 1 + 1;
+const floatSize = 3 + 2 + 2;
 const byteSize = floatSize * 4;
 // maxBatch * byteSize
 // const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
 // TODO:
 // const floatView = new Float32Array(1 << 20);
-const floatView = new Float32Array(1 << 18);
-const uintView = new Uint32Array(floatView.buffer);
+const vertexF32 = new Float32Array(1 << 18);
+const vertexU32 = new Uint32Array(vertexF32.buffer);
+const indexData = new Uint16Array(1 << 16);
 
 interface Program {
     program: WebGLProgram;
     u_mvp: WebGLUniformLocation;
     u_tex0: WebGLUniformLocation;
-    a_location: GLint,
-    a_anchor: GLint,
-    a_scale: GLint,
-    a_translation: GLint,
-    a_uvs: GLint,
-    a_z: GLint;
-    a_rotation: GLint;
+    a_position: GLint,
+    a_texCoord: GLint,
     a_colorMul: GLint;
     a_colorAdd: GLint;
 }
@@ -95,12 +86,9 @@ const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
     return buffer;
 }
 
-const bindAttrib = (name: GLint, size: number, stride: number, divisor: number, offset: number, type: GLenum, norm: boolean) => {
+const bindAttrib = (name: GLint, size: number, stride: number, offset: number, type: GLenum, norm: boolean) => {
     gl.enableVertexAttribArray(name);
     gl.vertexAttribPointer(name, size, type, norm, stride, offset);
-    if (divisor) {
-        instancedArrays.vertexAttribDivisorANGLE(name, divisor);
-    }
 }
 
 const createProgram = (vs: string, fs: string): WebGLProgram => {
@@ -128,53 +116,52 @@ const createProgram = (vs: string, fs: string): WebGLProgram => {
 let quadCount = 0;
 let quadTexture: WebGLTexture;
 const gl_program = createProgram(SHADER_VERTEX, SHADER_FRAGMENT);
-const program = {
+const program: Program = {
     program: gl_program,
     u_mvp: gl.getUniformLocation(gl_program, SHADER_U_MVP),
     u_tex0: gl.getUniformLocation(gl_program, SHADER_U_TEX),
 
-    a_location: gl.getAttribLocation(gl_program, SHADER_A_LOCATION),
-    a_anchor: gl.getAttribLocation(gl_program, SHADER_A_ANCHOR),
-    a_rotation: gl.getAttribLocation(gl_program, SHADER_A_ROTATION),
-    a_scale: gl.getAttribLocation(gl_program, SHADER_A_SCALE),
-    a_translation: gl.getAttribLocation(gl_program, SHADER_A_TRANSLATION),
-    a_uvs: gl.getAttribLocation(gl_program, SHADER_A_UVS),
-    a_z: gl.getAttribLocation(gl_program, SHADER_A_Z),
+    a_position: gl.getAttribLocation(gl_program, SHADER_A_POSITION),
+    a_texCoord: gl.getAttribLocation(gl_program, SHADER_A_TEX_COORD),
     a_colorMul: gl.getAttribLocation(gl_program, SHADER_A_COLOR_MUL),
     a_colorAdd: gl.getAttribLocation(gl_program, SHADER_A_COLOR_ADD),
 };
 
-// static quad indices and vertices
-const instanceIB = createBuffer(GL.ELEMENT_ARRAY_BUFFER, new Uint8Array([0, 1, 2, 2, 1, 3]), GL.STATIC_DRAW);
-const instanceVB = createBuffer(GL.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), GL.STATIC_DRAW);
-
-bindAttrib(program.a_location, 2, 0, 0, 0, GL.FLOAT, false);
-
-// dynamic buffer
-const streamVB = [
-    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
-    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
-    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
-    [createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW)],
-];
-let streamVBi = 0;
-let streamVBf = 0;
-
-export const completeFrame = () => {
-    streamVBi = 0;
-    streamVBf = (streamVBf + 1) & 3;
+interface DynamicBuffers {
+    vb: WebGLBuffer;
+    ib: WebGLBuffer;
 }
 
-function bindProgramBuffers(program: Program, buffer: WebGLBuffer) {
-    gl.bindBuffer(GL.ARRAY_BUFFER, buffer);
-    bindAttrib(program.a_anchor, 2, byteSize, 1, 0, GL.FLOAT, false);
-    bindAttrib(program.a_scale, 2, byteSize, 1, 8, GL.FLOAT, false);
-    bindAttrib(program.a_rotation, 1, byteSize, 1, 16, GL.FLOAT, false);
-    bindAttrib(program.a_z, 1, byteSize, 1, 20, GL.FLOAT, false);
-    bindAttrib(program.a_translation, 2, byteSize, 1, 24, GL.FLOAT, false);
-    bindAttrib(program.a_uvs, 4, byteSize, 1, 32, GL.FLOAT, false);
-    bindAttrib(program.a_colorMul, 4, byteSize, 1, 48, GL.UNSIGNED_BYTE, true);
-    bindAttrib(program.a_colorAdd, 4, byteSize, 1, 52, GL.UNSIGNED_BYTE, true);
+function createIndexedBuffer(vertexData: ArrayBufferLike, indexData: ArrayBufferLike, usage: GLint = GL.STREAM_DRAW) {
+    return {
+        vb: createBuffer(GL.ARRAY_BUFFER, vertexData, usage),
+        ib: createBuffer(GL.ELEMENT_ARRAY_BUFFER, indexData, usage),
+    };
+}
+
+// dynamic buffer
+const dynamicBuffers: DynamicBuffers[][] = [
+    [createIndexedBuffer(vertexF32, indexData)],
+    [createIndexedBuffer(vertexF32, indexData)],
+    [createIndexedBuffer(vertexF32, indexData)],
+    [createIndexedBuffer(vertexF32, indexData)],
+];
+
+let dynamicBufferIndex = 0;
+let dynamicBufferFrame = 0;
+
+export const completeFrame = () => {
+    dynamicBufferIndex = 0;
+    dynamicBufferFrame = (dynamicBufferFrame + 1) & 3;
+}
+
+function bindProgramBuffers(program: Program, buffers: DynamicBuffers) {
+    gl.bindBuffer(GL.ARRAY_BUFFER, buffers.vb);
+    gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffers.ib);
+    bindAttrib(program.a_position, 3, byteSize, 0, GL.FLOAT, false);
+    bindAttrib(program.a_texCoord, 2, byteSize, 12, GL.FLOAT, false);
+    bindAttrib(program.a_colorMul, 4, byteSize, 20, GL.UNSIGNED_BYTE, true);
+    bindAttrib(program.a_colorAdd, 4, byteSize, 24, GL.UNSIGNED_BYTE, true);
 }
 
 export interface Texture {
@@ -305,7 +292,7 @@ export const beginRenderToTexture = (texture: Texture) => {
     gl.scissor(0, 0, w, h);
 }
 
-export function setMVP(m:Mat4) {
+export function setMVP(m: Mat4) {
     gl.uniformMatrix4fv(program.u_mvp, false, m);
 }
 
@@ -320,19 +307,25 @@ export const beginRenderToMain = (x: number, y: number, px: number, py: number, 
     gl.scissor(0, 0, w, h);
 }
 
+function nextDynamicBuffer(): DynamicBuffers {
+    const streamBuffers = dynamicBuffers[dynamicBufferFrame];
+    let dynamicBuffer = streamBuffers[dynamicBufferIndex++];
+    if (!dynamicBuffer) {
+        dynamicBuffer = createIndexedBuffer(vertexF32, indexData);
+        streamBuffers.push(dynamicBuffer);
+    }
+    return dynamicBuffer;
+}
+
 export const flush = (_count = quadCount) => {
     if (_count) {
         gl.bindTexture(GL.TEXTURE_2D, quadTexture);
-        const streamBuffers = streamVB[streamVBf];
-        let vb = streamBuffers[streamVBi++];
-        if(!vb) {
-            vb = createBuffer(GL.ARRAY_BUFFER, floatView, GL.STREAM_DRAW);
-            streamBuffers.push(vb);
-        }
-        bindProgramBuffers(program, vb);
-        gl.bufferSubData(GL.ARRAY_BUFFER, 0, floatView.subarray(0, _count * floatSize));
+        const streamBuffers = nextDynamicBuffer();
+        bindProgramBuffers(program, streamBuffers);
+        gl.bufferSubData(GL.ARRAY_BUFFER, 0, vertexF32.subarray(0, _count * floatSize * 4));
+        gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, 0, indexData.subarray(0, _count * 6));
 
-        instancedArrays.drawElementsInstancedANGLE(GL.TRIANGLES, 6, GL.UNSIGNED_BYTE, 0, _count);
+        gl.drawElements(GL.TRIANGLES, 6 * _count, GL.UNSIGNED_SHORT, 0);
         quadCount = 0;
         ++stats.frameDrawCalls;
     }
@@ -346,19 +339,147 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
         flush();
         quadTexture = texture.texture_;
     }
-    let i = quadCount++ * floatSize;
-    floatView[i++] = texture.x_;
-    floatView[i++] = texture.y_;
-    floatView[i++] = sx * texture.w_;
-    floatView[i++] = sy * texture.h_;
-    floatView[i++] = r;
-    floatView[i++] = drawZ;
-    floatView[i++] = x;
-    floatView[i++] = y;
-    floatView[i++] = texture.u0_;
-    floatView[i++] = texture.v0_;
-    floatView[i++] = texture.u1_;
-    floatView[i++] = texture.v1_;
-    uintView[i++] = (((alpha * 0xFF) << 24) | color) >>> 0;
-    uintView[i++] = (((additive * 0xFF) << 24) | offset) >>> 0;
+    const baseVertex = quadCount * 4;
+    let indexIdx = quadCount * 6;
+    let i = baseVertex * floatSize;
+    ++quadCount;
+
+    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+
+    // const anchorX = 0;
+    // const anchorY = 0;
+    const anchorX = texture.x_;
+    const anchorY = texture.y_;
+    const sizeX = texture.w_ * sx;
+    const sizeY = texture.h_ * sy;
+    // const cs = 1;
+    const cs = cos(r);
+    // const sn = 0;
+    const sn = sin(r);
+    const x0 = -anchorX * sizeX;
+    // const x0 = 0;
+    const x1 = x0 + sizeX;
+    // const x1 =  sizeX;
+    const y0 = -anchorY * sizeY;
+    // const y0 = 0;
+    const y1 = y0 + sizeY;
+    // const y1 = sizeY;
+    const u0 = texture.u0_;
+    const v0 = texture.v0_;
+    const u1 = u0 + texture.u1_;
+    const v1 = v0 + texture.v1_;
+
+    vertexF32[i++] = x0 * cs - y0 * sn + x;
+    vertexF32[i++] = x0 * sn + y0 * cs + y;
+    vertexF32[i++] = drawZ;
+    vertexF32[i++] = u0
+    vertexF32[i++] = v0;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    vertexF32[i++] = x1 * cs - y0 * sn + x;
+    vertexF32[i++] = x1 * sn + y0 * cs + y;
+    vertexF32[i++] = drawZ;
+    vertexF32[i++] = u1
+    vertexF32[i++] = v0;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    vertexF32[i++] = x1 * cs - y1 * sn + x;
+    vertexF32[i++] = x1 * sn + y1 * cs + y;
+    vertexF32[i++] = drawZ;
+    vertexF32[i++] = u1
+    vertexF32[i++] = v1;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    vertexF32[i++] = x0 * cs - y1 * sn + x;
+    vertexF32[i++] = x0 * sn + y1 * cs + y;
+    vertexF32[i++] = drawZ;
+    vertexF32[i++] = u0
+    vertexF32[i++] = v1;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    indexData[indexIdx++] = baseVertex;
+    indexData[indexIdx++] = baseVertex + 1;
+    indexData[indexIdx++] = baseVertex + 2;
+    indexData[indexIdx++] = baseVertex + 2;
+    indexData[indexIdx++] = baseVertex + 3;
+    indexData[indexIdx++] = baseVertex;
+}
+
+
+export function drawBillboard(texture: Texture, x: number, y: number, z: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) {
+    if (quadTexture != texture.texture_ || quadCount == maxBatch) {
+        flush();
+        quadTexture = texture.texture_;
+    }
+    const baseVertex = quadCount * 4;
+    let indexIdx = quadCount * 6;
+    let i = baseVertex * floatSize;
+    ++quadCount;
+
+    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+
+    const anchorX = texture.x_;
+    const anchorY = texture.y_;
+    const sizeX = texture.w_ * sx;
+    const sizeY = texture.h_ * sy;
+    const cs = cos(r);
+    const sn = sin(r);
+    const x0 = -anchorX * sizeX;
+    const x1 = x0 + sizeX;
+    const y0 = -anchorY * sizeY;
+    const y1 = y0 + sizeY;
+    const u0 = texture.u0_;
+    const v0 = texture.v0_;
+    const u1 = u0 + texture.u1_;
+    const v1 = v0 + texture.v1_;
+
+    vertexF32[i++] = x0 * cs - y0 * sn + x;
+    vertexF32[i++] = y;
+    vertexF32[i++] = z - (x0 * sn + y0 * cs);
+    // vertexF32[i++] = z - 10 * y0;
+    //console.info(y0, y1, sizeY, texture.h_);
+    vertexF32[i++] = u0;
+    vertexF32[i++] = v0;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    vertexF32[i++] = x1 * cs - y0 * sn + x;
+    vertexF32[i++] = y;
+    vertexF32[i++] = z - (x1 * sn + y0 * cs);
+    // vertexF32[i++] = z - 10 * y0;
+    vertexF32[i++] = u1
+    vertexF32[i++] = v0;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    vertexF32[i++] = x1 * cs - y1 * sn + x;
+    vertexF32[i++] = y;
+    vertexF32[i++] = z - (x1 * sn + y1 * cs);
+    // vertexF32[i++] = z - y1;
+    vertexF32[i++] = u1
+    vertexF32[i++] = v1;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    vertexF32[i++] = x0 * cs - y1 * sn + x;
+    vertexF32[i++] = y;
+    vertexF32[i++] = z - (x0 * sn + y1 * cs);
+    // vertexF32[i++] = z - y1;
+    vertexF32[i++] = u0
+    vertexF32[i++] = v1;
+    vertexU32[i++] = colorMul;
+    vertexU32[i++] = colorAdd;
+
+    indexData[indexIdx++] = baseVertex;
+    indexData[indexIdx++] = baseVertex + 1;
+    indexData[indexIdx++] = baseVertex + 2;
+    indexData[indexIdx++] = baseVertex + 2;
+    indexData[indexIdx++] = baseVertex + 3;
+    indexData[indexIdx++] = baseVertex;
 }
