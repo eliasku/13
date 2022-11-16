@@ -37,7 +37,7 @@ jobs:
       - uses: helaili/jekyll-action@v2
         with:
           jekyll_src: './pages/site'
-#          build_dir: './pages/_site'
+          build_dir: './pages/site/_site'
           build_only: true
 
       - name: Upload artifact
