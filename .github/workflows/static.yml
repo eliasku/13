@@ -36,8 +36,9 @@ jobs:
 
       - uses: helaili/jekyll-action@v2
         with:
-          jekyll_src: './pages'
+          jekyll_src: './pages/site'
           build_only: true
+          gem_src: './pages'
           # build_dir: './_site' - default
 
       - name: Upload artifact
