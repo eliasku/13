@@ -35,7 +35,7 @@ jobs:
         uses: ruby/setup-ruby@0a29871fe2b0200a17a4497bae54fe5df0d973aa # v1.115.3
         with:
           ruby-version: '3.0'
-          bundler-cache: true
+          bundler-cache: false
           cache-version: 0
           working-directory: ./pages
 
