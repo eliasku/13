@@ -43,17 +43,15 @@ jobs:
         uses: actions/configure-pages@v2
 
       - name: Build with Jekyll
-        # Outputs to the './_site' directory by default
-#        run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
         run: bundle exec jekyll build
-        working-directory: ./pages/site
+        working-directory: ./pages
         env:
           JEKYLL_ENV: production
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: './pages/site/_site'
+          path: './pages/_site'
 
       - name: Deploy to GitHub Pages
         id: deployment

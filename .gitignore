@@ -3,3 +3,8 @@ node_modules/
 build/
 public/
 server.js
+
+# pages
+pages/vendor/
+pages/_site/
+pages/Gemfile.lock

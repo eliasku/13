@@ -104,3 +104,11 @@ npm start
 Navigate to [localhost:8080](http://localhost:8080)
 
 Use `npm run build --dev` build development ⅓ version
+
+### Build Pages (not a Game)
+
+```shell
+cd pages
+bundle install --path vendor/bundle
+bundle exec jekyll serve
+```
