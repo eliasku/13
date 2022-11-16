@@ -33,11 +33,11 @@ jobs:
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
-        working-directory: ./pages/site
         with:
           ruby-version: '3.0'
           bundler-cache: true
           cache-version: 0
+          working-directory: ./pages/site
 
       - name: Setup Pages
         uses: actions/configure-pages@v2
