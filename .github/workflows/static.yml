@@ -39,12 +39,12 @@ jobs:
           jekyll_src: './pages/site'
           build_only: true
           gem_src: './pages'
-          # build_dir: './_site' - default
+          build_dir: './pages/_site'
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
-        # with:
-        #   path: './_site' - default
+        with:
+          path: './pages/_site'
 
       - name: Deploy to GitHub Pages
         id: deployment
