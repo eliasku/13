@@ -7,7 +7,7 @@ import {keyboardDown, KeyCode} from "../utils/input";
 import {OBJECT_HEIGHT, OBJECT_RADIUS_BY_TYPE} from "./data/world";
 import {draw} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
-import {ClientID} from "../../shared/types";
+import {ClientID} from "../../../shared/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
 import {min} from "../utils/math";

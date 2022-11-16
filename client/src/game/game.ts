@@ -1,4 +1,4 @@
-import {ClientID} from "../../shared/types";
+import {ClientID} from "../../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {beginRenderToMain, draw, drawBillboard, flush, gl, setDrawZ, setMVP} from "../graphics/draw2d";
@@ -1003,7 +1003,7 @@ const simulateTic = () => {
                 setRandomPosition(p);
                 p.hp_ = 10;
                 p.mags_ = 1;
-                setCurrentWeapon(p, rand(weapons.length));
+                setCurrentWeapon(p, rand(GAME_CFG.npc.initWeaponLen));
                 pushActor(p);
                 ++count;
             }

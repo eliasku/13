@@ -1,4 +1,4 @@
-import {ClientID} from "../../shared/types";
+import {ClientID} from "../../../shared/types";
 import {_debugLagK} from "../game/config";
 import {onRTCPacket} from "../game/game";
 import {lerp} from "../utils/math";

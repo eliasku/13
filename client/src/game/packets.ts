@@ -1,5 +1,5 @@
 import {Actor, ClientEvent, newStateData, Packet, PacketDebug, StateData} from "./types";
-import {ClientID} from "../../shared/types";
+import {ClientID} from "../../../shared/types";
 
 const DEBUG_SIGN = 0xdeb51a1e;
 

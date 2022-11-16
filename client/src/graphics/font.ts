@@ -1,5 +1,4 @@
 import {createTexture, draw, getSubTexture, Texture, uploadTexture} from "./draw2d";
-import {max} from "../utils/math";
 
 const SPACE_REGEX = /\s/gm;
 const SPACE_CODE = ' '.codePointAt(0);

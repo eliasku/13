@@ -1,7 +1,6 @@
 import {readFileSync, writeFileSync} from "fs";
 import {InterfaceDeclaration, Project, SyntaxKind} from "ts-morph";
 
-
 export const mergeProps = (tsConfigFilePath: string, file: string, dest: string) => {
     const project = new Project({tsConfigFilePath});
     const getProps = (str: InterfaceDeclaration, out: string[]) => {
