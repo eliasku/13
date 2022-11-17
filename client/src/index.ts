@@ -9,6 +9,7 @@ import {updateSong} from "./audio/gen";
 import {drawText, drawTextShadow, drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {BuildVersion} from "../../shared/types";
+import {sin} from "./utils/math";
 
 const enum StartState {
     Loading = 0,
@@ -39,8 +40,18 @@ const enum StartState {
     const _states: ((ts?: number) => void | undefined)[] = [
         ,
         (ts: number) => {
-            beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
-            drawText(fnt[0], "press any key...", 10 + Math.sin(ts), 2, 10, 0, 0);
+            const scale = getScreenScale();
+            const W = (gl.drawingBufferWidth / scale) | 0;
+            const H = (gl.drawingBufferHeight / scale) | 0;
+            const centerX = W >> 1;
+            const centerY = H >> 1;
+            beginRenderToMain(0, 0, 0, 0, 0, scale);
+            const fontSize = 10 + Math.sin(8 * ts);
+            if (sin(ts * 4) <= 0) {
+                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY, 0xFF9966);
+            } else {
+                drawTextShadowCenter(fnt[0], "GAME 13", fontSize, centerX, centerY, 0xFF6633);
+            }
             flush();
             if (isAnyKeyDown()) {
                 loadAtlas();
