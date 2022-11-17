@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>13</title>
+    <style>
+        body {
+            margin: 0;
+        }
+        iframe {
+            display: block;
+            background: #000;
+            border: none;
+            height: 100vh;
+            width: 100vw;
+        }
+    </style>
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+</head>
+<body>
+<iframe src="https://next13.herokuapp.com"></iframe>
+<script>
+    vkBridge.send("VKWebAppInit", {});
+</script>
+</body>
+</html>
