@@ -9,7 +9,8 @@ import {updateSong} from "./audio/gen";
 import {drawText, drawTextShadow, drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {BuildVersion} from "../../shared/types";
-import {sin} from "./utils/math";
+import {cos, sin} from "./utils/math";
+import {GL} from "./graphics/gl";
 
 const enum StartState {
     Loading = 0,
@@ -45,12 +46,15 @@ const enum StartState {
             const H = (gl.drawingBufferHeight / scale) | 0;
             const centerX = W >> 1;
             const centerY = H >> 1;
+            const f = 0.5 + 0.5 * sin(ts);
+            gl.clearColor(0.2 * f, 0.2 * (1 - f), 0.0, 1.0);
+            gl.clear(GL.COLOR_BUFFER_BIT);
             beginRenderToMain(0, 0, 0, 0, 0, scale);
-            const fontSize = 10 + Math.sin(8 * ts);
+            const fontSize = 10 + 0.5 * Math.sin(8 * ts);
             if (sin(ts * 4) <= 0) {
-                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY, 0xFF9966);
+                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY, 0xd9ff66);
             } else {
-                drawTextShadowCenter(fnt[0], "GAME 13", fontSize, centerX, centerY, 0xFF6633);
+                drawTextShadowCenter(fnt[0], "GAME 13", fontSize, centerX, centerY, 0xd00000);
             }
             flush();
             if (isAnyKeyDown()) {
@@ -92,12 +96,22 @@ const enum StartState {
             flush();
         },
         (ts: number) => {
+            const scale = getScreenScale();
+            const W = (gl.drawingBufferWidth / scale) | 0;
+            const H = (gl.drawingBufferHeight / scale) | 0;
+            const centerX = W >> 1;
+            const centerY = H >> 1;
+            const f = 0.5 + 0.5 * sin(ts);
+            gl.clearColor(0.2 * f, 0.2 * (1 - f), 0.0, 1.0);
+            gl.clear(GL.COLOR_BUFFER_BIT);
             beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
-            drawTextShadow(fnt[0], "connecting" + ".".repeat((ts * 7) & 7), 10 + Math.sin(ts), 2, 10);
+            const fontSize = 10 + 0.5 * Math.sin(4 * ts);
+            drawTextShadowCenter(fnt[0], "CONNECTING", fontSize, centerX, centerY - 5, 0xd9ff66);
+            drawTextShadowCenter(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 5, 0xdddddd);
             flush();
             if (_sseState == 3) {
-                state = StartState.Connected;
-                speak("fight");
+             //   state = StartState.Connected;
+               // speak("fight");
             } else if (!_sseState) {
                 goToSplash();
             }

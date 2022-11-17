@@ -5,6 +5,14 @@
 - Font glyph combined with shadow
 - Render more depth
 
+### Gameplay
+
+- NPC can't spawn with powerful weapon, make game start much easier
+
+### UI
+
+- Splash / Connecting screen improved 
+
 ## 1.0.4
 
 - Change to OpenRelay STUN and TURN servers for WebRTC connection
