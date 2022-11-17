@@ -110,8 +110,8 @@ const enum StartState {
             drawTextShadowCenter(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 5, 0xdddddd);
             flush();
             if (_sseState == 3) {
-             //   state = StartState.Connected;
-               // speak("fight");
+                state = StartState.Connected;
+                speak("fight");
             } else if (!_sseState) {
                 goToSplash();
             }
