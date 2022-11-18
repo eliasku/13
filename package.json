@@ -13,6 +13,9 @@
   },
   "author": "eliasku",
   "license": "ISC",
+  "dependencies": {
+    "core-js": "^3.26.1"
+  },
   "devDependencies": {
     "@swc/core": "^1.3.18",
     "@types/node": "^18.11.9",

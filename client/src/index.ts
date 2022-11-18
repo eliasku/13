@@ -1,3 +1,5 @@
+import "core-js/es6/map";
+import "core-js/es6/set";
 import {_sseState, clientName, connect, loadCurrentOnlineUsers, processMessages, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
@@ -6,10 +8,10 @@ import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
-import {drawText, drawTextShadow, drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
+import {drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {BuildVersion} from "../../shared/types";
-import {cos, sin} from "./utils/math";
+import {sin} from "./utils/math";
 import {GL} from "./graphics/gl";
 
 const enum StartState {

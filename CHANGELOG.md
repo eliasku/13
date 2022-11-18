@@ -5,6 +5,8 @@
 - Limit max velocity for items drop
 - Fix over camera shake effect for rail-gun
 - Fix crosshair draw order
+- Force ES2020 for client
+- 
 
 ## 1.0.5
 
