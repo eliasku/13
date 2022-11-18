@@ -1,5 +1,3 @@
-import "core-js/es6/map";
-import "core-js/es6/set";
 import {_sseState, clientName, connect, loadCurrentOnlineUsers, processMessages, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";

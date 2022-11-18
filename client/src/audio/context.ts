@@ -20,7 +20,9 @@ export const play = (audioBuffer: AudioBuffer,
 }
 
 export const speak = (text: string) => {
-    const speech = new SpeechSynthesisUtterance(text);
-    speech.volume = 0.5;
-    speechSynthesis.speak(speech);
+    if("SpeechSynthesisUtterance" in window) {
+        const speech = new SpeechSynthesisUtterance(text);
+        speech.volume = 0.5;
+        speechSynthesis.speak(speech);
+    }
 }
