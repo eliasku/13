@@ -25,8 +25,8 @@ gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
 const onResize = () => {
     const dpr = devicePixelRatio;
-    const width = innerWidth;
-    const height = innerHeight;
+    const width = document.body.clientWidth;
+    const height = document.body.clientHeight;
     const w = (width * dpr) | 0;
     const h = (height * dpr) | 0;
     if (c.width !== w || c.height !== h) {
