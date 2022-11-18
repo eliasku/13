@@ -42,7 +42,7 @@ export function resolveVersion() {
 export function copyPublicAssets() {
     // copy html
     console.info("build html files");
-    execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o build/index.html client/assets/index.html`);
+    execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html client/assets/index.html`);
     copyFileSync("client/assets/index4.html", "public/index4.html");
     copyFileSync("client/assets/debug4.html", "public/debug4.html");
     copyFileSync("client/assets/debug.html", "public/debug.html");
