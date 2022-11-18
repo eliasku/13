@@ -29,7 +29,7 @@ export const renderFogObjects = (list: Actor[]) => {
         if (!a.type_ && a.client_ == clientId) {
             r *= 2;
         }
-        draw(img[Img.light_circle], (a.x_) / world2camera, (a.y_ - a.z_) / world2camera, 0, r, r);
+        draw(img[Img.light_circle], a.x_ / world2camera, (a.y_ - a.z_) / world2camera, 0, r, r);
     }
 }
 

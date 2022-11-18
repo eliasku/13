@@ -1,3 +1,11 @@
+## 1.0.6
+
+- Fix text particle spawn repeating
+- Remove standard weapons drop from Barrels
+- Limit max velocity for items drop
+- Fix over camera shake effect for rail-gun
+- Fix crosshair draw order
+
 ## 1.0.5
 
 ### Graphics

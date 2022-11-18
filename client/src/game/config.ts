@@ -18,5 +18,16 @@ export const GAME_CFG = {
     },
     items: {
         lifetime: 10 * Const.NetFq
+    },
+    barrels: {
+        initCount: 32,
+        hp: [3, 7],
+        dropWeapon: {
+            chance: 70,
+            min: 4
+        },
+    },
+    trees: {
+        initCount: 64,
     }
 };

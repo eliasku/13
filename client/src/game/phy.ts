@@ -90,6 +90,15 @@ export const reflectVelocity = (v: Vel, nx: number, ny: number, loss: number) =>
     v.v_ = (v.v_ - Z * ny) / loss;
 }
 
+export const limitVelocity = (v: Vel, len: number) => {
+    let l = v.u_ * v.u_ + v.v_ * v.v_;
+    if (l > len * len) {
+        l = len / sqrt(l);
+        v.u_ *= l;
+        v.v_ *= l;
+    }
+}
+
 export const applyGroundFriction = (p: Actor, amount: number) => {
     let v0 = p.u_ * p.u_ + p.v_ * p.v_;
     if (v0 > 0) {
@@ -116,7 +125,7 @@ export const addPos = (to: Pos, x: number, y: number, z: number, scale: number =
 }
 
 export const sqrLength3 = (x: number, y: number, z: number) => x * x + y * y + z * z;
-export const sqrDistXY = (a:Actor, b: Actor) => {
+export const sqrDistXY = (a: Actor, b: Actor) => {
     const dx = a.x_ - b.x_;
     const dy = a.y_ - b.y_;
     return dx * dx + dy * dy;

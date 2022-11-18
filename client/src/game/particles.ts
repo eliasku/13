@@ -1,14 +1,16 @@
 import {img, Img} from "../assets/gfx";
 import {beginRender, draw, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
-import {Actor, Particle, Vel} from "./types";
+import {Actor, Particle, TextParticle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {atan2, hypot, PI, sqrt} from "../utils/math";
+import {atan2, hypot, PI, sin, sqrt} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
 import {mapTexture} from "../assets/map";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {getLumaColor32} from "../utils/utils";
+import {cubicOut} from "../utils/easing";
+import {drawTextShadowCenter, fnt} from "../graphics/font";
 
 export const newParticle = (): Particle => ({
     x_: 0,
@@ -17,20 +19,20 @@ export const newParticle = (): Particle => ({
     u_: 0,
     v_: 0,
     w_: 0,
-    a_: 0,
-    r_: 0,
+    a_: 0.0,
+    r_: 0.0,
     color_: 0xFFFFFF,
-    scale_: 1,
+    scale_: 1.0,
     lifeTime_: 0,
     lifeMax_: 600,
     img_: Img.particle_flesh0,
     followVelocity_: 0,
-    followScale_: 0,
-    splashSizeX_: 1,
-    splashSizeY_: 1,
+    followScale_: 0.0,
+    splashSizeX_: 1.0,
+    splashSizeY_: 1.0,
     splashImg_: 0,
     splashEachJump_: 0,
-    splashScaleOnVelocity_: 0,
+    splashScaleOnVelocity_: 0.0,
 });
 
 const updateParticle = (p: Particle): boolean => {
@@ -69,6 +71,7 @@ const updateParticleList = (list: Particle[], i = 0) => {
 export function updateParticles() {
     updateParticleList(opaqueParticles);
     updateParticleList(particles);
+    updateTextParticleList(textParticles);
 }
 
 let seed0: number;
@@ -76,18 +79,22 @@ let particles0: Particle[];
 let particles: Particle[] = [];
 let opaqueParticles0: Particle[];
 let opaqueParticles: Particle[] = [];
+let textParticles: TextParticle[] = [];
+let textParticles0: TextParticle[] = [];
 let splats: number[] = [];
 
 export const saveParticles = () => {
     seed0 = _SEEDS[1];
     particles0 = particles.map(x => ({...x}));
     opaqueParticles0 = opaqueParticles.map(x => ({...x}));
+    textParticles0 = textParticles.map(x => ({...x}));
 }
 
 export const restoreParticles = () => {
     _SEEDS[1] = seed0;
     particles = particles0;
     opaqueParticles = opaqueParticles0;
+    textParticles = textParticles0;
     splats.length = 0;
 }
 
@@ -183,8 +190,8 @@ export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
         particle.splashSizeX_ = particle.scale_;
         particle.splashSizeY_ = particle.scale_;
         particle.color_ = getLumaColor32(0x80 + random1(0x20));
-        particle.r_ = random1n(.1);
-        particle.a_ = random1n(.5);
+        particle.r_ = random1n(0.1);
+        particle.a_ = random1n(0.5);
         particles.push(particle);
     }
 }
@@ -239,3 +246,44 @@ export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, color
     }
 }
 
+// Text particles
+
+export const newTextParticle = (source: Actor, text: string): TextParticle => ({
+    x_: source.x_,
+    y_: source.y_,
+    z_: source.z_,
+    text_: text,
+    lifetime_: 3 * 60,
+    time_: 0
+});
+
+const updateTextParticle = (p: TextParticle): boolean => {
+    ++p.time_;
+    const t = p.time_ / p.lifetime_;
+    return t >= 1;
+}
+
+const updateTextParticleList = (list: TextParticle[], i = 0) => {
+    for (; i < list.length;) {
+        if (updateTextParticle(list[i++])) {
+            list.splice(--i, 1);
+        }
+    }
+}
+
+export const addTextParticle = (source: Actor, text: string) => {
+    textParticles.push(newTextParticle(source, text));
+};
+
+export const drawTextParticles = () => {
+    for (const p of textParticles) {
+        const t = p.time_ / p.lifetime_;
+        if (t > 0.5 && sin(t * 64) > 0.5) {
+            continue;
+        }
+        const x = p.x_ / WORLD_SCALE;
+        const offZ = (cubicOut(t) * 60 * WORLD_SCALE) | 0;
+        const y = (p.y_ - p.z_ - offZ) / WORLD_SCALE;
+        drawTextShadowCenter(fnt[0], p.text_, 8, x, y);
+    }
+}
