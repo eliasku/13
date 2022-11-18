@@ -6,7 +6,8 @@
 - Fix over camera shake effect for rail-gun
 - Fix crosshair draw order
 - Force ES2020 for client
-- 
+- Fix resize
+- Fix missing `speechSynthesis`
 
 ## 1.0.5
 

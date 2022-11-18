@@ -1,12 +1,14 @@
 import {GL} from "./gl";
 import {cos, sin} from "../utils/math";
 import {
-    SHADER_FRAGMENT,
-    SHADER_A_COLOR_MUL,
-    SHADER_U_MVP,
     SHADER_A_COLOR_ADD,
+    SHADER_A_COLOR_MUL,
+    SHADER_A_POSITION,
+    SHADER_A_TEX_COORD,
+    SHADER_FRAGMENT,
+    SHADER_U_MVP,
     SHADER_U_TEX,
-    SHADER_VERTEX, SHADER_A_POSITION, SHADER_A_TEX_COORD
+    SHADER_VERTEX
 } from "./shader";
 import {Mat4} from "../utils/mat4";
 import {stats} from "../utils/fpsMeter";
@@ -15,35 +17,30 @@ export const gl = c.getContext("webgl", {
     antialias: false,
     // defaults:
     // alpha: true, - don't emulate RGB24
-    depth: true,
+    // depth: true,
     // stencil: false
 });
 
-// const instancedArrays = gl.getExtension('ANGLE_instanced_arrays')!;
-//
-// if (process.env.NODE_ENV === "development") {
-//     if (!gl || !instancedArrays) {
-//         alert("WebGL is required");
-//     }
-// }
-
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
-(onresize = (_?: any,
-             w: number = innerWidth,
-             h: number = innerHeight,
-             s: number = devicePixelRatio) => {
-    c.width = w * s;
-    c.height = h * s;
-    c.style.width = w + "px";
-    c.style.height = h + "px";
-})();
+const onResize = () => {
+    const dpr = devicePixelRatio;
+    const width = innerWidth;
+    const height = innerHeight;
+    const w = (width * dpr) | 0;
+    const h = (height * dpr) | 0;
+    if (c.width !== w || c.height !== h) {
+        c.width = w;
+        c.height = h;
+        c.style.width = width + "px";
+        c.style.height = height + "px";
+    }
+};
+onresize = onResize;
+setInterval(onResize, 1000);
+onResize();
 
 const maxBatch = 65535;
-// const depth = 1e5;
-// const depth = 1;
-// TODO: move to scope
-
 const floatSize = 3 + 2 + 2;
 const byteSize = floatSize * 4;
 // maxBatch * byteSize
