@@ -79,7 +79,6 @@ export const enum Img {
     joy4,
 
     logo_title,
-    logo_start,
 
     light_circle,
 
@@ -87,7 +86,7 @@ export const enum Img {
     num_npc = 8,
 }
 
-const Font = (size: number): string => size + "px Georgia,e";
+const Font = (size: number): string => `${size}px m,e`;
 // export const Font = (size: number): string => size + "px e";
 export const EMOJI: Record<number, string> = [];
 
@@ -299,12 +298,6 @@ export const loadAtlas = (): void => {
     pushSprite(72, 64);
     atlas.font = Font(72);
     atlas.fillText("13", x + 72 / 2, y + 51);
-    cutAlpha();
-    saveImage();
-
-    pushSprite(200, 24);
-    atlas.font = Font(24);
-    atlas.fillText("[ START ]", x + 100, y + 20);
     cutAlpha();
     saveImage();
 

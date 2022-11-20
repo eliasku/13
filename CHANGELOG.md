@@ -1,3 +1,11 @@
+## 1.0.7
+
+- Offline Practice Mode #37
+- Light below the Game Logo
+- Cross-platform static monospace font for UI
+- Splash Screen NPC start ammo
+- Decrease minimum fire distance for Gun weapons for NPC
+
 ## 1.0.6
 
 - Fix text particle spawn repeating

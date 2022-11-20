@@ -104,7 +104,8 @@ const createGunWeapon = (): WeaponConfig => {
     w.bulletShellColor_ = 0xFFDD22;
     w.clipSize_ = 30;
     w.clipReload_ = 60;
-    w.ai_shootDistanceMin_ = 128 * WORLD_SCALE;
+    // w.ai_shootDistanceMin_ = 128 * WORLD_SCALE;
+    w.ai_shootDistanceMin_ = 24 * WORLD_SCALE;
     w.ai_shootDistanceMax_ = 256 * WORLD_SCALE;
     return w;
 };

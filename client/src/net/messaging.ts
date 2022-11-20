@@ -20,7 +20,7 @@ export interface RemoteClient {
 }
 
 // const getUrl = (endpoint:string) => "https://next13.herokuapp.com/" + endpoint;
-const getUrl = (endpoint:string) => endpoint;
+const getUrl = (endpoint: string) => endpoint;
 
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
@@ -164,8 +164,16 @@ const onSSE: ((data: string) => void)[] = [
     }
 ];
 
-export const connect = () => {
-    if (!_sseState) {
+export const connect = (offlineMode?: boolean) => {
+    if (_sseState) {
+        console.warn("connect: sse state already", _sseState);
+        return;
+    }
+    if (offlineMode) {
+        // bypass all connection routine
+        _sseState = 2;
+        clientId = 1;
+    } else {
         _sseState = 1;
         messageUploading = false;
         messagesToPost = [];
@@ -181,7 +189,6 @@ export const connect = () => {
 }
 
 // RTC
-
 const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
     rc.pc_.createOffer({iceRestart})
         .then(offer => rc.pc_.setLocalDescription(offer))

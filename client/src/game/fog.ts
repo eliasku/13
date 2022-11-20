@@ -21,16 +21,25 @@ export const beginFogRender = () => {
     gl.blendFunc(GL.ZERO, GL.ONE_MINUS_SRC_ALPHA);
 }
 
-export const renderFogObjects = (list: Actor[]) => {
+
+export const drawFogPoint = (x: number, y: number, r: number) => {
+    r /= FOG_DOWNSCALE;
+    x /= FOG_DOWNSCALE;
+    y /= FOG_DOWNSCALE;
+    draw(img[Img.light_circle], x, y, 0, r, r);
+}
+
+export const drawFogObjects = (...lists: Actor[][]) => {
     const SOURCE_RADIUS_BY_TYPE = [2, 0, 1, 1, 0, 0];
-    const world2camera = WORLD_SCALE * FOG_DOWNSCALE;
-    for (const a of list) {
-        let r = SOURCE_RADIUS_BY_TYPE[a.type_] / FOG_DOWNSCALE;
-        // isMyPlayer
-        if (!a.type_ && clientId && a.client_ === clientId) {
-            r *= 2;
+    for (const list of lists) {
+        for (const a of list) {
+            let r = SOURCE_RADIUS_BY_TYPE[a.type_];
+            // isMyPlayer
+            if (!a.type_ && clientId && a.client_ === clientId) {
+                r *= 2;
+            }
+            drawFogPoint(a.x_ / WORLD_SCALE, (a.y_ - a.z_) / WORLD_SCALE, r);
         }
-        draw(img[Img.light_circle], a.x_ / world2camera, (a.y_ - a.z_) / world2camera, 0, r, r);
     }
 }
 

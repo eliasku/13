@@ -2,7 +2,7 @@ import {ClientID} from "../../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {beginRenderToMain, draw, drawBillboard, flush, gl, setDrawZ} from "../graphics/draw2d";
-import {_SEEDS, fxRand, fxRandElement, fxRandomNorm, rand, random} from "../utils/rnd";
+import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const, GAME_CFG} from "./config";
@@ -73,7 +73,8 @@ import {
     drawParticleShadows,
     drawSplats,
     drawTextParticles,
-    flushSplatsToMap, resetParticles,
+    flushSplatsToMap,
+    resetParticles,
     restoreParticles,
     saveParticles,
     updateParticles
@@ -110,7 +111,7 @@ import {
 } from "./data/world";
 import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
 import {termPrint} from "../graphics/ui";
-import {beginFogRender, renderFog, renderFogObjects} from "./fog";
+import {beginFogRender, drawFogObjects, drawFogPoint, renderFog} from "./fog";
 import {
     addDebugState,
     assertStateInSync,
@@ -312,7 +313,7 @@ export const createSplashState = () => {
         actor.hp_ = 10;
         actor.mags_ = 10;
         actor.sp_ = 10;
-        actor.weapon_ = 1 + (i % (weapons.length - 1));
+        setCurrentWeapon(actor, 1 + (i % (weapons.length - 1)));
         actor.anim0_ = i + rand(10) * Img.num_avatars;
         actor.btn_ = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
         const D = 80 + 20 * sqrt(random());
@@ -1425,9 +1426,10 @@ const drawGame = () => {
     drawList.sort((a, b) => WORLD_BOUNDS_SIZE * (a.y_ - b.y_) + a.x_ - b.x_);
 
     beginFogRender();
-    renderFogObjects(state.actors_[ActorType.Player]);
-    renderFogObjects(state.actors_[ActorType.Bullet]);
-    renderFogObjects(state.actors_[ActorType.Item]);
+    drawFogObjects(state.actors_[ActorType.Player], state.actors_[ActorType.Bullet], state.actors_[ActorType.Item]);
+    if (gameMode.title) {
+        drawFogPoint(gameCamera[0], gameCamera[1], 3 + fxRandom(1));
+    }
     flush();
 
     beginRenderToMain(
@@ -1485,7 +1487,6 @@ const drawGame = () => {
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-            drawBillboard(img[Img.logo_start], gameCamera[0] + fxRandomNorm(i4), y1 + 130 + fxRandomNorm(i4), 40, angle, scale, scale, 1, add);
             drawBillboard(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 40, angle, scale, scale, 1, add);
         }
     }

@@ -250,12 +250,12 @@ const updateTexture = (fa: FontAtlas) => {
     }
 }
 
-/// reseources
+/// resources
+export const fnt: FontAtlas[] = [];
 
-
-export const fnt: FontAtlas[] = [
-    makeFontAtlas("monospace,e", 24, 1, {strokeWidth: 3})
-];
+export const initFonts = () => {
+    fnt[0] = makeFontAtlas(`m,e`, 24, 1, {strokeWidth: 3});
+};
 
 export const updateFonts = () => fnt.forEach(updateTexture);
 

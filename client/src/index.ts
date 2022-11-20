@@ -14,7 +14,7 @@ import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
-import {drawTextShadowCenter, fnt, updateFonts} from "./graphics/font";
+import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {BuildVersion} from "../../shared/types";
 import {sin} from "./utils/math";
@@ -45,8 +45,11 @@ const enum StartState {
     if (!clientName) {
         setUserName("Guest " + ((Math.random() * 1000) | 0));
     }
-    new FontFace("e", "url(e.ttf)").load().then((font) => {
-        document.fonts.add(font);
+    Promise.all([
+        new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font)),
+        new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font))
+    ]).then(_ => {
+        initFonts();
         loadAtlas();
         state = StartState.Loaded;
 
@@ -97,15 +100,22 @@ const enum StartState {
                 if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
                     setUserName(prompt("your name", clientName));
                 }
-                drawTextShadowCenter(fnt[0], usersOnline + " playing right now", 7, centerX, centerY - 50);
 
-                if (button("start", "[ START ]", centerX - 100, centerY + 70, {w: 200, h: 48, visible: false})) {
+                drawTextShadowCenter(fnt[0], usersOnline + " playing right now", 7, centerX, centerY + 65);
+
+                if (button("start", "⚔ FIGHT", centerX - 50, centerY + 70, {w: 100, h: 20})) {
                     state = StartState.Connecting;
                     resetGame();
                     connect();
                 }
 
-                if (button("version-tag", "🏷 v" + BuildVersion, 2, H - 16, {w: 48, h: 14, visible: true})) {
+                if (button("practice", "🏹 PRACTICE", centerX - 50, centerY + 100, {w: 100, h: 20})) {
+                    state = StartState.Connected;
+                    resetGame();
+                    connect(true);
+                }
+
+                if (button("version_tag", "🏷 v" + BuildVersion, 2, H - 16, {w: 48, h: 14, visible: true})) {
                     open("https://github.com/eliasku/13", "_blank");
                 }
             }
