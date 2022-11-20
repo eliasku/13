@@ -326,6 +326,7 @@ export const createSplashState = () => {
     gameMode.hasPlayer = false;
     gameMode.tiltCamera = 0.05;
     gameMode.bloodRain = true;
+    gameMode.title = true;
 }
 
 const updateFrameTime = (ts: number) => {

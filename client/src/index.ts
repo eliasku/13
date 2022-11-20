@@ -65,20 +65,14 @@ const enum StartState {
             const H = (gl.drawingBufferHeight / scale) | 0;
             const centerX = W >> 1;
             const centerY = H >> 1;
-            const f = 0.5 + 0.5 * sin(ts);
-            // gl.clearColor(0.2 * f, 0.2 * (1 - f), 0.0, 1.0);
-            // gl.clear(GL.COLOR_BUFFER_BIT);
             beginRenderToMain(0, 0, 0, 0, 0, scale);
-            const fontSize = 10 + 0.5 * Math.sin(8 * ts);
-            if (sin(ts * 4) <= 0) {
-                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY, 0xd9ff66);
-            } else {
-                drawTextShadowCenter(fnt[0], "GAME 13", fontSize, centerX, centerY, 0xd00000);
+            const fontSize = 14 + 0.5 * Math.sin(8 * ts);
+            if (sin(ts * 8) <= 0) {
+                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY + 50, 0xd9ff66);
             }
             flush();
             if (isAnyKeyDown()) {
                 state = StartState.TapToConnect;
-                gameMode.title = true;
                 gameMode.playersAI = true;
                 gameMode.spawnNPC = true;
                 loadCurrentOnlineUsers().then((count) => {
