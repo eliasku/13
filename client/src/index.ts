@@ -1,7 +1,15 @@
-import {_sseState, clientName, connect, loadCurrentOnlineUsers, processMessages, setUserName} from "./net/messaging";
-import {isAnyKeyDown, updateInput} from "./utils/input";
+import {
+    _sseState,
+    clientName,
+    connect,
+    disconnect,
+    loadCurrentOnlineUsers,
+    processMessages,
+    setUserName
+} from "./net/messaging";
+import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
-import {createSplashState, getScreenScale, resetGame, updateGame} from "./game/game";
+import {createSplashState, gameMode, getScreenScale, resetGame, updateGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
@@ -28,6 +36,9 @@ const enum StartState {
         state = StartState.TapToConnect;
         resetGame();
         createSplashState();
+        gameMode.title = true;
+        gameMode.playersAI = true;
+        gameMode.spawnNPC = true;
         speak("13 the game");
     }
 
@@ -36,7 +47,12 @@ const enum StartState {
     }
     new FontFace("e", "url(e.ttf)").load().then((font) => {
         document.fonts.add(font);
+        loadAtlas();
         state = StartState.Loaded;
+
+        resetGame();
+        createSplashState();
+        gameMode.spawnNPC = false;
     });
     const _states: ((ts?: number) => void | undefined)[] = [
         ,
@@ -47,8 +63,8 @@ const enum StartState {
             const centerX = W >> 1;
             const centerY = H >> 1;
             const f = 0.5 + 0.5 * sin(ts);
-            gl.clearColor(0.2 * f, 0.2 * (1 - f), 0.0, 1.0);
-            gl.clear(GL.COLOR_BUFFER_BIT);
+            // gl.clearColor(0.2 * f, 0.2 * (1 - f), 0.0, 1.0);
+            // gl.clear(GL.COLOR_BUFFER_BIT);
             beginRenderToMain(0, 0, 0, 0, 0, scale);
             const fontSize = 10 + 0.5 * Math.sin(8 * ts);
             if (sin(ts * 4) <= 0) {
@@ -58,8 +74,10 @@ const enum StartState {
             }
             flush();
             if (isAnyKeyDown()) {
-                loadAtlas();
-                goToSplash();
+                state = StartState.TapToConnect;
+                gameMode.title = true;
+                gameMode.playersAI = true;
+                gameMode.spawnNPC = true;
                 loadCurrentOnlineUsers().then((count) => {
                     usersOnline = count;
                 });
@@ -87,7 +105,7 @@ const enum StartState {
                     connect();
                 }
 
-                if (button("version-tag", "v" + BuildVersion + " 🏷", 2, H - 16, {w: 48, h: 14, visible: true})) {
+                if (button("version-tag", "🏷 v" + BuildVersion, 2, H - 16, {w: 48, h: 14, visible: true})) {
                     open("https://github.com/eliasku/13", "_blank");
                 }
             }
@@ -117,6 +135,10 @@ const enum StartState {
             }
         },
         () => {
+            // debug disconnect
+            if (keyboardDown[KeyCode.Digit5]) {
+                disconnect();
+            }
             if (!_sseState) {
                 goToSplash();
             }
@@ -128,7 +150,7 @@ const enum StartState {
         updateStats(ts);
         //** DO FRAME **//
         updateSong(state != StartState.Connected);
-        if (state > StartState.Loaded) {
+        if (state >= StartState.Loaded) {
             updateGame(ts);
         }
         _states[state]?.(ts);

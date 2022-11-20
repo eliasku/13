@@ -26,7 +26,8 @@ export const renderFogObjects = (list: Actor[]) => {
     const world2camera = WORLD_SCALE * FOG_DOWNSCALE;
     for (const a of list) {
         let r = SOURCE_RADIUS_BY_TYPE[a.type_] / FOG_DOWNSCALE;
-        if (!a.type_ && a.client_ == clientId) {
+        // isMyPlayer
+        if (!a.type_ && clientId && a.client_ === clientId) {
             r *= 2;
         }
         draw(img[Img.light_circle], a.x_ / world2camera, (a.y_ - a.z_) / world2camera, 0, r, r);

@@ -8,6 +8,8 @@
 - Force ES2020 for client
 - Fix resize
 - Fix missing `speechSynthesis`
+- Zoom out a little bit
+- Splash screen on the game
 
 ## 1.0.5
 

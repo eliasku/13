@@ -90,6 +90,13 @@ export const saveParticles = () => {
     textParticles0 = textParticles.map(x => ({...x}));
 }
 
+export const resetParticles = () => {
+    particles.length = 0;
+    opaqueParticles.length = 0;
+    textParticles.length = 0;
+    splats.length = 0;
+}
+
 export const restoreParticles = () => {
     _SEEDS[1] = seed0;
     particles = particles0;
@@ -211,7 +218,8 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
 }
 
 export const flushSplatsToMap = () => {
-    if (splats.length > 16) {
+    // if (splats.length > 16) {
+    if (splats.length) {
         gl.bindFramebuffer(GL.FRAMEBUFFER, mapTexture.fbo_);
         beginRender();
         setupProjection(

@@ -29,5 +29,11 @@ export const GAME_CFG = {
     },
     trees: {
         initCount: 64,
+    },
+    camera: {
+        // base resolution
+        size: 256,
+        listenerRadius: 256,
+        baseScale: 1.1,
     }
 };

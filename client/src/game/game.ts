@@ -73,7 +73,7 @@ import {
     drawParticleShadows,
     drawSplats,
     drawTextParticles,
-    flushSplatsToMap,
+    flushSplatsToMap, resetParticles,
     restoreParticles,
     saveParticles,
     updateParticles
@@ -86,7 +86,8 @@ import {
     applyGroundFriction,
     checkBodyCollision,
     collideWithBoundsA,
-    copyPosFromActorCenter, limitVelocity,
+    copyPosFromActorCenter,
+    limitVelocity,
     reflectVelocity,
     roundActors,
     setRandomPosition,
@@ -96,7 +97,7 @@ import {
     updateAnim,
     updateBody
 } from "./phy";
-import {BASE_RESOLUTION, BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
+import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {
     ANIM_HIT_MAX,
     ANIM_HIT_OVER,
@@ -157,6 +158,15 @@ let hotUsable: Actor | null = null;
 // dynamic state
 let state: StateData = newStateData();
 let lastState: StateData;
+export const gameMode = {
+    title: false,
+    runAI: false,
+    playersAI: false,
+    hasPlayer: false,
+    tiltCamera: 0.0,
+    spawnNPC: true,
+    bloodRain: false,
+};
 
 // 0...50
 let cameraShake = 0;
@@ -208,6 +218,8 @@ const requireClient = (id: ClientID): Client => getOrCreate(clients, id, () => (
 const requireStats = (id: ClientID): PlayerStat => getOrCreate(state.stats_, id, () => ({frags_: 0, scores_: 0}));
 
 export const resetGame = () => {
+    resetParticles();
+
     clients.clear();
     localEvents.length = 0;
     receivedEvents.length = 0;
@@ -231,6 +243,14 @@ export const resetGame = () => {
     lastInputCmd = 0;
     lastAudioTic = 0;
     console.log("reset game");
+
+    gameMode.title = false;
+    gameMode.runAI = true;
+    gameMode.playersAI = false;
+    gameMode.hasPlayer = true;
+    gameMode.tiltCamera = 0.0;
+    gameMode.spawnNPC = true;
+    gameMode.bloodRain = false;
 }
 
 const recreateMap = () => {
@@ -266,7 +286,7 @@ function initBarrels() {
         actor.hp_ = hp[0] + rand(hp[1] - hp[0]);
         actor.btn_ = rand(2);
         // Drop weapon from barrels with 70% chance
-        if(rand(100) < weaponChance) {
+        if (rand(100) < weaponChance) {
             actor.weapon_ = weaponMin + rand(weapons.length - weaponMin);
         }
         setRandomPosition(actor)
@@ -289,6 +309,9 @@ export const createSplashState = () => {
         const k = i / 13;
         const actor = newActorObject(ActorType.Player);
         actor.client_ = 1 + i;
+        actor.hp_ = 10;
+        actor.mags_ = 10;
+        actor.sp_ = 10;
         actor.weapon_ = 1 + (i % (weapons.length - 1));
         actor.anim0_ = i + rand(10) * Img.num_avatars;
         actor.btn_ = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
@@ -299,6 +322,9 @@ export const createSplashState = () => {
     }
     gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
     startTic = 0;
+    gameMode.hasPlayer = false;
+    gameMode.tiltCamera = 0.05;
+    gameMode.bloodRain = true;
 }
 
 const updateFrameTime = (ts: number) => {
@@ -402,7 +428,7 @@ const printStatus = () => {
 }
 
 const getMyPlayer = (): Actor | undefined =>
-    getPlayerByClient(clientId);
+    clientId ? getPlayerByClient(clientId) : undefined;
 
 const getPlayerByClient = (c: ClientID): Actor | undefined =>
     state.actors_[ActorType.Player].find(p => p.client_ == c);
@@ -774,10 +800,13 @@ const updateWeaponPickup = (item: Actor, player: Actor) => {
     }
 }
 
+const isMyPlayer = (actor: Actor) => clientId && actor.client_ === clientId && actor.type_ === ActorType.Player;
+
 const pickItem = (item: Actor, player: Actor) => {
     if (testIntersection(item, player)) {
+        const withMyPlayer = isMyPlayer(player);
         if (item.btn_ & ItemType.Weapon) {
-            if (player.client_ === clientId && !hotUsable) {
+            if (withMyPlayer && !hotUsable) {
                 hotUsable = item;
             }
             // suck in mags
@@ -787,7 +816,7 @@ const pickItem = (item: Actor, player: Actor) => {
                 item.mags_ -= qty;
                 player.mags_ = min(10, player.mags_ + qty);
                 playAt(player, Snd.pick);
-                if (player.client_ === clientId) {
+                if (withMyPlayer) {
                     addTextParticle(item, `+${qty} mags`);
                 }
             }
@@ -799,7 +828,7 @@ const pickItem = (item: Actor, player: Actor) => {
                     player.hp_ = min(10, player.hp_ + qty);
                     item.hp_ = item.btn_ = 0;
                     playAt(player, Snd.heal);
-                    if (player.client_ === clientId) {
+                    if (withMyPlayer) {
                         addTextParticle(item, `+${qty} hp`);
                     }
                 }
@@ -810,7 +839,7 @@ const pickItem = (item: Actor, player: Actor) => {
                     stat.scores_ += qty;
                     item.hp_ = item.btn_ = 0;
                     playAt(player, Snd.pick);
-                    if (player.client_ === clientId) {
+                    if (withMyPlayer) {
                         addTextParticle(item, `+${qty} cr`);
                     }
                 }
@@ -820,7 +849,7 @@ const pickItem = (item: Actor, player: Actor) => {
                     player.mags_ = min(10, player.mags_ + qty);
                     item.hp_ = item.btn_ = 0;
                     playAt(player, Snd.pick);
-                    if (player.client_ === clientId) {
+                    if (withMyPlayer) {
                         addTextParticle(item, `+${qty} mags`);
                     }
                 }
@@ -830,7 +859,7 @@ const pickItem = (item: Actor, player: Actor) => {
                     ++player.sp_;
                     item.hp_ = item.btn_ = 0;
                     playAt(player, Snd.med);
-                    if (player.client_ === clientId) {
+                    if (withMyPlayer) {
                         addTextParticle(item, `+${qty} cr`);
                     }
                 }
@@ -844,7 +873,7 @@ const updateGameCamera = () => {
         const l = state.actors_[ActorType.Player].filter(p => p.client_);
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
     }
-    let cameraScale = BASE_RESOLUTION / min(gl.drawingBufferWidth, gl.drawingBufferHeight);
+    let scale = GAME_CFG.camera.baseScale;
     let cameraX = gameCamera[0];
     let cameraY = gameCamera[1];
     if (clientId) {
@@ -856,12 +885,12 @@ const updateGameCamera = () => {
             const py = p0.y_ / WORLD_SCALE;
             cameraX = px + wpn.cameraLookForward_ * (lookAtX - px) - viewM * viewX;
             cameraY = py + wpn.cameraLookForward_ * (lookAtY - py) - viewM * viewY;
-            cameraScale *= wpn.cameraScale_;
+            scale *= wpn.cameraScale_;
         }
     }
     gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
     gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
-    gameCamera[2] = lerpLog(gameCamera[2], cameraScale, 0.05);
+    gameCamera[2] = lerpLog(gameCamera[2], scale / getScreenScale(), 0.05);
 }
 
 const normalizeState = () => {
@@ -993,7 +1022,7 @@ const simulateTic = () => {
     cameraShake = dec1(cameraShake);
     cameraFeedback = dec1(cameraFeedback);
 
-    if (clientId) {
+    if (gameMode.spawnNPC) {
         const NPC_PERIOD_MASK = (1 << GAME_CFG.npc.period) - 1;
         if ((gameTic & NPC_PERIOD_MASK) === 0) {
             let count = 0;
@@ -1013,8 +1042,9 @@ const simulateTic = () => {
                 ++count;
             }
         }
-    } else {
-        // SPLASH SCREEN
+    }
+
+    if (gameMode.bloodRain) {
         spawnFleshParticles({
             x_: fxRand(WORLD_BOUNDS_SIZE),
             y_: fxRand(WORLD_BOUNDS_SIZE),
@@ -1213,7 +1243,7 @@ const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
                 if (player.weapon2_ && (player.clipAmmo2_ || !weapons[player.weapon2_].clipSize_)) {
                     swapWeaponSlot(player);
                 }
-                if (player.client_ === clientId) {
+                if (isMyPlayer(player)) {
                     addTextParticle(player, "EMPTY!");
                 }
                 player.s_ = weapon.reloadTime_;
@@ -1223,7 +1253,7 @@ const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
 }
 
 const updatePlayer = (player: Actor) => {
-    if (!player.client_ && clientId) {
+    if (gameMode.runAI && (!player.client_ || gameMode.playersAI)) {
         updateAI(state, player);
     }
     let grounded = player.z_ == 0 && player.w_ == 0;
@@ -1273,7 +1303,7 @@ const updatePlayer = (player: Actor) => {
                 if (player.mags_) {
                     player.clipReload_ = weapon.clipReload_;
                 } else {
-                    if (player.client_ === clientId) {
+                    if (isMyPlayer(player)) {
                         addTextParticle(player, "NO MAGS!");
                     }
                 }
@@ -1299,7 +1329,7 @@ const updatePlayer = (player: Actor) => {
                             needReloadWeaponIfOutOfAmmo(player);
                         }
                     }
-                    if (player.client_ == clientId) {
+                    if (isMyPlayer(player)) {
                         cameraShake = max(weapon.cameraShake_, cameraShake);
                         cameraFeedback = 5;
                     }
@@ -1414,10 +1444,8 @@ const drawGame = () => {
         const viewScale = 1 / gameCamera[2];
         let fx = fxRandomNorm(cameraShake / (8 * 50));
         let fz = fxRandomNorm(cameraShake / (8 * 50));
-        if (!clientId) {
-            fx += 0.05 * Math.sin(lastFrameTs);
-            fz += 0.05 * Math.cos(lastFrameTs);
-        }
+        fx += gameMode.tiltCamera * Math.sin(lastFrameTs);
+        fz += gameMode.tiltCamera * Math.cos(lastFrameTs);
         setupWorldCameraMatrix(cameraCenterX, cameraCenterY, viewScale, fx, fz);
     }
 
@@ -1449,7 +1477,7 @@ const drawGame = () => {
     if (process.env.NODE_ENV === "development") {
         drawCollisions(drawList);
     }
-    if (!clientId) {
+    if (gameMode.title) {
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
             const add = RGB((0x20 * (11 - i) + 0x20 * a) & 0xFF, 0, 0);
@@ -1470,7 +1498,8 @@ const drawGame = () => {
     flush();
 }
 
-export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / BASE_RESOLUTION;
+export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG.camera.size;
+
 const drawOverlay = () => {
     setDrawZ(1000);
     const scale = getScreenScale();
@@ -1792,8 +1821,9 @@ const drawObjects = () => {
 
 const playAt = (actor: Actor, id: Snd) => {
     if (gameTic > lastAudioTic) {
-        const dx = (actor.x_ / WORLD_SCALE - gameCamera[0]) / 256;
-        const dy = (actor.y_ / WORLD_SCALE - gameCamera[1]) / 256;
+        const r = GAME_CFG.camera.listenerRadius;
+        const dx = (actor.x_ / WORLD_SCALE - gameCamera[0]) / r;
+        const dy = (actor.y_ / WORLD_SCALE - gameCamera[1]) / r;
         const v = 1 - hypot(dx, dy);
         if (v > 0) {
             play(snd[id], v, clamp(dx, -1, 1));
