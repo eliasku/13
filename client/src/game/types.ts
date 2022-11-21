@@ -102,7 +102,7 @@ export interface Actor extends Pos, Vel {
     // 6 bits
     clipAmmo2_?: number;
 
-    // oh... check down trigger 3 bits
+    // oh... check down trigger 4 bits
     trig_?: number;
 }
 

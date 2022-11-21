@@ -5,6 +5,7 @@
 - Cross-platform static monospace font for UI
 - Splash Screen NPC start ammo
 - Decrease minimum fire distance for Gun weapons for NPC
+- Fix EMPTY / NO MAGS spam #44 (add reload / fire button down event) 
 
 ## 1.0.6
 

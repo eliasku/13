@@ -482,7 +482,7 @@ const checkPlayerInput = () => {
         if (viewX || viewY) {
             btn |= packDirByte(viewX, viewY, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
             if (shootButtonDown) {
-                btn |= ControlsFlag.Shooting;
+                btn |= ControlsFlag.Fire;
             }
         }
 
@@ -1245,7 +1245,7 @@ const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
                 if (player.weapon2_ && (player.clipAmmo2_ || !weapons[player.weapon2_].clipSize_)) {
                     swapWeaponSlot(player);
                 }
-                if (isMyPlayer(player)) {
+                if (isMyPlayer(player) && !(player.trig_ & ControlsFlag.DownEvent_Fire)) {
                     addTextParticle(player, "EMPTY!");
                 }
                 player.s_ = weapon.reloadTime_;
@@ -1305,11 +1305,14 @@ const updatePlayer = (player: Actor) => {
                 if (player.mags_) {
                     player.clipReload_ = weapon.clipReload_;
                 } else {
-                    if (isMyPlayer(player)) {
+                    if (isMyPlayer(player) && !(player.trig_ & ControlsFlag.DownEvent_Reload)) {
                         addTextParticle(player, "NO MAGS!");
                     }
                 }
             }
+            player.trig_ |= ControlsFlag.DownEvent_Reload;
+        } else {
+            player.trig_ &= ~ControlsFlag.DownEvent_Reload;
         }
         if (weapon.clipSize_ && player.clipReload_ && player.mags_) {
             --player.clipReload_;
@@ -1318,7 +1321,7 @@ const updatePlayer = (player: Actor) => {
                 player.clipAmmo_ = weapon.clipSize_;
             }
         }
-        if (player.btn_ & ControlsFlag.Shooting) {
+        if (player.btn_ & ControlsFlag.Fire) {
             // reload-tics = NetFq / Rate
             player.s_ = dec1(player.s_);
             if (!player.s_) {
@@ -1370,8 +1373,10 @@ const updatePlayer = (player: Actor) => {
                         addShellParticle(player, PLAYER_HANDS_Z, weapon.bulletShellColor_);
                     }
                 }
+                player.trig_ |= ControlsFlag.DownEvent_Fire;
             }
         } else {
+            player.trig_ &= ~ControlsFlag.DownEvent_Fire;
             player.detune_ = (player.detune_ / 3) | 0;
             player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_);
         }

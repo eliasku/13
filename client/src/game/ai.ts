@@ -71,7 +71,7 @@ export const updateAI = (state: StateData, player: Actor) => {
                         my = dy;
                         move = ControlsFlag.Move | ControlsFlag.Run;
                     } else {
-                        shoot = ControlsFlag.Shooting;
+                        shoot = ControlsFlag.Fire;
                     }
                     const md = packDirByte(mx, my, ControlsFlag.MoveAngleMax);
                     const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);

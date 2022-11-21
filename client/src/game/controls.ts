@@ -29,7 +29,7 @@ export const enum ControlsFlag {
     Move = 0x1,
     Run = 0x2,
     Jump = 0x4,
-    Shooting = 0x8,
+    Fire = 0x8,
     Drop = 0x10,
     Reload = 0x20,
     Swap = 0x40,
@@ -42,8 +42,10 @@ export const enum ControlsFlag {
     LookAngleMax = 0x100,
     LookAngleBit = 13,
 
-    DownEvent_Drop = 1,
-    DownEvent_Swap = 2,
+    DownEvent_Fire = 1,
+    DownEvent_Drop = 2,
+    DownEvent_Reload = 4,
+    DownEvent_Swap = 8,
 }
 
 export const gameCamera: number[] = [0, 0, 1];

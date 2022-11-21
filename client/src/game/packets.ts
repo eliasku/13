@@ -38,10 +38,10 @@ const readState = (state: StateData, i32: Int32Array, ptr: number): number => {
 
             clipAmmo_: ammoData & 63,
             clipReload_: (ammoData >> 6) & 63,
-            mags_: (ammoData >> 12) & 15,
+            mags_: (ammoData >> 12) & 0b1111,
             clipAmmo2_: (ammoData >> 16) & 63,
-            weapon2_: (ammoData >> 22) & 15,
-            trig_: (ammoData >> 26) & 3,
+            weapon2_: (ammoData >> 22) & 0b1111,
+            trig_: (ammoData >> 26) & 0b1111,
         };
         state.actors_[p.type_].push(p);
     }
