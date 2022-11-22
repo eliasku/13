@@ -932,7 +932,7 @@ const simulateTic = () => {
                         gameCamera[1] = p.y_ / WORLD_SCALE;
                     }
                     p.hp_ = 10;
-                    p.sp_ = 10;
+                    //p.sp_ = 10;
                     p.mags_ = 1;
                     p.btn_ = cmd.btn_;
                     //Const.StartWeapon;
