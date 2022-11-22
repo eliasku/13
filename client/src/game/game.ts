@@ -932,6 +932,7 @@ const simulateTic = () => {
                         gameCamera[1] = p.y_ / WORLD_SCALE;
                     }
                     p.hp_ = 10;
+                    p.sp_ = 10;
                     p.mags_ = 1;
                     p.btn_ = cmd.btn_;
                     //Const.StartWeapon;
@@ -1140,6 +1141,7 @@ const getNameByClientId = (client: ClientID) => client === clientId ? clientName
 
 const hitWithBullet = (actor: Actor, bullet: Actor) => {
 
+    let absorbed = false;
     addVelFrom(actor, bullet, 0.1);
     actor.animHit_ = ANIM_HIT_MAX;
     addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
@@ -1148,8 +1150,15 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
         let damage = bullet.weapon_;
         if (actor.sp_ > 0) {
             const q = clamp(damage, 0, actor.sp_);
-            actor.sp_ -= q;
-            damage -= q;
+            if (q > 0) {
+                actor.sp_ -= q;
+                damage -= q;
+                if (actor.type_ === ActorType.Player) {
+                    addImpactParticles(16, actor, bullet, [0x999999, 0x00CCCC, 0xFFFF00]);
+                    playAt(actor, Snd.hurt);
+                }
+                absorbed = true;
+            }
         }
         if (damage) {
             const q = clamp(damage, 0, actor.hp_);
@@ -1160,6 +1169,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                     addFleshParticles(16, actor, 64, bullet);
                     playAt(actor, Snd.hurt);
                 }
+                absorbed = true;
             }
         }
         if (damage) {
@@ -1206,18 +1216,23 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
         }
     }
     if (bullet.hp_ && bullet.btn_ != BulletType.Ray) {
-        --bullet.hp_;
-        if (bullet.hp_) {
-            let nx = bullet.x_ - actor.x_;
-            let ny = bullet.y_ - actor.y_;
-            const dist = sqrt(nx * nx + ny * ny);
-            if (dist > 0) {
-                nx /= dist;
-                ny /= dist;
-                reflectVelocity(bullet, nx, ny, 1);
-                const pen = OBJECT_RADIUS_BY_TYPE[actor.type_] + BULLET_RADIUS + 1;
-                bullet.x_ = actor.x_ + pen * nx;
-                bullet.y_ = actor.y_ + pen * ny;
+        // bullet hit or bounced?
+        if (absorbed) {
+            bullet.hp_ = 0;
+        } else {
+            --bullet.hp_;
+            if (bullet.hp_) {
+                let nx = bullet.x_ - actor.x_;
+                let ny = bullet.y_ - actor.y_;
+                const dist = sqrt(nx * nx + ny * ny);
+                if (dist > 0) {
+                    nx /= dist;
+                    ny /= dist;
+                    reflectVelocity(bullet, nx, ny, 1);
+                    const pen = OBJECT_RADIUS_BY_TYPE[actor.type_] + BULLET_RADIUS + 1;
+                    bullet.x_ = actor.x_ + pen * nx;
+                    bullet.y_ = actor.y_ + pen * ny;
+                }
             }
         }
     }
