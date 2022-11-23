@@ -8,6 +8,8 @@
 - Fix EMPTY / NO MAGS spam #44 (add reload / fire button down event) 
 - Additional particles when bullet hits player shields
 - Fix bullet bouncing on hit with damage #36 
+- Keep logo while connecting
+- Fix dancing nickname (wrong Z)
 
 ## 1.0.6
 

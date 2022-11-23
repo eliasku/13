@@ -1,15 +1,15 @@
 import {
-    _sseState,
+    _sseState, clientId,
     clientName,
     connect,
     disconnect,
     loadCurrentOnlineUsers,
-    processMessages,
+    processMessages, remoteClients,
     setUserName
 } from "./net/messaging";
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
-import {createSplashState, gameMode, getScreenScale, resetGame, updateGame} from "./game/game";
+import {createSeedGameState, createSplashState, gameMode, getScreenScale, resetGame, updateGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
@@ -100,12 +100,14 @@ const enum StartState {
                 if (button("start", "⚔ FIGHT", centerX - 50, centerY + 70, {w: 100, h: 20})) {
                     state = StartState.Connecting;
                     resetGame();
+                    gameMode.title = true;
                     connect();
                 }
 
                 if (button("practice", "🏹 PRACTICE", centerX - 50, centerY + 100, {w: 100, h: 20})) {
                     state = StartState.Connected;
                     resetGame();
+                    gameMode.title = false;
                     connect(true);
                 }
 
@@ -123,15 +125,13 @@ const enum StartState {
             const H = (gl.drawingBufferHeight / scale) | 0;
             const centerX = W >> 1;
             const centerY = H >> 1;
-            const f = 0.5 + 0.5 * sin(ts);
-            gl.clearColor(0.2 * f, 0.2 * (1 - f), 0.0, 1.0);
-            gl.clear(GL.COLOR_BUFFER_BIT);
             beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
             const fontSize = 10 + 0.5 * Math.sin(4 * ts);
-            drawTextShadowCenter(fnt[0], "CONNECTING", fontSize, centerX, centerY - 5, 0xd9ff66);
-            drawTextShadowCenter(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 5, 0xdddddd);
+            drawTextShadowCenter(fnt[0], "CONNECTING", fontSize, centerX, centerY + 40, 0xd9ff66);
+            drawTextShadowCenter(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 50, 0xdddddd);
             flush();
             if (_sseState == 3) {
+                gameMode.title = false;
                 state = StartState.Connected;
                 speak("fight");
             } else if (!_sseState) {

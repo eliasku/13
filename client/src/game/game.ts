@@ -295,7 +295,7 @@ function initBarrels() {
     }
 }
 
-const createSeedGameState = () => {
+export const createSeedGameState = () => {
     startTic = 0;
     gameTic = 0;
     state.mapSeed_ = state.seed_ = _SEEDS[0];
@@ -504,7 +504,7 @@ const checkPlayerInput = () => {
     }
 
     // RESPAWN EVENT
-    if (clientId && !waitToSpawn && !player && joined) {
+    if (!gameMode.title && clientId && !waitToSpawn && !player && joined) {
         if (isAnyKeyDown() || waitToAutoSpawn) {
             btn |= ControlsFlag.Spawn;
             waitToSpawn = true;
@@ -878,7 +878,7 @@ const updateGameCamera = () => {
     let scale = GAME_CFG.camera.baseScale;
     let cameraX = gameCamera[0];
     let cameraY = gameCamera[1];
-    if (clientId) {
+    if (clientId && !gameMode.title) {
         const p0 = getMyPlayer() ?? getRandomPlayer();
         if (p0?.client_) {
             const wpn = weapons[p0.weapon_];
@@ -931,11 +931,10 @@ const simulateTic = () => {
                         gameCamera[0] = p.x_ / WORLD_SCALE;
                         gameCamera[1] = p.y_ / WORLD_SCALE;
                     }
-                    p.hp_ = 10;
-                    //p.sp_ = 10;
-                    p.mags_ = 1;
+                    p.hp_ = GAME_CFG.player_hp;
+                    p.sp_ = GAME_CFG.player_sp;
+                    p.mags_ = GAME_CFG.player_mags;
                     p.btn_ = cmd.btn_;
-                    //Const.StartWeapon;
                     setCurrentWeapon(p, 1 + rand(3));
                     pushActor(p);
                 }
@@ -1774,6 +1773,7 @@ const drawPlayer = (p: Actor): void => {
     if (p.client_ > 0 && p.client_ !== clientId) {
         const name = getNameByClientId(p.client_);
         if (name) {
+            setDrawZ(0);
             drawTextShadowCenter(fnt[0], name, 6, x, y - 28);
         }
     }

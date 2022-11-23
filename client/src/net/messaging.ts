@@ -171,7 +171,7 @@ export const connect = (offlineMode?: boolean) => {
     }
     if (offlineMode) {
         // bypass all connection routine
-        _sseState = 2;
+        _sseState = 3;
         clientId = 1;
     } else {
         _sseState = 1;

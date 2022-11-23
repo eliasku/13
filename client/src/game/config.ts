@@ -35,5 +35,9 @@ export const GAME_CFG = {
         size: 256,
         listenerRadius: 256,
         baseScale: 1.1,
-    }
+    },
+    // initial values for player's spawn
+    player_hp: 10,
+    player_sp: 0,
+    player_mags: 1,
 };
