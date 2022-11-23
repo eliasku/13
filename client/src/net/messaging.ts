@@ -178,12 +178,11 @@ export const connect = (offlineMode?: boolean) => {
         messageUploading = false;
         messagesToPost = [];
         callbacks = [];
-        eventSource = new EventSource(/*EventSourceUrl*/ getUrl("_?v=" + BuildVersion));
-        eventSource.onerror = disconnect;
-        // eventSource.onerror = (e) => {
-        //     console.warn("server-event error");
-        //     termSSE();
-        // };
+        eventSource = new EventSource(getUrl("_?v=" + BuildVersion));
+        eventSource.onerror = (e) => {
+            console.warn("server-event error");
+            disconnect();
+        };
         eventSource.onmessage = e => onSSE[e.data[0]]?.(e.data.substring(1));
     }
 }
@@ -220,10 +219,9 @@ const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient =>
         setupDataChannel(rc);
     };
 
-    // TODO: debug
-    // pc.onicecandidateerror = (e: RTCPeerConnectionIceErrorEvent) => {
-    //     console.warn("ice candidate error: " + e.errorText);
-    // };
+    _pc.onicecandidateerror = (e: RTCPeerConnectionIceErrorEvent) => {
+        console.warn("ice candidate error: " + e.errorText);
+    };
     return rc;
 }
 
@@ -240,6 +238,17 @@ const connectToRemote = (rc: RemoteClient): Promise<void> => {
             sendOffer(rc, true).catch();
         }
     };
+    rc.pc_.onicegatheringstatechange = e => {
+        console.log('onicegatheringstatechange', rc.pc_.iceGatheringState);
+        switch (rc.pc_.iceGatheringState) {
+            case 'complete':
+                console.log('iceGatheringState: complete');
+                break
+            default:
+                console.log('iceGatheringState: not complete');
+                break
+        }
+    }
     console.log("connecting to " + rc.id_);
     return sendOffer(rc).then(_ => {
         rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
@@ -247,6 +256,9 @@ const connectToRemote = (rc: RemoteClient): Promise<void> => {
         return new Promise((resolve, reject) => {
             let num = 20;
             const timer = setInterval(() => {
+                if (rc.pc_.iceGatheringState !== "complete") {
+                    return;
+                }
                 if (isPeerConnected(rc)) {
                     clearInterval(timer);
                     resolve();
