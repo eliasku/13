@@ -11,15 +11,6 @@ import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
 import {iceServers} from "./iceServers";
 
-// https://groups.google.com/g/jssip/c/ocOZWYqLP5I
-let CERT:RTCCertificate = null;
-RTCPeerConnection.generateCertificate({
-    name: 'RSASSA-PKCS1-v1_5',
-    hash: 'SHA-256',
-    modulusLength: 2048,
-    publicExponent: new Uint8Array([1, 0, 1])
-} as AlgorithmIdentifier).then(cert => CERT = cert);
-
 export interface RemoteClient {
     id_: ClientID;
     pc_?: RTCPeerConnection;
@@ -221,7 +212,7 @@ const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
         id_: id,
-        pc_: _pc = new RTCPeerConnection({iceServers, certificates: [CERT]}),
+        pc_: _pc = new RTCPeerConnection({iceServers}),
     };
 
     _pc.onicecandidate = (e) => {
