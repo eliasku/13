@@ -342,20 +342,23 @@ export const updateGame = (ts: number) => {
         createSeedGameState();
     }
 
+    let predicted = false;
     if (startTic >= 0) {
         tryRunTicks(lastFrameTs);
         flushSplatsToMap();
-        if (!document.hidden) {
-            const predicted = beginPrediction();
-            drawGame();
-            drawOverlay();
+        predicted = beginPrediction();
+    }
+    if (!document.hidden) {
+        drawGame();
+        drawOverlay();
+    }
+    if (startTic >= 0) {
+        // check input before overlay, or save camera settings
+        checkPlayerInput();
+        checkJoinSync();
 
-            // check input before overlay, or save camera settings
-            checkPlayerInput();
-            checkJoinSync();
+        if (predicted) endPrediction();
 
-            if (predicted) endPrediction();
-        }
         sendInput();
         cleaningUpClients();
     }
