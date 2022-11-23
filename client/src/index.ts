@@ -101,13 +101,14 @@ const enum StartState {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
+                    gameMode.tiltCamera = 0.05;
+                    gameMode.bloodRain = true;
                     connect();
                 }
 
                 if (button("practice", "🏹 PRACTICE", centerX - 50, centerY + 100, {w: 100, h: 20})) {
                     state = StartState.Connected;
                     resetGame();
-                    gameMode.title = false;
                     connect(true);
                 }
 
@@ -132,6 +133,8 @@ const enum StartState {
             flush();
             if (_sseState == 3) {
                 gameMode.title = false;
+                gameMode.tiltCamera = 0.0;
+                gameMode.bloodRain = false;
                 state = StartState.Connected;
                 speak("fight");
             } else if (!_sseState) {
