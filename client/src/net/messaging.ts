@@ -14,8 +14,10 @@ import {iceServers} from "./iceServers";
 // https://groups.google.com/g/jssip/c/ocOZWYqLP5I
 let CERT:RTCCertificate = null;
 RTCPeerConnection.generateCertificate({
-    name: "ECDSA",
-    namedCurve: "P-256"
+    name: 'RSASSA-PKCS1-v1_5',
+    hash: 'SHA-256',
+    modulusLength: 2048,
+    publicExponent: new Uint8Array([1, 0, 1])
 } as AlgorithmIdentifier).then(cert => CERT = cert);
 
 export interface RemoteClient {
