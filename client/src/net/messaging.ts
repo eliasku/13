@@ -191,23 +191,10 @@ export const connect = (offlineMode?: boolean) => {
 const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
     rc.pc_.createOffer({iceRestart})
         .then(offer => rc.pc_.setLocalDescription(offer))
-        .then(() => {
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    if (rc.pc_.iceGatheringState !== "complete") {
-                        try {
-                            remoteCall(
-                                rc.id_, MessageType.RtcOffer, rc.pc_.localDescription.toJSON(),
-                                (message) => rc.pc_.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
-                            )
-                        } catch (e) {
-                            reject(e);
-                        }
-                    }
-                    resolve(undefined);
-                }, 1000);
-            });
-        });
+        .then(() => remoteCall(
+            rc.id_, MessageType.RtcOffer, rc.pc_.localDescription.toJSON(),
+            (message) => rc.pc_.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
+        ));
 
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
