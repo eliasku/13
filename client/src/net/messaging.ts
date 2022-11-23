@@ -265,7 +265,7 @@ const connectToRemote = (rc: RemoteClient): Promise<void> => {
                 } else if (!--num) {
                     reject();
                 }
-            }, 200);
+            }, 500);
         });
     });
 }
