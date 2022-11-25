@@ -179,11 +179,10 @@ export const connect = (offlineMode?: boolean) => {
         messagesToPost = [];
         callbacks = [];
         eventSource = new EventSource(/*EventSourceUrl*/ getUrl("_?v=" + BuildVersion));
-        eventSource.onerror = disconnect;
-        // eventSource.onerror = (e) => {
-        //     console.warn("server-event error");
-        //     termSSE();
-        // };
+        eventSource.onerror = (e) => {
+            console.warn("server-event error");
+            disconnect();
+        };
         eventSource.onmessage = e => onSSE[e.data[0]]?.(e.data.substring(1));
     }
 }

@@ -1533,12 +1533,14 @@ const drawOverlay = () => {
         drawMiniMap(state, trees, gl.drawingBufferWidth / scale, 0);
     }
 
-    printStatus();
+    if (!gameMode.title) {
+        printStatus();
+        drawVirtualPad();
+    }
+
     if (process.env.NODE_ENV === "development") {
         printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
-
-    drawVirtualPad();
 
     drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls}`, 5, 2, 5, 0, 0);
 

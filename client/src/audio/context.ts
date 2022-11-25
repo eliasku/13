@@ -1,9 +1,13 @@
+import {settings} from "../game/settings";
+
 export const audioContext = new AudioContext();
 
 export const play = (audioBuffer: AudioBuffer,
                      vol: number | StereoPannerNode,
                      pan: number | AudioBufferSourceNode,
                      gain?: GainNode): void => {
+    if (!settings.sound) return;
+
     const testMasterVol = 0.5;
     gain = audioContext.createGain();
     gain.gain.value = vol as number * testMasterVol;
@@ -20,9 +24,10 @@ export const play = (audioBuffer: AudioBuffer,
 }
 
 export const speak = (text: string) => {
-    if("SpeechSynthesisUtterance" in window) {
-        const speech = new SpeechSynthesisUtterance(text);
-        speech.volume = 0.5;
-        speechSynthesis.speak(speech);
-    }
+    if (!settings.speech) return;
+    if (!("SpeechSynthesisUtterance" in window)) return;
+
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.volume = 0.5;
+    speechSynthesis.speak(speech);
 }
