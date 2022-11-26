@@ -128,6 +128,7 @@ import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai";
 import {GL} from "../graphics/gl";
 import {drawCrosshair, drawShadows, setupWorldCameraMatrix} from "./gameDraw";
+import {getDevSetting} from "./settings";
 
 const clients = new Map<ClientID, Client>()
 
@@ -453,9 +454,7 @@ const getNextInputTic = (tic: number) =>
     );
 
 const checkPlayerInput = () => {
-    if (process.env.NODE_ENV === "development") {
-        updateDebugInput();
-    }
+    updateDebugInput();
 
     const player = getMyPlayer();
     if (player) {
@@ -1496,12 +1495,10 @@ const drawGame = () => {
     gl.depthMask(false);
     drawObjects();
 
-    setDrawZ(0.1);
-    renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
-
-    if (process.env.NODE_ENV === "development") {
+    if (getDevSetting("collision")) {
         drawCollisions(drawList);
     }
+
     if (gameMode.title) {
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
@@ -1517,6 +1514,8 @@ const drawGame = () => {
 
     gl.disable(GL.DEPTH_TEST);
     setDrawZ(0);
+    renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
+    //setDrawZ(0);
     drawTextParticles();
     drawHotUsableHint();
     flush();
@@ -1538,11 +1537,13 @@ const drawOverlay = () => {
         drawVirtualPad();
     }
 
-    if (process.env.NODE_ENV === "development") {
+    if (getDevSetting("info")) {
         printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 
-    drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls}`, 5, 2, 5, 0, 0);
+    if (getDevSetting("fps")) {
+        drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls}`, 4, 2, 5, 0, 0);
+    }
 
     flush();
 }

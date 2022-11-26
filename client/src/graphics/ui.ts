@@ -3,13 +3,13 @@ import {inputPointers, mousePointer, Pointer} from "../utils/input";
 import {Img, img} from "../assets/gfx";
 import {draw, setDrawZ} from "./draw2d";
 
-let y = 15;
+let y = 8;
 export const resetPrinter = () => {
-    y = 15;
+    y = 8;
 }
-export const termPrint = (text: string) => {
-    drawText(fnt[0], text, 7, 2, y, 7, 1);
-    y += 8;
+export const termPrint = (text: string, size = 7) => {
+    drawText(fnt[0], text, size, 2, y, size, 1);
+    y += size + 1;
 }
 
 // https://sol.gfxile.net/imgui/ch03.html

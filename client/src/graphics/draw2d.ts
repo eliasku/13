@@ -12,6 +12,7 @@ import {
 } from "./shader";
 import {Mat4} from "../utils/mat4";
 import {stats} from "../utils/fpsMeter";
+import {settings} from "../game/settings";
 
 export const gl = c.getContext("webgl", {
     antialias: false,
@@ -23,8 +24,9 @@ export const gl = c.getContext("webgl", {
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
+export const getDPR = () => settings.highDPI ? devicePixelRatio : 1.0;
 const onResize = () => {
-    const dpr = devicePixelRatio;
+    const dpr = getDPR();
     const width = document.body.clientWidth;
     const height = document.body.clientHeight;
     const w = (width * dpr) | 0;

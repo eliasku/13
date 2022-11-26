@@ -5,19 +5,19 @@ import {getChannelPacketSize} from "../net/channels_send";
 import {termPrint} from "../graphics/ui";
 import {keyboardDown, KeyCode} from "../utils/input";
 import {OBJECT_HEIGHT, OBJECT_RADIUS_BY_TYPE} from "./data/world";
-import {draw} from "../graphics/draw2d";
+import {draw, setDrawZ} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
 import {ClientID} from "../../../shared/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
 import {min} from "../utils/math";
+import {devSettings} from "./settings";
+import {WORLD_SCALE} from "../assets/params";
 
 //// DEBUG UTILITIES ////
 
 let debugState: StateData;
-let showDebugInfo = true;
 let debugStateEnabled = false;
-let drawCollisionEnabled = false;
 let debugCheckAvatar = 0;
 let prevSimulatedTic = 0;
 
@@ -48,8 +48,6 @@ export const printDebugInfo = (
     trees: Actor[],
     clients: Map<ClientID, Client>,
 ) => {
-    if (!showDebugInfo) return;
-
     let text = gameTic > prevSimulatedTic ? "🌐" : "🥶";
     const ticsAhead = (lastFrameTs - prevTime) * Const.NetFq | 0;
     const ticsPrediction = min(Const.PredictionMax, ticsAhead);
@@ -106,42 +104,43 @@ export const printDebugInfo = (
     text += "v := [" + _dmin[4] + " .. " + _dmax[4] + "]\n";
     text += "w := [" + _dmin[5] + " .. " + _dmax[5] + "]\n";
 
-    termPrint(text);
+    termPrint(text, 4);
 }
 
 export const updateDebugInput = () => {
-    if (keyboardDown[KeyCode.Digit0]) {
-        showDebugInfo = !showDebugInfo;
-    }
-    if (keyboardDown[KeyCode.Digit1]) {
-        ++debugCheckAvatar;
-    }
-    if (keyboardDown[KeyCode.Digit2]) {
-        drawCollisionEnabled = !drawCollisionEnabled;
-    }
-    if (keyboardDown[KeyCode.Digit3]) {
-        setDebugLagK((_debugLagK + 1) % 3);
-    }
-    if (keyboardDown[KeyCode.Digit4]) {
-        debugStateEnabled = !debugStateEnabled;
+    if (devSettings.enabled) {
+        if (keyboardDown[KeyCode.Digit0]) {
+            devSettings.info = devSettings.info ? 0 : 1;
+        }
+        if (keyboardDown[KeyCode.Digit1]) {
+            ++debugCheckAvatar;
+        }
+        if (keyboardDown[KeyCode.Digit2]) {
+            devSettings.collision = devSettings.collision ? 0 : 1;
+        }
+        if (keyboardDown[KeyCode.Digit3]) {
+            setDebugLagK((_debugLagK + 1) % 3);
+        }
+        if (keyboardDown[KeyCode.Digit4]) {
+            debugStateEnabled = !debugStateEnabled;
+        }
     }
 }
 
 const drawActorBoundingSphere = (p: Actor) => {
     const r = OBJECT_RADIUS_BY_TYPE[p.type_];
     const h = OBJECT_HEIGHT[p.type_];
-    const x = p.x_;
-    const y = p.y_ - p.z_ - h;
-    const s = r / 16;
-    draw(img[Img.box_t], x, y, 0, 1, p.z_ + h);
+    const x = p.x_ / WORLD_SCALE;
+    const y = (p.y_ - p.z_ - h) / WORLD_SCALE;
+    const s = (r / WORLD_SCALE) / 16;
+    draw(img[Img.box_t], x, y, 0, 1, (p.z_ + h) / WORLD_SCALE);
     draw(img[Img.circle_16], x, y, 0, s, s, 0.5, 0xFF0000);
 }
 
 export const drawCollisions = (list: Actor[]) => {
-    if (drawCollisionEnabled) {
-        for (const p of list) {
-            drawActorBoundingSphere(p);
-        }
+    setDrawZ(0);
+    for (const p of list) {
+        drawActorBoundingSphere(p);
     }
 }
 

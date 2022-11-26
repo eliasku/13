@@ -20,11 +20,14 @@ export const parseRGB = (color: string): number => {
                     parseInt(color.charAt(2), 16) * 0x11,
                     parseInt(color.charAt(3), 16) * 0x11);
             } else if (color.length === 7) {
-                return RGB(parseInt(color.slice(0, 2), 16),
-                    parseInt(color.slice(2, 4), 16),
-                    parseInt(color.slice(4, 6), 16));
+                return RGB(parseInt(color.slice(1, 3), 16),
+                    parseInt(color.slice(3, 5), 16),
+                    parseInt(color.slice(5, 7), 16));
             }
         }
     }
     return 0;
 }
+
+export const rgb_scale = (rgb: number, factor: number) =>
+    RGB(factor * ((rgb >>> 16) & 0xFF), factor * ((rgb >>> 8) & 0xFF), factor * (rgb & 0xFF));

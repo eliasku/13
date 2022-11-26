@@ -10,6 +10,7 @@ import {
 import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
 import {iceServers} from "./iceServers";
+import {setSetting, settings} from "../game/settings";
 
 export interface RemoteClient {
     id_: ClientID;
@@ -26,7 +27,7 @@ export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
 let eventSource: EventSource | null = null;
 export let clientId: 0 | ClientID = 0;
-export let clientName: string | null = localStorage.getItem("l3name");
+export let clientName: string | null = settings.name;
 let messagesToPost: Message[] = [];
 let messageUploading = false;
 let nextCallId = 1;
@@ -39,9 +40,9 @@ export const loadCurrentOnlineUsers = () => {
         .catch(() => 0);
 }
 
-export const setUserName = (name: string | null | undefined) => {
-    clientName = (name || "guest").trim().substring(0, 32).trim();
-    localStorage.setItem("l3name", clientName);
+export const setUserName = (name?: string) => {
+    name ||= "Guest " + ((Math.random() * 1000) | 0);
+    clientName = setSetting("name", name!.trim().substring(0, 32).trim());
 }
 
 const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>

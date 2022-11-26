@@ -1,3 +1,9 @@
+## 1.0.8
+
+- Kid-mode blood #51
+- Settings menu #48
+- Dev menu: click 4 times on the main Game Logo
+
 ## 1.0.7
 
 - Offline Practice Mode #37

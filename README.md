@@ -73,6 +73,9 @@ Destroy objects 🛢 | 📦 | 🪦 to get items
 - 🔌 Plasma-gun (bouncing, auto)
 - 🧵 Rail-gun (piercing)
 
+### Dev-menu
+Tap 4 times on the main game logo to unlock dev-mode and dev-settings.
+
 ## Minimal requirements
 
 - **Good, low-latency network connection** is required for each playing client

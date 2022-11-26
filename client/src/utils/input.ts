@@ -1,5 +1,6 @@
 import {audioContext} from "../audio/context";
 import {getOrCreate} from "./utils";
+import {getDPR} from "../graphics/draw2d";
 
 export interface Pointer {
     id_: number;
@@ -96,16 +97,16 @@ export const keyboardUp: number[] = [];
 
     const _handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect()) => {
         fn(mousePointer,
-            ((e.clientX - _bb.x) * devicePixelRatio) | 0,
-            ((e.clientY - _bb.y) * devicePixelRatio) | 0);
+            ((e.clientX - _bb.x) * getDPR()) | 0,
+            ((e.clientY - _bb.y) * getDPR()) | 0);
     };
 
     const _handleTouch = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect(), _touch?: Touch) => {
         e.preventDefault();
         for (_touch of e.changedTouches) {
             fn(getPointer(_touch.identifier),
-                ((_touch.clientX - _bb.x) * devicePixelRatio) | 0,
-                ((_touch.clientY - _bb.y) * devicePixelRatio) | 0);
+                ((_touch.clientX - _bb.x) * getDPR()) | 0,
+                ((_touch.clientY - _bb.y) * getDPR()) | 0);
         }
     };
 
