@@ -325,6 +325,12 @@ export const flush = (_count = quadCount) => {
         gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, 0, indexData.subarray(0, _count * 6));
 
         gl.drawElements(GL.TRIANGLES, 6 * _count, GL.UNSIGNED_SHORT, 0);
+        // if (process.env.NODE_ENV === "development") {
+            const err = gl.getError();
+            if (err) {
+                console.error("gl error");
+            }
+        // }
         quadCount = 0;
         ++stats.frameDrawCalls;
     }

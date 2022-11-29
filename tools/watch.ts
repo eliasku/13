@@ -20,9 +20,10 @@ const buildVersion = resolveVersion();
         };
         if (!debug) {
             opts.drop = ["debugger"];
-            if ((opts.entryPoints as string[])[0] !== "server/src/index.ts") {
-                opts.drop.push("console");
-            }
+            // if ((opts.entryPoints as string[])[0] !== "server/src/index.ts") {
+            //     opts.drop.push("console");
+            // }
+            // opts.minify = true;
             opts.minifySyntax = true;
         }
         opts.define = {

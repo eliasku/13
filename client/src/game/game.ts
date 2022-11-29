@@ -1125,7 +1125,7 @@ const kill = (actor: Actor) => {
         grave.btn_ = 2;
         pushActor(grave);
 
-        addFleshParticles(64, actor, 256, grave);
+        addFleshParticles(256, actor, 128, grave);
         addBoneParticles(32, actor, grave);
     }
 }

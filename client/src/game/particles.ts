@@ -1,8 +1,8 @@
 import {img, Img} from "../assets/gfx";
 import {beginRender, draw, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, TextParticle, Vel} from "./types";
-import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {atan2, hypot, max, PI, sin, sqrt} from "../utils/math";
+import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, sqrLength3, updateBody} from "./phy";
+import {atan2, cos, hypot, max, PI, sin, sqrt} from "../utils/math";
 import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
@@ -45,7 +45,11 @@ const updateParticle = (p: Particle): boolean => {
             const v = hypot(p.u_, p.v_, p.w_);
             if (v < 4 || p.splashEachJump_) {
                 const d = 1 + p.splashScaleOnVelocity_ * v;
-                splats.push(p.splashImg_, p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.a_, p.splashSizeX_ * d, p.splashSizeY_ * d, p.color_);
+                let angle = p.a_;
+                if (p.followVelocity_ > 0) {
+                    angle += p.followVelocity_ * atan2(p.v_, p.u_);
+                }
+                splats.push(p.splashImg_, p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, angle, p.splashSizeX_ * d, p.splashSizeY_ * sqrt(d), p.color_);
             }
             if (v < 4) {
                 return true;
@@ -163,13 +167,13 @@ export const drawParticle = (p: Particle) => {
 //////
 
 const KID_MODE_COLORS = [
-    parseRGB("#00FF00"),
-    parseRGB("#00FFFF"),
-    parseRGB("#3399FF"),
-    parseRGB("#FFFF00"),
-    parseRGB("#FF33FF"),
-    parseRGB("#FF9900"),
-    parseRGB("#FFAAAA"),
+    parseRGB("#2fff00"),
+    parseRGB("#00fff7"),
+    parseRGB("#007eff"),
+    parseRGB("#8300ff"),
+    parseRGB("#ff00ff"),
+    parseRGB("#ff4b00"),
+    parseRGB("#fffd00"),
 ];
 
 const MATURE_BLOOD_COLORS = [
@@ -188,14 +192,15 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
         if (vel) {
             addVelFrom(particle, vel, random1(0.5));
         }
-        addRadialVelocity(particle, random1n(PI), explVel * sqrt(random1()), 0);
-        particle.color_ = rgb_scale(color, 0.4 + random1(0.3));
+        const v = explVel * sqrt(random1());
+        addRadialVelocity(particle, random1n(PI), v, v * cos(random1(PI)));
+        particle.color_ = rgb_scale(color, 0.5 + random1(0.2));
         particle.img_ = Img.particle_shell;
         particle.splashImg_ = Img.circle_4;
         particle.splashEachJump_ = 1;
         particle.splashSizeX_ = 0.5;
-        particle.splashSizeY_ = 0.5 / 4;
-        particle.splashScaleOnVelocity_ = (1 + random1()) / 100;
+        particle.splashSizeY_ = 0.5 / 2;// / 4;
+        particle.splashScaleOnVelocity_ = (1 + sqrt(random1())) / 100;
         particle.scale_ = (1 + random1()) / 2;
         particle.followVelocity_ = 1;
         particle.followScale_ = 0.02;
