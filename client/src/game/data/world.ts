@@ -8,7 +8,6 @@ export const BULLET_RADIUS = 6 * WORLD_SCALE;
 
 export const PLAYER_HANDS_PX_Z = 10;
 export const PLAYER_HANDS_Z = PLAYER_HANDS_PX_Z * WORLD_SCALE;
-export const JUMP_VEL = 0x50;
 
 export const ANIM_HIT_OVER = 31;
 export const ANIM_HIT_MAX = 15;

@@ -103,7 +103,6 @@ import {
     ANIM_HIT_MAX,
     ANIM_HIT_OVER,
     BULLET_RADIUS,
-    JUMP_VEL,
     OBJECT_RADIUS,
     OBJECT_RADIUS_BY_TYPE,
     PLAYER_HANDS_PX_Z,
@@ -933,9 +932,9 @@ const simulateTic = () => {
                         gameCamera[0] = p.x_ / WORLD_SCALE;
                         gameCamera[1] = p.y_ / WORLD_SCALE;
                     }
-                    p.hp_ = GAME_CFG.player_hp;
-                    p.sp_ = GAME_CFG.player_sp;
-                    p.mags_ = GAME_CFG.player_mags;
+                    p.hp_ = GAME_CFG.player.hp;
+                    p.sp_ = GAME_CFG.player.sp;
+                    p.mags_ = GAME_CFG.player.mags;
                     p.btn_ = cmd.btn_;
                     setCurrentWeapon(p, 1 + rand(3));
                     pushActor(p);
@@ -1270,6 +1269,11 @@ const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
     }
 }
 
+function calcVelocityWithWeapon(player: Actor, velocity: number): number {
+    const k = player.weapon_ ? weapons[player.weapon_].moveWeightK : 1.0;
+    return (velocity * k) | 0;
+}
+
 const updatePlayer = (player: Actor) => {
     if (gameMode.runAI && (!player.client_ || gameMode.playersAI)) {
         updateAI(state, player);
@@ -1278,7 +1282,7 @@ const updatePlayer = (player: Actor) => {
     if (player.btn_ & ControlsFlag.Jump) {
         if (grounded) {
             player.z_ = 1;
-            player.w_ = JUMP_VEL;
+            player.w_ = calcVelocityWithWeapon(player, GAME_CFG.player.jumpVel);
             grounded = false;
             playAt(player, Snd.jump);
         }
@@ -1291,11 +1295,12 @@ const updatePlayer = (player: Actor) => {
     const lookDirX = cos(lookAngle);
     const lookDirY = sin(lookAngle);
     if (player.btn_ & ControlsFlag.Move) {
-        const speed = (player.btn_ & ControlsFlag.Run) ? 2 : 1;
-        const vel = speed * 60;
+        const vel = calcVelocityWithWeapon(player,
+            (player.btn_ & ControlsFlag.Run) ? GAME_CFG.player.runVel : GAME_CFG.player.walkVel
+        );
         player.u_ = reach(player.u_, vel * moveDirX, vel * c);
         player.v_ = reach(player.v_, vel * moveDirY, vel * c);
-        if (grounded && !((gameTic + player.anim0_) % (20 / speed))) {
+        if (grounded && !((gameTic + player.anim0_) % (120 / vel))) {
             playAt(player, Snd.step);
         }
     } else {
@@ -1455,16 +1460,16 @@ const drawGame = () => {
     flush();
 
     beginRenderToMain(
-        gameCamera[0] + fxRandomNorm(cameraShake / 5) | 0,
-        gameCamera[1] + fxRandomNorm(cameraShake / 5) | 0,
+        gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0),
+        gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0),
         0.5, 0.5,
         fxRandomNorm(cameraShake / (8 * 50)),
         1 / gameCamera[2]
     );
 
     {
-        const cameraCenterX = gameCamera[0] + fxRandomNorm(cameraShake / 5) | 0;
-        const cameraCenterY = gameCamera[1] + fxRandomNorm(cameraShake / 5) | 0;
+        const cameraCenterX = gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0);
+        const cameraCenterY = gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0);
         const viewScale = 1 / gameCamera[2];
         let fx = fxRandomNorm(cameraShake / (8 * 50));
         let fz = fxRandomNorm(cameraShake / (8 * 50));

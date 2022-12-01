@@ -3,10 +3,9 @@ import {WORLD_SCALE} from "../assets/params";
 import {img, Img} from "../assets/gfx";
 import {draw, gl, setDrawZ, setMVP} from "../graphics/draw2d";
 import {lookAtX, lookAtY, viewX, viewY} from "./controls";
-import {atan2, cos, PI, sin} from "../utils/math";
+import {clamp, cos, PI, sin} from "../utils/math";
 import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4";
-import {fxRandElement} from "../utils/rnd";
-import {COLOR_WHITE} from "./data/colors";
+import {weapons} from "./data/weapons";
 
 
 const SHADOW_SCALE = [1, 1, 2, 1, 1];
@@ -23,11 +22,35 @@ export const drawShadows = (drawList: Actor[]) => {
     }
 }
 
-
-export const drawCrosshair = (t: number, p0?: Actor) => {
-    if (p0 && (viewX || viewY)) {
+export const drawCrosshair = (t: number, player?: Actor) => {
+    if (player && ((viewX | 0) || (viewY | 0))) {
         setDrawZ(1000);
-        const len = 4 + sin(2 * t) * cos(4 * t) / 4 + (p0.detune_ / 8) + p0.s_ / 10;
+
+        if (player.weapon_) {
+            const weapon = weapons[player.weapon_];
+            if (weapon.clipSize_ && !player.clipAmmo_) {
+                if (player.clipReload_ && player.mags_) {
+                    // reloading
+                    const t = 1.0 - player.clipReload_ / weapon.clipReload_;
+                    const N = 8;
+                    for (let i = 0; i < N; ++i) {
+                        const sc = clamp(t * N - i, 0, 1);
+                        draw(img[Img.box_t1], lookAtX, lookAtY + 1000, (i / N) * PI * 2 - PI, 2 * sc, 5 - 2 * sc, 1, 0xFFFF99);
+                    }
+                    return;
+                } else {
+                    // blinking
+                    if (sin(t * 32) >= 0) {
+                        for (let i = 0; i < 4; ++i) {
+                            draw(img[Img.box_t1], lookAtX, lookAtY + 1000, t / 10 + i * PI / 2, 2, 4, 1, 0xFF3333);
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+
+        const len = 4 + sin(2 * t) * cos(4 * t) / 4 + (player.detune_ / 8) + player.s_ / 10;
         for (let i = 0; i < 4; ++i) {
             draw(img[Img.box_t1], lookAtX, lookAtY + 1000, t / 10 + i * PI / 2, 2, len);
         }

@@ -42,6 +42,9 @@ export interface WeaponConfig {
 
     ai_shootDistanceMin_: number;
     ai_shootDistanceMax_: number;
+
+    // value affects movement speed, jump velocity
+    moveWeightK: number;
 }
 
 const newWeapon = (): WeaponConfig => ({
@@ -72,6 +75,7 @@ const newWeapon = (): WeaponConfig => ({
     clipReload_: 0,
     ai_shootDistanceMin_: 0,
     ai_shootDistanceMax_: 0xFFFFFFFF,
+    moveWeightK: 1.0,
 });
 
 const createArmWeapon = (): WeaponConfig => {
@@ -107,6 +111,7 @@ const createGunWeapon = (): WeaponConfig => {
     // w.ai_shootDistanceMin_ = 128 * WORLD_SCALE;
     w.ai_shootDistanceMin_ = 24 * WORLD_SCALE;
     w.ai_shootDistanceMax_ = 256 * WORLD_SCALE;
+    w.moveWeightK = 0.8;
     return w;
 };
 
@@ -131,7 +136,7 @@ export const weapons: WeaponConfig[] = [
 let i = 1;
 
 // 🔪
-weapons[i].name_ = "knife";
+weapons[i].name_ = "Knife";
 weapons[i].reloadTime_ = 10;
 weapons[i].launchTime_ = 5;
 weapons[i].bulletDamage_ = 2;
@@ -139,15 +144,16 @@ weapons[i].gfxRot_ = -45;
 
 // AXE
 ++i;
-weapons[i].name_ = "axe";
+weapons[i].name_ = "Axe";
 weapons[i].reloadTime_ = 30;
 weapons[i].launchTime_ = 15;
 weapons[i].bulletDamage_ = 8;
 weapons[i].gfxRot_ = -45;
+weapons[i].moveWeightK = 0.9;
 
 // 🔫
 ++i;
-weapons[i].name_ = "pistol";
+weapons[i].name_ = "Pistol";
 weapons[i].bulletDamage_ = 3;
 weapons[i].angleSpread_ = 0.1;
 weapons[i].velocity_ /= 2;
@@ -155,10 +161,11 @@ weapons[i].relaunchSpeed_ = 16;
 weapons[i].detuneSpeed_ = 16;
 weapons[i].cameraFeedback_ = 0.02;
 weapons[i].clipSize_ = 9 * 3;
+weapons[i].moveWeightK = 1.0;
 
 // 🖊 light auto gun
 ++i;
-weapons[i].name_ = "auto gun";
+weapons[i].name_ = "Automatic Gun";
 weapons[i].reloadTime_ = 5;
 weapons[i].angleSpread_ = 0.25;
 weapons[i].kickBack_ = 20;
@@ -168,7 +175,7 @@ weapons[i].cameraFeedback_ = 0.02;
 
 // ✏️ hard machine-gun?
 ++i;
-weapons[i].name_ = "machine gun";
+weapons[i].name_ = "Machine Gun";
 weapons[i].reloadTime_ = 8;
 weapons[i].angleSpread_ = 0.25;
 weapons[i].kickBack_ = 20;
@@ -180,7 +187,7 @@ weapons[i].bulletDamage_ = 2;
 
 // 🪥 SHOT GUN
 ++i;
-weapons[i].name_ = "shotgun";
+weapons[i].name_ = "Shotgun";
 weapons[i].spawnCount_ = 5;
 weapons[i].angleSpread_ = 0.5;
 weapons[i].detuneSpeed_ = 32;
@@ -193,10 +200,11 @@ weapons[i].bulletHp_ = 2;
 weapons[i].bulletDamage_ = 2;
 weapons[i].bulletShellColor_ = 0xAA0000;
 weapons[i].clipSize_ = 7;
+weapons[i].moveWeightK = 0.9;
 
 // CROSS BOW ⛏
 ++i;
-weapons[i].name_ = "crossbow";
+weapons[i].name_ = "Crossbow";
 weapons[i].detuneSpeed_ = 1;
 weapons[i].cameraFeedback_ = 0.2;
 weapons[i].cameraLookForward_ = 0.4;
@@ -207,10 +215,11 @@ weapons[i].bulletDamage_ = 5;
 weapons[i].bulletType_ = BulletType.Arrow;
 weapons[i].bulletShellColor_ = 0x00FF00;
 weapons[i].clipSize_ = 7;
+weapons[i].moveWeightK = 0.9;
 
 // 🔌 plasma shock
 ++i;
-weapons[i].name_ = "plasma gun";
+weapons[i].name_ = "Plasma Gun";
 weapons[i].angleSpread_ = 0.5;
 weapons[i].detuneSpeed_ = 10;
 weapons[i].reloadTime_ = 10;
@@ -225,7 +234,7 @@ weapons[i].clipSize_ = 35;
 
 // 🧵 RAIL GUN
 ++i;
-weapons[i].name_ = "railgun";
+weapons[i].name_ = "Railgun";
 weapons[i].reloadTime_ = 120;
 weapons[i].cameraShake_ = 25;
 weapons[i].velocity_ = 1000;

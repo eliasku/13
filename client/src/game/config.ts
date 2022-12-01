@@ -36,8 +36,13 @@ export const GAME_CFG = {
         listenerRadius: 256,
         baseScale: 1.1,
     },
-    // initial values for player's spawn
-    player_hp: 10,
-    player_sp: 0,
-    player_mags: 1,
+    player: {
+        // initial values for player's spawn
+        hp: 10,
+        sp: 0,
+        mags: 1,
+        jumpVel: 80,
+        runVel: 120,
+        walkVel: 60,
+    }
 };

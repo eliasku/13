@@ -194,6 +194,7 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
         }
         const v = explVel * sqrt(random1());
         addRadialVelocity(particle, random1n(PI), v, v * cos(random1(PI)));
+        particle.v_ /= 2;
         particle.color_ = rgb_scale(color, 0.5 + random1(0.2));
         particle.img_ = Img.particle_shell;
         particle.splashImg_ = Img.circle_4;
@@ -223,7 +224,7 @@ export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
         particle.scale_ = 0.5 + random1(0.25);
         particle.splashSizeX_ = particle.scale_;
         particle.splashSizeY_ = particle.scale_;
-        particle.color_ = getLumaColor32(0x80 + random1(0x20));
+        particle.color_ = getLumaColor32(200 + random1(50));
         particle.r_ = random1n(0.1);
         particle.a_ = random1n(0.5);
         particles.push(particle);

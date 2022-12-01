@@ -3,6 +3,10 @@
 - Kid-mode blood #51
 - Settings menu #48
 - Dev menu: click 4 times on the main Game Logo
+- Fix game camera smoothness
+- Fix brightness for bone particles
+- Weapon affect movement velocity #50
+- Add Crosshair reload / empty state alterations
 
 ## 1.0.7
 
