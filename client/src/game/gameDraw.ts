@@ -28,7 +28,7 @@ export const drawCrosshair = (t: number, player?: Actor) => {
 
         if (player.weapon_) {
             const weapon = weapons[player.weapon_];
-            if (weapon.clipSize_ && !player.clipAmmo_) {
+            if (weapon.clipSize_) {
                 if (player.clipReload_ && player.mags_) {
                     // reloading
                     const t = 1.0 - player.clipReload_ / weapon.clipReload_;
@@ -38,7 +38,8 @@ export const drawCrosshair = (t: number, player?: Actor) => {
                         draw(img[Img.box_t1], lookAtX, lookAtY + 1000, (i / N) * PI * 2 - PI, 2 * sc, 5 - 2 * sc, 1, 0xFFFF99);
                     }
                     return;
-                } else {
+                }
+                if (!player.clipAmmo_) {
                     // blinking
                     if (sin(t * 32) >= 0) {
                         for (let i = 0; i < 4; ++i) {
