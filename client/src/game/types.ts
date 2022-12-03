@@ -181,7 +181,11 @@ export interface Particle extends Pos, Vel {
     // rotation speed
     r_: number;
 
+    // gravity factor
+    gravity_: number;
+
     scale_: number;
+    scaleDelta_: number;
     color_: number;
 
     lifeTime_: number;

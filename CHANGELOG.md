@@ -7,6 +7,7 @@
 - Fix brightness for bone particles
 - Weapon affect movement velocity #50
 - Add Crosshair reload / empty state alterations
+- Land particles and footprints #34
 
 ## 1.0.7
 

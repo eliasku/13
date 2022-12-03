@@ -2,7 +2,7 @@ import {ClientID} from "../../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {beginRenderToMain, draw, drawBillboard, flush, gl, setDrawZ} from "../graphics/draw2d";
-import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random} from "../utils/rnd";
+import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {Const, GAME_CFG} from "./config";
@@ -24,6 +24,7 @@ import {
 } from "./types";
 import {pack, unpack} from "./packets";
 import {
+    abs,
     atan2,
     clamp,
     cos,
@@ -66,7 +67,9 @@ import {
     addBoneParticles,
     addFleshParticles,
     addImpactParticles,
+    addLandParticles,
     addShellParticle,
+    addStepSplat,
     addTextParticle,
     drawOpaqueParticles,
     drawParticles,
@@ -951,7 +954,6 @@ const simulateTic = () => {
 
     for (const a of state.actors_[ActorType.Player]) {
         updatePlayer(a);
-        updateActorPhysics(a);
         addToGrid(playersGrid, a);
         a.fstate_ = 1;
     }
@@ -1278,16 +1280,17 @@ const updatePlayer = (player: Actor) => {
     if (gameMode.runAI && (!player.client_ || gameMode.playersAI)) {
         updateAI(state, player);
     }
-    let grounded = player.z_ == 0 && player.w_ == 0;
+    let landed = player.z_ == 0 && player.w_ == 0;
     if (player.btn_ & ControlsFlag.Jump) {
-        if (grounded) {
+        if (landed) {
             player.z_ = 1;
             player.w_ = calcVelocityWithWeapon(player, GAME_CFG.player.jumpVel);
-            grounded = false;
+            landed = false;
             playAt(player, Snd.jump);
+            addLandParticles(player, 240, 8);
         }
     }
-    const c = (grounded ? 16 : 8) / Const.NetFq;
+    const c = (landed ? 16 : 8) / Const.NetFq;
     const moveAngle = unpackAngleByte(player.btn_ >> ControlsFlag.MoveAngleBit, ControlsFlag.MoveAngleMax);
     const lookAngle = unpackAngleByte(player.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const moveDirX = cos(moveAngle);
@@ -1300,8 +1303,18 @@ const updatePlayer = (player: Actor) => {
         );
         player.u_ = reach(player.u_, vel * moveDirX, vel * c);
         player.v_ = reach(player.v_, vel * moveDirY, vel * c);
-        if (grounded && !((gameTic + player.anim0_) % (120 / vel))) {
-            playAt(player, Snd.step);
+        if (landed) {
+            const L = 256;
+            const S = (L / vel) | 0;
+            const moment = (gameTic + player.anim0_) % S;
+            if (!moment) {
+                playAt(player, Snd.step);
+                if (!random1i(4)) {
+                    addLandParticles(player, 240, 1);
+                }
+                const moment2 = (gameTic + player.anim0_) % (2 * S);
+                addStepSplat(player, moment2 ? 120 : -120);
+            }
         }
     } else {
         applyGroundFriction(player, 32 * c);
@@ -1400,6 +1413,20 @@ const updatePlayer = (player: Actor) => {
             player.trig_ &= ~ControlsFlag.DownEvent_Fire;
             player.detune_ = (player.detune_ / 3) | 0;
             player.s_ = reach(player.s_, weapon.launchTime_, weapon.relaunchSpeed_);
+        }
+    }
+
+    const prevVelZ = player.w_;
+    updateActorPhysics(player);
+
+    if (!landed) {
+        const isLanded = player.z_ <= 0 && prevVelZ <= 0;
+        if (isLanded) {
+            const count = 8;
+            const n = abs(count * prevVelZ / GAME_CFG.player.jumpVel) | 0;
+            if (n > 0) {
+                addLandParticles(player, 240, n);
+            }
         }
     }
 }
@@ -1841,14 +1868,15 @@ function drawOpaqueObjects() {
 
 const drawObjects = () => {
     drawSplats();
-    drawParticles();
-    setDrawZ(0.1);
 
+    setDrawZ(0.1);
     drawShadows(drawList);
     drawParticleShadows();
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor.type_](actor);
     }
+
+    drawParticles();
 }
 /// SOUND ENV ///
 
