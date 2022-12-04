@@ -4,7 +4,6 @@ import {clientName, remoteClients} from "../net/messaging";
 import {getChannelPacketSize} from "../net/channels_send";
 import {termPrint} from "../graphics/ui";
 import {keyboardDown, KeyCode} from "../utils/input";
-import {OBJECT_HEIGHT, OBJECT_RADIUS_BY_TYPE} from "./data/world";
 import {draw, setDrawZ} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
 import {ClientID} from "../../../shared/types";
@@ -13,6 +12,7 @@ import {roundActors} from "./phy";
 import {min} from "../utils/math";
 import {devSettings} from "./settings";
 import {WORLD_SCALE} from "../assets/params";
+import {actorsConfig} from "./data/world";
 
 //// DEBUG UTILITIES ////
 
@@ -128,8 +128,9 @@ export const updateDebugInput = () => {
 }
 
 const drawActorBoundingSphere = (p: Actor) => {
-    const r = OBJECT_RADIUS_BY_TYPE[p.type_];
-    const h = OBJECT_HEIGHT[p.type_];
+    const prop = actorsConfig[p.type_];
+    const r = prop.radius;
+    const h = prop.height;
     const x = p.x_ / WORLD_SCALE;
     const y = (p.y_ - p.z_ - h) / WORLD_SCALE;
     const s = (r / WORLD_SCALE) / 16;

@@ -2,17 +2,9 @@ import {Actor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
 import {clamp, cos, reach, sin, sqrt} from "../utils/math";
 import {ControlsFlag} from "./controls";
-import {
-    GRAVITY,
-    GRAVITY_WEAK,
-    OBJECT_BOUNDS_LOSS,
-    OBJECT_GROUND_FRICTION,
-    OBJECT_GROUND_LOSS,
-    OBJECT_HEIGHT,
-    OBJECT_RADIUS,
-    OBJECT_RADIUS_BY_TYPE
-} from "./data/world";
+import {actorsConfig, OBJECT_RADIUS} from "./data/world";
 import {WORLD_BOUNDS_SIZE} from "../assets/params";
+import {GAME_CFG} from "./config";
 
 export const setRandomPosition = (actor: Actor) => {
     actor.x_ = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);
@@ -22,7 +14,7 @@ export const setRandomPosition = (actor: Actor) => {
 export const copyPosFromActorCenter = (to: Pos, from: Actor) => {
     to.x_ = from.x_;
     to.y_ = from.y_;
-    to.z_ = from.z_ + OBJECT_HEIGHT[from.type_];
+    to.z_ = from.z_ + actorsConfig[from.type_].height;
 }
 
 export const updateBody = (body: Pos & Vel, gravity: number, loss: number) => {
@@ -44,17 +36,21 @@ export const updateAnim = (actor: Actor) => {
 }
 
 export const updateActorPhysics = (a: Actor) => {
+    const prop = actorsConfig[a.type_];
+    const world = GAME_CFG.world;
     const isWeakGravity = a.type_ ? 0 : (a.btn_ & ControlsFlag.Jump);
-    updateBody(a, isWeakGravity ? GRAVITY_WEAK : GRAVITY, OBJECT_GROUND_LOSS[a.type_]);
+    updateBody(a, isWeakGravity ? world.gravityWeak : world.gravity, prop.groundLoss);
     collideWithBoundsA(a);
     if (a.z_ <= 0) {
-        applyGroundFriction(a, OBJECT_GROUND_FRICTION[a.type_]);
+        applyGroundFriction(a, prop.groundFriction);
     }
     updateAnim(a);
 }
 
-export const collideWithBoundsA = (body: Actor): number =>
-    collideWithBounds(body, OBJECT_RADIUS_BY_TYPE[body.type_], OBJECT_BOUNDS_LOSS[body.type_]);
+export const collideWithBoundsA = (body: Actor): number => {
+    const props = actorsConfig[body.type_];
+    return collideWithBounds(body, props.radius, props.boundsLoss);
+}
 
 export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number): number => {
     let has = 0;
@@ -132,24 +128,24 @@ export const sqrDistXY = (a: Actor, b: Actor) => {
 }
 
 export const testIntersection = (a: Actor, b: Actor): boolean => {
-    const ta = a.type_;
-    const tb = b.type_;
-    const D = OBJECT_RADIUS_BY_TYPE[ta] + OBJECT_RADIUS_BY_TYPE[tb];
-    return sqrLength3(a.x_ - b.x_, a.y_ - b.y_, a.z_ + OBJECT_HEIGHT[ta] - b.z_ - OBJECT_HEIGHT[tb]) < D * D;
+    const ca = actorsConfig[a.type_];
+    const cb = actorsConfig[b.type_];
+    const D = ca.radius + cb.radius;
+    return sqrLength3(a.x_ - b.x_, a.y_ - b.y_, a.z_ + ca.height - b.z_ - cb.height) < D * D;
 }
 
-const OBJECT_IMASS = [1, 1, 1, 1, 0];
-
 export const checkBodyCollision = (a: Actor, b: Actor) => {
+    const ca = actorsConfig[a.type_];
+    const cb = actorsConfig[b.type_];
     let nx = a.x_ - b.x_;
     let ny = (a.y_ - b.y_) * 2;
-    let nz = (a.z_ + OBJECT_HEIGHT[a.type_]) - (b.z_ + OBJECT_HEIGHT[b.type_]);
+    let nz = (a.z_ + ca.height) - (b.z_ + cb.height);
     const sqrDist = sqrLength3(nx, ny, nz);
-    const D = OBJECT_RADIUS_BY_TYPE[a.type_] + OBJECT_RADIUS_BY_TYPE[b.type_];
-    if (sqrDist < D * D && sqrDist > 0) {
+    const D = ca.radius + cb.radius;
+    if (sqrDist > 0 && sqrDist < D * D) {
         const pen = (D / sqrt(sqrDist) - 1) / 2;
-        addPos(a, nx, ny, nz, OBJECT_IMASS[a.type_] * pen);
-        addPos(b, nx, ny, nz, -OBJECT_IMASS[b.type_] * pen);
+        addPos(a, nx, ny, nz, ca.imass * pen);
+        addPos(b, nx, ny, nz, -cb.imass * pen);
     }
 };
 
@@ -157,9 +153,10 @@ export const testRayWithSphere = (from: Actor, target: Actor, dx: number, dy: nu
     const Lx = target.x_ - from.x_;
     const Ly = target.y_ - from.y_;
     const len = Lx * dx + Ly * dy;
-    const R = OBJECT_RADIUS_BY_TYPE[target.type_];
+    const props = actorsConfig[target.type_];
+    const R = props.radius;
     return len >= 0 &&
-        sqrLength3(Lx - dx * len, Ly - dy * len, target.z_ + OBJECT_HEIGHT[target.type_] - from.z_) <= R * R;
+        sqrLength3(Lx - dx * len, Ly - dy * len, target.z_ + props.height - from.z_) <= R * R;
 }
 
 export const roundActors = (list: Actor[]) => {

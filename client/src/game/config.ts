@@ -1,3 +1,5 @@
+import {parseRGB} from "../utils/utils";
+
 export const enum Const {
     NetFq = 60,
     InputDelay = 8,
@@ -44,5 +46,45 @@ export const GAME_CFG = {
         jumpVel: 80,
         runVel: 120,
         walkVel: 60,
+    },
+    world: {
+        gravity: 5,
+        gravityWeak: 3
+    },
+    minimap: {
+        size: 48,
+        markerScale: 1,
+        colors: {
+            me: parseRGB("#fff"),
+            player: parseRGB("#f00"),
+            npc: parseRGB("#d06"),
+            tree: parseRGB("#888"),
+            barrel: parseRGB("#07f"),
+            item: parseRGB("#0f0"),
+            background: parseRGB("#010"),
+            backgroundAlpha: 0.6,
+        }
+    },
+    bodyColor: [
+        parseRGB("#FF99DD"),
+        parseRGB("#FFCC99"),
+        parseRGB("#CCFF99"),
+        parseRGB("#222222"),
+        parseRGB("#8855FF"),
+        parseRGB("#CCCCCC"),
+    ],
+    voice: {
+        killAB: [
+            "{0} CRUSHED {1}",
+            "{0} destroyed {1}",
+            "{0} killed {1}",
+            "{0} took {1} life",
+        ],
+        killNPC: [
+            "warm-up for {0}",
+            "{0} killed someone",
+            "death by {0}",
+            "{0} sows DEATH",
+        ]
     }
 };

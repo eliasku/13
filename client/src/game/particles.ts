@@ -1,9 +1,8 @@
 import {img, Img} from "../assets/gfx";
 import {beginRender, draw, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, TextParticle, Vel} from "./types";
-import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, sqrLength3, updateBody} from "./phy";
+import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
 import {atan2, cos, hypot, max, PI, sin, sqrt} from "../utils/math";
-import {GRAVITY} from "./data/world";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
 import {mapTexture} from "../assets/map";
@@ -12,6 +11,7 @@ import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils";
 import {cubicOut} from "../utils/easing";
 import {drawTextShadowCenter, fnt} from "../graphics/font";
 import {settings} from "./settings";
+import {GAME_CFG} from "./config";
 
 export const newParticle = (): Particle => ({
     x_: 0,
@@ -42,7 +42,7 @@ const updateParticle = (p: Particle): boolean => {
     p.a_ += p.r_;
     ++p.lifeTime_;
 
-    if (updateBody(p, p.gravity_ * GRAVITY, 2)) {
+    if (updateBody(p, p.gravity_ * GAME_CFG.world.gravity, 2)) {
         if (p.splashImg_) {
             const v = hypot(p.u_, p.v_, p.w_);
             if (v < 4 || p.splashEachJump_) {
@@ -248,31 +248,32 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
     opaqueParticles.push(particle);
 }
 
-export function addStepSplat(player:Actor, dx: number) {
+export function addStepSplat(player: Actor, dx: number) {
     splats.push(Img.box,
         (player.x_ + dx) / WORLD_SCALE + random1n(1),
         (player.y_) / WORLD_SCALE + random1n(1),
         0, 1 + random1(), 1, getLumaColor32(0x44 + random1(0x10)));
 }
 
-export function addLandParticles(player:Actor, r: number, n: number) {
-    while(n--) {
+export function addLandParticles(player: Actor, r: number, n: number) {
+    while (n--) {
         const particle = newParticle();
         const R = r * sqrt(random1());
         const a = random1n(PI);
         particle.x_ = player.x_ + R * cos(a);
         particle.y_ = player.y_ + R * sin(a);
         particle.z_ = 10;
-        particle.img_ = Img.circle_4;
+        particle.img_ = Img.box;
         particle.color_ = getLumaColor32(0x66 + random1(0x22));
         particle.r_ = random1n(0.25);
         particle.a_ = random1n(PI);
         particle.lifeMax_ = 10 + random1i(40);
         particle.gravity_ = -random1(0.1);
-        particle.scale_ = 0.4 + random1(0.5);
+        particle.scale_ = 8 * (0.4 + random1(0.5));
         particle.scaleDelta_ = -particle.scale_;
         addRadialVelocity(particle, random1n(PI), 16 + random1(16), 8);
-        particles.push(particle);
+        // particles.push(particle);
+        opaqueParticles.push(particle);
     }
 }
 
@@ -310,7 +311,7 @@ export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, color
         particle.scaleDelta_ = -particle.scale_;
         particle.followVelocity_ = 1;
         particle.followScale_ = 0.02;
-        particle.lifeMax_ = 8 + random1(16);
+        particle.lifeMax_ = 16 + random1(16);
         opaqueParticles.push(particle);
     }
 }

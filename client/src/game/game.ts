@@ -62,7 +62,7 @@ import {
 } from "./controls";
 import {isAnyKeyDown} from "../utils/input";
 import {Snd, snd} from "../assets/sfx";
-import {BulletType, weapons} from "./data/weapons";
+import {weapons} from "./data/weapons";
 import {
     addBoneParticles,
     addFleshParticles,
@@ -103,15 +103,14 @@ import {
 } from "./phy";
 import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {
+    actorsConfig,
     ANIM_HIT_MAX,
     ANIM_HIT_OVER,
     BULLET_RADIUS,
     OBJECT_RADIUS,
-    OBJECT_RADIUS_BY_TYPE,
     PLAYER_HANDS_PX_Z,
     PLAYER_HANDS_Z,
 } from "./data/world";
-import {COLOR_BODY, COLOR_WHITE} from "./data/colors";
 import {termPrint} from "../graphics/ui";
 import {beginFogRender, drawFogObjects, drawFogPoint, renderFog} from "./fog";
 import {
@@ -123,14 +122,23 @@ import {
     updateDebugInput
 } from "./debug";
 import {addToGrid, queryGridCollisions} from "./grid";
-import {getLumaColor32, getOrCreate, RGB} from "../utils/utils";
+import {getOrCreate, RGB} from "../utils/utils";
 import {drawText, drawTextShadowCenter, fnt} from "../graphics/font";
 import {stats} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai";
 import {GL} from "../graphics/gl";
-import {drawCrosshair, drawShadows, setupWorldCameraMatrix} from "./gameDraw";
-import {getDevSetting} from "./settings";
+import {
+    drawBarrel, drawBullet,
+    drawCrosshair, drawHotUsableHint, drawItem,
+    drawShadows,
+    drawTree,
+    getHitColorOffset,
+    setupWorldCameraMatrix
+} from "./gameDraw";
+import {getDevSetting, settings} from "./settings";
+import {bullets, BulletType} from "./data/bullets";
+import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
 
 const clients = new Map<ClientID, Client>()
 
@@ -147,7 +155,6 @@ let joined = false;
 let waitToAutoSpawn = false;
 let waitToSpawn = false;
 
-let lastFrameTs = 0;
 let lastInputTic = 0;
 let lastInputCmd = 0;
 let lastAudioTic = 0;
@@ -242,7 +249,7 @@ export const resetGame = () => {
     waitToAutoSpawn = false;
     waitToSpawn = false;
 
-    lastFrameTs = 0;
+    resetLastFrameTs();
     lastInputTic = 0;
     lastInputCmd = 0;
     lastAudioTic = 0;
@@ -330,12 +337,6 @@ export const createSplashState = () => {
     gameMode.tiltCamera = 0.05;
     gameMode.bloodRain = true;
     gameMode.title = true;
-}
-
-const updateFrameTime = (ts: number) => {
-    if (ts > lastFrameTs) {
-        lastFrameTs = ts;
-    }
 }
 
 export const updateGame = (ts: number) => {
@@ -991,7 +992,7 @@ const simulateTic = () => {
             updateBody(bullet, 0, 0);
             if (bullet.hp_ && collideWithBoundsA(bullet)) {
                 --bullet.hp_;
-                addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
+                addImpactParticles(8, bullet, bullet, bullets[bullet.btn_ as BulletType].color);
             }
             queryGridCollisions(bullet, playersGrid, checkBulletCollision);
             queryGridCollisions(bullet, barrelsGrid, checkBulletCollision);
@@ -1131,22 +1132,12 @@ const kill = (actor: Actor) => {
     }
 }
 
-const BULLET_COLOR = [
-    [0xFFFFFF],
-    [0xFFFF44],
-    [0x44FFFF],
-    [0x333333],
-    [0xFF0000, 0x00FF00, 0x00FFFF, 0xFFFF00, 0xFF00FF]
-];
-
-const getNameByClientId = (client: ClientID) => client === clientId ? clientName : remoteClients.get(client)?.name_;
-
 const hitWithBullet = (actor: Actor, bullet: Actor) => {
 
     let absorbed = false;
     addVelFrom(actor, bullet, 0.1);
     actor.animHit_ = ANIM_HIT_MAX;
-    addImpactParticles(8, bullet, bullet, BULLET_COLOR[bullet.btn_]);
+    addImpactParticles(8, bullet, bullet, bullets[bullet.btn_ as BulletType].color);
     playAt(actor, Snd.hit);
     if (actor.hp_) {
         let damage = bullet.weapon_;
@@ -1194,23 +1185,14 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                     stat.scores_ += actor.client_ > 0 ? 5 : 1;
                     ++stat.frags_;
                     state.stats_.set(killerID, stat);
-
-                    const a = getNameByClientId(killerID);
-                    const b = getNameByClientId(actor.client_);
-                    if (a) {
-                        let t = b ? [
-                            a + " CRUSHED " + b,
-                            a + " destroyed " + b,
-                            a + " killed " + b,
-                            a + " took " + b + " life",
-                        ] : [
-                            "warm-up for " + a,
-                            a + " killed someone",
-                            "death by " + a,
-                            a + " sows DEATH",
-                        ];
-                        if (gameTic > lastAudioTic) {
-                            speak(fxRandElement(t));
+                    if(settings.speech && gameTic > lastAudioTic) {
+                        const a = getNameByClientId(killerID);
+                        const b = getNameByClientId(actor.client_);
+                        if (a) {
+                            let text = fxRandElement(b ? GAME_CFG.voice.killAB : GAME_CFG.voice.killNPC);
+                            text = text.replace("{0}", a);
+                            text = text.replace("{1}", b);
+                            speak(text);
                         }
                     }
                 }
@@ -1231,7 +1213,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                     nx /= dist;
                     ny /= dist;
                     reflectVelocity(bullet, nx, ny, 1);
-                    const pen = OBJECT_RADIUS_BY_TYPE[actor.type_] + BULLET_RADIUS + 1;
+                    const pen = actorsConfig[actor.type_].radius + BULLET_RADIUS + 1;
                     bullet.x_ = actor.x_ + pen * nx;
                     bullet.y_ = actor.y_ + pen * ny;
                 }
@@ -1510,7 +1492,7 @@ const drawGame = () => {
     gl.depthFunc(GL.LESS);
     gl.depthMask(true);
 
-    drawCrosshair(lastFrameTs, getMyPlayer());
+    drawCrosshair(getMyPlayer());
     drawOpaqueParticles();
     drawOpaqueObjects();
 
@@ -1549,11 +1531,9 @@ const drawGame = () => {
     renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
     //setDrawZ(0);
     drawTextParticles();
-    drawHotUsableHint();
+    drawHotUsableHint(hotUsable);
     flush();
 }
-
-export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG.camera.size;
 
 const drawOverlay = () => {
     setDrawZ(1000);
@@ -1604,63 +1584,11 @@ const collectVisibleActors = (...lists: Actor[][]) => {
     }
 }
 
-const drawItem = (item: Actor) => {
-    if (item.clipReload_) {
-        const limit = 5 * Const.NetFq;
-        if (item.clipReload_ < limit) {
-            const f = 1 - item.clipReload_ / limit;
-            const fr = 8 + 16 * f;
-            if (sin(fr * (limit - item.clipReload_) / Const.NetFq) >= 0.5) {
-                return;
-            }
-        }
-    }
-    if (item.btn_ & ItemType.Weapon) {
-        if (item.mags_) {
-            drawObject(item, Img.item0 + ItemType.Ammo, 6, 0.8);
-        }
-        drawObject(item, Img.weapon0 + item.weapon_, 2, 0.8);
-    } else /*if (cat == ItemCategory.Effect)*/ {
-        const t = lastFrameTs * 4 + item.anim0_ / 25;
-        drawObject(item, Img.item0 + item.btn_, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
-    }
-}
-
-const drawBullet = (actor: Actor) => {
-    const BULLET_LENGTH = [0.2, 2, 1, 8, 512];
-    const BULLET_LENGTH_LIGHT = [0.1, 2, 2, 2, 512];
-    const BULLET_SIZE = [6, 3 / 2, 2, 4, 12];
-    const BULLET_PULSE = [0, 0, 1, 0, 0];
-    const BULLET_IMAGE = [
-        Img.circle_4_60p, Img.circle_4_70p, Img.box,
-        Img.circle_4_60p, Img.circle_4_70p, Img.box,
-        Img.circle_4_60p, Img.circle_4_70p, Img.box,
-        Img.box_r, Img.box_r, Img.box_r,
-        Img.box_l, Img.box_l, Img.box_l,
-    ];
-
-    const x = actor.x_ / WORLD_SCALE;
-    const y = actor.y_ / WORLD_SCALE;
-    const z = actor.z_ / WORLD_SCALE;
-    const a = atan2(actor.v_, actor.u_);
-    const type = actor.btn_;
-    const color = fxRandElement(BULLET_COLOR[type] as number[]);
-    const longing = BULLET_LENGTH[type];
-    const longing2 = BULLET_LENGTH_LIGHT[type];
-    const sz = BULLET_SIZE[type] +
-        BULLET_PULSE[type] * sin(32 * lastFrameTs + actor.anim0_) / 2;
-    let res = type * 3;
-
-    setDrawZ(z);
-    draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing, sz, 0.1, COLOR_WHITE, 1);
-    draw(img[BULLET_IMAGE[res++]], x, y, a, sz * longing / 2, sz / 2, 1, color);
-    draw(img[BULLET_IMAGE[res++]], x, y, a, 2 * longing2, 2);
-}
 
 function drawPlayerOpaque(p: Actor): void {
     const co = getHitColorOffset(p.animHit_);
     const basePhase = p.anim0_ + lastFrameTs;
-    const colorC = COLOR_BODY[p.anim0_ % COLOR_BODY.length];
+    const colorC = GAME_CFG.bodyColor[p.anim0_ % GAME_CFG.bodyColor.length];
     const colorArm = colorC;
     const colorBody = colorC;
     const x = p.x_ / WORLD_SCALE;
@@ -1801,7 +1729,7 @@ const drawPlayer = (p: Actor): void => {
     {
         const s = p.w_ / 500;
         const a = p.u_ / 500;
-        drawBillboard(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, COLOR_WHITE, 0, co);
+        drawBillboard(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);
     }
 
     if (!weaponBack && p.weapon_) {
@@ -1817,15 +1745,6 @@ const drawPlayer = (p: Actor): void => {
     }
 }
 
-const getHitColorOffset = (anim: number) =>
-    getLumaColor32(0xFF * min(1, 2 * anim / ANIM_HIT_MAX));
-
-const drawObject = (p: Actor, id: Img, z: number = 0, scale: number = 1) =>
-    drawBillboard(img[id], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.z_ / WORLD_SCALE + z, 0, scale, scale, 1, COLOR_WHITE, 0, getHitColorOffset(p.animHit_));
-
-const drawBarrel = (p: Actor): void => drawObject(p, p.btn_ + Img.barrel0);
-const drawTree = (p: Actor): void => drawObject(p, p.btn_ + Img.tree0);
-
 type ActorDrawFunction = (p: Actor) => void;
 const DRAW_BY_TYPE: (ActorDrawFunction)[] = [
     drawPlayer,
@@ -1836,28 +1755,8 @@ const DRAW_BY_TYPE: (ActorDrawFunction)[] = [
 ];
 
 const DRAW_OPAQUE_BY_TYPE: (ActorDrawFunction | undefined)[] = [
-    drawPlayerOpaque,
-    ,
-    ,
-    ,
-    ,
+    drawPlayerOpaque
 ];
-
-const drawHotUsableHint = () => {
-    if (hotUsable) {
-        if (hotUsable.btn_ & ItemType.Weapon) {
-            const weapon = weapons[hotUsable.weapon_];
-            let text = weapon.name_ + " " + EMOJI[Img.weapon0 + hotUsable.weapon_];
-            if (weapon.clipSize_) {
-                text += hotUsable.clipAmmo_;
-            }
-            const x = hotUsable.x_ / WORLD_SCALE;
-            const y = hotUsable.y_ / WORLD_SCALE;
-            drawTextShadowCenter(fnt[0], text, 7, x, y - 28);
-            drawTextShadowCenter(fnt[0], "Pick [E]", 7, x, y - 20);
-        }
-    }
-};
 
 function drawOpaqueObjects() {
     for (let i = drawList.length - 1; i >= 0; --i) {
@@ -1878,7 +1777,6 @@ const drawObjects = () => {
 
     drawParticles();
 }
-/// SOUND ENV ///
 
 const playAt = (actor: Actor, id: Snd) => {
     if (gameTic > lastAudioTic) {

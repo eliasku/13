@@ -1,12 +1,5 @@
 import {WORLD_SCALE} from "../../assets/params";
-
-export const enum BulletType {
-    Melee = 0,
-    Shell = 1,
-    Plasma = 2,
-    Arrow = 3,
-    Ray = 4,
-}
+import {BulletType} from "./bullets";
 
 export interface WeaponConfig {
     name_: string;

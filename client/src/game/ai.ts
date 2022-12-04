@@ -5,7 +5,7 @@ import {rand} from "../utils/rnd";
 import {weapons} from "./data/weapons";
 import {sqrDistXY} from "./phy";
 import {WORLD_BOUNDS_SIZE} from "../assets/params";
-import {OBJECT_RADIUS_BY_TYPE} from "./data/world";
+import {actorsConfig} from "./data/world";
 
 const hasAmmo = (player: Actor) => {
     if (player.weapon_) {
@@ -109,7 +109,7 @@ export const updateAI = (state: StateData, player: Actor) => {
                 const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
                 const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
                 let drop = 0;
-                if (dist < OBJECT_RADIUS_BY_TYPE[ActorType.Item] + OBJECT_RADIUS_BY_TYPE[ActorType.Player] &&
+                if (dist < actorsConfig[ActorType.Item].radius + actorsConfig[ActorType.Player].radius &&
                     !(player.trig_ & ControlsFlag.DownEvent_Drop)) {
                     drop = ControlsFlag.Drop;
                 }

@@ -8,6 +8,7 @@
 - Weapon affect movement velocity #50
 - Add Crosshair reload / empty state alterations
 - Land particles and footprints #34
+- Fix Weapon items overlaps the floor #42
 
 ## 1.0.7
 

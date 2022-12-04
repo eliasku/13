@@ -9,8 +9,7 @@ import {
     PAD_MOVE_RADIUS_1,
     WORLD_SCALE
 } from "../assets/params";
-import {COLOR_WHITE} from "./data/colors";
-import {getScreenScale} from "./game";
+import {getScreenScale} from "./gameState";
 import {hypot} from "../utils/math";
 import {weapons} from "./data/weapons";
 
@@ -223,7 +222,7 @@ export const drawVirtualPad = () => {
                 cy = pp.startY_ * k;
                 draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
             }
-            draw(img[i], cx, cy, 0, 1, 1, 0.5, pp ? COLOR_WHITE : 0);
+            draw(img[i], cx, cy, 0, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
         }
         ++i;
     }

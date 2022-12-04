@@ -9,7 +9,7 @@ import {
 } from "./net/messaging";
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
-import {createSplashState, gameMode, getScreenScale, resetGame, updateGame} from "./game/game";
+import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
 import {loadAtlas} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
@@ -20,6 +20,7 @@ import {BuildVersion} from "../../shared/types";
 import {sin} from "./utils/math";
 import {DEFAULT_FRAMERATE_LIMIT, devSettings, setSetting, settings} from "./game/settings";
 import {setupRAF} from "./utils/raf";
+import {getScreenScale} from "./game/gameState";
 
 const enum StartState {
     Loading = 0,
