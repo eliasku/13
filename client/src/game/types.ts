@@ -199,6 +199,8 @@ export interface Particle extends Pos, Vel {
     splashImg_: number;
     followVelocity_: number;
     followScale_: number;
+
+    shadowScale: number;
 }
 
 export interface TextParticle extends Pos {

@@ -36,6 +36,7 @@ export const newParticle = (): Particle => ({
     splashImg_: 0,
     splashEachJump_: 0,
     splashScaleOnVelocity_: 0.0,
+    shadowScale: 5.0,
 });
 
 const updateParticle = (p: Particle): boolean => {
@@ -135,11 +136,14 @@ export const drawOpaqueParticles = () => {
 }
 
 const drawListShadows = (particles: Particle[]) => {
+    const maxH = 128 * WORLD_SCALE;
+    const minH = 1 * WORLD_SCALE;
     for (const p of particles) {
-        if (p.z_ / WORLD_SCALE > 1) {
-            const s = 0.5 - (p.z_ / WORLD_SCALE) / 256;
+        if (p.z_ > minH && p.z_ < maxH) {
+            // if (p.z_ > minH) {//} && p.z_ < maxH) {
+            const s = p.shadowScale * (0.5 - p.z_ / maxH);
             const t = (1 - p.lifeTime_ / p.lifeMax_);// * s;
-            drawMeshSprite(img[Img.circle_4], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
+            drawMeshSprite(img[Img.box], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
         }
     }
 }
@@ -312,6 +316,7 @@ export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, color
         particle.followVelocity_ = 1;
         particle.followScale_ = 0.02;
         particle.lifeMax_ = 16 + random1(16);
+        particle.shadowScale = 0.0;
         opaqueParticles.push(particle);
     }
 }
