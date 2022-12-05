@@ -10,7 +10,7 @@ import {
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
 import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
-import {loadAtlas, loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
+import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
