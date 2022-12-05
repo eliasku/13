@@ -48,4 +48,7 @@ export function copyPublicAssets() {
     copyFileSync("client/assets/debug.html", "public/debug.html");
     copyFileSync("client/assets/e.ttf", "public/e.ttf");
     copyFileSync("client/assets/m.ttf", "public/m.ttf");
+    copyFileSync("client/assets/spot.png", "public/spot.png");
+    copyFileSync("client/assets/main.png", "public/main.png");
+    copyFileSync("client/assets/main.dat", "public/main.dat");
 }

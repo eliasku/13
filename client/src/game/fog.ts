@@ -1,5 +1,5 @@
 import {Actor} from "./types";
-import {Img, img} from "../assets/gfx";
+import {imgSpotLight} from "../assets/gfx";
 import {beginRenderToTexture, clear, createTexture, draw, gl, initFramebuffer, uploadTexture} from "../graphics/draw2d";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {GL} from "../graphics/gl";
@@ -26,7 +26,7 @@ export const drawFogPoint = (x: number, y: number, r: number) => {
     r /= FOG_DOWNSCALE;
     x /= FOG_DOWNSCALE;
     y /= FOG_DOWNSCALE;
-    draw(img[Img.light_circle], x, y, 0, r, r);
+    draw(imgSpotLight, x, y, 0, r, r);
 }
 
 export const drawFogObjects = (...lists: Actor[][]) => {

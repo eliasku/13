@@ -126,23 +126,23 @@ export const buildAtlas = (): AtlasPage => {
     let allIndices: number[] = [];
     let allVertices: number[] = [];
     let startIndex = 0;
+    let startVertex = 0;
     let indices: number[];
     let vertices: number[];
 
     const addMesh = (soft = false) => {
         const imgData = atlas.getImageData(x, y, sprWidth, sprHeight);
-        const subMesh = generateMeshSprite(imgData, soft, 4, 0, 0.99);
+        const subMesh = generateMeshSprite(imgData, soft, 4, 1, 0.999);
         startIndex = allIndices.length;
-        if(subMesh) {
-            const baseVertex = allVertices.length / 2;
+        startVertex = allVertices.length / 2;
+        if (subMesh) {
             indices = subMesh.indices;
             vertices = subMesh.vertices;
             for (const i of indices) {
-                allIndices.push(baseVertex + i);
+                allIndices.push(i);
             }
             allVertices = allVertices.concat(vertices);
-        }
-        else {
+        } else {
             indices = [];
             vertices = [];
         }
@@ -183,7 +183,9 @@ export const buildAtlas = (): AtlasPage => {
             x: ax ?? 0.5,
             y: ay ?? 0.5,
             triangles: indices.length / 3,
-            index: startIndex,
+            index0: startIndex,
+            vertex0: startVertex,
+            vertexCount: vertices.length / 2,
         });
 
     const cutAlpha = (cut: number = 0x80, imageData?: ImageData, imagePixels?: Uint8ClampedArray) => {
@@ -381,10 +383,75 @@ export const buildAtlas = (): AtlasPage => {
     //     uploadTexture(img[Img.light_circle], ctx.canvas, GL.LINEAR);
     // }
 
+    const headerDataSize = 3 * 4;
+    const imagesDataSize = img.length * (10 * 4);
+    const vertexDataSize = allVertices.length * 4;
+    const indexDataSize = allIndices.length * 2;
+    const buffer = new ArrayBuffer(headerDataSize + imagesDataSize + vertexDataSize + indexDataSize);
+    const bufferHeader = new Int32Array(buffer, 0, headerDataSize / 4);
+    const bufferSubImages = new Float32Array(buffer, headerDataSize, imagesDataSize / 4);
+    const bufferV = new Float32Array(buffer, headerDataSize + imagesDataSize, allVertices.length);
+    const bufferI = new Uint16Array(buffer, headerDataSize + imagesDataSize + vertexDataSize, allIndices.length);
+
+    bufferHeader[0] = img.length;
+    bufferHeader[1] = allVertices.length;
+    bufferHeader[2] = allIndices.length;
+
+    let ptr = 0;
+    for (const subImage of img) {
+        bufferSubImages[ptr++] = subImage.tx;
+        bufferSubImages[ptr++] = subImage.ty;
+        bufferSubImages[ptr++] = subImage.tw;
+        bufferSubImages[ptr++] = subImage.th;
+        bufferSubImages[ptr++] = subImage.x;
+        bufferSubImages[ptr++] = subImage.y;
+        bufferSubImages[ptr++] = subImage.index0;
+        bufferSubImages[ptr++] = subImage.triangles;
+        bufferSubImages[ptr++] = subImage.vertex0;
+        bufferSubImages[ptr++] = subImage.vertexCount;
+    }
+
+    bufferV.set(allVertices);
+    bufferI.set(allIndices);
+
+    console.info(JSON.stringify(EMOJI));
+
     return {
         vertices: new Float32Array(allVertices),
         indices: new Uint16Array(allIndices),
         images: img,
-        atlas: atlas.canvas,
+        image: atlas.canvas,
+        data: buffer,
     };
+}
+
+export function makeSpotLightTexture() {
+    const ctx = createCanvas(64);
+    ctx.translate(32, 32);
+    const grd = ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32);
+    grd.addColorStop(0, "rgba(255,255,255,1)");
+    grd.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grd;
+    circle(ctx, 32);
+    ctx.fill();
+    ctx.scale(1, 0.25);
+    circle(ctx, 32);
+    ctx.fill();
+    ctx.resetTransform();
+    // img[Img.light_circle] = createTexture(64);
+    // img[Img.light_circle].x_ = 0.5;
+    // img[Img.light_circle].y_ = 0.5;
+    // uploadTexture(img[Img.light_circle], ctx.canvas, GL.LINEAR);
+    ctx.canvas.toBlob((blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.href = url;
+        a.download = "spot.png";
+        a.click();
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, 0);
+    }, "png");
 }

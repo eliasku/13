@@ -31,6 +31,14 @@ const HDR: Record<string, OutgoingHttpHeaders> = {
         "content-type": "font/ttf",
         "cache-control": "max-age=86400"
     },
+    g: {
+        "content-type": "image/png",
+        "cache-control": "no-cache"
+    },
+    t: {
+        "content-type": "application/octet-stream",
+        "cache-control": "no-cache"
+    },
 };
 
 let nextClientId = 1;
@@ -179,6 +187,8 @@ const HANDLERS: any = {
         l: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.l),
         f: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.f),
         s: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.s),
+        g: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.g),
+        t: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.t),
     },
     POST: {
         "/": (req: IncomingMessage, res: ServerResponse) => serveStatic("/index.html", res, HDR.l),

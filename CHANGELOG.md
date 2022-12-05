@@ -1,6 +1,6 @@
 ## 1.0.9
 
-
+- Simple mesh sprites #41
 
 ## 1.0.8
 

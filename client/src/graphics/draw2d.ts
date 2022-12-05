@@ -42,8 +42,9 @@ onresize = onResize;
 setInterval(onResize, 1000);
 onResize();
 
-const maxBatch = 65535;
+// const batchVertexMax = 65535;
 const floatSize = 3 + 2 + 2;
+const batchVertexMax = ((1 << 18) / floatSize) | 0;
 const byteSize = floatSize * 4;
 // maxBatch * byteSize
 // const arrayBuffer = new ArrayBuffer(1 << 22/* maxBatch * byteSize */);
@@ -51,7 +52,7 @@ const byteSize = floatSize * 4;
 // const floatView = new Float32Array(1 << 20);
 const vertexF32 = new Float32Array(1 << 18);
 const vertexU32 = new Uint32Array(vertexF32.buffer);
-const indexData = new Uint16Array(1 << 16);
+const indexData = new Uint16Array(1 << 18);
 
 interface Program {
     program: WebGLProgram;
@@ -112,7 +113,8 @@ const createProgram = (vs: string, fs: string): WebGLProgram => {
     return program;
 }
 
-let quadCount = 0;
+let baseVertex = 0;
+let currentIndex = 0;
 let quadTexture: WebGLTexture;
 const gl_program = createProgram(SHADER_VERTEX, SHADER_FRAGMENT);
 const program: Program = {
@@ -163,6 +165,13 @@ function bindProgramBuffers(program: Program, buffers: DynamicBuffers) {
     bindAttrib(program.a_colorAdd, 4, byteSize, 24, GL.UNSIGNED_BYTE, true);
 }
 
+export interface SpriteMesh {
+    index: number;
+    triangles: number;
+    indices: Uint16Array;
+    vertices: Float32Array;
+}
+
 export interface Texture {
     texture_?: WebGLTexture;
     w_: number;
@@ -176,6 +185,13 @@ export interface Texture {
     u1_: number;
     v1_: number;
     fbo_?: WebGLFramebuffer;
+    // mesh support
+    index0?: number;
+    triangles?: number;
+    vertex0?: number;
+    vertexCount?: number;
+    indices?: Uint16Array;
+    vertices?: Float32Array;
 }
 
 export const getSubTexture = (src: Texture, x: number, y: number, w: number, h: number, ax: number = 0.5, ay: number = 0.5): Texture => ({
@@ -190,10 +206,10 @@ export const getSubTexture = (src: Texture, x: number, y: number, w: number, h: 
     v1_: h / src.h_,
 });
 
-export const createTexture = (size: number): Texture => ({
+export const createTexture = (sizeOrWidth: number, height?: number): Texture => ({
     texture_: gl.createTexture(),
-    w_: size,
-    h_: size,
+    w_: sizeOrWidth,
+    h_: height ?? sizeOrWidth,
     x_: 0,
     y_: 0,
     u0_: 0,
@@ -316,22 +332,22 @@ function nextDynamicBuffer(): DynamicBuffers {
     return dynamicBuffer;
 }
 
-export const flush = (_count = quadCount) => {
-    if (_count) {
+export const flush = (_indicesCount = currentIndex) => {
+    if (_indicesCount) {
         gl.bindTexture(GL.TEXTURE_2D, quadTexture);
         const streamBuffers = nextDynamicBuffer();
         bindProgramBuffers(program, streamBuffers);
-        gl.bufferSubData(GL.ARRAY_BUFFER, 0, vertexF32.subarray(0, _count * floatSize * 4));
-        gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, 0, indexData.subarray(0, _count * 6));
-
-        gl.drawElements(GL.TRIANGLES, 6 * _count, GL.UNSIGNED_SHORT, 0);
-        // if (process.env.NODE_ENV === "development") {
+        gl.bufferSubData(GL.ARRAY_BUFFER, 0, vertexF32.subarray(0, baseVertex * floatSize));
+        gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, 0, indexData.subarray(0, _indicesCount));
+        gl.drawElements(GL.TRIANGLES, _indicesCount, GL.UNSIGNED_SHORT, 0);
+        if (process.env.NODE_ENV === "development") {
             const err = gl.getError();
             if (err) {
                 console.error("gl error");
             }
-        // }
-        quadCount = 0;
+        }
+        currentIndex = 0;
+        baseVertex = 0;
         ++stats.frameDrawCalls;
     }
 }
@@ -340,14 +356,11 @@ let drawZ = 0;
 export const setDrawZ = (z: number) => drawZ = z;
 
 export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) => {
-    if (quadTexture != texture.texture_ || quadCount == maxBatch) {
+    if (quadTexture != texture.texture_ || baseVertex + 4 >= batchVertexMax) {
         flush();
         quadTexture = texture.texture_;
     }
-    const baseVertex = quadCount * 4;
-    let indexIdx = quadCount * 6;
     let i = baseVertex * floatSize;
-    ++quadCount;
 
     const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
     const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
@@ -407,24 +420,23 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
 
-    indexData[indexIdx++] = baseVertex;
-    indexData[indexIdx++] = baseVertex + 1;
-    indexData[indexIdx++] = baseVertex + 2;
-    indexData[indexIdx++] = baseVertex + 2;
-    indexData[indexIdx++] = baseVertex + 3;
-    indexData[indexIdx++] = baseVertex;
+    indexData[currentIndex++] = baseVertex;
+    indexData[currentIndex++] = baseVertex + 1;
+    indexData[currentIndex++] = baseVertex + 2;
+    indexData[currentIndex++] = baseVertex + 2;
+    indexData[currentIndex++] = baseVertex + 3;
+    indexData[currentIndex++] = baseVertex;
+
+    baseVertex += 4;
 }
 
 
 export function drawBillboard(texture: Texture, x: number, y: number, z: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) {
-    if (quadTexture != texture.texture_ || quadCount == maxBatch) {
+    if (quadTexture != texture.texture_ || baseVertex + 4 >= batchVertexMax) {
         flush();
         quadTexture = texture.texture_;
     }
-    const baseVertex = quadCount * 4;
-    let indexIdx = quadCount * 6;
     let i = baseVertex * floatSize;
-    ++quadCount;
 
     const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
     const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
@@ -481,10 +493,100 @@ export function drawBillboard(texture: Texture, x: number, y: number, z: number,
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
 
-    indexData[indexIdx++] = baseVertex;
-    indexData[indexIdx++] = baseVertex + 1;
-    indexData[indexIdx++] = baseVertex + 2;
-    indexData[indexIdx++] = baseVertex + 2;
-    indexData[indexIdx++] = baseVertex + 3;
-    indexData[indexIdx++] = baseVertex;
+    indexData[currentIndex++] = baseVertex;
+    indexData[currentIndex++] = baseVertex + 1;
+    indexData[currentIndex++] = baseVertex + 2;
+    indexData[currentIndex++] = baseVertex + 2;
+    indexData[currentIndex++] = baseVertex + 3;
+    indexData[currentIndex++] = baseVertex;
+
+    baseVertex += 4;
+}
+
+export function drawMeshSpriteUp(texture: Texture, x: number, y: number, z: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) {
+    if (quadTexture != texture.texture_ || baseVertex + texture.vertexCount >= batchVertexMax) {
+        flush();
+        quadTexture = texture.texture_;
+    }
+
+    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+
+    const cs = cos(r);
+    const sn = sin(r);
+    const u0 = texture.u0_;
+    const v0 = texture.v0_;
+    const u1 = texture.u1_;
+    const v1 = texture.v1_;
+
+    const offsetX = -texture.x_ * texture.w_;
+    const offsetY = -texture.y_ * texture.h_;
+    let vi = texture.vertex0 * 2;
+    let i = baseVertex * floatSize;
+    for (let j = 0; j < texture.vertexCount; ++j) {
+        const vx = Math.round(texture.vertices[vi++]);
+        const vy = Math.round(texture.vertices[vi++]);
+        const px = offsetX + vx;
+        const py = offsetY + vy;
+        vertexF32[i++] = x + (sx * px * cs - sy * py * sn);
+        vertexF32[i++] = y;
+        vertexF32[i++] = z - (sx * px * sn + sy * py * cs);
+        vertexF32[i++] = u0 + u1 * vx / texture.w_;
+        vertexF32[i++] = v0 + v1 * vy / texture.h_;
+        vertexU32[i++] = colorMul;
+        vertexU32[i++] = colorAdd;
+    }
+
+    let index = texture.index0;
+    for (let i = 0; i < texture.triangles; ++i) {
+        indexData[currentIndex++] = baseVertex + texture.indices[index++];
+        indexData[currentIndex++] = baseVertex + texture.indices[index++];
+        indexData[currentIndex++] = baseVertex + texture.indices[index++];
+    }
+
+    baseVertex += texture.vertexCount;
+}
+
+export function drawMeshSprite(texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) {
+    if (quadTexture != texture.texture_ || baseVertex + texture.vertexCount >= batchVertexMax) {
+        flush();
+        quadTexture = texture.texture_;
+    }
+
+    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+
+    const cs = cos(r);
+    const sn = sin(r);
+    const u0 = texture.u0_;
+    const v0 = texture.v0_;
+    const u1 = texture.u1_;
+    const v1 = texture.v1_;
+
+    const offsetX = -texture.x_ * texture.w_;
+    const offsetY = -texture.y_ * texture.h_;
+    let vi = texture.vertex0 * 2;
+    let i = baseVertex * floatSize;
+    for (let j = 0; j < texture.vertexCount; ++j) {
+        const vx = Math.round(texture.vertices[vi++]);
+        const vy = Math.round(texture.vertices[vi++]);
+        const px = offsetX + vx;
+        const py = offsetY + vy;
+        vertexF32[i++] = x + (sx * px * cs - sy * py * sn);
+        vertexF32[i++] = y + (sx * px * sn + sy * py * cs);
+        vertexF32[i++] = drawZ;
+        vertexF32[i++] = u0 + u1 * vx / texture.w_;
+        vertexF32[i++] = v0 + v1 * vy / texture.h_;
+        vertexU32[i++] = colorMul;
+        vertexU32[i++] = colorAdd;
+    }
+
+    let index = texture.index0;
+    for (let i = 0; i < texture.triangles; ++i) {
+        indexData[currentIndex++] = baseVertex + texture.indices[index++];
+        indexData[currentIndex++] = baseVertex + texture.indices[index++];
+        indexData[currentIndex++] = baseVertex + texture.indices[index++];
+    }
+
+    baseVertex += texture.vertexCount;
 }

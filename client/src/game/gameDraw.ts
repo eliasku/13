@@ -1,7 +1,7 @@
 import {Actor, ItemType} from "./types";
 import {WORLD_SCALE} from "../assets/params";
 import {EMOJI, img, Img} from "../assets/gfx";
-import {draw, drawBillboard, gl, setDrawZ, setMVP} from "../graphics/draw2d";
+import {draw, drawBillboard, drawMeshSprite, drawMeshSpriteUp, gl, setDrawZ, setMVP} from "../graphics/draw2d";
 import {lookAtX, lookAtY, viewX, viewY} from "./controls";
 import {atan2, clamp, cos, min, PI, sin} from "../utils/math";
 import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4";
@@ -18,7 +18,7 @@ export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
         const prop = actorsConfig[actor.type_];
         const shadowScale = (2 - actor.z_ / (WORLD_SCALE * 64)) * prop.shadowScale;
-        draw(
+        drawMeshSprite(
             img[Img.circle_4],
             actor.x_ / WORLD_SCALE,
             actor.y_ / WORLD_SCALE,
@@ -103,10 +103,13 @@ export const getHitColorOffset = (anim: number) =>
 export const drawObject = (p: Actor, id: Img, z: number = 0, scale: number = 1) =>
     drawBillboard(img[id], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.z_ / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p.animHit_));
 
-export const drawBarrel = (p: Actor): void => drawObject(p, p.btn_ + Img.barrel0);
-export const drawTree = (p: Actor): void => drawObject(p, p.btn_ + Img.tree0);
+export const drawObjectMesh2D = (p: Actor, id: Img, z: number = 0, scale: number = 1, oy: number = 0.0) =>
+    drawMeshSpriteUp(img[id], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE + oy, p.z_ / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p.animHit_));
 
-export const drawItem = (item: Actor) => {
+export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p.btn_ + Img.barrel0);
+export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p.btn_ + Img.tree0);
+
+export const drawItemOpaque = (item: Actor) => {
     if (item.clipReload_) {
         const limit = 5 * Const.NetFq;
         if (item.clipReload_ < limit) {
@@ -118,13 +121,13 @@ export const drawItem = (item: Actor) => {
         }
     }
     if (item.btn_ & ItemType.Weapon) {
+        drawObjectMesh2D(item, Img.weapon0 + item.weapon_, 4, 0.8);
         if (item.mags_) {
-            drawObject(item, Img.item0 + ItemType.Ammo, 8, 0.8);
+            drawObjectMesh2D(item, Img.item0 + ItemType.Ammo, 8, 0.8, -0.1);
         }
-        drawObject(item, Img.weapon0 + item.weapon_, 4, 0.8);
     } else /*if (cat == ItemCategory.Effect)*/ {
         const t = lastFrameTs * 4 + item.anim0_ / 25;
-        drawObject(item, Img.item0 + item.btn_, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
+        drawObjectMesh2D(item, Img.item0 + item.btn_, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
     }
 }
 
@@ -140,9 +143,9 @@ export const drawBullet = (actor: Actor) => {
     const longing2 = bulletData.lightLength;
     const sz = bulletData.size + bulletData.pulse * sin(32 * lastFrameTs + actor.anim0_) / 2;
     setDrawZ(z);
-    draw(img[bulletData.images[0]], x, y, a, sz * longing, sz, 0.1, 0xFFFFFF, 1);
-    draw(img[bulletData.images[1]], x, y, a, sz * longing / 2, sz / 2, 1, color);
-    draw(img[bulletData.images[2]], x, y, a, 2 * longing2, 2);
+    drawMeshSprite(img[bulletData.images[0]], x, y, a, sz * longing, sz, 0.1, 0xFFFFFF, 1);
+    drawMeshSprite(img[bulletData.images[1]], x, y, a, sz * longing / 2, sz / 2, 1, color);
+    drawMeshSprite(img[bulletData.images[2]], x, y, a, 2 * longing2, 2);
 }
 
 export const drawHotUsableHint = (hotUsable?: Actor) => {

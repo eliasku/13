@@ -1,12 +1,6 @@
 import {buildAtlas} from "./generate";
 import {AtlasPage} from "./atlas";
 
-function waitNextFrame() {
-    return new Promise((resolve) => {
-        requestAnimationFrame(resolve);
-    });
-}
-
 const w = document.body.clientWidth;
 const h = document.body.clientHeight;
 c.width = w * devicePixelRatio;
@@ -23,7 +17,7 @@ function drawDetails(atlas: AtlasPage) {
     ctx.fillStyle = "#abc";
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.imageSmoothingEnabled = false;
-    const image = atlas.atlas;
+    const image = atlas.image;
     ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, SCALE * image.width, SCALE * image.height);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -35,11 +29,11 @@ function drawDetails(atlas: AtlasPage) {
         ctx.strokeRect(img.tx * SCALE, img.ty * SCALE, img.tw * SCALE, img.th * SCALE);
 
         ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        let index = img.index;
+        let index = img.index0;
         for (let i = 0; i < img.triangles; ++i) {
-            const i0 = atlas.indices[index++];
-            const i1 = atlas.indices[index++];
-            const i2 = atlas.indices[index++];
+            const i0 = img.vertex0 + atlas.indices[index++];
+            const i1 = img.vertex0 + atlas.indices[index++];
+            const i2 = img.vertex0 + atlas.indices[index++];
 
             ctx.beginPath();
             ctx.moveTo(SCALE * (atlas.vertices[i0 * 2] + img.tx), SCALE * (atlas.vertices[i0 * 2 + 1] + img.ty));
@@ -66,6 +60,7 @@ function drawDetails(atlas: AtlasPage) {
     ctx.fillText("verts: " + totalVerts + " | tris: " + totalTris, 80, 120);
 }
 
+
 async function start() {
     {
         const font = new FontFace("e", `url(./e.ttf)`);
@@ -78,6 +73,31 @@ async function start() {
 
     const page = buildAtlas();
     drawDetails(page);
+    page.image.toBlob((blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.href = url;
+        a.download = "main.png";
+        a.click();
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, 0);
+    }, "png");
+
+    const url = URL.createObjectURL(new Blob([page.data], {type: "application/octet-stream"}));
+    const a = document.createElement('a');
+    document.body.appendChild(a);
+    a.href = url;
+    a.download = "main.dat";
+    a.click();
+    setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }, 0);
+
+    // makeSpotLightTexture();
 }
 
 start().then();

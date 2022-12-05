@@ -1,18 +1,21 @@
 export interface Image {
-    // first index for sub mesh
-    index: number;
-    triangles: number;
     tx: number;
     ty: number;
     tw: number;
     th: number;
     x: number;
     y: number;
+    // first index for sub mesh
+    index0: number;
+    triangles: number;
+    vertex0: number;
+    vertexCount: number;
 }
 
 export interface AtlasPage {
     images: Image[];
     vertices: Float32Array;
     indices: Uint16Array;
-    atlas: HTMLCanvasElement;
+    image: HTMLCanvasElement;
+    data: ArrayBuffer;
 }

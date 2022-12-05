@@ -10,7 +10,7 @@ import {
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
 import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
 import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
-import {loadAtlas} from "./assets/gfx";
+import {loadAtlas, loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
@@ -56,10 +56,12 @@ const enum Menu {
     }
     Promise.all([
         new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font)),
-        new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font))
+        new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font)),
+        loadMainAtlas(),
+        loadSpotLightTexture()
     ]).then(_ => {
         initFonts();
-        loadAtlas();
+        // loadAtlas();
         state = StartState.Loaded;
 
         resetGame();

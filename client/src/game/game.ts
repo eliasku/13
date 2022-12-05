@@ -1,7 +1,7 @@
 import {ClientID} from "../../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
-import {beginRenderToMain, draw, drawBillboard, flush, gl, setDrawZ} from "../graphics/draw2d";
+import {beginRenderToMain, draw, drawBillboard, drawMeshSpriteUp, flush, gl, setDrawZ} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
@@ -72,7 +72,6 @@ import {
     addStepSplat,
     addTextParticle,
     drawOpaqueParticles,
-    drawParticles,
     drawParticleShadows,
     drawSplats,
     drawTextParticles,
@@ -129,10 +128,13 @@ import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai";
 import {GL} from "../graphics/gl";
 import {
-    drawBarrel, drawBullet,
-    drawCrosshair, drawHotUsableHint, drawItem,
+    drawBarrelOpaque,
+    drawBullet,
+    drawCrosshair,
+    drawHotUsableHint,
+    drawItemOpaque,
     drawShadows,
-    drawTree,
+    drawTreeOpaque,
     getHitColorOffset,
     setupWorldCameraMatrix
 } from "./gameDraw";
@@ -867,7 +869,7 @@ const pickItem = (item: Actor, player: Actor) => {
                     item.hp_ = item.btn_ = 0;
                     playAt(player, Snd.med);
                     if (withMyPlayer) {
-                        addTextParticle(item, `+${qty} cr`);
+                        addTextParticle(item, `+${qty} sp`);
                     }
                 }
             }
@@ -1185,7 +1187,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
                     stat.scores_ += actor.client_ > 0 ? 5 : 1;
                     ++stat.frags_;
                     state.stats_.set(killerID, stat);
-                    if(settings.speech && gameTic > lastAudioTic) {
+                    if (settings.speech && gameTic > lastAudioTic) {
                         const a = getNameByClientId(killerID);
                         const b = getNameByClientId(actor.client_);
                         if (a) {
@@ -1607,82 +1609,6 @@ function drawPlayerOpaque(p: Actor): void {
 
     const wpn = weapons[p.weapon_];
     let viewAngle = unpackAngleByte(p.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
-    let weaponX = x;
-    let weaponY = y;
-    let weaponZ = z + PLAYER_HANDS_PX_Z;
-    let weaponAngle = atan2(
-        y + 1000 * sin(viewAngle) - weaponY + weaponZ,
-        x + 1000 * cos(viewAngle) - weaponX
-    );
-    let weaponBack = 0;
-    if (weaponAngle < -0.2 && weaponAngle > -PI + 0.2) {
-        weaponBack = 1;
-        //weaponY -= 16 * 4;
-    }
-    const A = sin(weaponAngle - PI);
-    let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
-    let wx = 1;
-    if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
-        wx = -1;
-    }
-    if (wpn.handsAnim_) {
-        // const t = max(0, (p.s - 0.8) * 5);
-        // anim := 1 -> 0
-        const t = min(1, wpn.launchTime_ > 0 ? (p.s_ / wpn.launchTime_) : max(0, (p.s_ / wpn.reloadTime_ - 0.5) * 2));
-        wd += sin(t * PI) * wpn.handsAnim_;
-        weaponAngle -= -wx * PI * 0.25 * sin((1 - (1 - t) ** 2) * PI2);
-    }
-    weaponX += wd * cos(weaponAngle);
-    weaponY += wd * sin(weaponAngle);
-
-    drawBillboard(img[Img.box_t], x - 3, y, z + 5, 0, 2, leg1, 1, colorArm, 0, co);
-    drawBillboard(img[Img.box_t], x + 3, y, z + 5, 0, 2, leg2, 1, colorArm, 0, co);
-    drawBillboard(img[Img.box], x, y, z + 7 - base, 0, 8, 6, 1, colorBody, 0, co);
-
-    // DRAW HANDS
-    const rArmX = x + 4;
-    const lArmX = x - 4;
-    const armAY = y - z - PLAYER_HANDS_PX_Z + base * 2;
-    const weaponAY = weaponY - weaponZ;
-    const rArmRot = atan2(-armAY + weaponAY, weaponX - rArmX);
-    const lArmRot = atan2(-armAY + weaponAY, weaponX - lArmX);
-    const lArmLen = hypot(weaponX - lArmX, weaponAY - armAY) - 1;
-    const rArmLen = hypot(weaponX - rArmX, weaponAY - armAY) - 1;
-
-    if (p.weapon_) {
-        drawBillboard(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, rArmRot, rArmLen, 2, 1, colorArm, 0, co);
-        drawBillboard(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, lArmRot, lArmLen, 2, 1, colorArm, 0, co);
-    } else {
-        let sw1 = walk * sin(20 * runK * basePhase);
-        let sw2 = walk * cos(20 * runK * basePhase);
-        let armLen = 5;
-        if (!p.client_ && p.hp_ < 10 && !p.sp_) {
-            sw1 -= PI / 2;
-            sw2 += PI / 2;
-            armLen += 4;
-        }
-        drawBillboard(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, sw1 + PI / 4, armLen, 2, 1, colorArm, 0, co);
-        drawBillboard(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, sw2 + PI - PI / 4, armLen, 2, 1, colorArm, 0, co);
-    }
-}
-
-const drawPlayer = (p: Actor): void => {
-    const co = getHitColorOffset(p.animHit_);
-    const basePhase = p.anim0_ + lastFrameTs;
-    const imgHead = p.client_ ? (Img.avatar0 + p.anim0_ % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
-    const x = p.x_ / WORLD_SCALE;
-    const y = p.y_ / WORLD_SCALE;
-    const z = p.z_ / WORLD_SCALE;
-    const speed = hypot(p.u_, p.v_, p.w_);
-    const runK = (p.btn_ & ControlsFlag.Run) ? 1 : 0.8;
-    const walk = min(1, speed / 100);
-    let base = -0.5 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
-    const idle_base = (1 - walk) * ((1 + sin(10 * basePhase) ** 2) / 4);
-    base = base + idle_base;
-    /////
-
-    const wpn = weapons[p.weapon_];
-    let viewAngle = unpackAngleByte(p.btn_ >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const weaponBaseAngle = wpn.gfxRot_ * TO_RAD;
     const weaponBaseScaleX = wpn.gfxSx_;
     const weaponBaseScaleY = 1;
@@ -1723,18 +1649,51 @@ const drawPlayer = (p: Actor): void => {
 
     weaponAngle += weaponBaseAngle;
 
-    if (weaponBack && p.weapon_) {
-        drawBillboard(img[Img.weapon0 + p.weapon_], weaponX, weaponY - 1, weaponZ, weaponAngle, weaponSX, weaponSY);
-    }
-    {
-        const s = p.w_ / 500;
-        const a = p.u_ / 500;
-        drawBillboard(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);
+    if (p.weapon_) {
+        drawMeshSpriteUp(img[Img.weapon0 + p.weapon_], weaponX, weaponY + (weaponBack ? -1 : 1), weaponZ, weaponAngle, weaponSX, weaponSY);
     }
 
-    if (!weaponBack && p.weapon_) {
-        drawBillboard(img[Img.weapon0 + p.weapon_], weaponX, weaponY + 1, weaponZ, weaponAngle, weaponSX, weaponSY);
+    drawMeshSpriteUp(img[Img.box_t], x - 3, y, z + 5, 0, 2, leg1, 1, colorArm, 0, co);
+    drawMeshSpriteUp(img[Img.box_t], x + 3, y, z + 5, 0, 2, leg2, 1, colorArm, 0, co);
+    drawMeshSpriteUp(img[Img.box], x, y, z + 7 - base, 0, 8, 6, 1, colorBody, 0, co);
+
+    // DRAW HANDS
+    const rArmX = x + 4;
+    const lArmX = x - 4;
+    const armAY = y - z - PLAYER_HANDS_PX_Z + base * 2;
+    const weaponAY = weaponY - weaponZ;
+    const rArmRot = atan2(-armAY + weaponAY, weaponX - rArmX);
+    const lArmRot = atan2(-armAY + weaponAY, weaponX - lArmX);
+    const lArmLen = hypot(weaponX - lArmX, weaponAY - armAY) - 1;
+    const rArmLen = hypot(weaponX - rArmX, weaponAY - armAY) - 1;
+
+    if (p.weapon_) {
+        drawMeshSpriteUp(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, rArmRot, rArmLen, 2, 1, colorArm, 0, co);
+        drawMeshSpriteUp(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, lArmRot, lArmLen, 2, 1, colorArm, 0, co);
+    } else {
+        let sw1 = walk * sin(20 * runK * basePhase);
+        let sw2 = walk * cos(20 * runK * basePhase);
+        let armLen = 5;
+        if (!p.client_ && p.hp_ < 10 && !p.sp_) {
+            sw1 -= PI / 2;
+            sw2 += PI / 2;
+            armLen += 4;
+        }
+        drawMeshSpriteUp(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, sw1 + PI / 4, armLen, 2, 1, colorArm, 0, co);
+        drawMeshSpriteUp(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, sw2 + PI - PI / 4, armLen, 2, 1, colorArm, 0, co);
     }
+
+    {
+        const imgHead = p.client_ ? (Img.avatar0 + p.anim0_ % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
+        const s = p.w_ / 500;
+        const a = p.u_ / 500;
+        drawMeshSpriteUp(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);
+    }
+}
+
+const drawPlayer = (p: Actor): void => {
+    const x = p.x_ / WORLD_SCALE;
+    const y = p.y_ / WORLD_SCALE;
 
     if (p.client_ > 0 && p.client_ !== clientId) {
         const name = getNameByClientId(p.client_);
@@ -1748,14 +1707,18 @@ const drawPlayer = (p: Actor): void => {
 type ActorDrawFunction = (p: Actor) => void;
 const DRAW_BY_TYPE: (ActorDrawFunction)[] = [
     drawPlayer,
-    drawBarrel,
+    ,
     drawBullet,
-    drawItem,
-    drawTree,
+    ,
+    ,
 ];
 
 const DRAW_OPAQUE_BY_TYPE: (ActorDrawFunction | undefined)[] = [
-    drawPlayerOpaque
+    drawPlayerOpaque,
+    drawBarrelOpaque,
+    ,
+    drawItemOpaque,
+    drawTreeOpaque,
 ];
 
 function drawOpaqueObjects() {
@@ -1772,10 +1735,10 @@ const drawObjects = () => {
     drawShadows(drawList);
     drawParticleShadows();
     for (const actor of drawList) {
-        DRAW_BY_TYPE[actor.type_](actor);
+        DRAW_BY_TYPE[actor.type_]?.(actor);
     }
 
-    drawParticles();
+    //drawParticles();
 }
 
 const playAt = (actor: Actor, id: Snd) => {
