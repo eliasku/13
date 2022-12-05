@@ -18,7 +18,7 @@ const ctx = c.getContext("2d");
 
 /// BEGIN
 function drawDetails(atlas: AtlasPage) {
-    const SCALE = 4;
+    const SCALE = 8;
     ctx.clearRect(0, 0, c.width, c.height);
     ctx.fillStyle = "#abc";
     ctx.fillRect(0, 0, c.width, c.height);
@@ -49,17 +49,16 @@ function drawDetails(atlas: AtlasPage) {
             ctx.closePath();
             ctx.stroke();
         }
-
-        ctx.fillStyle = "red";
-        ctx.fillRect((img.tx + img.x * img.tw) * SCALE,
-            (img.ty + img.y * img.th) * SCALE,
-            SCALE * 2, SCALE * 2);
     }
     for (const img of atlas.images) {
-        ctx.fillStyle = "red";
-        ctx.fillRect((img.tx + img.x * img.tw) * SCALE,
-            (img.ty + img.y * img.th) * SCALE,
+        ctx.fillStyle = "yellow";
+        ctx.fillRect((img.tx + img.x * img.tw) * SCALE - SCALE,
+            (img.ty + img.y * img.th) * SCALE - SCALE,
             SCALE * 2, SCALE * 2);
+        ctx.fillStyle = "black";
+        ctx.fillRect((img.tx + img.x * img.tw) * SCALE - SCALE * 0.5,
+            (img.ty + img.y * img.th) * SCALE - SCALE * 0.5,
+            SCALE, SCALE);
     }
 
     ctx.font = "48px m";

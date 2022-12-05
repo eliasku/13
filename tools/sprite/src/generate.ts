@@ -180,8 +180,8 @@ export const buildAtlas = (): AtlasPage => {
             ty: y,
             tw: sprWidth,
             th: sprHeight,
-            x: ax,
-            y: ay,
+            x: ax ?? 0.5,
+            y: ay ?? 0.5,
             triangles: indices.length / 3,
             index: startIndex,
         });
