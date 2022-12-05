@@ -125,7 +125,7 @@ export function preview2(emoji:string, opts:{size?:number, sx?:number, sy? : num
 
         const rsize = (opts.size ?? 16) - 16;
         //output += `/* ${emoji} */ ["${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${rsize || ""}, ${opts.a ?? ""}, ${opts.sx ?? ""}, ${opts.sy ?? ""}, ${opts.cut ?? ""}, ${opts.x ?? ""}, ${opts.y ?? ""}],\n`;
-        //return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut, opts.x ?? 0.5, opts.y ?? 0.5];
-        return lc;
+        return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut, opts.x ?? 0.5, opts.y ?? 0.5];
+        // return lc;
     }
 }
