@@ -354,7 +354,7 @@ export const flush = (_indicesCount = currentIndex) => {
     }
 }
 
-let drawZ = 0;
+export let drawZ = 0;
 export const setDrawZ = (z: number) => drawZ = z;
 
 export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) => {

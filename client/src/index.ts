@@ -8,7 +8,16 @@ import {
     setUserName
 } from "./net/messaging";
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
-import {button, resetPrinter, ui_begin, ui_finish} from "./graphics/ui";
+import {
+    button,
+    label,
+    resetPrinter,
+    ui_begin,
+    ui_finish,
+    ui_renderComplete,
+    ui_renderNormal,
+    ui_renderOpaque
+} from "./graphics/ui";
 import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
@@ -29,6 +38,8 @@ const enum StartState {
     Connecting = 3,
     Connected = 4,
 }
+
+type StateFunc = (ts?: number) => void | undefined;
 
 const enum Menu {
     Main = 0,
@@ -68,33 +79,11 @@ const enum Menu {
         createSplashState();
         gameMode.spawnNPC = false;
     });
-    const _states: ((ts?: number) => void | undefined)[] = [
-        ,
-        (ts: number) => {
+    const preStates:StateFunc[] = [
+      ,
+      ,
+        ()=>{
             const scale = getScreenScale();
-            const W = (gl.drawingBufferWidth / scale) | 0;
-            const H = (gl.drawingBufferHeight / scale) | 0;
-            const centerX = W >> 1;
-            const centerY = H >> 1;
-            beginRenderToMain(0, 0, 0, 0, 0, scale);
-            const fontSize = 14 + 0.5 * Math.sin(8 * ts);
-            if (sin(ts * 8) <= 0) {
-                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY + 50, 0xd9ff66);
-            }
-            flush();
-            if (isAnyKeyDown()) {
-                state = StartState.TapToConnect;
-                gameMode.playersAI = true;
-                gameMode.spawnNPC = true;
-                loadCurrentOnlineUsers().then((count) => {
-                    usersOnline = count;
-                });
-            }
-        },
-        () => {
-            const scale = getScreenScale();
-            beginRenderToMain(0, 0, 0, 0, 0, scale);
-
             ui_begin(scale);
             {
                 const W = (gl.drawingBufferWidth / scale) | 0;
@@ -103,12 +92,12 @@ const enum Menu {
                 const centerY = H >> 1;
 
                 if (menu === Menu.Main) {
-                    drawTextShadowCenter(fnt[0], "Welcome back,", 7, centerX, 14);
+                    label("Welcome back,", 7, centerX, 14);
                     if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
                         setUserName(prompt("your name", clientName));
                     }
 
-                    drawTextShadowCenter(fnt[0], usersOnline + " playing right now", 7, centerX, centerY + 45);
+                    label(usersOnline + " playing right now", 7, centerX, centerY + 45);
 
                     if (button("dev_mode", "", centerX - 40, centerY - 40, {w: 80, h: 80, visible: false})) {
                         if (++devLock > 3) {
@@ -135,7 +124,7 @@ const enum Menu {
                         menu = Menu.Settings;
                     }
                 } else if (menu === Menu.Settings) {
-                    drawTextShadowCenter(fnt[0], "⚙️ SETTINGS", 20, centerX, 30);
+                    label("⚙️ SETTINGS", 20, centerX, 30);
                     if (button("sounds", "🔊 SOUNDS: " + (settings.sound ? "ON" : "OFF"), centerX - 50, centerY - 70, {
                         w: 100,
                         h: 20
@@ -198,7 +187,7 @@ const enum Menu {
                         menu = Menu.Main;
                     }
                 } else if (menu === Menu.Dev) {
-                    drawTextShadowCenter(fnt[0], "⚙️ DEVELOPER", 20, centerX, 30);
+                    label("⚙️ DEVELOPER", 20, centerX, 30);
                     if (button("fps", "FPS: " + (devSettings.fps ? "ON" : "OFF"), centerX - 50, centerY - 70, {
                         w: 100,
                         h: 20
@@ -237,8 +226,32 @@ const enum Menu {
                 }
             }
             ui_finish();
-
+        }
+    ];
+    const _states:StateFunc[] = [
+        ,
+        (ts: number) => {
+            const scale = getScreenScale();
+            const W = (gl.drawingBufferWidth / scale) | 0;
+            const H = (gl.drawingBufferHeight / scale) | 0;
+            const centerX = W >> 1;
+            const centerY = H >> 1;
+            beginRenderToMain(0, 0, 0, 0, 0, scale);
+            const fontSize = 14 + 0.5 * Math.sin(8 * ts);
+            if (sin(ts * 8) <= 0) {
+                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY + 50, 0xd9ff66);
+            }
             flush();
+            if (isAnyKeyDown()) {
+                state = StartState.TapToConnect;
+                gameMode.playersAI = true;
+                gameMode.spawnNPC = true;
+                loadCurrentOnlineUsers().then((count) => {
+                    usersOnline = count;
+                });
+            }
+        },
+        () => {
         },
         (ts: number) => {
             const scale = getScreenScale();
@@ -276,7 +289,9 @@ const enum Menu {
         ts /= 1000;
         updateStats(ts);
         //** DO FRAME **//
-        updateSong(state != StartState.Connected);
+        updateSong(state !== StartState.Connected);
+
+        preStates[state]?.(ts);
         if (state >= StartState.Loaded) {
             updateGame(ts);
         }
@@ -285,6 +300,7 @@ const enum Menu {
         resetPrinter();
         updateInput();
         processMessages();
+        ui_renderComplete();
 
         completeFrame();
     });

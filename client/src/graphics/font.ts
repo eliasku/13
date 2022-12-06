@@ -37,6 +37,9 @@ export interface FontAtlas {
     fallback: string;
     ctx: CanvasRenderingContext2D;
     texture: Texture;
+    textureBoxT1: Texture;
+    textureBoxLT: Texture;
+    textureBox: Texture;
     nextSheetX: number;
     nextSheetY: number;
     sheetLineHeight: number;
@@ -70,9 +73,13 @@ export const makeFontAtlas = (family: string,
 
     const ctx = canvas.getContext("2d", {willReadFrequently: true});
     const fallback = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif';
+    const texture = createTexture(canvasSize);
     const fa: FontAtlas = {
         fallback, style, size, scale, family, ctx,
-        texture: createTexture(canvasSize),
+        texture,
+        textureBoxLT: getSubTexture(texture, 1, 1, 1, 1, 0, 0),
+        textureBox: getSubTexture(texture, 1, 1, 1, 1, 0.5, 0.5),
+        textureBoxT1: getSubTexture(texture, 1, 1, 1, 1, 0.5, -1),
         nextSheetX: 0,
         nextSheetY: 0,
         sheetLineHeight: 0,
@@ -95,6 +102,9 @@ const enlargeFontTexture = (fa: FontAtlas) => {
     const c = fa.ctx.canvas;
     const size = c.width << 1;
     fa.texture.w_ = fa.texture.h_ = c.width = c.height = size;
+    fa.textureBoxLT = getSubTexture(fa.texture, 1, 1, 1, 1, 0, 0);
+    fa.textureBox = getSubTexture(fa.texture, 1, 1, 1, 1, 0.5, 0.5);
+    fa.textureBoxT1 = getSubTexture(fa.texture, 1, 1, 1, 1, 0.5, -1);
     resetFontAtlas(fa, fa.characters);
 }
 
@@ -110,9 +120,11 @@ const resetFontCanvas = (fa: FontAtlas) => {
 
 const resetFontAtlas = (fa: FontAtlas, characters = DEFAULT_CHARACTERS) => {
     fa.ctx.clearRect(0, 0, fa.ctx.canvas.width, fa.ctx.canvas.height);
+    fa.ctx.fillStyle = "#FFF";
+    fa.ctx.fillRect(0, 0, 3, 3);
     //fa.ctx.fillRect(0, 0, fa.ctx.canvas.width, fa.ctx.canvas.height);
     resetFontCanvas(fa);
-    fa.nextSheetX = 0;
+    fa.nextSheetX = 4;
     fa.nextSheetY = 0;
     fa.characterMap.clear();
     addSpaceCharacter(fa);

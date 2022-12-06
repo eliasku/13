@@ -1,6 +1,15 @@
 import {Actor} from "./types";
 import {imgSpotLight} from "../assets/gfx";
-import {beginRenderToTexture, clear, createTexture, draw, gl, initFramebuffer, uploadTexture} from "../graphics/draw2d";
+import {
+    beginRenderToTexture,
+    clear,
+    createTexture,
+    draw, drawZ,
+    gl,
+    initFramebuffer,
+    setDrawZ,
+    uploadTexture
+} from "../graphics/draw2d";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {GL} from "../graphics/gl";
 import {clientId} from "../net/messaging";
@@ -44,4 +53,4 @@ export const drawFogObjects = (...lists: Actor[][]) => {
 }
 
 export const renderFog = (t: number, add: number) =>
-    draw(fogTexture, 0, 0, 0, FOG_DOWNSCALE, FOG_DOWNSCALE, 0.7, RGB(0x40 + 0x20 * sin(t), 0x11, 0x33), 0, add & 0x990000);
+    draw(fogTexture, 0, drawZ, 0, FOG_DOWNSCALE, FOG_DOWNSCALE, 0.7, RGB(0x40 + 0x20 * sin(t), 0x11, 0x33), 0, add & 0x990000);

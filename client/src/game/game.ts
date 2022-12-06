@@ -110,7 +110,7 @@ import {
     PLAYER_HANDS_PX_Z,
     PLAYER_HANDS_Z,
 } from "./data/world";
-import {termPrint} from "../graphics/ui";
+import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/ui";
 import {beginFogRender, drawFogObjects, drawFogPoint, renderFog} from "./fog";
 import {
     addDebugState,
@@ -1470,6 +1470,16 @@ const drawGame = () => {
     }
     flush();
 
+    gl.clear(GL.DEPTH_BUFFER_BIT);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LESS);
+    gl.depthMask(true);
+    gl.depthRange(0, 1);
+
+    beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
+    ui_renderOpaque();
+    flush();
+
     beginRenderToMain(
         gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0),
         gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0),
@@ -1489,12 +1499,6 @@ const drawGame = () => {
         setupWorldCameraMatrix(cameraCenterX, cameraCenterY, viewScale, fx, fz);
     }
 
-    gl.clear(GL.DEPTH_BUFFER_BIT);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LESS);
-    gl.depthMask(true);
-
-    drawCrosshair(getMyPlayer());
     drawOpaqueParticles();
     drawOpaqueObjects();
 
@@ -1528,13 +1532,16 @@ const drawGame = () => {
     }
     flush();
 
-    gl.disable(GL.DEPTH_TEST);
+    //gl.disable(GL.DEPTH_TEST);
     setDrawZ(0);
+    gl.depthRange(0.5, 0.5);
     renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
     //setDrawZ(0);
     drawTextParticles();
     drawHotUsableHint(hotUsable);
     flush();
+
+    gl.disable(GL.DEPTH_TEST);
 }
 
 const drawOverlay = () => {
@@ -1558,6 +1565,10 @@ const drawOverlay = () => {
     if (getDevSetting("fps")) {
         drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls} |  ⃤ ${stats.triangles} | ∷${stats.vertices}`, 4, 2, 5, 0, 0);
     }
+
+    ui_renderNormal();
+
+    drawCrosshair(getMyPlayer(), gameCamera, scale);
 
     flush();
 }
@@ -1650,7 +1661,7 @@ function drawPlayerOpaque(p: Actor): void {
     weaponAngle += weaponBaseAngle;
 
     if (p.weapon_) {
-        drawMeshSpriteUp(img[Img.weapon0 + p.weapon_], weaponX, weaponY + (weaponBack ? -1 : 1), weaponZ, weaponAngle, weaponSX, weaponSY);
+        drawMeshSpriteUp(img[Img.weapon0 + p.weapon_], weaponX, weaponY/* + (weaponBack ? -1 : 1)*/, weaponZ, weaponAngle, weaponSX, weaponSY);
     }
 
     drawMeshSpriteUp(img[Img.box_t], x - 3, y, z + 5, 0, 2, leg1, 1, colorArm, 0, co);

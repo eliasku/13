@@ -6,6 +6,7 @@ import {clientId} from "../net/messaging";
 import {PI} from "../utils/math";
 import {actorsConfig, OBJECT_RADIUS} from "./data/world";
 import {GAME_CFG} from "./config";
+import {fnt} from "../graphics/font";
 
 const getPlayerColor = (player: Actor): number => {
     const config = GAME_CFG.minimap;
@@ -27,7 +28,7 @@ const drawMiniMapList = (x: number, y: number, actors: Actor[] | undefined, colo
             if (actor.type_ === ActorType.Player) {
                 c = getPlayerColor(actor);
             }
-            draw(img[Img.box],
+            draw(fnt[0].textureBox,
                 x + scale * actor.x_,
                 y + scale * actor.y_,
                 PI / 4, s, s, 1, c);
