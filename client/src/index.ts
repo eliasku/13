@@ -8,16 +8,7 @@ import {
     setUserName
 } from "./net/messaging";
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
-import {
-    button,
-    label,
-    resetPrinter,
-    ui_begin,
-    ui_finish,
-    ui_renderComplete,
-    ui_renderNormal,
-    ui_renderOpaque
-} from "./graphics/ui";
+import {button, label, resetPrinter, ui_begin, ui_finish, ui_renderComplete} from "./graphics/ui";
 import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
@@ -30,6 +21,7 @@ import {sin} from "./utils/math";
 import {DEFAULT_FRAMERATE_LIMIT, devSettings, setSetting, settings} from "./game/settings";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
+import {completeLoading, setLoadingProgress} from "./preloader";
 
 const enum StartState {
     Loading = 0,
@@ -65,24 +57,34 @@ const enum Menu {
     if (!clientName) {
         setUserName();
     }
+    let loaded = 0;
+    let total = 4;
+    const updateProgress = () => {
+        setLoadingProgress(loaded / total);
+    };
+    const wrapLoadItem = <T>(task: Promise<T>) => task.then((r) => {
+        ++loaded;
+        updateProgress();
+        return r;
+    });
+    updateProgress();
     Promise.all([
-        new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font)),
-        new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font)),
-        loadMainAtlas(),
-        loadSpotLightTexture()
+        wrapLoadItem(new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font))),
+        wrapLoadItem(new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font))),
+        wrapLoadItem(loadMainAtlas()),
+        wrapLoadItem(loadSpotLightTexture()),
     ]).then(_ => {
         initFonts();
-        // loadAtlas();
         state = StartState.Loaded;
-
         resetGame();
         createSplashState();
         gameMode.spawnNPC = false;
+        completeLoading();
     });
-    const preStates:StateFunc[] = [
-      ,
-      ,
-        ()=>{
+    const preStates: StateFunc[] = [
+        ,
+        ,
+        () => {
             const scale = getScreenScale();
             ui_begin(scale);
             {
@@ -228,7 +230,7 @@ const enum Menu {
             ui_finish();
         }
     ];
-    const _states:StateFunc[] = [
+    const _states: StateFunc[] = [
         ,
         (ts: number) => {
             const scale = getScreenScale();
