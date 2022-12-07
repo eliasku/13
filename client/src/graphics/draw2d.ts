@@ -526,8 +526,8 @@ export function drawMeshSpriteUp(texture: Texture, x: number, y: number, z: numb
     let vi = texture.vertex0 * 2;
     let i = baseVertex * floatSize;
     for (let j = 0; j < texture.vertexCount; ++j) {
-        const vx = Math.round(texture.vertices[vi++]);
-        const vy = Math.round(texture.vertices[vi++]);
+        const vx = texture.vertices[vi++];
+        const vy = texture.vertices[vi++];
         const px = offsetX + vx;
         const py = offsetY + vy;
         vertexF32[i++] = x + (sx * px * cs - sy * py * sn);
@@ -570,8 +570,8 @@ export function drawMeshSprite(texture: Texture, x: number, y: number, r: number
     let vi = texture.vertex0 * 2;
     let i = baseVertex * floatSize;
     for (let j = 0; j < texture.vertexCount; ++j) {
-        const vx = Math.round(texture.vertices[vi++]);
-        const vy = Math.round(texture.vertices[vi++]);
+        const vx = texture.vertices[vi++];
+        const vy = texture.vertices[vi++];
         const px = offsetX + vx;
         const py = offsetY + vy;
         vertexF32[i++] = x + (sx * px * cs - sy * py * sn);

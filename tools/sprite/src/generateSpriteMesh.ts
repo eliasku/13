@@ -90,12 +90,17 @@ export function generateMeshSprite(img: ImageData, soft: boolean, subsample: num
         inverted: false
     };
 
-    console.info(polygon);
+    //console.info(polygon);
     polygon = polybool.polygon(polybool.segments(polygon));
     const data = polybool.polygonToGeoJSON(polygon);
 
-    if (!data.coordinates.length) return;
-    console.info(data);
+    if (!data.coordinates.length) {
+        return {
+            indices: [],
+            vertices: [],
+        };
+    }
+
     const data2 = [];
     if (data.type === "Polygon") {
         data2.push(earcut.flatten(data.coordinates));
@@ -105,9 +110,6 @@ export function generateMeshSprite(img: ImageData, soft: boolean, subsample: num
         }
     }
 
-    // const data2 = [earcut.flatten(data.coordinates)];
-
-    console.info(data2);
     let vertices: number[] = [];
     const indices: number[] = [];
     for (const d of data2) {
@@ -118,6 +120,13 @@ export function generateMeshSprite(img: ImageData, soft: boolean, subsample: num
         }
         vertices = vertices.concat(d.vertices);
     }
+
+    if (!soft) {
+        for (let i = 0; i < vertices.length; ++i) {
+            vertices[i] = Math.fround(vertices[i]);
+        }
+    }
+
     return {
         indices,
         vertices,

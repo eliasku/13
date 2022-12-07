@@ -135,17 +135,12 @@ export const buildAtlas = (): AtlasPage => {
         const subMesh = generateMeshSprite(imgData, soft, 4, 1, 0.999);
         startIndex = allIndices.length;
         startVertex = allVertices.length / 2;
-        if (subMesh) {
-            indices = subMesh.indices;
-            vertices = subMesh.vertices;
-            for (const i of indices) {
-                allIndices.push(i);
-            }
-            allVertices = allVertices.concat(vertices);
-        } else {
-            indices = [];
-            vertices = [];
+        indices = subMesh.indices;
+        vertices = subMesh.vertices;
+        for (const i of indices) {
+            allIndices.push(i);
         }
+        allVertices = allVertices.concat(vertices);
 
         if (flood) {
             const imgData = atlas.getImageData(x - 1, y - 1, sprWidth + 2, sprHeight + 2);
