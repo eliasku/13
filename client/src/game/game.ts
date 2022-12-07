@@ -1507,7 +1507,10 @@ const drawGame = () => {
 
     // skybox
     setDrawZ(-1);
-    draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, BOUNDS_SIZE + 2000, 1, 0x221100);
+    draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, 1500, 1, 0x221100);
+    draw(img[Img.box_lt], -1000, BOUNDS_SIZE - 500, 0, BOUNDS_SIZE + 2000, 1500, 1, 0x221100);
+    draw(img[Img.box_lt], -1000, 0, 0, 1500, BOUNDS_SIZE, 1, 0x221100);
+    draw(img[Img.box_lt], BOUNDS_SIZE - 500, 0, 0, 1500, BOUNDS_SIZE, 1, 0x221100);
 
     flush();
     gl.enable(GL.DEPTH_TEST);
@@ -1520,6 +1523,7 @@ const drawGame = () => {
     }
 
     if (gameMode.title) {
+        setDrawZ(1);
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
             const color = RGB((0x20 * (11 - i) + 0x20 * a) & 0xFF, 0, 0);
@@ -1527,7 +1531,6 @@ const drawGame = () => {
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-            drawRing(img[Img.box], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 100, 10, 32, 1, 0.5, 1, color);
             drawMeshSpriteUp(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 40, angle, scale, scale, 1, color);
         }
     }

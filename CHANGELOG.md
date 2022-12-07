@@ -1,7 +1,10 @@
 ## 1.0.9
 
+### Rendering
+
 - Simple mesh sprites #41
 - Generic mesh virtual pads #64
+- Improve Clear pass #62
 
 ## 1.0.8
 
