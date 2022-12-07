@@ -77,15 +77,7 @@ export const enum Img {
     particle_flesh1,
     particle_shell,
 
-    joy0,
-    joy1,
-    joy2,
-    joy3,
-    joy4,
-
     logo_title,
-
-    light_circle,
 
     num_avatars = 14,
     num_npc = 8,
@@ -345,37 +337,6 @@ export const buildAtlas = (): AtlasPage => {
 
     atlas.fillStyle = "#fff";
 
-    const renderJoy = (r0: number, r1: number, text0: string, text1: string) => {
-        let s = r1 * 2 + 32;
-        pushSprite(s, s);
-        atlas.font = Font(10);
-        atlas.lineWidth = 2;
-
-        s /= 2;
-        atlas.translate(x + s, y + s);
-
-        circle(atlas, r0);
-        atlas.stroke();
-
-        circle(atlas, r1);
-        atlas.stroke();
-
-        atlas.fillText(text0, 0, -r0 - 3);
-        atlas.fillText(text1, 0, -r1 - 3);
-
-        atlas.resetTransform();
-
-        cutAlpha();
-        addMesh();
-        saveImage();
-    }
-
-    renderJoy(PAD_MOVE_RADIUS_0, PAD_MOVE_RADIUS_1, "RUN", "JUMP");
-    renderJoy(PAD_FIRE_RADIUS_0, PAD_FIRE_RADIUS_1, "AIM", "FIRE");
-    renderJoy(16, 16, "DROP", "");
-    renderJoy(16, 16, "RELOAD", "");
-    renderJoy(16, 16, "SWAP", "");
-
     pushSprite(72, 64);
     atlas.font = Font(72);
     atlas.fillText("13", x + 72 / 2, y + 51);
@@ -383,31 +344,7 @@ export const buildAtlas = (): AtlasPage => {
     addMesh();
     saveImage();
 
-    // document.body.appendChild(atlas.canvas);
-    // atlas.canvas.style.position = "fixed";
-    // atlas.canvas.style.top = "0";
-    // atlas.canvas.style.left = "0";
-
     temp.canvas.width = temp.canvas.height = 0;
-
-    // {
-    //     const ctx = createCanvas(64);
-    //     ctx.translate(32, 32);
-    //     const grd = ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32);
-    //     grd.addColorStop(0, "rgba(255,255,255,1)");
-    //     grd.addColorStop(1, "rgba(255,255,255,0)");
-    //     ctx.fillStyle = grd;
-    //     circle(ctx, 32);
-    //     ctx.fill();
-    //     ctx.scale(1, 0.25);
-    //     circle(ctx, 32);
-    //     ctx.fill();
-    //     ctx.resetTransform();
-    //     img[Img.light_circle] = createTexture(64);
-    //     img[Img.light_circle].x_ = 0.5;
-    //     img[Img.light_circle].y_ = 0.5;
-    //     uploadTexture(img[Img.light_circle], ctx.canvas, GL.LINEAR);
-    // }
 
     const headerDataSize = 3 * 4;
     const imagesDataSize = img.length * (10 * 4);
@@ -464,10 +401,6 @@ export function makeSpotLightTexture() {
     circle(ctx, 32);
     ctx.fill();
     ctx.resetTransform();
-    // img[Img.light_circle] = createTexture(64);
-    // img[Img.light_circle].x_ = 0.5;
-    // img[Img.light_circle].y_ = 0.5;
-    // uploadTexture(img[Img.light_circle], ctx.canvas, GL.LINEAR);
     ctx.canvas.toBlob((blob: Blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

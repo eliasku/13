@@ -1,5 +1,5 @@
 import {GL} from "./gl";
-import {cos, sin} from "../utils/math";
+import {cos, PI2, sin} from "../utils/math";
 import {
     SHADER_A_COLOR_ADD,
     SHADER_A_COLOR_MUL,
@@ -163,13 +163,6 @@ function bindProgramBuffers(program: Program, buffers: DynamicBuffers) {
     bindAttrib(program.a_texCoord, 2, byteSize, 12, GL.FLOAT, false);
     bindAttrib(program.a_colorMul, 4, byteSize, 20, GL.UNSIGNED_BYTE, true);
     bindAttrib(program.a_colorAdd, 4, byteSize, 24, GL.UNSIGNED_BYTE, true);
-}
-
-export interface SpriteMesh {
-    index: number;
-    triangles: number;
-    indices: Uint16Array;
-    vertices: Float32Array;
 }
 
 export interface Texture {
@@ -591,4 +584,96 @@ export function drawMeshSprite(texture: Texture, x: number, y: number, r: number
     }
 
     baseVertex += texture.vertexCount;
+}
+
+export function drawRing(texture: Texture, x: number, y: number, r: number, dr: number, segments: number, sx: number, sy: number, alpha: number = 1, color: number = 0xFFFFFF) {
+    if (quadTexture !== texture.texture_ || baseVertex + segments * 2 >= batchVertexMax) {
+        flush();
+        quadTexture = texture.texture_;
+    }
+
+    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const u = texture.u0_;
+    const v = texture.v0_;
+
+    let i = baseVertex * floatSize;
+    let a = 0;
+    const da = PI2 / segments;
+    for (let j = 0; j < segments; ++j) {
+        const cs = sx * cos(a);
+        const sn = sy * sin(a);
+
+        vertexF32[i++] = x + (r + dr) * cs;
+        vertexF32[i++] = y + (r + dr) * sn;
+        vertexF32[i++] = drawZ;
+        vertexF32[i++] = u;
+        vertexF32[i++] = v;
+        vertexU32[i++] = colorMul;
+        vertexU32[i++] = 0;
+
+        vertexF32[i++] = x + r * cs;
+        vertexF32[i++] = y + r * sn;
+        vertexF32[i++] = drawZ;
+        vertexF32[i++] = u;
+        vertexF32[i++] = v;
+        vertexU32[i++] = colorMul;
+        vertexU32[i++] = 0;
+
+        a += da;
+    }
+
+    let index = baseVertex;
+    for (let i = 1; i < segments; ++i) {
+        indexData[currentIndex++] = index;
+        indexData[currentIndex++] = index + 2;
+        indexData[currentIndex++] = index + 3;
+        indexData[currentIndex++] = index + 3;
+        indexData[currentIndex++] = index + 1;
+        indexData[currentIndex++] = index;
+        index += 2;
+    }
+    indexData[currentIndex++] = index;
+    indexData[currentIndex++] = baseVertex;
+    indexData[currentIndex++] = baseVertex + 1;
+    indexData[currentIndex++] = baseVertex + 1;
+    indexData[currentIndex++] = index + 1;
+    indexData[currentIndex++] = index;
+
+    baseVertex += segments * 2;
+}
+
+
+export function drawCircle(texture: Texture, x: number, y: number, r: number, segments: number, sx: number, sy: number, alpha: number = 1, color: number = 0xFFFFFF) {
+    if (quadTexture !== texture.texture_ || baseVertex + segments >= batchVertexMax) {
+        flush();
+        quadTexture = texture.texture_;
+    }
+
+    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const u = texture.u0_;
+    const v = texture.v0_;
+
+    let i = baseVertex * floatSize;
+    let a = 0;
+    const da = PI2 / segments;
+    for (let j = 0; j < segments; ++j) {
+        const cs = sx * cos(a);
+        const sn = sy * sin(a);
+        vertexF32[i++] = x + r * cs;
+        vertexF32[i++] = y + r * sn;
+        vertexF32[i++] = drawZ;
+        vertexF32[i++] = u;
+        vertexF32[i++] = v;
+        vertexU32[i++] = colorMul;
+        vertexU32[i++] = 0;
+        a += da;
+    }
+
+    let index = baseVertex + 1;
+    for (let i = 2; i < segments; ++i) {
+        indexData[currentIndex++] = baseVertex;
+        indexData[currentIndex++] = index++;
+        indexData[currentIndex++] = index;
+    }
+    baseVertex += segments;
 }

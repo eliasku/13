@@ -1,7 +1,7 @@
 import {ClientID} from "../../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
-import {beginRenderToMain, draw, drawMeshSpriteUp, flush, gl, setDrawZ} from "../graphics/draw2d";
+import {beginRenderToMain, draw, drawMeshSpriteUp, drawRing, flush, gl, setDrawZ} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
@@ -1522,12 +1522,13 @@ const drawGame = () => {
     if (gameMode.title) {
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
-            const add = RGB((0x20 * (11 - i) + 0x20 * a) & 0xFF, 0, 0);
+            const color = RGB((0x20 * (11 - i) + 0x20 * a) & 0xFF, 0, 0);
             const scale = 1 + i / 100;
             const angle = a * i / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-            drawMeshSpriteUp(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 40, angle, scale, scale, 1, add);
+            drawRing(img[Img.box], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 100, 10, 32, 1, 0.5, 1, color);
+            drawMeshSpriteUp(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 40, angle, scale, scale, 1, color);
         }
     }
     flush();

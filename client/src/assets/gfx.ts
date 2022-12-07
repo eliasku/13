@@ -70,12 +70,6 @@ export const enum Img {
     particle_flesh1,
     particle_shell,
 
-    joy0,
-    joy1,
-    joy2,
-    joy3,
-    joy4,
-
     logo_title,
 
     num_avatars = 14,

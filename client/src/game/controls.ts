@@ -1,7 +1,6 @@
 import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input";
-import {draw, gl} from "../graphics/draw2d";
+import {drawCircle, drawRing, gl} from "../graphics/draw2d";
 import {Actor} from "./types";
-import {img, Img} from "../assets/gfx";
 import {
     PAD_FIRE_RADIUS_0,
     PAD_FIRE_RADIUS_1,
@@ -12,6 +11,7 @@ import {
 import {getScreenScale} from "./gameState";
 import {hypot} from "../utils/math";
 import {weapons} from "./data/weapons";
+import {drawTextShadowCenter, fnt} from "../graphics/font";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -143,14 +143,16 @@ interface VPadControl {
     // any len > undefined = false (undefined is NaN)
     r1_?: number | undefined;
     r2_?: number | undefined;
+    text1?: string;
+    text2?: string;
 }
 
 const vpad: VPadControl[] = [
-    {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: PAD_MOVE_RADIUS_0, r2_: PAD_MOVE_RADIUS_1},
-    {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: PAD_FIRE_RADIUS_0, r2_: PAD_FIRE_RADIUS_1},
-    {l_: 0.5, t_: 0.25, r_: 0.66, b_: 0.5, isButton_: 1},
-    {l_: 0.66, t_: 0.25, r_: 0.82, b_: 0.5, isButton_: 1},
-    {l_: 0.82, t_: 0.25, r_: 1, b_: 0.5, isButton_: 1},
+    {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: PAD_MOVE_RADIUS_0, r2_: PAD_MOVE_RADIUS_1, text1: "RUN", text2: "JUMP"},
+    {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: PAD_FIRE_RADIUS_0, r2_: PAD_FIRE_RADIUS_1, text1: "AIM", text2: "FIRE"},
+    {l_: 0.5, t_: 0.25, r_: 0.66, b_: 0.5, isButton_: 1, r1_: 16, text1: "DROP"},
+    {l_: 0.66, t_: 0.25, r_: 0.82, b_: 0.5, isButton_: 1, r1_: 16, text1: "RELOAD"},
+    {l_: 0.82, t_: 0.25, r_: 1, b_: 0.5, isButton_: 1, r1_: 16, text1: "SWAP"},
 ];
 let touchPadActive = false;
 
@@ -205,25 +207,31 @@ export const drawVirtualPad = () => {
     if (!touchPadActive) {
         return;
     }
+    const boxTexture = fnt[0].textureBox;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
     const k = 1 / getScreenScale();
-    let i = Img.joy0;
+    const segments = 16;
     for (const control of vpad) {
         if (!control.hidden_) {
             const w_ = W * (control.r_ - control.l_);
             const h_ = H * (control.b_ - control.t_);
             let cx = k * (W * control.l_ + w_ / 2);
             let cy = k * (H * control.t_ + h_ / 2);
-            // draw(img[Img.box], cx, cy, 0, w_ * k, h_ * k, 0.1, 0);
             const pp = control.pointer_;
             if (!control.isButton_ && pp) {
                 cx = pp.startX_ * k;
                 cy = pp.startY_ * k;
-                draw(img[Img.circle_16], pp.x_ * k, pp.y_ * k, 0, 1, 1, 0.5);
+                drawCircle(boxTexture, pp.x_ * k, pp.y_ * k, 16, segments, 1, 1, 0.5);
             }
-            draw(img[i], cx, cy, 0, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+            if (control.r1_ !== undefined) {
+                drawTextShadowCenter(fnt[0], control.text1, 8, cx, cy - control.r1_ - 4, pp ? 0xFFFFFF : 0x777777);
+                drawRing(boxTexture, cx, cy, control.r1_ - 2, 4, segments, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+            }
+            if (control.r2_ !== undefined) {
+                drawTextShadowCenter(fnt[0], control.text2, 8, cx, cy - control.r2_ - 4, pp ? 0xFFFFFF : 0x777777);
+                drawRing(boxTexture, cx, cy, control.r2_ - 2, 4, segments, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+            }
         }
-        ++i;
     }
 }

@@ -1,6 +1,7 @@
 ## 1.0.9
 
 - Simple mesh sprites #41
+- Generic mesh virtual pads #64
 
 ## 1.0.8
 
