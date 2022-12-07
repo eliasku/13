@@ -1,7 +1,7 @@
 import {Actor, ItemType} from "./types";
 import {WORLD_SCALE} from "../assets/params";
 import {EMOJI, img, Img} from "../assets/gfx";
-import {draw, drawBillboard, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d";
+import {draw, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d";
 import {lookAtX, lookAtY, viewX, viewY} from "./controls";
 import {atan2, clamp, cos, min, PI, sin} from "../utils/math";
 import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4";
@@ -104,9 +104,6 @@ export const setupWorldCameraMatrix = (x: number, y: number, scale: number, rx: 
 
 export const getHitColorOffset = (anim: number) =>
     getLumaColor32(0xFF * min(1, 2 * anim / ANIM_HIT_MAX));
-
-export const drawObject = (p: Actor, id: Img, z: number = 0, scale: number = 1) =>
-    drawBillboard(img[id], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE, p.z_ / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p.animHit_));
 
 export const drawObjectMesh2D = (p: Actor, id: Img, z: number = 0, scale: number = 1, oy: number = 0.0) =>
     drawMeshSpriteUp(img[id], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE + oy, p.z_ / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p.animHit_));

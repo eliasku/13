@@ -116,7 +116,7 @@ export const restoreParticles = () => {
 export const drawSplats = (list = splats, i = 0) => {
     setDrawZ(0.1);
     for (; i < list.length;) {
-        draw(
+        drawMeshSprite(
             img[list[i++]],
             list[i++],
             list[i++],

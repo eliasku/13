@@ -130,7 +130,7 @@ export const buildAtlas = (): AtlasPage => {
     let indices: number[];
     let vertices: number[];
 
-    const addMesh = (soft = false) => {
+    const addMesh = (soft = false, flood: boolean = true) => {
         const imgData = atlas.getImageData(x, y, sprWidth, sprHeight);
         const subMesh = generateMeshSprite(imgData, soft, 4, 1, 0.999);
         startIndex = allIndices.length;
@@ -145,6 +145,38 @@ export const buildAtlas = (): AtlasPage => {
         } else {
             indices = [];
             vertices = [];
+        }
+
+        if (flood) {
+            const imgData = atlas.getImageData(x - 1, y - 1, sprWidth + 2, sprHeight + 2);
+            const newImageData = new Uint8ClampedArray((sprWidth + 2) * (sprHeight + 2) * 4);
+            const stride = imgData.width * 4;
+            const copy = (from: number, to: number) => {
+                if (!imgData.data[to + 3] || from === to) {
+                    newImageData[to] = imgData.data[from];
+                    newImageData[to + 1] = imgData.data[from + 1];
+                    newImageData[to + 2] = imgData.data[from + 2];
+                    newImageData[to + 3] = imgData.data[from + 3];
+                }
+            };
+            for (let cy = 1; cy < imgData.height - 1; ++cy) {
+                for (let cx = 1; cx < imgData.width - 1; ++cx) {
+                    let i = cy * stride + cx * 4;
+                    if (imgData.data[i + 3]) {
+                        copy(i, i);
+                        copy(i, i - stride);
+                        copy(i, i + stride);
+                        copy(i, i - 4);
+                        copy(i, i + 4);
+                        copy(i, i - stride - 4);
+                        copy(i, i - stride + 4);
+                        copy(i, i + stride - 4);
+                        copy(i, i + stride + 4);
+                    }
+                }
+            }
+            imgData.data.set(newImageData);
+            atlas.putImageData(imgData, x - 1, y - 1);
         }
     };
     // TODO:
@@ -161,13 +193,14 @@ export const buildAtlas = (): AtlasPage => {
     };
 
     const pushSprite = (w: number, h: number) => {
+        const pad = 2;
         x = x1;
-        x1 = x + w + 1;
-        if (x1 + 1 >= canvaSize) {
-            y += 1 + maxHeight;
+        x1 = x + w + pad;
+        if (x1 + pad >= canvaSize) {
+            y += pad + maxHeight;
             maxHeight = h;
             x = 1;
-            x1 = x + w + 1;
+            x1 = x + w + pad;
         }
         if (h > maxHeight) maxHeight = h;
         sprWidth = w;
@@ -235,8 +268,8 @@ export const buildAtlas = (): AtlasPage => {
     }
     // BOX
     pushSprite(1, 1);
-    atlas.fillRect(x, y, 1, 1);
-    addMesh(false);
+    atlas.fillRect(x - 1, y - 1, 3, 3);
+    addMesh(false, false);
     saveImage();
     saveImage(0, 0);
     saveImage(0.5, 0);
@@ -245,12 +278,10 @@ export const buildAtlas = (): AtlasPage => {
     saveImage(1);
     // CIRCLE
     createCircle(4);
-    addMesh();
     saveImage(0.6);
     saveImage(0.7);
 
     createCircle(16);
-    addMesh();
     saveImage();
 
     [
@@ -314,7 +345,7 @@ export const buildAtlas = (): AtlasPage => {
     atlas.fillRect(x, y, 4, 2);
     atlas.fillStyle = "#999";
     atlas.fillRect(x, y, 1, 2);
-    addMesh(false);
+    addMesh();
     saveImage();
 
     atlas.fillStyle = "#fff";
