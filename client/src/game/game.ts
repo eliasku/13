@@ -1481,6 +1481,7 @@ const drawGame = () => {
     flush();
 
     gl.clear(GL.DEPTH_BUFFER_BIT);
+    gl.clearDepth(1);
     gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LESS);
     gl.depthMask(true);
@@ -1520,22 +1521,15 @@ const drawGame = () => {
 
     drawOpaqueParticles();
     drawOpaqueObjects();
-
     drawSplatsOpaque();
-
-    setDrawZ(0);
-    draw(mapTexture, 0, 0);
-
     flush();
+
     // gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
     gl.depthMask(false);
-    // skybox
-    setDrawZ(-1);
-    draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, 1500, 1, 0x221100);
-    draw(img[Img.box_lt], -1000, BOUNDS_SIZE - 500, 0, BOUNDS_SIZE + 2000, 1500, 1, 0x221100);
-    draw(img[Img.box_lt], -1000, 0, 0, 1500, BOUNDS_SIZE, 1, 0x221100);
-    draw(img[Img.box_lt], BOUNDS_SIZE - 500, 0, 0, 1500, BOUNDS_SIZE, 1, 0x221100);
+    setDrawZ(0);
+    draw(mapTexture, 0, 0);
+    flush();
 
     drawObjects();
 
@@ -1556,8 +1550,18 @@ const drawGame = () => {
         }
     }
     flush();
+    // skybox
+    {
+        setLightMapTexture(emptyTexture.texture_);
+        setDrawZ(0);
+        const fullAmbientColor = RGB(ambientColor[0] * 0xFF, ambientColor[1] * 0xFF, ambientColor[2] * 0xFF);
+        draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(img[Img.box_lt], -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(img[Img.box_lt], -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
+        draw(img[Img.box_lt], BOUNDS_SIZE - 1, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
 
-    setLightMapTexture(emptyTexture.texture_);
+        flush();
+    }
 
     //gl.disable(GL.DEPTH_TEST);
     setDrawZ(0);
