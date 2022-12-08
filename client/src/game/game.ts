@@ -1527,9 +1527,9 @@ const drawGame = () => {
     // gl.enable(GL.DEPTH_TEST);
     gl.depthFunc(GL.LEQUAL);
     gl.depthMask(false);
+
     setDrawZ(0);
     draw(mapTexture, 0, 0);
-    flush();
 
     drawObjects();
 
@@ -1550,29 +1550,22 @@ const drawGame = () => {
         }
     }
     flush();
+
+    gl.disable(GL.DEPTH_TEST);
+    setLightMapTexture(emptyTexture.texture_);
+    setDrawZ(0);
     // skybox
     {
-        setLightMapTexture(emptyTexture.texture_);
-        setDrawZ(0);
+        const tex = fnt[0].textureBoxLT;
         const fullAmbientColor = RGB(ambientColor[0] * 0xFF, ambientColor[1] * 0xFF, ambientColor[2] * 0xFF);
-        draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
-        draw(img[Img.box_lt], -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
-        draw(img[Img.box_lt], -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
-        draw(img[Img.box_lt], BOUNDS_SIZE - 1, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
-
-        flush();
+        draw(tex, -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(tex, -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(tex, -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
+        draw(tex, BOUNDS_SIZE - 1, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
     }
-
-    //gl.disable(GL.DEPTH_TEST);
-    setDrawZ(0);
-    gl.depthRange(0.5, 0.5);
-    //renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
-    //setDrawZ(0);
     drawTextParticles();
     drawHotUsableHint(hotUsable);
     flush();
-
-    gl.disable(GL.DEPTH_TEST);
 }
 
 const drawOverlay = () => {
