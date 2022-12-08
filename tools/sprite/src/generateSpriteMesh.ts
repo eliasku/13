@@ -123,7 +123,7 @@ export function generateMeshSprite(img: ImageData, soft: boolean, subsample: num
 
     if (!soft) {
         for (let i = 0; i < vertices.length; ++i) {
-            vertices[i] = Math.fround(vertices[i]);
+            vertices[i] = Math.abs(Math.round(vertices[i]));
         }
     }
 

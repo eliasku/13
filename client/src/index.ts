@@ -18,7 +18,7 @@ import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {BuildVersion} from "../../shared/types";
 import {sin} from "./utils/math";
-import {DEFAULT_FRAMERATE_LIMIT, devSettings, setSetting, settings} from "./game/settings";
+import {DEFAULT_FRAMERATE_LIMIT, setSetting, settings} from "./game/settings";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
@@ -103,7 +103,7 @@ const enum Menu {
 
                     if (button("dev_mode", "", centerX - 40, centerY - 40, {w: 80, h: 80, visible: false})) {
                         if (++devLock > 3) {
-                            devSettings.enabled = 1;
+                            setSetting("dev", 1);
                             menu = Menu.Dev;
                         }
                     }
@@ -190,29 +190,36 @@ const enum Menu {
                     }
                 } else if (menu === Menu.Dev) {
                     label("⚙️ DEVELOPER", 20, centerX, 30);
-                    if (button("fps", "FPS: " + (devSettings.fps ? "ON" : "OFF"), centerX - 50, centerY - 70, {
+                    if (button("fps", "FPS: " + (settings.dev_fps ? "ON" : "OFF"), centerX - 50, centerY - 70, {
                         w: 100,
                         h: 20
                     })) {
-                        devSettings.fps = devSettings.fps ? 0 : 1;
+                        setSetting("dev_fps", settings.dev_fps ? 0 : 1);
                     }
-                    if (button("collision", "COLLISION: " + (devSettings.collision ? "ON" : "OFF"), centerX - 50, centerY - 40, {
+                    if (button("collision", "COLLISION: " + (settings.dev_collision ? "ON" : "OFF"), centerX - 50, centerY - 40, {
                         w: 100,
                         h: 20
                     })) {
-                        devSettings.collision = devSettings.collision ? 0 : 1;
+                        setSetting("dev_collision", settings.dev_collision ? 0 : 1);
                     }
-                    if (button("console", "LOGS: " + (devSettings.console ? "ON" : "OFF"), centerX - 50, centerY - 10, {
+                    if (button("console", "LOGS: " + (settings.dev_console ? "ON" : "OFF"), centerX - 50, centerY - 10, {
                         w: 100,
                         h: 20
                     })) {
-                        devSettings.console = devSettings.console ? 0 : 1;
+                        setSetting("dev_console", settings.dev_console ? 0 : 1);
                     }
-                    if (button("info", "INFO: " + (devSettings.info ? "ON" : "OFF"), centerX - 50, centerY + 20, {
+                    if (button("info", "INFO: " + (settings.dev_info ? "ON" : "OFF"), centerX - 50, centerY + 20, {
                         w: 100,
                         h: 20
                     })) {
-                        devSettings.info = devSettings.info ? 0 : 1;
+                        setSetting("dev_info", settings.dev_info ? 0 : 1);
+                    }
+                    if (button("dev_disable", "DISABLE", centerX - 30, centerY + 50, {
+                        w: 60,
+                        h: 10
+                    })) {
+                        setSetting("dev", 0);
+                        menu = Menu.Main;
                     }
 
                     if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
@@ -277,8 +284,8 @@ const enum Menu {
             }
         },
         () => {
-            // debug disconnect
-            if (keyboardDown[KeyCode.Digit5]) {
+            // exit room / disconnect
+            if (keyboardDown[KeyCode.Escape]) {
                 disconnect();
             }
             if (!_sseState) {

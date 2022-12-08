@@ -113,7 +113,7 @@ export const restoreParticles = () => {
     splats.length = 0;
 }
 
-export const drawSplats = (list = splats, i = 0) => {
+export const drawSplatsOpaque = (list = splats, i = 0) => {
     setDrawZ(0.1);
     for (; i < list.length;) {
         drawMeshSprite(
@@ -149,16 +149,8 @@ const drawListShadows = (particles: Particle[]) => {
 }
 
 export const drawParticleShadows = () => {
-    setDrawZ(0.1);
-    // drawListShadows(particles);
     drawListShadows(opaqueParticles);
 }
-
-// export const drawParticles = () => {
-//     for (const p of particles) {
-//         drawParticle(p);
-//     }
-// }
 
 export const drawParticle = (p: Particle) => {
     // const velocityScale = max(1, 1 - p.followVelocity_ + p.followScale_ * hypot(p.u_, p.v_, p.w_));
@@ -296,7 +288,7 @@ export const flushSplatsToMap = () => {
         gl.scissor(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
         gl.disable(GL.DEPTH_TEST);
         gl.depthMask(false);
-        drawSplats();
+        drawSplatsOpaque();
         splats.length = 0;
         flush();
     }

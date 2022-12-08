@@ -2,12 +2,13 @@ import {Actor} from "./types";
 import {imgSpotLight} from "../assets/gfx";
 import {
     beginRenderToTexture,
-    clear,
     createTexture,
-    draw, drawZ,
+    draw,
+    drawZ,
+    emptyTexture,
     gl,
     initFramebuffer,
-    setDrawZ,
+    setLightMapTexture,
     uploadTexture
 } from "../graphics/draw2d";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
@@ -18,23 +19,31 @@ import {RGB} from "../utils/utils";
 
 const FOG_DOWNSCALE = 4;
 const FOG_SIZE = BOUNDS_SIZE / FOG_DOWNSCALE;
-const fogTexture = createTexture(FOG_SIZE);
+export const fogTexture = createTexture(FOG_SIZE);
 uploadTexture(fogTexture);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 initFramebuffer(fogTexture);
 
 export const beginFogRender = () => {
-    beginRenderToTexture(fogTexture);
-    clear(1, 1, 1, 1);
+    setLightMapTexture(emptyTexture.texture_);
+    beginRenderToTexture(fogTexture, FOG_DOWNSCALE);
+
+    // clear(1, 1, 1, 1);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(GL.COLOR_BUFFER_BIT);
+
     gl.disable(GL.DEPTH_TEST);
     gl.depthMask(false);
-    gl.blendFunc(GL.ZERO, GL.ONE_MINUS_SRC_ALPHA);
+    // gl.blendFunc(GL.ZERO, GL.ONE_MINUS_SRC_ALPHA);
+    gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
 }
 
 
 export const drawFogPoint = (x: number, y: number, r: number) => {
-    r /= FOG_DOWNSCALE;
-    x /= FOG_DOWNSCALE;
-    y /= FOG_DOWNSCALE;
+    // r /= FOG_DOWNSCALE;
+    // x /= FOG_DOWNSCALE;
+    // y /= FOG_DOWNSCALE;
     draw(imgSpotLight, x, y, 0, r, r);
 }
 
@@ -52,5 +61,5 @@ export const drawFogObjects = (...lists: Actor[][]) => {
     }
 }
 
-export const renderFog = (t: number, add: number) =>
-    draw(fogTexture, 0, drawZ, 0, FOG_DOWNSCALE, FOG_DOWNSCALE, 0.7, RGB(0x40 + 0x20 * sin(t), 0x11, 0x33), 0, add & 0x990000);
+// export const renderFog = (t: number, add: number) =>
+//     draw(fogTexture, 0, drawZ, 0, FOG_DOWNSCALE, FOG_DOWNSCALE, 0.7, RGB(0x40 + 0x20 * sin(t), 0x11, 0x33), 0, add & 0x990000);

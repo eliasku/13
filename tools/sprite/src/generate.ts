@@ -373,7 +373,7 @@ export const buildAtlas = (): AtlasPage => {
         bufferSubImages[ptr++] = subImage.vertex0;
         bufferSubImages[ptr++] = subImage.vertexCount;
     }
-
+    
     bufferV.set(allVertices);
     bufferI.set(allIndices);
 

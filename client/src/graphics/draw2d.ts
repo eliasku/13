@@ -5,14 +5,16 @@ import {
     SHADER_A_COLOR_MUL,
     SHADER_A_POSITION,
     SHADER_A_TEX_COORD,
-    SHADER_FRAGMENT,
+    SHADER_FRAGMENT, SHADER_U_AMBIENT_COLOR,
     SHADER_U_MVP,
     SHADER_U_TEX,
+    SHADER_U_TEX_1,
     SHADER_VERTEX
 } from "./shader";
 import {Mat4} from "../utils/mat4";
 import {stats} from "../utils/fpsMeter";
 import {settings} from "../game/settings";
+import {createCanvas} from "../assets/gfx";
 
 export const gl = c.getContext("webgl", {
     antialias: false,
@@ -57,7 +59,9 @@ const indexData = new Uint16Array(1 << 18);
 interface Program {
     program: WebGLProgram;
     u_mvp: WebGLUniformLocation;
+    u_ambientColor: WebGLUniformLocation;
     u_tex0: WebGLUniformLocation;
+    u_tex1: WebGLUniformLocation;
     a_position: GLint,
     a_texCoord: GLint,
     a_colorMul: GLint;
@@ -116,11 +120,20 @@ const createProgram = (vs: string, fs: string): WebGLProgram => {
 let baseVertex = 0;
 let currentIndex = 0;
 let quadTexture: WebGLTexture;
+let lightMapTexture: WebGLTexture;
+export let ambientColor = new Float32Array([0, 0, 0, 0]);
+
+export function setLightMapTexture(texture: WebGLTexture) {
+    lightMapTexture = texture;
+}
+
 const gl_program = createProgram(SHADER_VERTEX, SHADER_FRAGMENT);
 const program: Program = {
     program: gl_program,
     u_mvp: gl.getUniformLocation(gl_program, SHADER_U_MVP),
+    u_ambientColor: gl.getUniformLocation(gl_program, SHADER_U_AMBIENT_COLOR),
     u_tex0: gl.getUniformLocation(gl_program, SHADER_U_TEX),
+    u_tex1: gl.getUniformLocation(gl_program, SHADER_U_TEX_1),
 
     a_position: gl.getAttribLocation(gl_program, SHADER_A_POSITION),
     a_texCoord: gl.getAttribLocation(gl_program, SHADER_A_TEX_COORD),
@@ -229,6 +242,14 @@ export const uploadTexture = (texture: Texture, source?: TexImageSource, filter:
     }
 }
 
+export const emptyTexture = createTexture(4);
+{
+    const emptyC = createCanvas(4);
+    emptyC.fillStyle = "#FFF";
+    emptyC.fillRect(0, 0, 4, 4);
+    uploadTexture(emptyTexture, emptyC.canvas);
+}
+
 // set projection and activate 0 texture level
 export const setupProjection = (
     posX: number, posY: number,
@@ -277,6 +298,8 @@ export const setupProjection = (
     ]);
 
     gl.uniform1i(program.u_tex0, 0);
+    gl.uniform1i(program.u_tex1, 1);
+    gl.uniform4fv(program.u_ambientColor, ambientColor);
 }
 
 export const beginRender = () => {
@@ -290,11 +313,11 @@ export const clear = (r: number, g: number, b: number, a: number) => {
     gl.clear(GL.COLOR_BUFFER_BIT);
 }
 
-export const beginRenderToTexture = (texture: Texture) => {
+export const beginRenderToTexture = (texture: Texture, scale: number) => {
     beginRender();
     const w = texture.w_;
     const h = texture.h_;
-    setupProjection(0, 0, 0, 1, 0, 1, w, -h);
+    setupProjection(0, 0, 0, 1, 0, 1.0 / scale, w, -h);
     gl.bindFramebuffer(GL.FRAMEBUFFER, texture.fbo_);
     gl.viewport(0, 0, w, h);
     gl.scissor(0, 0, w, h);
@@ -327,7 +350,10 @@ function nextDynamicBuffer(): DynamicBuffers {
 
 export const flush = (_indicesCount = currentIndex) => {
     if (_indicesCount) {
+        gl.activeTexture(GL.TEXTURE0);
         gl.bindTexture(GL.TEXTURE_2D, quadTexture);
+        gl.activeTexture(GL.TEXTURE0 + 1);
+        gl.bindTexture(GL.TEXTURE_2D, lightMapTexture);
         const streamBuffers = nextDynamicBuffer();
         bindProgramBuffers(program, streamBuffers);
         gl.bufferSubData(GL.ARRAY_BUFFER, 0, vertexF32.subarray(0, baseVertex * floatSize));
@@ -558,15 +584,15 @@ export function drawMeshSprite(texture: Texture, x: number, y: number, r: number
     const u1 = texture.u1_;
     const v1 = texture.v1_;
 
-    const offsetX = -texture.x_ * texture.w_;
-    const offsetY = -texture.y_ * texture.h_;
+    const offsetX = texture.x_ * texture.w_;
+    const offsetY = texture.y_ * texture.h_;
     let vi = texture.vertex0 * 2;
     let i = baseVertex * floatSize;
     for (let j = 0; j < texture.vertexCount; ++j) {
         const vx = texture.vertices[vi++];
         const vy = texture.vertices[vi++];
-        const px = offsetX + vx;
-        const py = offsetY + vy;
+        const px = vx - offsetX;
+        const py = vy - offsetY;
         vertexF32[i++] = x + (sx * px * cs - sy * py * sn);
         vertexF32[i++] = y + (sx * px * sn + sy * py * cs);
         vertexF32[i++] = drawZ;

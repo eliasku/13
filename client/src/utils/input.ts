@@ -14,6 +14,7 @@ export interface Pointer {
 }
 
 export const enum KeyCode {
+    Escape = 27,
     Space = 32,
     A = 65,
     S = 83,

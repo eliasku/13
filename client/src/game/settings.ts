@@ -8,6 +8,23 @@ export const enum BloodMode {
 
 export const DEFAULT_FRAMERATE_LIMIT = 60;
 
+type DevSettingsKey =
+    "dev" |
+    "dev_fps" |
+    "dev_collision" |
+    "dev_console" |
+    "dev_info";
+
+type SettingsKey = DevSettingsKey |
+    "name" |
+    "sound" |
+    "music" |
+    "speech" |
+    "blood" |
+    "particles" |
+    "highDPI" |
+    "frameRateCap";
+
 interface Settings {
     name: string;
     sound: number;
@@ -17,6 +34,12 @@ interface Settings {
     particles: number;
     highDPI: number;
     frameRateCap: number;
+
+    dev: number;
+    dev_fps: number;
+    dev_collision: number;
+    dev_console: number;
+    dev_info: number;
 }
 
 export const settings: Settings = {
@@ -28,6 +51,11 @@ export const settings: Settings = {
     particles: 1,
     highDPI: 1,
     frameRateCap: DEFAULT_FRAMERATE_LIMIT,
+    dev: 0,
+    dev_fps: 1,
+    dev_collision: 0,
+    dev_console: 1,
+    dev_info: 0,
 };
 
 for (const key of Object.keys(settings)) {
@@ -45,28 +73,12 @@ for (const key of Object.keys(settings)) {
     }
 }
 
-export function setSetting(key: string, value: any): any {
+export function setSetting(key: SettingsKey, value: any): any {
     (settings as any)[key] = value;
     localStorage.setItem(prefix + key, value);
     return value;
 }
 
-interface DevSettings {
-    enabled: number;
-    fps: number;
-    collision: number;
-    console: number;
-    info: number;
-}
-
-export const devSettings: DevSettings = {
-    enabled: (process.env.NODE_ENV === "development") as any | 0,
-    fps: 1,
-    collision: 0,
-    console: 1,
-    info: 0,
-};
-
-export function getDevSetting(key: string) {
-    return devSettings.enabled && (devSettings as any)[key];
+export function getDevSetting(key: DevSettingsKey) {
+    return settings.dev && settings[key];
 }

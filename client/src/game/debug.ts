@@ -10,7 +10,7 @@ import {ClientID} from "../../../shared/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
 import {min} from "../utils/math";
-import {devSettings} from "./settings";
+import {setSetting, settings} from "./settings";
 import {WORLD_SCALE} from "../assets/params";
 import {actorsConfig} from "./data/world";
 
@@ -108,15 +108,15 @@ export const printDebugInfo = (
 }
 
 export const updateDebugInput = () => {
-    if (devSettings.enabled) {
+    if (settings.dev) {
         if (keyboardDown[KeyCode.Digit0]) {
-            devSettings.info = devSettings.info ? 0 : 1;
+            setSetting("dev_info", settings.dev_info ? 0 : 1);
         }
         if (keyboardDown[KeyCode.Digit1]) {
             ++debugCheckAvatar;
         }
         if (keyboardDown[KeyCode.Digit2]) {
-            devSettings.collision = devSettings.collision ? 0 : 1;
+            setSetting("dev_collision", settings.dev_collision ? 0 : 1);
         }
         if (keyboardDown[KeyCode.Digit3]) {
             setDebugLagK((_debugLagK + 1) % 3);

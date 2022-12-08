@@ -1,7 +1,17 @@
 import {ClientID} from "../../../shared/types";
 import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
-import {beginRenderToMain, draw, drawMeshSpriteUp, drawRing, flush, gl, setDrawZ} from "../graphics/draw2d";
+import {
+    ambientColor,
+    beginRenderToMain,
+    draw,
+    drawMeshSpriteUp,
+    emptyTexture,
+    flush,
+    gl,
+    setDrawZ,
+    setLightMapTexture
+} from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
 import {EMOJI, img, Img} from "../assets/gfx";
@@ -73,7 +83,7 @@ import {
     addTextParticle,
     drawOpaqueParticles,
     drawParticleShadows,
-    drawSplats,
+    drawSplatsOpaque,
     drawTextParticles,
     flushSplatsToMap,
     resetParticles,
@@ -111,7 +121,7 @@ import {
     PLAYER_HANDS_Z,
 } from "./data/world";
 import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/ui";
-import {beginFogRender, drawFogObjects, drawFogPoint, renderFog} from "./fog";
+import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog";
 import {
     addDebugState,
     assertStateInSync,
@@ -1499,12 +1509,27 @@ const drawGame = () => {
         setupWorldCameraMatrix(cameraCenterX, cameraCenterY, viewScale, fx, fz);
     }
 
+    {
+        const add = ((getHitColorOffset(getMyPlayer()?.animHit_) & 0x990000) >>> 16) / 0xFF;
+        ambientColor[0] = clamp(0x40 / 0xFF + (0x20 / 0xFF) * sin(lastFrameTs) + add, 0, 1);
+        ambientColor[1] = 0x11 / 0xFF;
+        ambientColor[2] = 0x33 / 0xFF;
+        ambientColor[3] = 0.8;
+        setLightMapTexture(fogTexture.texture_);
+    }
+
     drawOpaqueParticles();
     drawOpaqueObjects();
+
+    drawSplatsOpaque();
 
     setDrawZ(0);
     draw(mapTexture, 0, 0);
 
+    flush();
+    // gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
+    gl.depthMask(false);
     // skybox
     setDrawZ(-1);
     draw(img[Img.box_lt], -1000, -1000, 0, BOUNDS_SIZE + 2000, 1500, 1, 0x221100);
@@ -1512,13 +1537,9 @@ const drawGame = () => {
     draw(img[Img.box_lt], -1000, 0, 0, 1500, BOUNDS_SIZE, 1, 0x221100);
     draw(img[Img.box_lt], BOUNDS_SIZE - 500, 0, 0, 1500, BOUNDS_SIZE, 1, 0x221100);
 
-    flush();
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
-    gl.depthMask(false);
     drawObjects();
 
-    if (getDevSetting("collision")) {
+    if (getDevSetting("dev_collision")) {
         drawCollisions(drawList);
     }
 
@@ -1536,10 +1557,12 @@ const drawGame = () => {
     }
     flush();
 
+    setLightMapTexture(emptyTexture.texture_);
+
     //gl.disable(GL.DEPTH_TEST);
     setDrawZ(0);
     gl.depthRange(0.5, 0.5);
-    renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
+    //renderFog(lastFrameTs, getHitColorOffset(getMyPlayer()?.animHit_));
     //setDrawZ(0);
     drawTextParticles();
     drawHotUsableHint(hotUsable);
@@ -1562,11 +1585,11 @@ const drawOverlay = () => {
         drawVirtualPad();
     }
 
-    if (getDevSetting("info")) {
+    if (getDevSetting("dev_info")) {
         printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 
-    if (getDevSetting("fps")) {
+    if (getDevSetting("dev_fps")) {
         drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls} |  ⃤ ${stats.triangles} | ∷${stats.vertices}`, 4, 2, 5, 0, 0);
     }
 
@@ -1744,16 +1767,12 @@ function drawOpaqueObjects() {
 }
 
 const drawObjects = () => {
-    drawSplats();
-
-    setDrawZ(0.1);
+    setDrawZ(0.15);
     drawShadows(drawList);
     drawParticleShadows();
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor.type_]?.(actor);
     }
-
-    //drawParticles();
 }
 
 const playAt = (actor: Actor, id: Snd) => {
