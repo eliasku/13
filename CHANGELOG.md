@@ -4,6 +4,8 @@
 - Simple mesh sprites #41
 - Generic mesh virtual pads #64
 - Improve Clear pass #62
+- Improve Fog pass #63
+- `[Escape]` key to navigate back #65
 
 ## 1.0.8
 

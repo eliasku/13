@@ -185,7 +185,7 @@ const enum Menu {
                     if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
                         w: 100,
                         h: 20
-                    })) {
+                    }) || keyboardDown[KeyCode.Escape]) {
                         menu = Menu.Main;
                     }
                 } else if (menu === Menu.Dev) {
@@ -225,7 +225,7 @@ const enum Menu {
                     if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
                         w: 100,
                         h: 20
-                    })) {
+                    }) || keyboardDown[KeyCode.Escape]) {
                         menu = Menu.Main;
                     }
                 }
