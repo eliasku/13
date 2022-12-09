@@ -144,9 +144,11 @@ export const drawBullet = (actor: Actor) => {
     const longing = bulletData.length;
     const longing2 = bulletData.lightLength;
     const sz = bulletData.size + bulletData.pulse * sin(32 * lastFrameTs + actor.anim0_) / 2;
-    setDrawZ(z);
+    setDrawZ(z - 0.1);
     drawMeshSprite(img[bulletData.images[0]], x, y, a, sz * longing, sz, 0.1, 0xFFFFFF, 1);
+    setDrawZ(z);
     drawMeshSprite(img[bulletData.images[1]], x, y, a, sz * longing / 2, sz / 2, 1, color);
+    setDrawZ(z + 0.1);
     drawMeshSprite(img[bulletData.images[2]], x, y, a, 2 * longing2, 2);
 }
 

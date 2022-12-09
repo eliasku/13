@@ -4,7 +4,6 @@ import {
     beginRenderToTexture,
     createTexture,
     draw,
-    drawZ,
     emptyTexture,
     gl,
     initFramebuffer,
@@ -14,13 +13,12 @@ import {
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {GL} from "../graphics/gl";
 import {clientId} from "../net/messaging";
-import {sin} from "../utils/math";
-import {RGB} from "../utils/utils";
+import {actorsConfig} from "./data/world";
 
 const FOG_DOWNSCALE = 4;
 const FOG_SIZE = BOUNDS_SIZE / FOG_DOWNSCALE;
 export const fogTexture = createTexture(FOG_SIZE);
-uploadTexture(fogTexture);
+uploadTexture(fogTexture, undefined, GL.LINEAR);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 initFramebuffer(fogTexture);
@@ -29,37 +27,37 @@ export const beginFogRender = () => {
     setLightMapTexture(emptyTexture.texture_);
     beginRenderToTexture(fogTexture, FOG_DOWNSCALE);
 
-    // clear(1, 1, 1, 1);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(GL.COLOR_BUFFER_BIT);
 
     gl.disable(GL.DEPTH_TEST);
     gl.depthMask(false);
-    // gl.blendFunc(GL.ZERO, GL.ONE_MINUS_SRC_ALPHA);
     gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
 }
 
-
-export const drawFogPoint = (x: number, y: number, r: number) => {
-    // r /= FOG_DOWNSCALE;
-    // x /= FOG_DOWNSCALE;
-    // y /= FOG_DOWNSCALE;
-    draw(imgSpotLight, x, y, 0, r, r);
+export const drawFogPoint = (x: number, y: number, r: number, alpha: number) => {
+    draw(imgSpotLight, x, y, 0, r, r, alpha);
 }
 
 export const drawFogObjects = (...lists: Actor[][]) => {
-    const SOURCE_RADIUS_BY_TYPE = [2, 0, 1, 1, 0, 0];
     for (const list of lists) {
         for (const a of list) {
-            let r = SOURCE_RADIUS_BY_TYPE[a.type_];
-            // isMyPlayer
-            if (!a.type_ && clientId && a.client_ === clientId) {
-                r *= 2;
+            let type = actorsConfig[a.type_];
+            let r = type.lightRadiusK;
+            let alpha = type.light;
+            if(r > 0 && alpha > 0) {
+                // isMyPlayer
+                if (!a.type_) {
+                    if(clientId && a.client_ === clientId) {
+                        //r *= 2;
+                    }
+                    else {
+                        r /= 4;
+                        // alpha /= 2;
+                    }
+                }
+                draw(imgSpotLight, a.x_ / WORLD_SCALE, (a.y_ - a.z_) / WORLD_SCALE, 0, r, r, alpha);
             }
-            drawFogPoint(a.x_ / WORLD_SCALE, (a.y_ - a.z_) / WORLD_SCALE, r);
         }
     }
 }
-
-// export const renderFog = (t: number, add: number) =>
-//     draw(fogTexture, 0, drawZ, 0, FOG_DOWNSCALE, FOG_DOWNSCALE, 0.7, RGB(0x40 + 0x20 * sin(t), 0x11, 0x33), 0, add & 0x990000);

@@ -20,6 +20,8 @@ export interface ActorProp {
     shadowScale: number;
     shadowAdd: number;
     shadowColor: number;
+    lightRadiusK: number;
+    light: number;
 }
 
 export const actorsConfig: Record<ActorType, ActorProp> = [
@@ -33,6 +35,8 @@ export const actorsConfig: Record<ActorType, ActorProp> = [
         shadowScale: 1,
         shadowAdd: 0,
         shadowColor: 0,
+        lightRadiusK: 4,
+        light: 1,
     },
     {
         radius: OBJECT_RADIUS,
@@ -44,6 +48,8 @@ export const actorsConfig: Record<ActorType, ActorProp> = [
         shadowScale: 1,
         shadowAdd: 0,
         shadowColor: 0,
+        lightRadiusK: 0,
+        light: 0,
     },
     {
         radius: BULLET_RADIUS,
@@ -55,6 +61,8 @@ export const actorsConfig: Record<ActorType, ActorProp> = [
         shadowScale: 2,
         shadowAdd: 1,
         shadowColor: 0x333333,
+        lightRadiusK: 1,
+        light: 1,
     },
     {
         radius: OBJECT_RADIUS + 4 * WORLD_SCALE,
@@ -66,6 +74,8 @@ export const actorsConfig: Record<ActorType, ActorProp> = [
         shadowScale: 1,
         shadowAdd: 0,
         shadowColor: 0,
+        lightRadiusK: 1,
+        light: 0.5,
     },
     {
         radius: OBJECT_RADIUS + 4 * WORLD_SCALE,
@@ -77,5 +87,7 @@ export const actorsConfig: Record<ActorType, ActorProp> = [
         shadowScale: 1,
         shadowAdd: 0,
         shadowColor: 0,
+        lightRadiusK: 0,
+        light: 0,
     }
 ];

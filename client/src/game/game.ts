@@ -1528,6 +1528,20 @@ const drawGame = () => {
     gl.depthFunc(GL.LEQUAL);
     gl.depthMask(false);
 
+    setLightMapTexture(emptyTexture.texture_);
+    // skybox
+    {
+        const tex = fnt[0].textureBoxLT;
+        const fullAmbientColor = RGB(ambientColor[0] * 0xFF, ambientColor[1] * 0xFF, ambientColor[2] * 0xFF);
+        draw(tex, -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(tex, -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(tex, -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
+        draw(tex, BOUNDS_SIZE - 1, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
+    }
+    flush();
+
+    setLightMapTexture(fogTexture.texture_);
+
     setDrawZ(0);
     draw(mapTexture, 0, 0);
 
@@ -1551,18 +1565,9 @@ const drawGame = () => {
     }
     flush();
 
-    gl.disable(GL.DEPTH_TEST);
     setLightMapTexture(emptyTexture.texture_);
+    gl.disable(GL.DEPTH_TEST);
     setDrawZ(0);
-    // skybox
-    {
-        const tex = fnt[0].textureBoxLT;
-        const fullAmbientColor = RGB(ambientColor[0] * 0xFF, ambientColor[1] * 0xFF, ambientColor[2] * 0xFF);
-        draw(tex, -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
-        draw(tex, -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
-        draw(tex, -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
-        draw(tex, BOUNDS_SIZE - 1, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
-    }
     drawTextParticles();
     drawHotUsableHint(hotUsable);
     flush();
