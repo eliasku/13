@@ -6,6 +6,7 @@
 - Improve Clear pass #62
 - Improve Fog pass #63
 - `[Escape]` key to navigate back #65
+- Fade blood and footprints after some time #68
 
 ## 1.0.8
 

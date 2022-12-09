@@ -40,6 +40,7 @@ const themes:MapTheme[] = [
     }
 ];
 
+export const mapTexture0 = createTexture(BOUNDS_SIZE);
 export const mapTexture = createTexture(BOUNDS_SIZE);
 initFramebuffer(mapTexture);
 
@@ -60,6 +61,7 @@ export const generateMapBackground = (_i: number = 0, _size: number = BOUNDS_SIZ
         const splatH = theme.rectH[0] + rand(theme.rectH[1] - theme.rectH[0]);
         _map.fillRect(rand(_size), rand(_size) * sc, splatW, splatH);
     }
+    uploadTexture(mapTexture0, _map.canvas);
     uploadTexture(mapTexture, _map.canvas);
     return theme;
 }

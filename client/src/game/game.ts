@@ -85,7 +85,7 @@ import {
     drawParticleShadows,
     drawSplatsOpaque,
     drawTextParticles,
-    flushSplatsToMap,
+    updateMapTexture,
     resetParticles,
     restoreParticles,
     saveParticles,
@@ -361,7 +361,7 @@ export const updateGame = (ts: number) => {
     let predicted = false;
     if (startTic >= 0) {
         tryRunTicks(lastFrameTs);
-        flushSplatsToMap();
+        updateMapTexture(lastFrameTs);
         predicted = beginPrediction();
     }
     if (!document.hidden) {
@@ -1476,7 +1476,7 @@ const drawGame = () => {
     beginFogRender();
     drawFogObjects(state.actors_[ActorType.Player], state.actors_[ActorType.Bullet], state.actors_[ActorType.Item]);
     if (gameMode.title) {
-        drawFogPoint(gameCamera[0], gameCamera[1], 3 + fxRandom(1));
+        drawFogPoint(gameCamera[0], gameCamera[1], 3 + fxRandom(1), 1);
     }
     flush();
 

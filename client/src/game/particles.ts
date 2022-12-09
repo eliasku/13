@@ -2,10 +2,10 @@ import {img, Img} from "../assets/gfx";
 import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
 import {Actor, Particle, TextParticle, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {atan2, cos, hypot, max, PI, sin, sqrt} from "../utils/math";
+import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
 import {GL} from "../graphics/gl";
-import {mapTexture} from "../assets/map";
+import {mapTexture, mapTexture0} from "../assets/map";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils";
 import {cubicOut} from "../utils/easing";
@@ -273,9 +273,14 @@ export function addLandParticles(player: Actor, r: number, n: number) {
     }
 }
 
-export const flushSplatsToMap = () => {
-    // if (splats.length > 16) {
-    if (splats.length) {
+let mapFadeTime0 = 0;
+// draw particles splats and fade map
+export const updateMapTexture = (time: number) => {
+    const deltaFadeTime = time - mapFadeTime0;
+    const MAP_FADE_TIME = 60;
+    const MAP_FADE_MIN = 0.1;
+    const MAP_FADE_TIME_STEP = MAP_FADE_TIME * MAP_FADE_MIN;
+    if (splats.length || deltaFadeTime >= MAP_FADE_TIME_STEP) {
         gl.bindFramebuffer(GL.FRAMEBUFFER, mapTexture.fbo_);
         beginRender();
         setupProjection(
@@ -288,8 +293,14 @@ export const flushSplatsToMap = () => {
         gl.scissor(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
         gl.disable(GL.DEPTH_TEST);
         gl.depthMask(false);
-        drawSplatsOpaque();
-        splats.length = 0;
+        if (splats.length) {
+            drawSplatsOpaque();
+            splats.length = 0;
+        }
+        if (deltaFadeTime >= MAP_FADE_TIME_STEP) {
+            draw(mapTexture0, 0, 0, 0, 1, 1, min(1, deltaFadeTime / MAP_FADE_TIME));
+            mapFadeTime0 = time;
+        }
         flush();
     }
 }
