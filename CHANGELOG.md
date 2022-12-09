@@ -7,6 +7,7 @@
 - Improve Fog pass #63
 - `[Escape]` key to navigate back #65
 - Fade blood and footprints after some time #68
+- Fix `step` sound playing interval
 
 ## 1.0.8
 

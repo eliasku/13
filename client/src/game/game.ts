@@ -1302,12 +1302,16 @@ const updatePlayer = (player: Actor) => {
             const S = (L / vel) | 0;
             const moment = (gameTic + player.anim0_) % S;
             if (!moment) {
-                playAt(player, Snd.step);
                 if (!random1i(4)) {
                     addLandParticles(player, 240, 1);
                 }
                 const moment2 = (gameTic + player.anim0_) % (2 * S);
                 addStepSplat(player, moment2 ? 120 : -120);
+
+                const moment4 = (gameTic + player.anim0_) % (4 * S);
+                if (!moment4) {
+                    playAt(player, Snd.step);
+                }
             }
         }
     } else {
