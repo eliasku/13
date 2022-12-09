@@ -1610,7 +1610,7 @@ const drawList: Actor[] = [];
 
 const collectVisibleActors = (...lists: Actor[][]) => {
     drawList.length = 0;
-    const pad = OBJECT_RADIUS * 2;
+    const pad = 2 * OBJECT_RADIUS / WORLD_SCALE;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
     const invScale = gameCamera[2] / 2;
