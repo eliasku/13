@@ -20,7 +20,7 @@ document.body.appendChild(preloader);
 
 export function setLoadingProgress(v: number) {
     const el = document.getElementById("preloader-progress");
-    const segments = 20;
+    const segments = 16;
     if (el) {
         const p = (v * segments) | 0;
         const l = segments - p;
