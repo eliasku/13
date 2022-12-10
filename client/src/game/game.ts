@@ -580,11 +580,11 @@ const checkJoinSync = () => {
 }
 
 const getMinTic = (_tic: number = 1 << 30) => {
-    if (!remoteClients.size || !clients.size) {
+    if (!remoteClients.size || !clients.size || !joined) {
         _tic = gameTic + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
     }
     for (const [, client] of clients) {
-        if (_tic > client.tic_) {
+        if (_tic > client.tic_ && client.ready_) {
             _tic = client.tic_;
         }
     }
