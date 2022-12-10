@@ -85,10 +85,10 @@ import {
     drawParticleShadows,
     drawSplatsOpaque,
     drawTextParticles,
-    updateMapTexture,
     resetParticles,
     restoreParticles,
     saveParticles,
+    updateMapTexture,
     updateParticles
 } from "./particles";
 import {
@@ -222,6 +222,14 @@ const newActorObject = (type: ActorType): Actor =>
         hp_: 1,
         sp_: 0,
         mags_: 0,
+
+        clipAmmo_: 0,
+        clipReload_: 0,
+
+        clipAmmo2_: 0,
+        weapon2_: 0,
+        trig_: 0,
+        fstate_: 0,
     });
 
 const createRandomItem = (): Actor => {
@@ -250,9 +258,8 @@ export const resetGame = () => {
     state = newStateData();
     normalizeState();
 
-    // netTic = 0;
     startTic = -1;
-    // gameTic = 0;
+    gameTic = 1;
     // prevTime = 0;
     // startTime = 0;
     // ackMin = 0;
@@ -319,7 +326,7 @@ function initBarrels() {
 
 export const createSeedGameState = () => {
     startTic = 0;
-    gameTic = 0;
+    gameTic = 1;
     state.mapSeed_ = state.seed_ = _SEEDS[0];
     recreateMap();
     initBarrels();
@@ -360,6 +367,7 @@ export const updateGame = (ts: number) => {
 
     let predicted = false;
     if (startTic >= 0) {
+        cleaningUpClients();
         tryRunTicks(lastFrameTs);
         updateMapTexture(lastFrameTs);
         predicted = beginPrediction();
@@ -370,13 +378,13 @@ export const updateGame = (ts: number) => {
     }
     if (startTic >= 0) {
         // check input before overlay, or save camera settings
-        checkPlayerInput();
-        checkJoinSync();
+        updatePlayerControls();
 
         if (predicted) endPrediction();
 
+        checkJoinSync();
+        checkPlayerInput();
         sendInput();
-        cleaningUpClients();
     }
 }
 
@@ -468,14 +476,16 @@ const getNextInputTic = (tic: number) =>
         ((lastFrameTs - prevTime) * Const.NetFq) | 0
     );
 
-const checkPlayerInput = () => {
+const updatePlayerControls = () => {
     updateDebugInput();
 
     const player = getMyPlayer();
     if (player) {
         updateControls(player);
     }
+}
 
+const checkPlayerInput = () => {
     let inputTic = getNextInputTic(gameTic);
     // if (lastInputTic >= inputTic) {
 
@@ -486,7 +496,7 @@ const checkPlayerInput = () => {
 
 
     // localEvents = localEvents.filter((x) => x.t < inputTic || x.spawn);
-
+    const player = getMyPlayer();
     let btn = 0;
     if (player) {
         if (moveX || moveY) {
@@ -569,7 +579,10 @@ const checkJoinSync = () => {
     }
 }
 
-const getMinTic = (_tic = gameTic + ((lastFrameTs - prevTime) * Const.NetFq) | 0) => {
+const getMinTic = (_tic: number = 1 << 30) => {
+    if (!remoteClients.size || !clients.size) {
+        _tic = gameTic + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
+    }
     for (const [, client] of clients) {
         if (_tic > client.tic_) {
             _tic = client.tic_;
@@ -593,7 +606,7 @@ const tryRunTicks = (ts: number): number => {
         return 0;
     }
     const netTic = getMinTic();
-    let frames = (ts - prevTime) * Const.NetFq | 0;
+    let frames = ((ts - prevTime) * Const.NetFq) | 0;
     let framesSimulated = 0;
     while (gameTic <= netTic && frames--) {
         simulateTic();
@@ -606,7 +619,8 @@ const tryRunTicks = (ts: number): number => {
     }
 
     // we played all available net-events
-    const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
+    // const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
+    const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.1);
     if (gameTic > netTic) {
         // slow down a bit in case if we predict a lot
         if (ts - prevTime > Const.InputDelay / Const.NetFq) {
@@ -632,7 +646,7 @@ const tryRunTicks = (ts: number): number => {
     return framesSimulated;
 }
 
-const _packetBuffer = new Int32Array(1024 * 16);
+const _packetBuffer = new Int32Array(1024 * 256);
 
 const sendInput = () => {
     const lastTic = gameTic - 1;
@@ -674,7 +688,7 @@ const sendInput = () => {
 
 const processPacket = (sender: Client, data: Packet) => {
     if (startTic < 0 && data.state_) {
-        if (data.state_.tic_ > getMinTic(1 << 31)) {
+        if (data.state_.tic_ > getMinTic()) {
             updateFrameTime(performance.now() / 1000);
             prevTime = lastFrameTs;
             state = data.state_;
@@ -685,7 +699,7 @@ const processPacket = (sender: Client, data: Packet) => {
     }
 
     if (process.env.NODE_ENV === "development") {
-        if (startTic > 0) {
+        if (startTic >= 0) {
             assertStateInSync(sender.id_, data, state, gameTic);
         }
     }
@@ -720,9 +734,9 @@ export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
     processPacket(requireClient(from), unpack(from, new Int32Array(buffer)));
     if (document.hidden) {
         updateFrameTime(performance.now() / 1000);
+        cleaningUpClients();
         if (tryRunTicks(lastFrameTs)) {
             sendInput();
-            cleaningUpClients();
         }
     }
 }
@@ -889,21 +903,26 @@ const pickItem = (item: Actor, player: Actor) => {
 
 const updateGameCamera = () => {
     const getRandomPlayer = () => {
-        const l = state.actors_[ActorType.Player].filter(p => p.client_);
+        const l = state.actors_[ActorType.Player].filter(p => p.client_ && clients.has(p.client_));
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
     }
     let scale = GAME_CFG.camera.baseScale;
     let cameraX = gameCamera[0];
     let cameraY = gameCamera[1];
     if (clientId && !gameMode.title) {
-        const p0 = getMyPlayer() ?? getRandomPlayer();
+        const myPlayer = getMyPlayer();
+        const p0 = myPlayer ?? getRandomPlayer();
         if (p0?.client_) {
             const wpn = weapons[p0.weapon_];
-            const viewM = 100 * wpn.cameraFeedback_ * cameraFeedback / (hypot(viewX, viewY) + 0.001);
             const px = p0.x_ / WORLD_SCALE;
             const py = p0.y_ / WORLD_SCALE;
-            cameraX = px + wpn.cameraLookForward_ * (lookAtX - px) - viewM * viewX;
-            cameraY = py + wpn.cameraLookForward_ * (lookAtY - py) - viewM * viewY;
+            cameraX = px;
+            cameraY = py;
+            if (myPlayer) {
+                const viewM = 100 * wpn.cameraFeedback_ * cameraFeedback / (hypot(viewX, viewY) + 0.001);
+                cameraX += wpn.cameraLookForward_ * (lookAtX - px) - viewM * viewX;
+                cameraY += wpn.cameraLookForward_ * (lookAtY - py) - viewM * viewY;
+            }
             scale *= wpn.cameraScale_;
         }
     }
@@ -988,9 +1007,11 @@ const simulateTic = () => {
             queryGridCollisions(a, playersGrid, pickItem);
         }
         if (a.hp_ && a.clipReload_) {
-            --a.clipReload_;
-            if (!a.clipReload_) {
-                a.hp_ = 0;
+            if ((gameTic % 10) === 0) {
+                --a.clipReload_;
+                if (!a.clipReload_) {
+                    a.hp_ = 0;
+                }
             }
         }
     }
@@ -1444,7 +1465,7 @@ const beginPrediction = (): boolean => {
     if (!Const.Prediction) return false;
 
     // global state
-    let frames = min(Const.PredictionMax, (lastFrameTs - prevTime) * Const.NetFq | 0);
+    let frames = min(Const.PredictionMax, ((lastFrameTs - prevTime) * Const.NetFq) | 0);
     if (!frames) return false;
 
     // save particles
@@ -1457,6 +1478,7 @@ const beginPrediction = (): boolean => {
     // && gameTic <= lastInputTic
     while (frames--) {
         simulateTic();
+        normalizeState();
     }
     return true;
 }
@@ -1740,10 +1762,13 @@ const drawPlayer = (p: Actor): void => {
     const y = p.y_ / WORLD_SCALE;
 
     if (p.client_ > 0 && p.client_ !== clientId) {
-        const name = getNameByClientId(p.client_);
+        let name = getNameByClientId(p.client_);
+        if (process.env.NODE_ENV === "development") {
+            name = (name ?? "") + " #" + p.client_
+        }
         if (name) {
-            setDrawZ(0);
-            drawTextShadowCenter(fnt[0], name, 6, x, y - 28);
+            setDrawZ(32);
+            drawTextShadowCenter(fnt[0], name, 6, x, y + 1);
         }
     }
 }

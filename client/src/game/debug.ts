@@ -17,7 +17,8 @@ import {actorsConfig} from "./data/world";
 //// DEBUG UTILITIES ////
 
 let debugState: StateData;
-let debugStateEnabled = false;
+let debugStateEnabled = process.env.NODE_ENV === "development";
+//let debugStateEnabled = false;
 let debugCheckAvatar = 0;
 let prevSimulatedTic = 0;
 
@@ -64,8 +65,9 @@ export const printDebugInfo = (
     text += "items: " + state.actors_[ActorType.Item].length + "\n";
     text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
     text += "trees: " + trees.length + "\n";
+    //text += " | clients: " + clients.size + " | " + "remoteClients: " + remoteClients.size + "\n";
 
-    text += `┌ ${clientName} | tic: ${gameTic}, game-net: ${netTic - gameTic}\n`;
+    text += `┌ ${clientName} | tic: ${gameTic}, net-game: ${netTic - gameTic}\n`;
     for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;
@@ -216,8 +218,14 @@ const assertStateEquality = (label: string, a: StateData, b: StateData) => {
                     "weapon_",
                     "hp_",
                     "sp_",
+                    "mags_",
                     "anim0_",
                     "animHit_",
+                    "clipAmmo_",
+                    "clipReload_",
+                    "weapon2_",
+                    "clipAmmo2_",
+                    "trig_",
                 ];
                 for (const f of fields) {
                     if ((actorA as any)[f] !== (actorB as any)[f]) {

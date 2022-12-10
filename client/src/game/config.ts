@@ -19,7 +19,10 @@ export const GAME_CFG = {
         max: 8,
     },
     items: {
-        lifetime: 10 * Const.NetFq
+        // should be < (2 ** 6)
+        // div by 10
+        // (10 * Const.NetFq) / 10 => 60
+        lifetime: 60,
     },
     barrels: {
         initCount: 32,

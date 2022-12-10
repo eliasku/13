@@ -163,7 +163,7 @@ export const roundActors = (list: Actor[]) => {
     for (const a of list) {
         a.x_ = a.x_ & 0xFFFF;
         a.y_ = a.y_ & 0xFFFF;
-        a.z_ = clamp(a.z_ | 0, 0, 1 << 14);
+        a.z_ = clamp(a.z_ | 0, 0, (1 << 16) - 1) & 0xFFFF;
         a.u_ = clamp(a.u_ | 0, -1024, 1024);
         a.v_ = clamp(a.v_ | 0, -1024, 1024);
         a.w_ = clamp(a.w_ | 0, -1024, 1024);

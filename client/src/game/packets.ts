@@ -55,19 +55,19 @@ const readState = (state: StateData, i32: Int32Array, ptr: number): number => {
     return ptr;
 }
 export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: ClientEvent[] = [], _state?: StateData, _debug?: PacketDebug): Packet => {
-    let event_t = i32[2];
+    let event_tic = i32[2];
     // 10
     let ptr = 3;
-    for (; event_t;) {
+    for (; event_tic;) {
         const v = i32[ptr++];
-        let c = v >> 21;
+        const delta = v >> 21;
         _events.push({
-            tic_: event_t,
+            tic_: event_tic,
             client_: client,
             btn_: v & 0x1fffff,
         });
-        event_t += c;
-        if (!c) break;
+        event_tic += delta;
+        if (!delta) break;
     }
     if (i32[1] & 2) {
         _state = newStateData();
@@ -89,12 +89,38 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
     return {
         sync_: (i32[1] & 1) as any as boolean,
         tic_: i32[0],
-        receivedOnSender_: i32[0] + (i32[1] >> 16),
+        receivedOnSender_: i32[0] + (i32[1] >> 2),
         events_: _events,
         state_: _state,
         debug: _debug,
     };
 }
+
+const validateFieldSize = (a: Actor) => {
+    console.assert(a.type_ >= 0 && a.type_ < (2 ** 3));
+    console.assert(a.weapon_ >= 0 && a.weapon_ < (2 ** 4));
+    console.assert(a.s_ >= 0 && a.s_ < (2 ** 8));
+    console.assert(a.anim0_ >= 0 && a.anim0_ < (2 ** 8));
+    console.assert(a.hp_ >= 0 && a.hp_ < (2 ** 4));
+
+    console.assert(a.u_ >= -1024 && a.u_ <= 1024);
+    console.assert(a.v_ >= -1024 && a.v_ <= 1024);
+    console.assert(a.w_ >= -1024 && a.w_ <= 1024);
+    console.assert(a.x_ >= 0 && a.x_ <= 0xFFFF);
+    console.assert(a.y_ >= 0 && a.y_ <= 0xFFFF);
+    console.assert(a.z_ >= 0 && a.z_ <= 0xFFFF);
+
+    console.assert(a.id_ >= 0 && a.id_ < 2 ** 31);
+    //console.assert(a.client_);
+    console.assert(a.btn_ >= 0 && a.btn_ < 2 ** 31);
+
+    console.assert(a.clipAmmo_ >= 0 && a.clipAmmo_ < 2 ** 6);
+    console.assert(a.clipReload_ >= 0 && a.clipReload_ < 2 ** 6);
+    console.assert(a.mags_ >= 0 && a.mags_ < 2 ** 4);
+    console.assert(a.clipAmmo2_ >= 0 && a.clipAmmo2_ < 2 ** 6);
+    console.assert(a.weapon2_ >= 0 && a.weapon2_ < 2 ** 4);
+    console.assert(a.trig_ >= 0 && a.trig_ < 2 ** 4);
+};
 
 const writeState = (state: StateData | undefined, i32: Int32Array, ptr: number): number => {
     if (state) {
@@ -105,6 +131,9 @@ const writeState = (state: StateData | undefined, i32: Int32Array, ptr: number):
         const list: Actor[] = [].concat(...state.actors_);
         i32[ptr++] = list.length;
         for (const p of list) {
+            if (process.env.NODE_ENV === "development") {
+                validateFieldSize(p);
+            }
             // type: 3
             // weapon: 4
             // hp: 5
@@ -131,13 +160,13 @@ const writeState = (state: StateData | undefined, i32: Int32Array, ptr: number):
 
 export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     i32[0] = packet.tic_;
-    // 1 - sync
-    // 2 - init-packet
-    i32[1] = ((packet.receivedOnSender_ - packet.tic_) << 16) | (packet.sync_ as any) | (!!packet.state_ as any << 1);
+    // 0-bit - sync
+    // 1-bit - init-packet
+    i32[1] = ((packet.receivedOnSender_ - packet.tic_) << 2) | ((!!packet.state_) as any << 1) | (packet.sync_ as any);
     const events = packet.events_;
     events.sort((a, b) => a.tic_ - b.tic_);
-    let event_t = events.length ? events[0].tic_ : 0;
-    i32[2] = event_t;
+    const event_tic = events.length ? events[0].tic_ : 0;
+    i32[2] = event_tic;
     let ptr = 3;
     let i = 0;
     while (i < events.length) {
