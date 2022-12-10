@@ -216,6 +216,7 @@ const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient =>
 
     _pc.ondatachannel = (e) => {
         console.log("received data-channel on Slave");
+        //await new Promise<void>((resolve) => setTimeout(resolve, (1000 + 3000 * Math.random()) | 0));
         rc.dc_ = e.channel;
         setupDataChannel(rc);
     };
@@ -234,27 +235,26 @@ const closePeerConnection = (rc?: RemoteClient) => {
     }
 }
 
-const connectToRemote = (rc: RemoteClient): Promise<void> => {
-    rc.pc_.oniceconnectionstatechange = e => {
+const connectToRemote = async (rc: RemoteClient): Promise<void> => {
+    rc.pc_.oniceconnectionstatechange = _ => {
         if ("fd".indexOf(rc.pc_?.iceConnectionState[0]) >= 0) {
             sendOffer(rc, true).catch();
         }
     };
     console.log("connecting to " + rc.id_);
-    return sendOffer(rc).then(_ => {
-        rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
-        setupDataChannel(rc);
-        return new Promise((resolve, reject) => {
-            let num = 20;
-            const timer = setInterval(() => {
-                if (isPeerConnected(rc)) {
-                    clearInterval(timer);
-                    resolve();
-                } else if (!--num) {
-                    reject();
-                }
-            }, 200);
-        });
+    await sendOffer(rc);
+    rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
+    setupDataChannel(rc);
+    await new Promise<void>((resolve, reject) => {
+        let num = 50;
+        const timer = setInterval(() => {
+            if (isPeerConnected(rc)) {
+                clearInterval(timer);
+                resolve();
+            } else if (!--num) {
+                reject();
+            }
+        }, 100);
     });
 }
 

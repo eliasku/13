@@ -580,13 +580,20 @@ const checkJoinSync = () => {
 }
 
 const getMinTic = (_tic: number = 1 << 30) => {
-    if (!remoteClients.size || !clients.size || !joined) {
+    if (!joined) {
         _tic = gameTic + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
     }
+    let clientsTotal = 0;
     for (const [, client] of clients) {
-        if (_tic > client.tic_ && client.ready_) {
-            _tic = client.tic_;
+        if (client.isPlaying_) {
+            ++clientsTotal;
+            if (_tic > client.tic_) {
+                _tic = client.tic_;
+            }
         }
+    }
+    if (!clientsTotal) {
+        _tic = gameTic + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
     }
     return _tic;
 }
@@ -594,7 +601,7 @@ const getMinTic = (_tic: number = 1 << 30) => {
 // get minimum tic that already received by
 const getMinAckAndInput = (lastTic: number) => {
     for (const [, client] of clients) {
-        if (lastTic > client.acknowledgedTic_) {
+        if (lastTic > client.acknowledgedTic_ && client.isPlaying_) {
             lastTic = client.acknowledgedTic_;
         }
     }
@@ -618,27 +625,18 @@ const tryRunTicks = (ts: number): number => {
         prevTime += 1 / Const.NetFq;
     }
 
-    // we played all available net-events
-    // const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
-    const nearPrevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.1);
-    if (gameTic > netTic) {
-        // slow down a bit in case if we predict a lot
-        if (ts - prevTime > Const.InputDelay / Const.NetFq) {
-            prevTime = nearPrevTime;
-        }
-    } else {
-        // we got packets to go
-        if (gameTic + Const.InputDelay < netTic) {
-            // speed up
-            // console.info("speed up");
-            // prevTime -= Const.InputDelay / Const.NetFq;
-            prevTime -= 1 / Const.NetFq;
-            // prevTime = nearPrevTime;
-            // prevTime = ts - Const.InputDelay * Const.NetDt;
-        }
+    const lastTic = gameTic - 1;
+    const nearPrevTime2 = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
+
+    if (netTic < lastTic + Const.InputDelay) {
+        prevTime += 0.1 / Const.NetFq;
+    }
+    if (lastTic + Const.InputDelay < netTic) {
+        prevTime -= 1 / Const.NetFq;
+    } else if (lastTic < netTic) {
+        prevTime = nearPrevTime2;
     }
 
-    const lastTic = gameTic - 1;
     receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
     const ackTic = getMinAckAndInput(lastTic);
     localEvents = localEvents.filter(v => v.tic_ > ackTic);
@@ -1767,8 +1765,8 @@ const drawPlayer = (p: Actor): void => {
             name = (name ?? "") + " #" + p.client_
         }
         if (name) {
-            setDrawZ(32);
-            drawTextShadowCenter(fnt[0], name, 6, x, y + 1);
+            setDrawZ(32 + p.z_ / WORLD_SCALE);
+            drawTextShadowCenter(fnt[0], name, 6, x, y + 2);
         }
     }
 }
