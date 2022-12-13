@@ -1,6 +1,8 @@
 ## 1.0.10
 
-- Fix occlusion!
+- Fix render occlusion
+- Fix desync item's lifetime overflow
+- Fix start tic sync issue (disable prediction for joining state)
 
 ## 1.0.9
 

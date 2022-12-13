@@ -120,6 +120,8 @@ export interface Client {
 
     // I'm playing client's events
     isPlaying_?: boolean;
+
+    startState?: StateData;
 }
 
 export interface ClientEvent {

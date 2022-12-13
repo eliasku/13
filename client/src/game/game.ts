@@ -1,5 +1,5 @@
 import {ClientID} from "../../../shared/types";
-import {clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
+import {_sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {
     ambientColor,
@@ -366,15 +366,45 @@ export const updateGame = (ts: number) => {
     }
 
     let predicted = false;
+    if (startTic < 0 && remoteClients.size) {
+        const minTic = getMinTic();
+        let actualStateCount = 0;
+        let maxState: StateData | null = null;
+        let maxStateTic: number = 0;
+        let playingClients = 0;
+        for (const [id, _] of remoteClients) {
+            const client = clients.get(id);
+            if (client) {
+                if (client.isPlaying_) {
+                    ++playingClients;
+                }
+                if (client.startState && client.startState.tic_ > minTic) {
+                    ++actualStateCount;
+                    if (client.startState.tic_ > maxStateTic) {
+                        maxStateTic = client.startState.tic_;
+                        maxState = client.startState;
+                    }
+                }
+            }
+        }
+        if (maxState && actualStateCount >= playingClients) {
+            updateFrameTime(performance.now() / 1000);
+            prevTime = lastFrameTs;
+            state = maxState;
+            gameTic = startTic = state.tic_ + 1;
+            recreateMap();
+            normalizeState();
+        }
+    }
     if (startTic >= 0) {
         cleaningUpClients();
         tryRunTicks(lastFrameTs);
-        updateMapTexture(lastFrameTs);
         predicted = beginPrediction();
     }
     if (!document.hidden) {
         drawGame();
         drawOverlay();
+        updateMapTexture(lastFrameTs);
     }
     if (startTic >= 0) {
         // check input before overlay, or save camera settings
@@ -487,15 +517,6 @@ const updatePlayerControls = () => {
 
 const checkPlayerInput = () => {
     let inputTic = getNextInputTic(gameTic);
-    // if (lastInputTic >= inputTic) {
-
-    // if (inputTic < lastInputTic) {
-    //     return;
-    // }
-    // lastInputTic = inputTic;
-
-
-    // localEvents = localEvents.filter((x) => x.t < inputTic || x.spawn);
     const player = getMyPlayer();
     let btn = 0;
     if (player) {
@@ -539,8 +560,6 @@ const checkPlayerInput = () => {
         }
     }
 
-    // const lastInputBtn = getLastLocalBtn(inputTic);
-    // if (lastInputCmd !== btn) {
     if (lastInputCmd !== btn) {
         if (inputTic <= lastInputTic) {
             inputTic = lastInputTic + 1;
@@ -580,8 +599,8 @@ const checkJoinSync = () => {
 }
 
 const getMinTic = (_tic: number = 1 << 30) => {
-    if (!joined) {
-        _tic = gameTic + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
+    if (!clientId || !joined) {
+        _tic = gameTic + Const.InputDelay + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
     }
     let clientsTotal = 0;
     for (const [, client] of clients) {
@@ -608,6 +627,19 @@ const getMinAckAndInput = (lastTic: number) => {
     return lastTic;
 }
 
+const correctPrevTime = (netTic: number, ts: number) => {
+    const lastTic = gameTic - 1;
+    if (netTic === lastTic) {
+        // limit predicted tics
+        if ((ts - prevTime) > Const.InputDelay / Const.NetFq) {
+            prevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
+        }
+    }
+    if (lastTic + Const.InputDelay < netTic) {
+        prevTime -= 1 / Const.NetFq;
+    }
+};
+
 const tryRunTicks = (ts: number): number => {
     if (startTic < 0) {
         return 0;
@@ -625,18 +657,9 @@ const tryRunTicks = (ts: number): number => {
         prevTime += 1 / Const.NetFq;
     }
 
+    correctPrevTime(netTic, ts);
+
     const lastTic = gameTic - 1;
-    const nearPrevTime2 = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
-
-    if (netTic < lastTic + Const.InputDelay) {
-        prevTime += 0.1 / Const.NetFq;
-    }
-    if (lastTic + Const.InputDelay < netTic) {
-        prevTime -= 1 / Const.NetFq;
-    } else if (lastTic < netTic) {
-        prevTime = nearPrevTime2;
-    }
-
     receivedEvents = receivedEvents.filter(v => v.tic_ > lastTic);
     const ackTic = getMinAckAndInput(lastTic);
     localEvents = localEvents.filter(v => v.tic_ > ackTic);
@@ -686,13 +709,8 @@ const sendInput = () => {
 
 const processPacket = (sender: Client, data: Packet) => {
     if (startTic < 0 && data.state_) {
-        if (data.state_.tic_ > getMinTic()) {
-            updateFrameTime(performance.now() / 1000);
-            prevTime = lastFrameTs;
-            state = data.state_;
-            gameTic = startTic = state.tic_ + 1;
-            recreateMap();
-            normalizeState();
+        if (!sender.startState || data.state_.tic_ > sender.startState.tic_) {
+            sender.startState = data.state_;
         }
     }
 
@@ -729,6 +747,9 @@ const processPacket = (sender: Client, data: Packet) => {
 }
 
 export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
+    if (_sseState < 3) {
+        return;
+    }
     processPacket(requireClient(from), unpack(from, new Int32Array(buffer)));
     if (document.hidden) {
         updateFrameTime(performance.now() / 1000);
@@ -1460,7 +1481,7 @@ const cloneState = (_state: StateData = state): StateData => ({
 
 const beginPrediction = (): boolean => {
     // if (!Const.Prediction || time < 0.001) return false;
-    if (!Const.Prediction) return false;
+    if (!Const.Prediction || !joined) return false;
 
     // global state
     let frames = min(Const.PredictionMax, ((lastFrameTs - prevTime) * Const.NetFq) | 0);
@@ -1611,12 +1632,12 @@ const drawOverlay = () => {
         drawVirtualPad();
     }
 
-    if (getDevSetting("dev_info")) {
-        printDebugInfo(gameTic, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
-    }
-
     if (getDevSetting("dev_fps")) {
         drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls} |  ⃤ ${stats.triangles} | ∷${stats.vertices}`, 4, 2, 5, 0, 0);
+    }
+
+    if (getDevSetting("dev_info")) {
+        printDebugInfo((lastState ?? state).tic_ + 1, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 
     ui_renderNormal();
