@@ -20,8 +20,9 @@ export interface RemoteClient {
     debugPacketByteLength?: number;
 }
 
-// const getUrl = (endpoint:string) => "https://next13.herokuapp.com/" + endpoint;
 const getUrl = (endpoint: string) => endpoint;
+const getSseUrl = (room: number = DEFAULT_ROOM) => getUrl(`_?v=${BuildVersion}&r=${room}`);
+const DEFAULT_ROOM = 1;
 
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
@@ -33,11 +34,20 @@ let messageUploading = false;
 let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
-export const loadCurrentOnlineUsers = () => {
-    return fetch(getUrl("i"), {method: "POST"})
-        .then(r => r.json())
-        .then(j => Number.parseInt(j?.on))
-        .catch(() => 0);
+export interface RoomInfo {
+    id: number;
+    players: number;
+}
+
+export const loadRoomsInfo = async (): Promise<RoomInfo[]> => {
+    let result: RoomInfo[] = [];
+    try {
+        const response = await fetch(getUrl(`i`), {method: "POST"});
+        result = (await response.json()) as RoomInfo[];
+    } catch (e) {
+        console.warn("Can't load rooms info", e);
+    }
+    return result;
 }
 
 export const setUserName = (name?: string) => {
@@ -119,7 +129,7 @@ export const processMessages = () => {
 };
 
 const _post = (messages: Message[]): Promise<PostMessagesResponse> =>
-    fetch(getUrl("_"), {
+    fetch(getSseUrl(), {
         method: "POST",
         body: JSON.stringify([clientId, messages])
     }).then(response => response.json() as Promise<PostMessagesResponse>);
@@ -179,7 +189,7 @@ export const connect = (offlineMode?: boolean) => {
         messageUploading = false;
         messagesToPost = [];
         callbacks = [];
-        eventSource = new EventSource(/*EventSourceUrl*/ getUrl("_?v=" + BuildVersion));
+        eventSource = new EventSource(getSseUrl());
         eventSource.onerror = (e) => {
             console.warn("server-event error");
             disconnect();
@@ -272,5 +282,9 @@ const setupDataChannel = (rc: RemoteClient) => {
 const requireRemoteClient = (id: ClientID): RemoteClient =>
     getOrCreate(remoteClients, id, newRemoteClient);
 
-export const isPeerConnected = (rc?: RemoteClient): boolean =>
-    rc?.dc_?.readyState[0] == "o" && rc?.pc_?.iceConnectionState[1] == "o";
+export const isPeerConnected = (rc?: RemoteClient): boolean => {
+    const dataChannelState = rc?.dc_?.readyState;
+    const iceConnectionState = rc?.pc_?.iceConnectionState;
+    return dataChannelState === "open" &&
+        (iceConnectionState == "connected" || iceConnectionState == "completed");
+};

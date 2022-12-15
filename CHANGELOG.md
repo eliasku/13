@@ -1,3 +1,7 @@
+## 1.0.11
+
+- Multiple rooms on 1 server #38
+
 ## 1.0.10
 
 - Fix render occlusion

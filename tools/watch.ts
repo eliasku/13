@@ -1,4 +1,4 @@
-import {exec} from "child_process";
+import {spawn} from "child_process";
 import {build, BuildOptions} from 'esbuild';
 import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
 
@@ -69,4 +69,7 @@ const buildVersion = resolveVersion();
 
 console.info("watching... " + process.cwd());
 
-exec("node ./server.js");
+const server = spawn("node", ["./server.js"]);
+server.stdout.on('data', data => process.stdout.write(data));
+server.stderr.on('data', data => process.stderr.write(data));
+server.on('exit', code => console.log('[SERVER] process exited with code ' + code.toString()));

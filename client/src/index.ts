@@ -3,8 +3,9 @@ import {
     clientName,
     connect,
     disconnect,
-    loadCurrentOnlineUsers,
+    loadRoomsInfo,
     processMessages,
+    RoomInfo,
     setUserName
 } from "./net/messaging";
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
@@ -26,7 +27,7 @@ import {completeLoading, setLoadingProgress} from "./preloader";
 const enum StartState {
     Loading = 0,
     Loaded = 1,
-    TapToConnect = 2,
+    TapToStart = 2,
     Connecting = 3,
     Connected = 4,
 }
@@ -40,12 +41,24 @@ const enum Menu {
 }
 
 {
-    let usersOnline = 0;
+    let availableRooms: RoomInfo[] = [];
+    const getTotalOnline = () => {
+        let total = 0;
+        for (const room of availableRooms) {
+            total += room.players;
+        }
+        return total;
+    }
+    setInterval(async () => {
+        if (state > StartState.Loaded && _sseState < 3) {
+            availableRooms = await loadRoomsInfo();
+        }
+    }, 2000);
     let state: StartState = StartState.Loading;
     let menu: Menu = Menu.Main;
     let devLock: number = 0;
     const goToSplash = () => {
-        state = StartState.TapToConnect;
+        state = StartState.TapToStart;
         resetGame();
         createSplashState();
         gameMode.title = true;
@@ -99,7 +112,10 @@ const enum Menu {
                         setUserName(prompt("your name", clientName));
                     }
 
-                    label(usersOnline + " playing right now", 7, centerX, centerY + 45);
+                    const total = getTotalOnline();
+                    if (total > 0) {
+                        label(`${total} playing right now`, 7, centerX, centerY + 45);
+                    }
 
                     if (button("dev_mode", "", centerX - 40, centerY - 40, {w: 80, h: 80, visible: false})) {
                         if (++devLock > 3) {
@@ -108,7 +124,10 @@ const enum Menu {
                         }
                     }
 
-                    if (button("start", "⚔ FIGHT", centerX - 50, centerY + 50, {w: 100, h: 20})) {
+                    if (button("start", total ? "⚔ FIGHT" : "⚔ CREATE GAME", centerX - 50, centerY + 50, {
+                        w: 100,
+                        h: 20
+                    })) {
                         state = StartState.Connecting;
                         resetGame();
                         gameMode.title = true;
@@ -252,12 +271,9 @@ const enum Menu {
             }
             flush();
             if (isAnyKeyDown()) {
-                state = StartState.TapToConnect;
+                state = StartState.TapToStart;
                 gameMode.playersAI = true;
                 gameMode.spawnNPC = true;
-                loadCurrentOnlineUsers().then((count) => {
-                    usersOnline = count;
-                });
             }
         },
         () => {

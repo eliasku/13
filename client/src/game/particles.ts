@@ -86,10 +86,10 @@ let seed0: number;
 // let particles0: Particle[];
 // let particles: Particle[] = [];
 let opaqueParticles0: Particle[];
-let opaqueParticles: Particle[] = [];
-let textParticles: TextParticle[] = [];
+export let opaqueParticles: Particle[] = [];
 let textParticles0: TextParticle[] = [];
-let splats: number[] = [];
+export let textParticles: TextParticle[] = [];
+export let splats: number[] = [];
 
 export const saveParticles = () => {
     seed0 = _SEEDS[1];

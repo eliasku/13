@@ -1,7 +1,7 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
-import {readFile} from "fs";
 
 import {BuildVersion, ClientID, MessageField, Request, ServerEventName} from "../../shared/types";
+import {serveFile} from "./static";
 
 interface ClientState {
     id_: ClientID;
@@ -9,49 +9,37 @@ interface ClientState {
     ts_: number;
     eventStream_: ServerResponse;
     nextEventId_: number;
+    room: RoomState;
 }
 
-const HDR: Record<string, OutgoingHttpHeaders> = {
-    _: {
-        "connection": "keep-alive",
-        "content-type": "text/event-stream",
-        "cache-control": "no-cache",
-    },
-    n: {
-        "content-type": "application/json"
-    },
-    l: {
-        "content-type": "text/html;charset=utf-8",
-        "cache-control": "no-cache",
-    },
-    s: {
-        "cache-control": "no-cache"
-    },
-    f: {
-        "content-type": "font/ttf",
-        "cache-control": "max-age=86400"
-    },
-    g: {
-        "content-type": "image/png",
-        "cache-control": "no-cache"
-    },
-    t: {
-        "content-type": "application/octet-stream",
-        "cache-control": "no-cache"
-    },
+const HDR_EVENT_STREAM: OutgoingHttpHeaders = {
+    "connection": "keep-alive",
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache",
 };
 
-let nextClientId = 1;
+const HDR_JSON_NO_CACHE: OutgoingHttpHeaders = {
+    "content-type": "application/json",
+    "cache-control": "no-cache",
+};
 
-const clients = new Map<ClientID, ClientState>();
+interface RoomState {
+    id: number;
+    nextClientIndex: ClientID;
+    clients: Map<ClientID, ClientState>;
+}
+
+const rooms: Map<number, RoomState> = new Map();
 
 setInterval(() => {
-    for (const [, client] of clients) {
-        if ((performance.now() - client.ts_ > 5000) ||
-            !sendServerEvent(client, ServerEventName.Ping, "")) {
-            removeClient(client);
+    for (const [, room] of rooms) {
+        for (const [, client] of room.clients) {
+            if ((performance.now() - client.ts_ > 5000) ||
+                !sendServerEvent(client, ServerEventName.Ping, "")) {
+                removeClient(client);
+            }
+            // sendServerEvent(client, ServerEventName.Ping, "");
         }
-        // sendServerEvent(client, ServerEventName.Ping, "");
     }
 }, 1000);
 
@@ -65,8 +53,8 @@ const sendServerEvent = (client: ClientState, event: ServerEventName, data: stri
         (err) => err && removeClient(client)
     );
 
-const broadcastServerEvent = (from: ClientID, event: ServerEventName, data: string) => {
-    for (const [id, client] of clients) {
+const broadcastServerEvent = (room: RoomState, from: ClientID, event: ServerEventName, data: string) => {
+    for (const [id, client] of room.clients) {
         if (id != from) {
             sendServerEvent(client, event, data);
         }
@@ -83,49 +71,91 @@ const removeClient = (client: ClientState) => {
     } catch {
     }
 
-    clients.delete(client.id_);
-    broadcastServerEvent(client.id_, ServerEventName.ClientListChange, "-" + client.id_);
-    console.info("broadcast client " + client.id_ + " removed ");
+    const room = client.room;
+    room.clients.delete(client.id_);
+    broadcastServerEvent(client.room, client.id_, ServerEventName.ClientListChange, `-${client.id_}`);
+    console.info(`[room ${room.id}] broadcast client ${client.id_} removed`);
+
+    if (!room.clients.size) {
+        console.info(`[room ${room.id}] is removed because last player leaved`);
+        rooms.delete(room.id);
+    }
 }
 
-const processGameInfo = (req: IncomingMessage, res: ServerResponse) => {
-    res.writeHead(200, {
-        "content-type": "application/json",
-        "cache-control": "no-cache",
-    });
-    res.write(`{"on":${clients.size}}`);
+const readRoomId = (query: URLSearchParams) => {
+    const roomIdS = query.get("r");
+    if (roomIdS) {
+        const id = parseInt(roomIdS);
+        if (!isNaN(id)) {
+            return id;
+        }
+    }
+    return 0;
+};
+
+const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
+    res.writeHead(200, HDR_JSON_NO_CACHE);
+    const json: any[] = [];
+    for (const [id, room] of rooms) {
+        json.push({
+            id,
+            players: room.clients.size,
+        });
+    }
+    res.write(JSON.stringify(json));
     res.end();
 };
 
-const processServerEvents = (req: IncomingMessage, res: ServerResponse) => {
-    const query = new URLSearchParams(req.url.split("?")[1] ?? "");
+function validateRequestBuildVersion(query: URLSearchParams, req: IncomingMessage, res: ServerResponse) {
     if (query.get("v") !== BuildVersion) {
-        res.writeHead(500);
+        error(req, res, "Build version mismatch");
+        return false;
+    }
+    return true;
+}
+
+const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
+    if (!validateRequestBuildVersion(params, req, res)) {
         return;
     }
 
-    res.writeHead(200, HDR._);
-
+    res.writeHead(200, HDR_EVENT_STREAM);
+    const roomId = readRoomId(params);
+    if (!roomId) {
+        error(req, res, `error parse room number ${params.get("r")}`);
+        return;
+    }
+    let room = rooms.get(roomId);
+    if (!room) {
+        room = {
+            id: roomId,
+            nextClientIndex: 1,
+            clients: new Map()
+        };
+        console.info(`[room ${roomId}] created`);
+        rooms.set(roomId, room);
+    }
     // create new client connection
-    const clientIds = [...clients.keys()];
+    const clientIds = [...room.clients.keys()];
 
-    const id = nextClientId++;
+    const id = room.nextClientIndex++;
     const client: ClientState = {
         id_: id,
         ts_: performance.now(),
         eventStream_: res,
-        nextEventId_: 0
+        nextEventId_: 0,
+        room,
     };
-    clients.set(id, client);
+    room.clients.set(id, client);
     clientIds.unshift(id);
 
     req.on("close", () => removeClient(client));
 
-    console.info("init client " + client.id_);
+    console.info(`[room ${roomId}] init client ${client.id_}`);
     sendServerEvent(client, ServerEventName.ClientInit, "" + clientIds);
 
-    console.info("broadcast add client " + client.id_);
-    broadcastServerEvent(id, ServerEventName.ClientListChange, "" + id);
+    console.info(`[room ${roomId}] broadcast add client ${client.id_}`);
+    broadcastServerEvent(room, id, ServerEventName.ClientListChange, "" + id);
 }
 
 const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
@@ -136,82 +166,87 @@ const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
     return JSON.parse(Buffer.concat(buffers).toString()) as Request;
 }
 
-const processIncomeMessages = (req: IncomingMessage, res: ServerResponse) =>
-    readJSON(req).then((reqData) => {
+const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    if (!validateRequestBuildVersion(params, req, res)) {
+        return;
+    }
+    const roomId = readRoomId(params);
+    if (!roomId) {
+        error(req, res, `error parse room number ${params.get("r")}`);
+        return;
+    }
+    let room = rooms.get(roomId);
+    if (!room) {
+        error(req, res, `room ${roomId} not found`);
+        return;
+    }
+    try {
+        const reqData = await readJSON(req);
         if (!reqData) {
-            res.writeHead(500);
-            res.end();
+            error(req, res, "No request data for income messages");
+            return;
         }
         // process new clients
-        const client = clients.get(reqData[0]);
-        if (client) {
-            client.ts_ = performance.now();
-            let numProcessedMessages = 0;
-            for (const msg of reqData[1]) {
-                const toClient = clients.get(msg[MessageField.Destination]);
-                if (toClient) {
-                    sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
-                }
-                ++numProcessedMessages;
-            }
-            res.writeHead(200, HDR.n);
-            res.end("" + numProcessedMessages);
-        } else {
+        const client = room.clients.get(reqData[0]);
+        if (!client) {
             // handle on client bad connection state (need to connect again and get new ID)
             console.warn("client is not active: ", reqData[0]);
             res.writeHead(404);
             res.end();
+            return;
         }
-    }).catch(() => {
-        console.warn("error handle income message /_");
-    });
-
-const serveStatic = (file: string, res: ServerResponse, mime: OutgoingHttpHeaders) =>
-    readFile(
-        "./public" + file,
-        (err, data) => {
-            res.writeHead(err ? 404 : 200, mime);
-            res.end(data);
+        client.ts_ = performance.now();
+        let numProcessedMessages = 0;
+        for (const msg of reqData[1]) {
+            const toClient = room.clients.get(msg[MessageField.Destination]);
+            if (toClient) {
+                sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
+            }
+            ++numProcessedMessages;
         }
-    );
+        res.writeHead(200, HDR_JSON_NO_CACHE);
+        res.end("" + numProcessedMessages);
+    } catch (e) {
+        error(req, res, "Handle income message exception " + e);
+    }
+}
 
-const error = (req: IncomingMessage, res: ServerResponse) => {
+const error = (req: IncomingMessage, res: ServerResponse, error: Error | string) => {
+    console.warn(`Generic error on ${req.url} : ${error}`);
     res.writeHead(500);
     res.end();
 }
 
-const HANDLERS: any = {
-    GET: {
-        "/": (req: IncomingMessage, res: ServerResponse) => serveStatic("/index.html", res, HDR.l),
-        _: processServerEvents,
-        l: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.l),
-        f: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.f),
-        s: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.s),
-        g: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.g),
-        t: (req: IncomingMessage, res: ServerResponse) => serveStatic(req.url, res, HDR.t),
+type HandlerFunction = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => any;
+
+const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
+    "/_": {
+        GET: processServerEvents,
+        POST: processIncomeMessages,
     },
-    POST: {
-        "/": (req: IncomingMessage, res: ServerResponse) => serveStatic("/index.html", res, HDR.l),
-        _: processIncomeMessages,
-        i: processGameInfo,
-    }
+    "/i": {
+        POST: getRoomsInfo,
+    },
 };
 
 createServer((req: IncomingMessage, res: ServerResponse) => {
     try {
-        const handler = HANDLERS[req.method];
+        const parts: string[] = req.url.split("?");
+        const url = parts[0];
+        const handler = HANDLERS[url];
         if (handler) {
-            const url = req.url.split("?")[0];
-            const pathnameId = url.at(-1);
-            handler[pathnameId](req, res);
+            const method = handler[req.method];
+            if (method) {
+                const params = new URLSearchParams(parts[1] ?? "");
+                method(params, req, res);
+            } else {
+                error(req, res, "Invalid method " + req.method);
+            }
         } else {
-            error(req, res);
+            serveFile(url, res);
         }
-    }
-    catch(e) {
-        console.warn("Request error");
-        console.trace(e);
-        error(req, res);
+    } catch (e) {
+        error(req, res, "Request completed with unhandled exception: " + e);
     }
 }).listen(+process.env.PORT || 8080);
 

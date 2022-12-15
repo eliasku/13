@@ -1,6 +1,6 @@
 import {Actor, ActorType, Client, Packet, StateData} from "./types";
 import {_debugLagK, Const, setDebugLagK} from "./config";
-import {clientName, remoteClients} from "../net/messaging";
+import {clientId, clientName, remoteClients} from "../net/messaging";
 import {getChannelPacketSize} from "../net/channels_send";
 import {termPrint} from "../graphics/ui";
 import {keyboardDown, KeyCode} from "../utils/input";
@@ -13,6 +13,7 @@ import {min} from "../utils/math";
 import {setSetting, settings} from "./settings";
 import {WORLD_SCALE} from "../assets/params";
 import {actorsConfig} from "./data/world";
+import {opaqueParticles, splats, textParticles} from "./particles";
 
 //// DEBUG UTILITIES ////
 
@@ -65,14 +66,15 @@ export const printDebugInfo = (
     text += "items: " + state.actors_[ActorType.Item].length + "\n";
     text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
     text += "trees: " + trees.length + "\n";
+    text += `* ${opaqueParticles.length} | t ${textParticles.length} | $ ${splats.length}\n`;
     //text += " | clients: " + clients.size + " | " + "remoteClients: " + remoteClients.size + "\n";
 
-    text += `┌ ${clientName} | tic: ${gameTic}, net-game: ${netTic - gameTic}\n`;
+    text += `┌ ${clientName} #${clientId} | tic: ${gameTic}, net-game: ${netTic - gameTic}\n`;
     for (const [, remoteClient] of remoteClients) {
         const pc = remoteClient.pc_;
         const dc = remoteClient.dc_;
         const cl = clients.get(remoteClient.id_);
-        text += "├ " + remoteClient.name_ + remoteClient.id_;
+        text += `├ ${remoteClient.name_} #${remoteClient.id_}`;
         text += pc ? (icons_iceState[pc.iceConnectionState] ?? "❓") : "🧿";
         text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
