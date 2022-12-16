@@ -5,8 +5,6 @@ export type CallID = number;
 export type MessageData = any;
 export type MessageTypeID = number;
 
-export const EventSourceUrl = "/_";
-
 declare var __VERSION__: string;
 export const BuildVersion = __VERSION__;
 
