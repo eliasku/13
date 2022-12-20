@@ -3,7 +3,7 @@
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "node",
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "removeComments": false,
     "preserveConstEnums": false,
     "sourceMap": true,

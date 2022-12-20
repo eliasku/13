@@ -6,7 +6,7 @@ import {termPrint} from "../graphics/ui";
 import {keyboardDown, KeyCode} from "../utils/input";
 import {draw, setDrawZ} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
-import {ClientID} from "../../../shared/types";
+import {ClientID} from "../../../shared/src/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
 import {min} from "../utils/math";

@@ -17,7 +17,7 @@ import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {BuildVersion} from "../../shared/types";
+import {BuildVersion} from "../../shared/src/types";
 import {sin} from "./utils/math";
 import {DEFAULT_FRAMERATE_LIMIT, setSetting, settings} from "./game/settings";
 import {setupRAF} from "./utils/raf";

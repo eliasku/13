@@ -1,6 +1,6 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 
-import {BuildVersion, ClientID, MessageField, Request, ServerEventName} from "../../shared/types";
+import {BuildVersion, ClientID, MessageField, Request, ServerEventName} from "../../shared/src/types";
 import {serveFile} from "./static";
 
 interface ClientState {

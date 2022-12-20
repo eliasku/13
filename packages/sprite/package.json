@@ -1,0 +1,15 @@
+{
+  "name": "@eliasku/13-sprite",
+  "version": "1.0.0",
+  "scripts": {
+    "watch": "esbuild src/index.ts --watch --bundle --format=esm --outfile=public/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "earcut": "^2.2.4",
+    "polybooljs": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/earcut": "^2.1.1"
+  }
+}

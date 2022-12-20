@@ -35,9 +35,9 @@ const buildVersion = resolveVersion();
 
     const esbuildTasks = [
         build(addBuildOptions({
-            entryPoints: ["server/src/index.ts"],
+            entryPoints: ["packages/server/src/index.ts"],
+            tsconfig: "packages/server/tsconfig.json",
             outfile: "server.js",
-            tsconfig: "server/tsconfig.json",
             platform: "node",
             target: "node16",
         })).catch(e => {
@@ -45,18 +45,18 @@ const buildVersion = resolveVersion();
             process.exit(1);
         }),
         build(addBuildOptions({
-            entryPoints: ["client/src/index.ts"],
+            entryPoints: ["packages/client/src/index.ts"],
+            tsconfig: "packages/client/tsconfig.json",
             outfile: "public/client.js",
-            tsconfig: "client/tsconfig.json",
             plugins: [],
         })).catch(e => {
             console.warn(e);
             process.exit(1);
         }),
         build(addBuildOptions({
-            entryPoints: ["client/src/index.ts"],
+            entryPoints: ["packages/client/src/index.ts"],
+            tsconfig: "packages/client/tsconfig.json",
             outfile: "public/debug.js",
-            tsconfig: "client/tsconfig.json",
             plugins: [],
         }, true)).catch(e => {
             console.warn(e);

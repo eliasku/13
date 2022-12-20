@@ -1,4 +1,4 @@
-import {ClientID} from "../../../shared/types";
+import {ClientID} from "../../../shared/src/types";
 import {Img} from "../assets/gfx";
 import {atan2, PI, PI2} from "../utils/math";
 
