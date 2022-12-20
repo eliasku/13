@@ -1,7 +1,7 @@
 import {min} from "../utils/math";
 import {gl} from "../graphics/draw2d";
 import {GAME_CFG} from "./config";
-import {ClientID} from "../../../shared/types";
+import {ClientID} from "../../../shared/src/types";
 import {clientId, clientName, remoteClients} from "../net/messaging";
 
 export let lastFrameTs = 0.0;

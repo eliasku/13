@@ -42,13 +42,13 @@ export function resolveVersion() {
 export function copyPublicAssets() {
     // copy html
     console.info("build html files");
-    execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html client/assets/index.html`);
-    copyFileSync("client/assets/index4.html", "public/index4.html");
-    copyFileSync("client/assets/debug4.html", "public/debug4.html");
-    copyFileSync("client/assets/debug.html", "public/debug.html");
-    copyFileSync("client/assets/e.ttf", "public/e.ttf");
-    copyFileSync("client/assets/m.ttf", "public/m.ttf");
-    copyFileSync("client/assets/spot.png", "public/spot.png");
-    copyFileSync("client/assets/main.png", "public/main.png");
-    copyFileSync("client/assets/main.dat", "public/main.dat");
+    execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html packages/client/assets/index.html`);
+    copyFileSync("packages/client/assets/index4.html", "public/index4.html");
+    copyFileSync("packages/client/assets/debug4.html", "public/debug4.html");
+    copyFileSync("packages/client/assets/debug.html", "public/debug.html");
+    copyFileSync("packages/client/assets/e.ttf", "public/e.ttf");
+    copyFileSync("packages/client/assets/m.ttf", "public/m.ttf");
+    copyFileSync("packages/client/assets/spot.png", "public/spot.png");
+    copyFileSync("packages/client/assets/main.png", "public/main.png");
+    copyFileSync("packages/client/assets/main.dat", "public/main.dat");
 }

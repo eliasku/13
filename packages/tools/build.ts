@@ -35,7 +35,7 @@ function sz(...files: string[]) {
         opts.format = "esm";
         if (!debug) {
             opts.drop = ["debugger"];
-            if ((opts.entryPoints as string[])[0] !== "server/src/index.ts") {
+            if ((opts.entryPoints as string[])[0] !== "packages/server/src/index.ts") {
                 opts.drop.push("console");
             }
             opts.minifySyntax = true;
@@ -51,9 +51,9 @@ function sz(...files: string[]) {
 
     const esbuildTasks = [
         build(addBuildOptions({
-            entryPoints: ["server/src/index.ts"],
+            entryPoints: ["packages/server/src/index.ts"],
+            tsconfig: "packages/server/tsconfig.json",
             outfile: "build/server0.js",
-            tsconfig: "server/tsconfig.json",
             platform: "node",
             target: "node16",
         })).catch(e => {
@@ -61,9 +61,9 @@ function sz(...files: string[]) {
             process.exit(1);
         }),
         build(addBuildOptions({
-            entryPoints: ["client/src/index.ts"],
+            entryPoints: ["packages/client/src/index.ts"],
+            tsconfig: "packages/client/tsconfig.json",
             outfile: "build/client0.js",
-            tsconfig: "client/tsconfig.json",
             plugins: [],
             target: "es2020"
         })).catch(e => {
@@ -71,9 +71,9 @@ function sz(...files: string[]) {
             process.exit(1);
         }),
         build(addBuildOptions({
-            entryPoints: ["client/src/index.ts"],
+            entryPoints: ["packages/client/src/index.ts"],
+            tsconfig: "packages/client/tsconfig.json",
             outfile: "build/debug.js",
-            tsconfig: "client/tsconfig.json",
             target: "es2020",
             plugins: [],
         }, true)).catch(e => {

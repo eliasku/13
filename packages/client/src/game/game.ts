@@ -1,4 +1,4 @@
-import {ClientID} from "../../../shared/types";
+import {ClientID} from "../../../shared/src/types";
 import {_sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {

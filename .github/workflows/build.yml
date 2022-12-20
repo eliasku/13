@@ -33,8 +33,7 @@ jobs:
 
       - name: typecheck
         run: |
-          npm run typecheck-client
-          npm run typecheck-server
+          npm run typecheck
 
       - name: build
         run: |
