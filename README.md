@@ -78,13 +78,19 @@ Tap 4 times on the main game logo to unlock dev-mode and dev-settings.
 
 ## Minimal requirements
 
+### Client
+
 - **Good, low-latency network connection** is required for each playing client
 - **Fast mobile device or desktop** to not lag other clients
-- `NodeJS` 16 or higher is required for server
 - WebAudio `AudioContext` support is required (available from Safari iOS 14.5, April 2021)
 - WebGL context is required
 - Modern JS syntax support
 - Checked in the latest Chrome, Safari, Firefox on iOS, Android and Mac.
+
+### Server, build stack
+
+- `NodeJS` **v18 or higher** is required
+- `NPM` **v7 or higher** is required for workspaces
 
 ## 📦 Resources
 
