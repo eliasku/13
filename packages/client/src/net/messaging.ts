@@ -5,7 +5,7 @@ import {
     MessageData,
     MessageField,
     MessageType,
-    PostMessagesResponse
+    PostMessagesResponse, RoomInfo
 } from "../../../shared/src/types";
 import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
@@ -33,11 +33,6 @@ let messagesToPost: Message[] = [];
 let messageUploading = false;
 let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
-
-export interface RoomInfo {
-    id: number;
-    players: number;
-}
 
 export const loadRoomsInfo = async (): Promise<RoomInfo[]> => {
     let result: RoomInfo[] = [];

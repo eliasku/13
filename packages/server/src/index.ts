@@ -1,7 +1,8 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 
-import {BuildVersion, ClientID, MessageField, Request, ServerEventName} from "../../shared/src/types";
+import {BuildVersion, ClientID, MessageField, Request, RoomInfo, ServerEventName} from "../../shared/src/types";
 import {serveFile} from "./static";
+import {rollSeed32, temper} from "@eliasku/13-shared/src/seed";
 
 interface ClientState {
     id_: ClientID;
@@ -25,6 +26,8 @@ const HDR_JSON_NO_CACHE: OutgoingHttpHeaders = {
 
 interface RoomState {
     id: number;
+    code: number;
+    isPublic: boolean;
     nextClientIndex: ClientID;
     clients: Map<ClientID, ClientState>;
 }
@@ -95,12 +98,14 @@ const readRoomId = (query: URLSearchParams) => {
 
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, HDR_JSON_NO_CACHE);
-    const json: any[] = [];
+    const json: RoomInfo[] = [];
     for (const [id, room] of rooms) {
-        json.push({
-            id,
-            players: room.clients.size,
-        });
+        if (room.isPublic) {
+            json.push({
+                id,
+                players: room.clients.size,
+            });
+        }
     }
     res.write(JSON.stringify(json));
     res.end();
@@ -129,6 +134,8 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
     if (!room) {
         room = {
             id: roomId,
+            code: temper(rollSeed32(roomId)),
+            isPublic: true,
             nextClientIndex: 1,
             clients: new Map()
         };
@@ -163,7 +170,8 @@ const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
     for await (const chunk of req) {
         buffers.push(chunk);
     }
-    return JSON.parse(Buffer.concat(buffers).toString()) as Request;
+    const content = Buffer.concat(buffers).toString();
+    return JSON.parse(content) as Request;
 }
 
 const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessage, res: ServerResponse): Promise<void> => {
