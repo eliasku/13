@@ -54,3 +54,8 @@ export type Request = [
 
 // number of processed messages
 export type PostMessagesResponse = number;
+
+export interface RoomInfo {
+    id: number;
+    players: number;
+}

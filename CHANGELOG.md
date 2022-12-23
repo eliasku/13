@@ -1,6 +1,7 @@
 ## 1.0.11
 
-- Multiple rooms on 1 server #38
+- Multiple rooms #38
+- Brand icons
 
 ## 1.0.10
 
