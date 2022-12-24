@@ -1,6 +1,6 @@
 ## 1.0.11
 
-- Multiple rooms #38
+- Create and join game rooms #38
 - Brand icons
 
 ## 1.0.10

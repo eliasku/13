@@ -4,25 +4,38 @@ import {gl} from "../graphics/draw2d";
 import {clientName, setUserName} from "../net/messaging";
 import {DEFAULT_FRAMERATE_LIMIT, setSetting, settings} from "../game/settings";
 import {keyboardDown, KeyCode} from "../utils/input";
-import {BuildVersion} from "@eliasku/13-shared/src/types";
+import {BuildVersion, RoomsInfoResponse} from "@eliasku/13-shared/src/types";
+import {parseRadix64String} from "@eliasku/13-shared/src/radix64";
 
 const enum Menu {
     Main = 0,
     Settings = 1,
     Dev = 2,
+    Games = 3,
+    CreateGame = 4,
+}
+
+export interface MenuResult {
+    command: MenuCommand;
+    createPrivate?: boolean;
+    joinByCode?: string;
 }
 
 export const enum MenuCommand {
-    None = 0,
-    StartPractice = 1,
-    StartGame = 2,
+    StartPractice = 0,
+    QuickStart = 1,
+    JoinGame = 2,
+    CreateGame = 3,
 }
 
 let menu: Menu = Menu.Main;
 let devLock: number = 0;
 
-export function menuScreen(totalOnline: number): MenuCommand {
-    let result = MenuCommand.None;
+// create game options
+let isPrivate = false;
+
+export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefined {
+    let result: MenuResult | undefined;
     const scale = getScreenScale();
     ui_begin(scale);
     {
@@ -32,13 +45,18 @@ export function menuScreen(totalOnline: number): MenuCommand {
         const centerY = H >> 1;
 
         if (menu === Menu.Main) {
+            let totalPublicOnline = 0;
+            for (const room of serverInfo.rooms) {
+                totalPublicOnline += room.players;
+            }
+
             label("Welcome back,", 7, centerX, 14);
             if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
                 setUserName(prompt("your name", clientName));
             }
 
-            if (totalOnline) {
-                label(`${totalOnline} playing right now`, 7, centerX, centerY + 45);
+            if (serverInfo.players) {
+                label(`${serverInfo.players} playing right now`, 7, centerX, centerY + 45);
             }
 
             if (button("dev_mode", "", centerX - 40, centerY - 40, {w: 80, h: 80, visible: false})) {
@@ -48,15 +66,22 @@ export function menuScreen(totalOnline: number): MenuCommand {
                 }
             }
 
-            if (button("start", totalOnline ? "⚔ FIGHT" : "⚔ CREATE GAME", centerX - 50, centerY + 50, {
+            if (button("start", totalPublicOnline ? "⚔ FIGHT" : "⚔ CREATE GAME", centerX - 50, centerY + 50, {
                 w: 100,
                 h: 20
             })) {
-                result = MenuCommand.StartGame;
+                result = {command: MenuCommand.QuickStart};
+            }
+
+            if (button("custom", "☰", centerX + 60, centerY + 50, {
+                w: 20,
+                h: 20
+            })) {
+                menu = Menu.Games;
             }
 
             if (button("practice", "🏹 PRACTICE", centerX - 50, centerY + 75, {w: 100, h: 20})) {
-                result = MenuCommand.StartPractice;
+                result = {command: MenuCommand.StartPractice};
             }
             if (button("settings", "⚙️ SETTINGS", centerX - 50, centerY + 108, {w: 100, h: 16})) {
                 menu = Menu.Settings;
@@ -163,6 +188,74 @@ export function menuScreen(totalOnline: number): MenuCommand {
                 h: 20
             }) || keyboardDown[KeyCode.Escape]) {
                 menu = Menu.Main;
+            }
+        } else if (menu === Menu.Games) {
+            label("⚙️ GAMES", 20, centerX, 30);
+
+            let y = -70;
+            let i = 0;
+            for (const room of serverInfo.rooms) {
+                if (button("room" + room.code, `GAME #${room.code} (${room.players}/${room.max})`, centerX - 50, centerY + y, {
+                    w: 100,
+                    h: 20
+                })) {
+                    if (room.players < room.max) {
+                        result = {command: MenuCommand.JoinGame, joinByCode: room.code};
+                    }
+                }
+                y += 20;
+                ++i;
+                if (i > 5) {
+                    break;
+                }
+            }
+
+            if (button("join_code", "JOIN BY CODE", centerX - 50, centerY + 50, {
+                w: 100,
+                h: 20
+            })) {
+                const code = prompt("Enter Game Code", "0");
+                const v = parseRadix64String(code);
+                if (v) {
+                    result = {command: MenuCommand.JoinGame, joinByCode: code};
+                } else {
+                    console.warn("bad game code");
+                }
+            }
+
+            if (button("create", "CREATE MY GAME", centerX - 50, centerY + 70, {
+                w: 100,
+                h: 20
+            })) {
+                menu = Menu.CreateGame;
+            }
+
+            if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+                w: 100,
+                h: 20
+            }) || keyboardDown[KeyCode.Escape]) {
+                menu = Menu.Main;
+            }
+
+        } else if (menu === Menu.CreateGame) {
+            label("⚙️ CREATE GAME ROOM", 20, centerX, 30);
+            if (button("visibility", "ACCESS: " + (isPrivate ? "🕵️ PRIVATE" : "👁️ PUBLIC"), centerX - 50, centerY - 70, {
+                w: 100,
+                h: 20
+            })) {
+                isPrivate = !isPrivate;
+            }
+            if (button("create", "⚔ START GAME", centerX - 50, centerY + 40, {
+                w: 100,
+                h: 20
+            })) {
+                result = {command: MenuCommand.CreateGame, createPrivate: isPrivate};
+            }
+            if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+                w: 100,
+                h: 20
+            }) || keyboardDown[KeyCode.Escape]) {
+                menu = Menu.Games;
             }
         }
 

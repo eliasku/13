@@ -5,7 +5,8 @@ import {
     MessageData,
     MessageField,
     MessageType,
-    PostMessagesResponse, RoomInfo
+    PostMessagesResponse,
+    RoomsInfoResponse
 } from "../../../shared/src/types";
 import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
@@ -21,8 +22,19 @@ export interface RemoteClient {
 }
 
 const getUrl = (endpoint: string) => endpoint;
-const getSseUrl = (room: number = DEFAULT_ROOM) => getUrl(`_?v=${BuildVersion}&r=${room}`);
-const DEFAULT_ROOM = 1;
+const getPostUrl = () => getUrl(`_?v=${BuildVersion}&r=${currentRoomCode}`);
+const getJoinUrl = (joinRoomCode?: string, createRoom?: string) => {
+    const args = [`v=${BuildVersion}`];
+    if (joinRoomCode) {
+        args.push(`r=${joinRoomCode}`);
+    }
+    if (createRoom) {
+        args.push(`c=${createRoom}`);
+    }
+    return getUrl(`_?${args.join("&")}`);
+};
+
+export let currentRoomCode = "";
 
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
@@ -34,11 +46,11 @@ let messageUploading = false;
 let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
-export const loadRoomsInfo = async (): Promise<RoomInfo[]> => {
-    let result: RoomInfo[] = [];
+export const loadRoomsInfo = async (): Promise<RoomsInfoResponse> => {
+    let result: RoomsInfoResponse = {rooms: [], players: 0};
     try {
         const response = await fetch(getUrl(`i`), {method: "POST"});
-        result = (await response.json()) as RoomInfo[];
+        result = (await response.json()) as RoomsInfoResponse;
     } catch (e) {
         console.warn("Can't load rooms info", e);
     }
@@ -124,7 +136,7 @@ export const processMessages = () => {
 };
 
 const _post = (messages: Message[]): Promise<PostMessagesResponse> =>
-    fetch(getSseUrl(), {
+    fetch(getPostUrl(), {
         method: "POST",
         body: JSON.stringify([clientId, messages])
     }).then(response => response.json() as Promise<PostMessagesResponse>);
@@ -139,7 +151,9 @@ const onSSE: ((data: string) => void)[] = [
     },
     // INIT
     (data: string, _ids?: number[]) => {
-        _ids = data.split(",").map(Number);
+        const list = data.split(",");
+        currentRoomCode = list.shift();
+        _ids = list.map(Number);
         clientId = _ids.shift();
         _sseState = 2;
         Promise.all(_ids.map(id => {
@@ -170,7 +184,7 @@ const onSSE: ((data: string) => void)[] = [
     }
 ];
 
-export const connect = (offlineMode?: boolean) => {
+export const connect = (offlineMode?: boolean, gameCode?: string, createGame?: string) => {
     if (_sseState) {
         console.warn("connect: sse state already", _sseState);
         return;
@@ -184,7 +198,7 @@ export const connect = (offlineMode?: boolean) => {
         messageUploading = false;
         messagesToPost = [];
         callbacks = [];
-        eventSource = new EventSource(getSseUrl());
+        eventSource = new EventSource(getJoinUrl(gameCode, createGame));
         eventSource.onerror = (e) => {
             console.warn("server-event error");
             disconnect();

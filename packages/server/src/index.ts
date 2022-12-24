@@ -3,6 +3,7 @@ import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from
 import {BuildVersion, ClientID, MessageField, Request, RoomInfo, ServerEventName} from "../../shared/src/types";
 import {serveFile} from "./static";
 import {rollSeed32, temper} from "@eliasku/13-shared/src/seed";
+import {parseRadix64String, toRadix64String} from "@eliasku/13-shared/src/radix64";
 
 interface ClientState {
     id_: ClientID;
@@ -26,12 +27,14 @@ const HDR_JSON_NO_CACHE: OutgoingHttpHeaders = {
 
 interface RoomState {
     id: number;
-    code: number;
+    code: string;
     isPublic: boolean;
+    playersLimit: number;
     nextClientIndex: ClientID;
     clients: Map<ClientID, ClientState>;
 }
 
+let nextRoomId = 1;
 const rooms: Map<number, RoomState> = new Map();
 
 setInterval(() => {
@@ -85,27 +88,27 @@ const removeClient = (client: ClientState) => {
     }
 }
 
-const readRoomId = (query: URLSearchParams) => {
-    const roomIdS = query.get("r");
-    if (roomIdS) {
-        const id = parseInt(roomIdS);
-        if (!isNaN(id)) {
-            return id;
-        }
-    }
-    return 0;
+const readRoomCode = (query: URLSearchParams): number => {
+    const roomCode = query.get("r");
+    return roomCode ? parseRadix64String(roomCode) : 0;
 };
 
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, HDR_JSON_NO_CACHE);
-    const json: RoomInfo[] = [];
-    for (const [id, room] of rooms) {
+    const json = {
+        rooms: [] as RoomInfo[],
+        players: 0
+    };
+    for (const [, room] of rooms) {
+        const players = room.clients.size;
         if (room.isPublic) {
-            json.push({
-                id,
-                players: room.clients.size,
+            json.rooms.push({
+                code: room.code,
+                players,
+                max: 8,
             });
         }
+        json.players += players;
     }
     res.write(JSON.stringify(json));
     res.end();
@@ -119,31 +122,76 @@ function validateRequestBuildVersion(query: URLSearchParams, req: IncomingMessag
     return true;
 }
 
+interface CreateRoomOptions {
+    id?: number;
+    isPublic?: boolean; // true
+    playersLimit?: number; // 8
+}
+
+function createRoom(options?: CreateRoomOptions): RoomState {
+    const id = options?.id ?? nextRoomId++;
+    const isPublic = options?.isPublic ?? true;
+    const playersLimit = options?.playersLimit ?? 8;
+    const room: RoomState = {
+        id,
+        isPublic,
+        playersLimit,
+        code: toRadix64String(temper(rollSeed32(id))),
+        nextClientIndex: 1,
+        clients: new Map()
+    };
+    console.info(`[room ${room.id}] created`);
+    rooms.set(room.id, room);
+    return room;
+}
+
+function findRoomByCode(code: string): RoomState | undefined {
+    for (const [, r] of rooms) {
+        if (r.code === code) {
+            return r;
+        }
+    }
+    return undefined;
+}
+
 const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
     if (!validateRequestBuildVersion(params, req, res)) {
         return;
     }
 
     res.writeHead(200, HDR_EVENT_STREAM);
-    const roomId = readRoomId(params);
-    if (!roomId) {
-        error(req, res, `error parse room number ${params.get("r")}`);
-        return;
-    }
-    let room = rooms.get(roomId);
-    if (!room) {
-        room = {
-            id: roomId,
-            code: temper(rollSeed32(roomId)),
-            isPublic: true,
-            nextClientIndex: 1,
-            clients: new Map()
-        };
-        console.info(`[room ${roomId}] created`);
-        rooms.set(roomId, room);
+    let room: RoomState | undefined;
+    if (params.has("r")) {
+        const R = params.get("r");
+        const v = parseRadix64String(R);
+        if (!v) {
+            error(req, res, `error parse room #${R}`);
+            return;
+        }
+        room = findRoomByCode(R);
+        if (!room) {
+            error(req, res, `room #${R} not found`, 404);
+            return;
+        }
+        if (room.clients.size >= room.playersLimit) {
+            error(req, res, `room #${R} is full`, 429);
+            return;
+        }
+    } else if (params.has("c")) {
+        room = createRoom({isPublic: params.get("c") === "0"});
+    } else {
+        for (const [, r] of rooms) {
+            if (r.isPublic && r.clients.size < r.playersLimit) {
+                room = r;
+                break;
+            }
+        }
+        if (!room) {
+            room = createRoom();
+        }
     }
     // create new client connection
-    const clientIds = [...room.clients.keys()];
+    const list:(string|number)[] = [...room.clients.keys()];
 
     const id = room.nextClientIndex++;
     const client: ClientState = {
@@ -154,14 +202,15 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         room,
     };
     room.clients.set(id, client);
-    clientIds.unshift(id);
+    list.unshift(id);
+    list.unshift(room.code);
 
     req.on("close", () => removeClient(client));
 
-    console.info(`[room ${roomId}] init client ${client.id_}`);
-    sendServerEvent(client, ServerEventName.ClientInit, "" + clientIds);
+    console.info(`[room ${room.id}] init client ${client.id_}`);
+    sendServerEvent(client, ServerEventName.ClientInit, "" + list);
 
-    console.info(`[room ${roomId}] broadcast add client ${client.id_}`);
+    console.info(`[room ${room.id}] broadcast add client ${client.id_}`);
     broadcastServerEvent(room, id, ServerEventName.ClientListChange, "" + id);
 }
 
@@ -178,14 +227,14 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
     if (!validateRequestBuildVersion(params, req, res)) {
         return;
     }
-    const roomId = readRoomId(params);
-    if (!roomId) {
-        error(req, res, `error parse room number ${params.get("r")}`);
+    const roomCode = params.get("r");
+    if (!roomCode || !parseRadix64String(roomCode)) {
+        error(req, res, `error parse room code #${params.get("r")}`);
         return;
     }
-    let room = rooms.get(roomId);
+    const room = findRoomByCode(roomCode);
     if (!room) {
-        error(req, res, `room ${roomId} not found`);
+        error(req, res, `room ${roomCode} not found`);
         return;
     }
     try {
@@ -219,9 +268,9 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
     }
 }
 
-const error = (req: IncomingMessage, res: ServerResponse, error: Error | string) => {
+const error = (req: IncomingMessage, res: ServerResponse, error: Error | string, status: number = 500) => {
     console.warn(`Generic error on ${req.url} : ${error}`);
-    res.writeHead(500);
+    res.writeHead(status);
     res.end();
 }
 

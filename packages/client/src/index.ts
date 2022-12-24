@@ -8,7 +8,7 @@ import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {RoomInfo} from "../../shared/src/types";
+import {RoomsInfoResponse} from "../../shared/src/types";
 import {sin} from "./utils/math";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
@@ -28,15 +28,10 @@ type StateFunc = (ts?: number) => void | undefined;
 {
     let state: StartState = StartState.Loading;
 
-    let availableRooms: RoomInfo[] = [];
-    let totalPlayersOnline: number = 0;
+    let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
     setInterval(async () => {
         if (state > StartState.Loaded && _sseState < 3) {
-            availableRooms = await loadRoomsInfo();
-            totalPlayersOnline = 0;
-            for (const room of availableRooms) {
-                totalPlayersOnline += room.players;
-            }
+            publicServerInfo = await loadRoomsInfo();
         }
     }, 2000);
 
@@ -80,18 +75,34 @@ type StateFunc = (ts?: number) => void | undefined;
         ,
         ,
         () => {
-            const command = menuScreen(totalPlayersOnline);
-            if (command === MenuCommand.StartPractice) {
-                state = StartState.Connected;
-                resetGame();
-                connect(true);
-            } else if (command === MenuCommand.StartGame) {
-                state = StartState.Connecting;
-                resetGame();
-                gameMode.title = true;
-                gameMode.tiltCamera = 0.05;
-                gameMode.bloodRain = true;
-                connect();
+            const result = menuScreen(publicServerInfo);
+            if (result) {
+                if (result.command === MenuCommand.StartPractice) {
+                    state = StartState.Connected;
+                    resetGame();
+                    connect(true);
+                } else if (result.command === MenuCommand.QuickStart) {
+                    state = StartState.Connecting;
+                    resetGame();
+                    gameMode.title = true;
+                    gameMode.tiltCamera = 0.05;
+                    gameMode.bloodRain = true;
+                    connect(false);
+                } else if (result.command === MenuCommand.JoinGame) {
+                    state = StartState.Connecting;
+                    resetGame();
+                    gameMode.title = true;
+                    gameMode.tiltCamera = 0.05;
+                    gameMode.bloodRain = true;
+                    connect(false, result.joinByCode);
+                } else if (result.command === MenuCommand.CreateGame) {
+                    state = StartState.Connecting;
+                    resetGame();
+                    gameMode.title = true;
+                    gameMode.tiltCamera = 0.05;
+                    gameMode.bloodRain = true;
+                    connect(false, undefined, result.createPrivate ? "1" : "0");
+                }
             }
         },
     ];

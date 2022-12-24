@@ -56,6 +56,12 @@ export type Request = [
 export type PostMessagesResponse = number;
 
 export interface RoomInfo {
-    id: number;
+    code: string;
     players: number;
+    max: number;
+}
+
+export interface RoomsInfoResponse {
+    rooms: RoomInfo[],
+    players: number,
 }
