@@ -1,5 +1,6 @@
 import {buildAtlas} from "./generate";
 import {AtlasPage} from "./atlas";
+import {preview2} from "./spr";
 
 const w = document.body.clientWidth;
 const h = document.body.clientHeight;
@@ -99,5 +100,7 @@ async function start() {
 
     // makeSpotLightTexture();
 }
+
+console.info(preview2("🐸", {size: 19}));
 
 start().then();

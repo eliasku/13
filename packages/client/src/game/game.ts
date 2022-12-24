@@ -1769,7 +1769,7 @@ function drawPlayerOpaque(p: Actor): void {
     }
 
     {
-        const imgHead = p.client_ ? (Img.avatar0 + p.anim0_ % Img.num_avatars) : (Img.npc0 + p.anim0_ % Img.num_npc);
+        const imgHead = p.client_ ? (Img.avatar0 + /*p.anim0_ % Img.num_avatars*/14) : (Img.npc0 + p.anim0_ % Img.num_npc);
         const s = p.w_ / 500;
         const a = p.u_ / 500;
         drawMeshSpriteUp(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);

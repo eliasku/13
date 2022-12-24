@@ -38,6 +38,7 @@ export const enum Img {
     avatar11,
     avatar12,
     avatar13,
+    avatar14,
 
     npc0,
     npc1,
@@ -72,7 +73,7 @@ export const enum Img {
 
     logo_title,
 
-    num_avatars = 14,
+    num_avatars = 15,
     num_npc = 8,
 }
 

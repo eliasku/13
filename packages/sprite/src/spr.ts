@@ -87,8 +87,8 @@ export function preview2(emoji:string, opts:{size?:number, sx?:number, sy? : num
     // document.body.appendChild(canvas);
     {
         const lc = document.createElement("canvas");
-        // const scale = 1 / scaleUp;
-        const scale = 1;
+        const scale = 1 / scaleUp;
+        // const scale = 1;
         const cut2 = opts.cut ?? 0x80;
         lc.width = 1 + (bounds.w * scale + 2) | 0;
         lc.height = 1 + (bounds.h * scale + 2) | 0;
@@ -124,8 +124,8 @@ export function preview2(emoji:string, opts:{size?:number, sx?:number, sy? : num
         // }
 
         const rsize = (opts.size ?? 16) - 16;
-        //output += `/* ${emoji} */ ["${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${rsize || ""}, ${opts.a ?? ""}, ${opts.sx ?? ""}, ${opts.sy ?? ""}, ${opts.cut ?? ""}, ${opts.x ?? ""}, ${opts.y ?? ""}],\n`;
-        return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut, opts.x ?? 0.5, opts.y ?? 0.5];
+        return `/* ${emoji} */ ["${emoji}", ${bounds.x}, ${bounds.y}, ${lc.width}, ${lc.height}, ${rsize || ""}, ${opts.a ?? ""}, ${opts.sx ?? ""}, ${opts.sy ?? ""}, ${opts.cut ?? ""}, ${opts.x ?? ""}, ${opts.y ?? ""}],\n`;
+        //return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut, opts.x ?? 0.5, opts.y ?? 0.5];
         // return lc;
     }
 }

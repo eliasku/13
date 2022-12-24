@@ -45,6 +45,7 @@ export const enum Img {
     avatar11,
     avatar12,
     avatar13,
+    avatar14,
 
     npc0,
     npc1,
@@ -79,7 +80,7 @@ export const enum Img {
 
     logo_title,
 
-    num_avatars = 14,
+    num_avatars = 15,
     num_npc = 8,
 }
 
@@ -295,7 +296,7 @@ export const buildAtlas = (): AtlasPage => {
         /* 🦊 */ ["🦊", 177, 153, 22, 20, 4, , , , , ,],
         /* 🐭 */ ["🐭", 176, 148, 23, 22, 4, , , , , ,],
         /* 🦍 */ ["🦍", 179, 145, 22, 22, 4, , , , , ,],
-
+        /* 🐸 */ ["🐸", 180, 158, 22, 20, 3, , , , , , ],
         /* 🍅 */ ["🍅", 195, 166, 18, 19, , , , , , ,],
         /* 😐 */ ["😐", 192, 166, 19, 19, , , , , , ,],
         /* 🐷 */ ["🐷", 192, 170, 19, 17, , , , , , ,],
@@ -373,7 +374,7 @@ export const buildAtlas = (): AtlasPage => {
         bufferSubImages[ptr++] = subImage.vertex0;
         bufferSubImages[ptr++] = subImage.vertexCount;
     }
-    
+
     bufferV.set(allVertices);
     bufferI.set(allIndices);
 
