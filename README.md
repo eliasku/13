@@ -1,3 +1,9 @@
+[![Build](https://github.com/eliasku/13/actions/workflows/build.yml/badge.svg)](https://github.com/eliasku/13/actions/workflows/build.yml)
+[![Pages](https://github.com/eliasku/13/actions/workflows/static.yml/badge.svg)](https://github.com/eliasku/13/actions/workflows/static.yml)
+[![Twitter](https://img.shields.io/twitter/follow/eliaskuvoice.svg?style=flat&label=Follow&logoColor=white&color=1da1f2&logo=twitter)](https://twitter.com/eliaskuvoice)
+[![Play Release](https://img.shields.io/badge/Play%20Release-online-pink.svg)](https://grtc.herokuapp.com/)
+[![Play Latest](https://img.shields.io/badge/Play%20Latest-online-olive.svg)](https://next13.herokuapp.com/)
+
 # ‍☠️ 13 ‍☠️
 
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
