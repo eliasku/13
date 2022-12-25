@@ -114,6 +114,8 @@ export interface Client {
 
     // completed inputs received from remote
     tic_: number;
+    _ts0: number;
+    _ts1: number;
 
     // client starts play my events
     ready_?: boolean;
@@ -161,6 +163,11 @@ export interface Packet {
     receivedOnSender_: number;
     // packet contains info tic and before, 22 bits, for 19 hr of game session
     tic_: number;
+
+    // timestamps to measure lag between 2 peers
+    _ts0: number;
+    _ts1: number;
+
     // events are not confirmed
     events_: ClientEvent[];
     // init state

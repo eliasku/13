@@ -3,6 +3,7 @@
 - Create and join game rooms #38
 - New FROGMAN head
 - Brand icons
+- RTC packet lag calculation #73
 
 ## 1.0.10
 

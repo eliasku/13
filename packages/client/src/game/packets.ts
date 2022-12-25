@@ -56,8 +56,10 @@ const readState = (state: StateData, i32: Int32Array, ptr: number): number => {
 }
 export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: ClientEvent[] = [], _state?: StateData, _debug?: PacketDebug): Packet => {
     let event_tic = i32[2];
+    const ts0 = i32[3];
+    const ts1 = i32[4];
     // 10
-    let ptr = 3;
+    let ptr = 5;
     for (; event_tic;) {
         const v = i32[ptr++];
         const delta = v >> 21;
@@ -93,6 +95,8 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
         events_: _events,
         state_: _state,
         debug: _debug,
+        _ts0: ts0,
+        _ts1: ts1,
     };
 }
 
@@ -167,7 +171,9 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     events.sort((a, b) => a.tic_ - b.tic_);
     const event_tic = events.length ? events[0].tic_ : 0;
     i32[2] = event_tic;
-    let ptr = 3;
+    i32[3] = packet._ts0;
+    i32[4] = packet._ts1;
+    let ptr = 5;
     let i = 0;
     while (i < events.length) {
         const e = events[i++];

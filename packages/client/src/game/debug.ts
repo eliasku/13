@@ -14,7 +14,6 @@ import {setSetting, settings} from "./settings";
 import {WORLD_SCALE} from "../assets/params";
 import {actorsConfig} from "./data/world";
 import {opaqueParticles, splats, textParticles} from "./particles";
-import {toRadix64String} from "@eliasku/13-shared/src/radix64";
 
 //// DEBUG UTILITIES ////
 
@@ -83,8 +82,7 @@ export const printDebugInfo = (
         text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
             text += `+${cl.tic_ - (gameTic - 1)}`;
-            text += "| x" + getChannelPacketSize(remoteClient).toString(16) +
-                "";//" max: " + JSON.stringify(pc.localDescription.toJSON());
+            text += "| x" + getChannelPacketSize(remoteClient).toString(16);
         }
         text += "\n";
     }

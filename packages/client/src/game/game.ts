@@ -243,6 +243,8 @@ const createRandomItem = (): Actor => {
 const requireClient = (id: ClientID): Client => getOrCreate(clients, id, () => ({
     id_: id,
     tic_: 0,
+    _ts0: 0,
+    _ts1: 0,
     acknowledgedTic_: 0
 }));
 
@@ -481,7 +483,14 @@ const printStatus = () => {
 
         termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
         for (const [id, rc] of remoteClients) {
-            termPrint((isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc.name_ + getPlayerStatInfo(id));
+            let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc.name_ + getPlayerStatInfo(id);
+            if (1 || settings.dev) {
+                const cl = clients.get(id);
+                if (cl) {
+                    text += " " + (cl._ts0 - cl._ts1);
+                }
+            }
+            termPrint(text);
         }
     }
 }
@@ -676,12 +685,15 @@ const sendInput = () => {
             const cl = requireClient(id);
             const inputTic = getNextInputTic(lastTic);
             if (inputTic > cl.acknowledgedTic_) {
+                cl._ts0 = performance.now() & 0x7FFFFFFF;
                 const packet: Packet = {
                     sync_: cl.isPlaying_,
                     // send to Client info that we know already
                     receivedOnSender_: cl.tic_,
                     // t: lastTic + simTic + Const.InputDelay,
                     tic_: inputTic,
+                    _ts0: cl._ts0,
+                    _ts1: cl._ts1,
                     events_: localEvents.filter(e => e.tic_ > cl.acknowledgedTic_ && e.tic_ <= inputTic),
                 };
                 //console.log(JSON.stringify(packet.events_));
@@ -708,6 +720,7 @@ const sendInput = () => {
 }
 
 const processPacket = (sender: Client, data: Packet) => {
+    sender._ts1 = data._ts0;
     if (startTic < 0 && data.state_) {
         if (!sender.startState || data.state_.tic_ > sender.startState.tic_) {
             sender.startState = data.state_;
