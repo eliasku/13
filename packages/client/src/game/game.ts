@@ -486,8 +486,8 @@ const printStatus = () => {
             let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc.name_ + getPlayerStatInfo(id);
             if (1 || settings.dev) {
                 const cl = clients.get(id);
-                if (cl) {
-                    text += " " + (cl._ts0 - cl._ts1);
+                if (cl && cl._lag !== undefined) {
+                    text += " " + cl._lag;
                 }
             }
             termPrint(text);
@@ -721,6 +721,7 @@ const sendInput = () => {
 
 const processPacket = (sender: Client, data: Packet) => {
     sender._ts1 = data._ts0;
+    sender._lag = (performance.now() & 0x7FFFFFFF) - data._ts1;
     if (startTic < 0 && data.state_) {
         if (!sender.startState || data.state_.tic_ > sender.startState.tic_) {
             sender.startState = data.state_;

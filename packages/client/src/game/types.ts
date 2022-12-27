@@ -116,6 +116,7 @@ export interface Client {
     tic_: number;
     _ts0: number;
     _ts1: number;
+    _lag?: number;
 
     // client starts play my events
     ready_?: boolean;
