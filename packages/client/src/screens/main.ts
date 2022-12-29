@@ -4,7 +4,7 @@ import {gl} from "../graphics/draw2d";
 import {clientName, setUserName} from "../net/messaging";
 import {DEFAULT_FRAMERATE_LIMIT, setSetting, settings} from "../game/settings";
 import {keyboardDown, KeyCode} from "../utils/input";
-import {BuildVersion, RoomsInfoResponse} from "@eliasku/13-shared/src/types";
+import {BuildVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@eliasku/13-shared/src/types";
 import {parseRadix64String} from "@eliasku/13-shared/src/radix64";
 
 const enum Menu {
@@ -17,7 +17,7 @@ const enum Menu {
 
 export interface MenuResult {
     command: MenuCommand;
-    createPrivate?: boolean;
+    newGame?: NewGameParams;
     joinByCode?: string;
 }
 
@@ -32,7 +32,15 @@ let menu: Menu = Menu.Main;
 let devLock: number = 0;
 
 // create game options
-let isPrivate = false;
+const newGameSettings: MenuResult = {
+    command: MenuCommand.CreateGame,
+    newGame: {
+        flags: GameModeFlag.Public,
+        playersLimit: 8,
+        npcLevel: 2,
+        theme: 0,
+    }
+};
 
 export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefined {
     let result: MenuResult | undefined;
@@ -45,9 +53,9 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
         const centerY = H >> 1;
 
         if (menu === Menu.Main) {
-            let totalPublicOnline = 0;
+            let totalJoinCap = 0;
             for (const room of serverInfo.rooms) {
-                totalPublicOnline += room.players;
+                totalJoinCap += room.max - room.players;
             }
 
             label("Welcome back,", 7, centerX, 14);
@@ -66,7 +74,7 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                 }
             }
 
-            if (button("start", totalPublicOnline ? "⚔ FIGHT" : "⚔ CREATE GAME", centerX - 50, centerY + 50, {
+            if (button("start", totalJoinCap ? "⚔ FIGHT" : "⚔ CREATE GAME", centerX - 50, centerY + 50, {
                 w: 100,
                 h: 20
             })) {
@@ -239,17 +247,52 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
 
         } else if (menu === Menu.CreateGame) {
             label("⚙️ CREATE GAME ROOM", 20, centerX, 30);
-            if (button("visibility", "ACCESS: " + (isPrivate ? "🕵️ PRIVATE" : "👁️ PUBLIC"), centerX - 50, centerY - 70, {
+            let y = centerY - 70;
+            if (button("visibility", "ACCESS: " + ((newGameSettings.newGame.flags & GameModeFlag.Public) ? "👁️ PUBLIC" : "🕵️ PRIVATE"), centerX - 50, y, {
                 w: 100,
                 h: 20
             })) {
-                isPrivate = !isPrivate;
+                newGameSettings.newGame.flags ^= GameModeFlag.Public;
             }
+            y += 25;
+            if (button("players_limit", "MAX PLAYERS: " + newGameSettings.newGame.playersLimit, centerX - 50, y, {
+                w: 100,
+                h: 20
+            })) {
+                const MAX_PLAYERS = 8;
+                ++newGameSettings.newGame.playersLimit;
+                if (newGameSettings.newGame.playersLimit > MAX_PLAYERS) {
+                    newGameSettings.newGame.playersLimit = 2;
+                }
+            }
+            y += 25
+            const NPC_LEVELS = ["NONE", "RARE", "NORMAL", "CROWD"];
+            if (button("npc_level", "NPC: " + NPC_LEVELS[newGameSettings.newGame.npcLevel], centerX - 50, y, {
+                w: 100,
+                h: 20
+            })) {
+                ++newGameSettings.newGame.npcLevel;
+                if (newGameSettings.newGame.npcLevel >= NPC_LEVELS.length) {
+                    newGameSettings.newGame.npcLevel = 0;
+                }
+            }
+            y += 25;
+            const THEME_NAMES = ["? RANDOM", "🌲 FOREST", "🌵 DESERT", "❄ SNOW"];
+            if (button("map_theme", "MAP: " + THEME_NAMES[newGameSettings.newGame.theme], centerX - 50, y, {
+                w: 100,
+                h: 20
+            })) {
+                ++newGameSettings.newGame.theme;
+                if (newGameSettings.newGame.theme > 3) {
+                    newGameSettings.newGame.theme = 0;
+                }
+            }
+            y += 25;
             if (button("create", "⚔ START GAME", centerX - 50, centerY + 40, {
                 w: 100,
                 h: 20
             })) {
-                result = {command: MenuCommand.CreateGame, createPrivate: isPrivate};
+                result = newGameSettings;
             }
             if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
                 w: 100,

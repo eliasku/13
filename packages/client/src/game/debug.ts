@@ -1,6 +1,6 @@
 import {Actor, ActorType, Client, Packet, StateData} from "./types";
 import {_debugLagK, Const, setDebugLagK} from "./config";
-import {clientId, clientName, currentRoomCode, remoteClients} from "../net/messaging";
+import {_room, clientId, clientName, remoteClients} from "../net/messaging";
 import {getChannelPacketSize} from "../net/channels_send";
 import {termPrint} from "../graphics/ui";
 import {keyboardDown, KeyCode} from "../utils/input";
@@ -14,6 +14,7 @@ import {setSetting, settings} from "./settings";
 import {WORLD_SCALE} from "../assets/params";
 import {actorsConfig} from "./data/world";
 import {opaqueParticles, splats, textParticles} from "./particles";
+import {gameMode} from "./game";
 
 //// DEBUG UTILITIES ////
 
@@ -57,11 +58,11 @@ export const printDebugInfo = (
     text += `~ ${ticsPrediction} of ${ticsAhead}\n`;
     prevSimulatedTic = gameTic;
 
-    if (currentRoomCode) {
-        text += "ROOM: " + currentRoomCode + "\n";
+    if (_room) {
+        text += `ROOM: ${_room.code} ${_room.npcLevel} ${gameMode.npcLevel}\n`;
     }
     if (_debugLagK) {
-        text += "debug-lag K: " + _debugLagK + "\n";
+        text += `debug-lag K: ${_debugLagK}\n`;
     }
     text += "visible: " + drawList.length + "\n";
     text += "players: " + state.actors_[ActorType.Player].length + "\n";

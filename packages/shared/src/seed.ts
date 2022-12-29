@@ -13,3 +13,5 @@ export const temper = (x: number /* u32 */): number /* u32 */ => {
 }
 
 export const rollSeed32 = (seed: number): number => (Math.imul(seed, 1103515245) + 12345) >>> 0;
+
+export const newSeedFromTime = (): number => new Date as any as number >>> 0;

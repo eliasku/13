@@ -65,3 +65,17 @@ export interface RoomsInfoResponse {
     rooms: RoomInfo[],
     players: number,
 }
+
+export const enum GameModeFlag {
+    Public = 1,
+    Coop = 2,
+    Timer = 4,
+    Offline = 1 << 16,
+}
+
+export interface NewGameParams {
+    flags: number;
+    playersLimit: number;
+    npcLevel: number;
+    theme: number;
+}

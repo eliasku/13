@@ -1,4 +1,5 @@
 import {parseRGB} from "../utils/utils";
+import {weapons} from "./data/weapons";
 
 export const enum Const {
     NetFq = 60,
@@ -12,12 +13,25 @@ export let _debugLagK = 0;
 export const setDebugLagK = (a: number) => _debugLagK = a;
 
 export const GAME_CFG = {
-    npc: {
+    npc: [{
+        initWeaponLen: 1,
+        period: 12,
+        max: 0,
+    },{
+        initWeaponLen: 3,
+        period: 11,
+        max: 4,
+    },{
         initWeaponLen: 4,
         period: 10,
-        // period: 9,
         max: 8,
-    },
+    },{
+        // allow all weapons?
+        // initWeaponLen: 10,
+        initWeaponLen: 4,
+        period: 8,
+        max: 16,
+    }],
     items: {
         // should be < (2 ** 6)
         // div by 10

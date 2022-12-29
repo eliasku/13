@@ -1,4 +1,13 @@
-import {_sseState, clientName, connect, disconnect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging";
+import {
+    _room,
+    _sseState,
+    clientName,
+    connect,
+    disconnect,
+    loadRoomsInfo,
+    processMessages,
+    setUserName
+} from "./net/messaging";
 import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
 import {resetPrinter, ui_renderComplete} from "./graphics/ui";
 import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
@@ -8,12 +17,13 @@ import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/gen";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {RoomsInfoResponse} from "../../shared/src/types";
+import {GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
 import {sin} from "./utils/math";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
+import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
 
 const enum StartState {
     Loading = 0,
@@ -41,7 +51,7 @@ type StateFunc = (ts?: number) => void | undefined;
         createSplashState();
         gameMode.title = true;
         gameMode.playersAI = true;
-        gameMode.spawnNPC = true;
+        gameMode.npcLevel = 3;
         speak("13 the game");
     }
 
@@ -68,7 +78,7 @@ type StateFunc = (ts?: number) => void | undefined;
         state = StartState.Loaded;
         resetGame();
         createSplashState();
-        gameMode.spawnNPC = false;
+        gameMode.npcLevel = 0;
         completeLoading();
     });
     const preStates: StateFunc[] = [
@@ -80,28 +90,34 @@ type StateFunc = (ts?: number) => void | undefined;
                 if (result.command === MenuCommand.StartPractice) {
                     state = StartState.Connected;
                     resetGame();
-                    connect(true);
+                    connect({
+                        flags: GameModeFlag.Offline,
+                        playersLimit: 1,
+                        npcLevel: 1,
+                        theme: 0,
+                    });
+                    gameMode.npcLevel = _room.npcLevel;
                 } else if (result.command === MenuCommand.QuickStart) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
-                    connect(false);
+                    connect();
                 } else if (result.command === MenuCommand.JoinGame) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
-                    connect(false, result.joinByCode);
+                    connect(undefined, result.joinByCode);
                 } else if (result.command === MenuCommand.CreateGame) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
-                    connect(false, undefined, result.createPrivate ? "1" : "0");
+                    connect(result.newGame);
                 }
             }
         },
@@ -123,7 +139,7 @@ type StateFunc = (ts?: number) => void | undefined;
             if (isAnyKeyDown()) {
                 state = StartState.TapToStart;
                 gameMode.playersAI = true;
-                gameMode.spawnNPC = true;
+                gameMode.npcLevel = 3;
             }
         },
         () => {
@@ -143,6 +159,7 @@ type StateFunc = (ts?: number) => void | undefined;
                 gameMode.title = false;
                 gameMode.tiltCamera = 0.0;
                 gameMode.bloodRain = false;
+                gameMode.npcLevel = _room.npcLevel;
                 state = StartState.Connected;
                 speak("fight");
             } else if (!_sseState) {

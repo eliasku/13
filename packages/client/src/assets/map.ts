@@ -13,7 +13,7 @@ interface MapTheme {
     treeGfx: number[];
 }
 
-const themes:MapTheme[] = [
+const themes: MapTheme[] = [
     {
         primaryColor: "#060",
         splatColors: ["#080", "#572"],
@@ -44,24 +44,25 @@ export const mapTexture0 = createTexture(BOUNDS_SIZE);
 export const mapTexture = createTexture(BOUNDS_SIZE);
 initFramebuffer(mapTexture);
 
-export const generateMapBackground = (_i: number = 0, _size: number = BOUNDS_SIZE, _map = createCanvas(_size)): MapTheme => {
-    const themeId = rand(themes.length);
+export const generateMapBackground = (themeId: number): MapTheme => {
     const theme = themes[themeId];
-    _map.fillStyle = theme.primaryColor;
-    _map.fillRect(0, 0, _size, _size);
+    const size = BOUNDS_SIZE;
+    const map = createCanvas(size)
+    map.fillStyle = theme.primaryColor;
+    map.fillRect(0, 0, size, size);
     const sc = 4;
-    _map.scale(1, 1 / sc);
-    for(; _i++ < _size;) {
-        _map.fillStyle = theme.splatColors[rand(theme.splatColors.length)];
-        _map.beginPath()
+    map.scale(1, 1 / sc);
+    for (let i = 0; i++ < size;) {
+        map.fillStyle = theme.splatColors[rand(theme.splatColors.length)];
+        map.beginPath()
         const splatR = theme.splatR[0] + rand(theme.splatR[1] - theme.splatR[0]);
-        _map.arc(rand(_size), rand(_size) * sc, splatR, 0, PI2);
-        _map.fill();
+        map.arc(rand(size), rand(size) * sc, splatR, 0, PI2);
+        map.fill();
         const splatW = theme.rectW[0] + rand(theme.rectW[1] - theme.rectW[0]);
         const splatH = theme.rectH[0] + rand(theme.rectH[1] - theme.rectH[0]);
-        _map.fillRect(rand(_size), rand(_size) * sc, splatW, splatH);
+        map.fillRect(rand(size), rand(size) * sc, splatW, splatH);
     }
-    uploadTexture(mapTexture0, _map.canvas);
-    uploadTexture(mapTexture, _map.canvas);
+    uploadTexture(mapTexture0, map.canvas);
+    uploadTexture(mapTexture, map.canvas);
     return theme;
 }

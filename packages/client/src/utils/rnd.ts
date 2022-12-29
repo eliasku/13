@@ -1,8 +1,8 @@
 import {unorm_f32_from_u32} from "./bits";
-import {rollSeed32, temper} from "@eliasku/13-shared/src/seed";
+import {newSeedFromTime, rollSeed32, temper} from "@eliasku/13-shared/src/seed";
 
 // simple PRNG from libc with u32 state
-export const _SEEDS = [, , ,].fill(new Date as any as number >>> 0);
+export const _SEEDS = [, , ,].fill(newSeedFromTime());
 
 export const nextInt = (idx = 0): number /* u32 */ =>
     temper(_SEEDS[idx] = rollSeed32(_SEEDS[idx]));

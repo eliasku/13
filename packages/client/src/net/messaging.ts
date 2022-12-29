@@ -1,10 +1,12 @@
 import {
     BuildVersion,
     ClientID,
+    GameModeFlag,
     Message,
     MessageData,
     MessageField,
     MessageType,
+    NewGameParams,
     PostMessagesResponse,
     RoomsInfoResponse
 } from "../../../shared/src/types";
@@ -12,6 +14,7 @@ import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
 import {iceServers} from "./iceServers";
 import {setSetting, settings} from "../game/settings";
+import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
 
 export interface RemoteClient {
     id_: ClientID;
@@ -22,19 +25,29 @@ export interface RemoteClient {
 }
 
 const getUrl = (endpoint: string) => endpoint;
-const getPostUrl = () => getUrl(`_?v=${BuildVersion}&r=${currentRoomCode}`);
-const getJoinUrl = (joinRoomCode?: string, createRoom?: string) => {
+const getPostUrl = () => getUrl(`_?v=${BuildVersion}&r=${_room.code}`);
+const getJoinUrl = (joinRoomCode?: string, newGameParams?: NewGameParams) => {
     const args = [`v=${BuildVersion}`];
     if (joinRoomCode) {
         args.push(`r=${joinRoomCode}`);
     }
-    if (createRoom) {
-        args.push(`c=${createRoom}`);
+    if (newGameParams) {
+        const params = [newGameParams.flags, newGameParams.playersLimit, newGameParams.npcLevel, newGameParams.theme];
+        const data = encodeURIComponent(JSON.stringify(params));
+        args.push(`c=${data}`);
     }
     return getUrl(`_?${args.join("&")}`);
 };
 
-export let currentRoomCode = "";
+interface RoomInstance {
+    code: string;
+    flags: number;
+    npcLevel: number;
+    mapSeed: number;
+    mapTheme: number;
+}
+
+export let _room: RoomInstance | undefined;
 
 export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
@@ -84,6 +97,7 @@ export const disconnect = () => {
     remoteClients.forEach(closePeerConnection);
     clientId = 0;
     _sseState = 0;
+    _room = undefined;
 }
 
 const handleOffer = (rc: RemoteClient, offer: RTCSessionDescriptionInit) =>
@@ -150,13 +164,20 @@ const onSSE: ((data: string) => void)[] = [
         processMessages();
     },
     // INIT
-    (data: string, _ids?: number[]) => {
-        const list = data.split(",");
-        currentRoomCode = list.shift();
-        _ids = list.map(Number);
-        clientId = _ids.shift();
+    (data: string) => {
+        const json: [string, number[], number[]] = JSON.parse(data);
+        const roomData: any[] = json[1];
+        _room = {
+            code: json[0],
+            flags: roomData[0],
+            npcLevel: roomData[1],
+            mapTheme: roomData[2],
+            mapSeed: roomData[3],
+        };
+        const ids: number[] = json[2];
+        clientId = ids.shift();
         _sseState = 2;
-        Promise.all(_ids.map(id => {
+        Promise.all(ids.map(id => {
             remoteSend(id, MessageType.Name, clientName)
             return connectToRemote(requireRemoteClient(id))
         }))
@@ -184,21 +205,28 @@ const onSSE: ((data: string) => void)[] = [
     }
 ];
 
-export const connect = (offlineMode?: boolean, gameCode?: string, createGame?: string) => {
+export const connect = (newGameParams?: NewGameParams, gameCode?: string) => {
     if (_sseState) {
         console.warn("connect: sse state already", _sseState);
         return;
     }
-    if (offlineMode) {
+    if (newGameParams && (newGameParams.flags & GameModeFlag.Offline)) {
         // bypass all connection routine
         _sseState = 3;
         clientId = 1;
+        _room = {
+            code: "",
+            npcLevel: newGameParams.npcLevel,
+            flags: newGameParams.flags,
+            mapTheme: newGameParams.theme ? (newGameParams.theme - 1) : Math.floor(Math.random() * 3),
+            mapSeed: newSeedFromTime(),
+        };
     } else {
         _sseState = 1;
         messageUploading = false;
         messagesToPost = [];
         callbacks = [];
-        eventSource = new EventSource(getJoinUrl(gameCode, createGame));
+        eventSource = new EventSource(getJoinUrl(gameCode, newGameParams));
         eventSource.onerror = (e) => {
             console.warn("server-event error");
             disconnect();

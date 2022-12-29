@@ -1,8 +1,17 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 
-import {BuildVersion, ClientID, MessageField, Request, RoomInfo, ServerEventName} from "../../shared/src/types";
+import {
+    BuildVersion,
+    ClientID,
+    GameModeFlag,
+    MessageField,
+    NewGameParams,
+    Request,
+    RoomInfo,
+    ServerEventName
+} from "../../shared/src/types";
 import {serveFile} from "./static";
-import {rollSeed32, temper} from "@eliasku/13-shared/src/seed";
+import {newSeedFromTime, rollSeed32, temper} from "@eliasku/13-shared/src/seed";
 import {parseRadix64String, toRadix64String} from "@eliasku/13-shared/src/radix64";
 
 interface ClientState {
@@ -25,11 +34,10 @@ const HDR_JSON_NO_CACHE: OutgoingHttpHeaders = {
     "cache-control": "no-cache",
 };
 
-interface RoomState {
+interface RoomState extends NewGameParams {
     id: number;
     code: string;
-    isPublic: boolean;
-    playersLimit: number;
+    mapSeed: number;
     nextClientIndex: ClientID;
     clients: Map<ClientID, ClientState>;
 }
@@ -88,11 +96,6 @@ const removeClient = (client: ClientState) => {
     }
 }
 
-const readRoomCode = (query: URLSearchParams): number => {
-    const roomCode = query.get("r");
-    return roomCode ? parseRadix64String(roomCode) : 0;
-};
-
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, HDR_JSON_NO_CACHE);
     const json = {
@@ -101,11 +104,11 @@ const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: Server
     };
     for (const [, room] of rooms) {
         const players = room.clients.size;
-        if (room.isPublic) {
+        if (room.flags & GameModeFlag.Public) {
             json.rooms.push({
                 code: room.code,
                 players,
-                max: 8,
+                max: room.playersLimit,
             });
         }
         json.players += players;
@@ -122,20 +125,24 @@ function validateRequestBuildVersion(query: URLSearchParams, req: IncomingMessag
     return true;
 }
 
-interface CreateRoomOptions {
+interface CreateRoomOptions extends NewGameParams {
     id?: number;
-    isPublic?: boolean; // true
-    playersLimit?: number; // 8
 }
 
 function createRoom(options?: CreateRoomOptions): RoomState {
     const id = options?.id ?? nextRoomId++;
-    const isPublic = options?.isPublic ?? true;
+    const flags = options?.flags ?? GameModeFlag.Public;
+    const npcLevel = options?.npcLevel ?? 2;
     const playersLimit = options?.playersLimit ?? 8;
+    let theme = options?.theme ?? 0;
+    theme = theme ? (theme - 1) : Math.floor(Math.random() * 3);
     const room: RoomState = {
         id,
-        isPublic,
+        flags,
+        npcLevel,
         playersLimit,
+        theme,
+        mapSeed: newSeedFromTime(),
         code: toRadix64String(temper(rollSeed32(id))),
         nextClientIndex: 1,
         clients: new Map()
@@ -178,10 +185,26 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
             return;
         }
     } else if (params.has("c")) {
-        room = createRoom({isPublic: params.get("c") === "0"});
+        const c = decodeURIComponent(params.get("c"));
+        try {
+            const data: any[] = JSON.parse(c);
+            const flags: number = data[0] ?? GameModeFlag.Public;
+            const playersLimit = data[1] ?? 8;
+            const npcLevel = data[2] ?? 2;
+            const theme = data[3] ?? 0;
+            room = createRoom({
+                flags,
+                playersLimit,
+                npcLevel,
+                theme
+            });
+        } catch {
+            error(req, res, `bad room create params: "${c}"`);
+            return;
+        }
     } else {
         for (const [, r] of rooms) {
-            if (r.isPublic && r.clients.size < r.playersLimit) {
+            if ((r.flags & GameModeFlag.Public) && r.clients.size < r.playersLimit) {
                 room = r;
                 break;
             }
@@ -191,7 +214,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         }
     }
     // create new client connection
-    const list:(string|number)[] = [...room.clients.keys()];
+    const ids: number[] = [...room.clients.keys()];
 
     const id = room.nextClientIndex++;
     const client: ClientState = {
@@ -202,13 +225,16 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         room,
     };
     room.clients.set(id, client);
-    list.unshift(id);
-    list.unshift(room.code);
+    ids.unshift(id);
 
     req.on("close", () => removeClient(client));
 
     console.info(`[room ${room.id}] init client ${client.id_}`);
-    sendServerEvent(client, ServerEventName.ClientInit, "" + list);
+    sendServerEvent(client, ServerEventName.ClientInit, JSON.stringify([
+        room.code,
+        [room.flags, room.npcLevel, room.theme, room.mapSeed],
+        ids
+    ]));
 
     console.info(`[room ${room.id}] broadcast add client ${client.id_}`);
     broadcastServerEvent(room, id, ServerEventName.ClientListChange, "" + id);

@@ -1,5 +1,5 @@
 import {ClientID} from "../../../shared/src/types";
-import {_sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
+import {_room, _sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
 import {play, speak} from "../audio/context";
 import {
     ambientColor,
@@ -151,6 +151,7 @@ import {
 import {getDevSetting, settings} from "./settings";
 import {bullets, BulletType} from "./data/bullets";
 import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
+import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
 
 const clients = new Map<ClientID, Client>()
 
@@ -187,8 +188,8 @@ export const gameMode = {
     playersAI: false,
     hasPlayer: false,
     tiltCamera: 0.0,
-    spawnNPC: true,
     bloodRain: false,
+    npcLevel: 0,
 };
 
 // 0...50
@@ -281,14 +282,14 @@ export const resetGame = () => {
     gameMode.playersAI = false;
     gameMode.hasPlayer = true;
     gameMode.tiltCamera = 0.0;
-    gameMode.spawnNPC = true;
+    gameMode.npcLevel = 0;
     gameMode.bloodRain = false;
 }
 
-const recreateMap = () => {
+const recreateMap = (themeIdx: number, seed: number) => {
     // generate map
-    _SEEDS[0] = state.mapSeed_;
-    const theme = generateMapBackground();
+    _SEEDS[0] = seed;
+    const theme = generateMapBackground(themeIdx);
     trees.length = 0;
     treesGrid.length = 0;
     const nextId = state.nextId_;
@@ -330,13 +331,15 @@ export const createSeedGameState = () => {
     startTic = 0;
     gameTic = 1;
     state.mapSeed_ = state.seed_ = _SEEDS[0];
-    recreateMap();
+    recreateMap(_room.mapTheme, _room.mapSeed);
     initBarrels();
 }
 
 export const createSplashState = () => {
+    startTic = 0;
+    gameTic = 1;
     state.seed_ = state.mapSeed_ = _SEEDS[0];
-    recreateMap();
+    recreateMap(Math.floor(Math.random() * 3), newSeedFromTime());
     for (let i = 0; i < 13; ++i) {
         const k = i / 13;
         const actor = newActorObject(ActorType.Player);
@@ -353,7 +356,6 @@ export const createSplashState = () => {
         pushActor(actor);
     }
     gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
-    startTic = 0;
     gameMode.hasPlayer = false;
     gameMode.tiltCamera = 0.05;
     gameMode.bloodRain = true;
@@ -394,7 +396,7 @@ export const updateGame = (ts: number) => {
             prevTime = lastFrameTs;
             state = maxState;
             gameTic = startTic = state.tic_ + 1;
-            recreateMap();
+            recreateMap(_room.mapTheme, _room.mapSeed);
             normalizeState();
         }
     }
@@ -1094,8 +1096,9 @@ const simulateTic = () => {
     cameraShake = dec1(cameraShake);
     cameraFeedback = dec1(cameraFeedback);
 
-    if (gameMode.spawnNPC) {
-        const NPC_PERIOD_MASK = (1 << GAME_CFG.npc.period) - 1;
+    if (gameMode.npcLevel) {
+        const npcConfig = GAME_CFG.npc[gameMode.npcLevel];
+        const NPC_PERIOD_MASK = (1 << npcConfig.period) - 1;
         if ((gameTic & NPC_PERIOD_MASK) === 0) {
             let count = 0;
             for (const actor of state.actors_[ActorType.Player]) {
@@ -1104,12 +1107,12 @@ const simulateTic = () => {
                 }
             }
             // while (count < GAME_CFG.npc.max) {
-            if (count < GAME_CFG.npc.max) {
+            if (count < npcConfig.max) {
                 const p = newActorObject(ActorType.Player);
                 setRandomPosition(p);
                 p.hp_ = 10;
                 p.mags_ = 1;
-                setCurrentWeapon(p, rand(GAME_CFG.npc.initWeaponLen));
+                setCurrentWeapon(p, rand(npcConfig.initWeaponLen));
                 pushActor(p);
                 ++count;
             }
