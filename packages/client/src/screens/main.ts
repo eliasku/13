@@ -288,13 +288,15 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                 }
             }
             y += 25;
-            if (button("create", "⚔ START GAME", centerX - 50, centerY + 40, {
+            y += 25;
+            if (button("create", "⚔ START GAME", centerX - 50, y, {
                 w: 100,
                 h: 20
             })) {
                 result = newGameSettings;
             }
-            if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+            y += 25;
+            if (button("back", "⬅ BACK", centerX - 50, y, {
                 w: 100,
                 h: 20
             }) || keyboardDown[KeyCode.Escape]) {
