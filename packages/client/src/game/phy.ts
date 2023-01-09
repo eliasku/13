@@ -1,4 +1,4 @@
-import {Actor, Pos, Vel} from "./types";
+import {Actor, ActorType, PlayerActor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
 import {clamp, cos, reach, sin, sqrt} from "../utils/math";
 import {ControlsFlag} from "./controls";
@@ -38,7 +38,7 @@ export const updateAnim = (actor: Actor) => {
 export const updateActorPhysics = (a: Actor) => {
     const prop = actorsConfig[a._type];
     const world = GAME_CFG._world;
-    const isWeakGravity = a._type ? 0 : (a._btn & ControlsFlag.Jump);
+    const isWeakGravity = a._type === ActorType.Player ? ((a as PlayerActor)._input & ControlsFlag.Jump) : 0;
     updateBody(a, isWeakGravity ? world._gravityWeak : world._gravity, prop._groundLoss);
     collideWithBoundsA(a);
     if (a._z <= 0) {
