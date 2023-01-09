@@ -24,7 +24,7 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 initFramebuffer(fogTexture);
 
 export const beginFogRender = () => {
-    setLightMapTexture(emptyTexture.texture_);
+    setLightMapTexture(emptyTexture._texture);
     beginRenderToTexture(fogTexture, FOG_DOWNSCALE);
 
     gl.clearColor(0, 0, 0, 1);
@@ -42,13 +42,13 @@ export const drawFogPoint = (x: number, y: number, r: number, alpha: number) => 
 export const drawFogObjects = (...lists: Actor[][]) => {
     for (const list of lists) {
         for (const a of list) {
-            let type = actorsConfig[a.type_];
-            let r = type.lightRadiusK;
-            let alpha = type.light;
+            let type = actorsConfig[a._type];
+            let r = type._lightRadiusK;
+            let alpha = type._light;
             if(r > 0 && alpha > 0) {
                 // isMyPlayer
-                if (!a.type_) {
-                    if(clientId && a.client_ === clientId) {
+                if (!a._type) {
+                    if(clientId && a._client === clientId) {
                         //r *= 2;
                     }
                     else {
@@ -56,7 +56,7 @@ export const drawFogObjects = (...lists: Actor[][]) => {
                         // alpha /= 2;
                     }
                 }
-                draw(imgSpotLight, a.x_ / WORLD_SCALE, (a.y_ - a.z_) / WORLD_SCALE, 0, r, r, alpha);
+                draw(imgSpotLight, a._x / WORLD_SCALE, (a._y - a._z) / WORLD_SCALE, 0, r, r, alpha);
             }
         }
     }

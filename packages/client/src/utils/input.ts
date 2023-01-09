@@ -3,14 +3,14 @@ import {getOrCreate} from "./utils";
 import {getDPR} from "../graphics/draw2d";
 
 export interface Pointer {
-    id_: number;
-    startX_: number;
-    startY_: number;
-    x_: number;
-    y_: number;
-    downEvent_: boolean;
-    upEvent_: boolean;
-    active_: boolean;
+    _id: number;
+    _startX: number;
+    _startY: number;
+    _x: number;
+    _y: number;
+    _downEvent: boolean;
+    _upEvent: boolean;
+    _active: boolean;
 }
 
 export const enum KeyCode {
@@ -64,35 +64,35 @@ export const keyboardUp: number[] = [];
 
     /* @__PURE__ */
     const newPointer = (id_: number): Pointer => ({
-        id_,
-        startX_: 0,
-        startY_: 0,
-        x_: 0,
-        y_: 0,
-        downEvent_: false,
-        upEvent_: false,
-        active_: false,
+        _id: id_,
+        _startX: 0,
+        _startY: 0,
+        _x: 0,
+        _y: 0,
+        _downEvent: false,
+        _upEvent: false,
+        _active: false,
     });
 
     const handleDown = (pointer: Pointer, x: number, y: number) => {
-        pointer.x_ = x;
-        pointer.y_ = y;
-        pointer.startX_ = x;
-        pointer.startY_ = y;
-        pointer.downEvent_ = true;
-        pointer.active_ = true;
+        pointer._x = x;
+        pointer._y = y;
+        pointer._startX = x;
+        pointer._startY = y;
+        pointer._downEvent = true;
+        pointer._active = true;
         // console.info("-down:", pointer.id_);
     }
 
     const handleMove = (pointer: Pointer, x: number, y: number) => {
-        pointer.x_ = x;
-        pointer.y_ = y;
+        pointer._x = x;
+        pointer._y = y;
         // console.info("-move:", pointer.id_);
     }
 
     const handleUp = (p: Pointer) => {
-        p.upEvent_ = p.active_;
-        p.active_ = false;
+        p._upEvent = p._active;
+        p._active = false;
         // console.info("-up:", pointer.id_);
     }
 
@@ -177,7 +177,7 @@ export const keyboardUp: number[] = [];
 }
 
 const resetPointer = (p: Pointer) =>
-    p.downEvent_ = p.upEvent_ = false;
+    p._downEvent = p._upEvent = false;
 
 export const updateInput = () => {
     keyboardDown.length = 0;
@@ -188,5 +188,5 @@ export const updateInput = () => {
 
 export const isAnyKeyDown = () =>
     keyboardDown.length ||
-    mousePointer.upEvent_ ||
-    [...inputPointers.values()].some(x => x.upEvent_);
+    mousePointer._upEvent ||
+    [...inputPointers.values()].some(x => x._upEvent);

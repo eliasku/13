@@ -6,56 +6,56 @@ const DEFAULT_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 
 export interface CharacterData {
     // advance width
-    a: number;
+    _a: number;
     // bounding rect
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+    _x: number;
+    _y: number;
+    _w: number;
+    _h: number;
     // uv
-    tex?: Texture;
+    _texture?: Texture;
 }
 
 const CHAR_BOUNDING_BOX = {
-    supported: 0,
-    left: 0,
-    right: 0,
-    ascent: 0,
-    descent: 0
+    _supported: 0,
+    _left: 0,
+    _right: 0,
+    _ascent: 0,
+    _descent: 0
 };
 
 export interface FontStyleDef {
-    strokeWidth?: number;
-    strokeColor?: { r: number, g: number, b: number, a: number };
+    _strokeWidth?: number;
+    _strokeColor?: { r: number, g: number, b: number, a: number };
 }
 
 export interface FontAtlas {
-    family: string;
-    size: number;
-    scale: number;
-    style: FontStyleDef;
-    fallback: string;
-    ctx: CanvasRenderingContext2D;
-    texture: Texture;
-    textureBoxT1: Texture;
-    textureBoxLT: Texture;
-    textureBox: Texture;
-    nextSheetX: number;
-    nextSheetY: number;
-    sheetLineHeight: number;
-    characters: string;
+    _family: string;
+    _size: number;
+    _scale: number;
+    _style: FontStyleDef;
+    _fallback: string;
+    _ctx: CanvasRenderingContext2D;
+    _texture: Texture;
+    _textureBoxT1: Texture;
+    _textureBoxLT: Texture;
+    _textureBox: Texture;
+    _nextSheetX: number;
+    _nextSheetY: number;
+    _sheetLineHeight: number;
+    _characters: string;
 
     // in pixels, resolution independent
-    border: number;
+    _border: number;
 
-    characterMap: Map<number, CharacterData>;
+    _characterMap: Map<number, CharacterData>;
     // relative to EM units
-    lineSize: number;
+    _lineSize: number;
 
-    dirty: boolean;
+    _dirty: boolean;
 
-    strokeWidth: number;
-    strokeColor: string;
+    _strokeWidth: number;
+    _strokeColor: string;
 }
 
 export const makeFontAtlas = (family: string,
@@ -75,23 +75,23 @@ export const makeFontAtlas = (family: string,
     const fallback = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif';
     const texture = createTexture(canvasSize);
     const fa: FontAtlas = {
-        fallback, style, size, scale, family, ctx,
-        texture,
-        textureBoxLT: getSubTexture(texture, 1, 1, 1, 1, 0, 0),
-        textureBox: getSubTexture(texture, 1, 1, 1, 1, 0.5, 0.5),
-        textureBoxT1: getSubTexture(texture, 1, 1, 1, 1, 0.5, -1),
-        nextSheetX: 0,
-        nextSheetY: 0,
-        sheetLineHeight: 0,
-        characters: "",
-        border: Math.ceil(scale),
-        characterMap: new Map<number, CharacterData>(),
-        lineSize: 1.3,
+        _fallback: fallback, _style: style, _size: size, _scale: scale, _family: family, _ctx: ctx,
+        _texture: texture,
+        _textureBoxLT: getSubTexture(texture, 1, 1, 1, 1, 0, 0),
+        _textureBox: getSubTexture(texture, 1, 1, 1, 1, 0.5, 0.5),
+        _textureBoxT1: getSubTexture(texture, 1, 1, 1, 1, 0.5, -1),
+        _nextSheetX: 0,
+        _nextSheetY: 0,
+        _sheetLineHeight: 0,
+        _characters: "",
+        _border: Math.ceil(scale),
+        _characterMap: new Map<number, CharacterData>(),
+        _lineSize: 1.3,
 
-        dirty: true,
+        _dirty: true,
 
-        strokeWidth: style.strokeWidth ?? 0,
-        strokeColor: style.strokeColor ? `rgba(${style.strokeColor.r},${style.strokeColor.g},${style.strokeColor.b},${style.strokeColor.a})`
+        _strokeWidth: style._strokeWidth ?? 0,
+        _strokeColor: style._strokeColor ? `rgba(${style._strokeColor.r},${style._strokeColor.g},${style._strokeColor.b},${style._strokeColor.a})`
             : 'rgba(0,0,0,0.5)'
     };
     resetFontAtlas(fa);
@@ -99,49 +99,49 @@ export const makeFontAtlas = (family: string,
 };
 
 const enlargeFontTexture = (fa: FontAtlas) => {
-    const c = fa.ctx.canvas;
+    const c = fa._ctx.canvas;
     const size = c.width << 1;
-    fa.texture.w_ = fa.texture.h_ = c.width = c.height = size;
-    fa.textureBoxLT = getSubTexture(fa.texture, 1, 1, 1, 1, 0, 0);
-    fa.textureBox = getSubTexture(fa.texture, 1, 1, 1, 1, 0.5, 0.5);
-    fa.textureBoxT1 = getSubTexture(fa.texture, 1, 1, 1, 1, 0.5, -1);
-    resetFontAtlas(fa, fa.characters);
+    fa._texture._w = fa._texture._h = c.width = c.height = size;
+    fa._textureBoxLT = getSubTexture(fa._texture, 1, 1, 1, 1, 0, 0);
+    fa._textureBox = getSubTexture(fa._texture, 1, 1, 1, 1, 0.5, 0.5);
+    fa._textureBoxT1 = getSubTexture(fa._texture, 1, 1, 1, 1, 0.5, -1);
+    resetFontAtlas(fa, fa._characters);
 }
 
 const resetFontCanvas = (fa: FontAtlas) => {
-    const fontSize = Math.ceil(fa.size * fa.scale);
-    fa.ctx.font = `${fontSize}px ${fa.family},${fa.fallback}`;
+    const fontSize = Math.ceil(fa._size * fa._scale);
+    fa._ctx.font = `${fontSize}px ${fa._family},${fa._fallback}`;
     // "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"
     // setup context
-    fa.ctx.fillStyle = 'rgb(255,255,255)';
-    fa.ctx.textBaseline = 'alphabetic';
-    fa.ctx.textAlign = 'left';
+    fa._ctx.fillStyle = 'rgb(255,255,255)';
+    fa._ctx.textBaseline = 'alphabetic';
+    fa._ctx.textAlign = 'left';
 }
 
 const resetFontAtlas = (fa: FontAtlas, characters = DEFAULT_CHARACTERS) => {
-    fa.ctx.clearRect(0, 0, fa.ctx.canvas.width, fa.ctx.canvas.height);
-    fa.ctx.fillStyle = "#FFF";
-    fa.ctx.fillRect(0, 0, 3, 3);
+    fa._ctx.clearRect(0, 0, fa._ctx.canvas.width, fa._ctx.canvas.height);
+    fa._ctx.fillStyle = "#FFF";
+    fa._ctx.fillRect(0, 0, 3, 3);
     //fa.ctx.fillRect(0, 0, fa.ctx.canvas.width, fa.ctx.canvas.height);
     resetFontCanvas(fa);
-    fa.nextSheetX = 4;
-    fa.nextSheetY = 0;
-    fa.characterMap.clear();
+    fa._nextSheetX = 4;
+    fa._nextSheetY = 0;
+    fa._characterMap.clear();
     addSpaceCharacter(fa);
-    fa.characters = "";
+    fa._characters = "";
     addChars(fa, characters);
     updateTexture(fa);
 }
 
 const addSpaceCharacter = (fa: FontAtlas) => {
-    const spaceWidth = fa.ctx.measureText(' ').width / fa.scale;
-    fa.characterMap.set(SPACE_CODE, {
-            a: spaceWidth,
-            x: 0,
-            y: 0,
-            w: spaceWidth,
-            h: fa.size * fa.lineSize,
-            tex: getSubTexture(fa.texture, 0, 0, 0, 0, 0, 0)
+    const spaceWidth = fa._ctx.measureText(' ').width / fa._scale;
+    fa._characterMap.set(SPACE_CODE, {
+            _a: spaceWidth,
+            _x: 0,
+            _y: 0,
+            _w: spaceWidth,
+            _h: fa._size * fa._lineSize,
+            _texture: getSubTexture(fa._texture, 0, 0, 0, 0, 0, 0)
         }
     );
 }
@@ -155,73 +155,73 @@ const addChars = (fa: FontAtlas, characters: string) => {
 
 const readMetrics = (fa: FontAtlas, metrics: TextMetrics) => {
     const bb = CHAR_BOUNDING_BOX;
-    if (bb.supported === 0) {
-        bb.supported = ('actualBoundingBoxLeft' in metrics
+    if (bb._supported === 0) {
+        bb._supported = ('actualBoundingBoxLeft' in metrics
             && 'actualBoundingBoxRight' in metrics
             && 'actualBoundingBoxAscent' in metrics
             && 'actualBoundingBoxDescent' in metrics) ? 2 : 1;
     }
-    if (bb.supported === 2) {
-        bb.left = metrics.actualBoundingBoxLeft;
-        bb.right = metrics.actualBoundingBoxRight;
-        bb.ascent = metrics.actualBoundingBoxAscent;
-        bb.descent = metrics.actualBoundingBoxDescent;
+    if (bb._supported === 2) {
+        bb._left = metrics.actualBoundingBoxLeft;
+        bb._right = metrics.actualBoundingBoxRight;
+        bb._ascent = metrics.actualBoundingBoxAscent;
+        bb._descent = metrics.actualBoundingBoxDescent;
     } else {
-        const size = fa.size * fa.scale;
-        bb.left = 0;
-        bb.right = metrics.width;
-        bb.ascent = Math.ceil(0.7 * size);
-        bb.descent = Math.ceil(0.3 * size);
+        const size = fa._size * fa._scale;
+        bb._left = 0;
+        bb._right = metrics.width;
+        bb._ascent = Math.ceil(0.7 * size);
+        bb._descent = Math.ceil(0.3 * size);
     }
     return bb;
 }
 
 const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
-    if (fa.characterMap.has(codepoint)) {
-        return fa.characterMap.get(codepoint)!;
+    if (fa._characterMap.has(codepoint)) {
+        return fa._characterMap.get(codepoint)!;
     }
 
     const character = String.fromCodePoint(codepoint);
-    const ctx = fa.ctx;
+    const ctx = fa._ctx;
     const canvas = ctx.canvas;
-    const invScale = 1 / fa.scale;
+    const invScale = 1 / fa._scale;
     const metrics = ctx.measureText(character);
     const bb = readMetrics(fa, metrics);
-    const padding = fa.border + fa.strokeWidth * fa.scale;
-    const w = bb.right + bb.left + 2 * padding;
-    const h = bb.descent + bb.ascent + 2 * padding;
-    let x = fa.nextSheetX;
-    let y = fa.nextSheetY;
+    const padding = fa._border + fa._strokeWidth * fa._scale;
+    const w = bb._right + bb._left + 2 * padding;
+    const h = bb._descent + bb._ascent + 2 * padding;
+    let x = fa._nextSheetX;
+    let y = fa._nextSheetY;
     if (x + w > canvas.width) {
         x = 0;
-        y += fa.sheetLineHeight;
-        fa.sheetLineHeight = 0;
+        y += fa._sheetLineHeight;
+        fa._sheetLineHeight = 0;
         if (y + h > canvas.height) {
             enlargeFontTexture(fa);
             return getCharacter(fa, codepoint);
         }
     }
 
-    if (h > fa.sheetLineHeight) {
-        fa.sheetLineHeight = h;
+    if (h > fa._sheetLineHeight) {
+        fa._sheetLineHeight = h;
     }
 
-    const data = {
-        a: metrics.width * invScale,
-        x: -(bb.left + padding) * invScale,
-        y: -(bb.ascent + padding) * invScale,
-        w: w * invScale,
-        h: h * invScale,
-        tex: getSubTexture(fa.texture, x, y, w, h, 0, 0)
+    const data:CharacterData = {
+        _a: metrics.width * invScale,
+        _x: -(bb._left + padding) * invScale,
+        _y: -(bb._ascent + padding) * invScale,
+        _w: w * invScale,
+        _h: h * invScale,
+        _texture: getSubTexture(fa._texture, x, y, w, h, 0, 0)
     };
 
-    fa.characterMap.set(codepoint, data);
-    fa.characters += character;
-    const px = x + bb.left + padding;
-    const py = y + bb.ascent + padding;
-    if (fa.strokeWidth > 0) {
+    fa._characterMap.set(codepoint, data);
+    fa._characters += character;
+    const px = x + bb._left + padding;
+    const py = y + bb._ascent + padding;
+    if (fa._strokeWidth > 0) {
         ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        ctx.lineWidth = 2 * fa.strokeWidth * fa.scale;
+        ctx.lineWidth = 2 * fa._strokeWidth * fa._scale;
         ctx.lineJoin = 'round';
         ctx.strokeText(character, px, py);
         ctx.strokeText(character, px, py + 1);
@@ -248,17 +248,17 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
     // ctx.strokeRect(x + w / 2, y + padding + bb.ascent, w / 2, bb.descent);
     // }
     x += w;
-    fa.nextSheetX = x;
-    fa.nextSheetY = y;
-    fa.dirty = true;
+    fa._nextSheetX = x;
+    fa._nextSheetY = y;
+    fa._dirty = true;
 
     return data;
 }
 
 const updateTexture = (fa: FontAtlas) => {
-    if (fa.dirty) {
-        uploadTexture(fa.texture, fa.ctx.canvas);
-        fa.dirty = false;
+    if (fa._dirty) {
+        uploadTexture(fa._texture, fa._ctx.canvas);
+        fa._dirty = false;
     }
 }
 
@@ -266,7 +266,7 @@ const updateTexture = (fa: FontAtlas) => {
 export const fnt: FontAtlas[] = [];
 
 export const initFonts = () => {
-    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 24, 1, {strokeWidth: 3});
+    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 24, 1, {_strokeWidth: 3});
 };
 
 export const updateFonts = () => fnt.forEach(updateTexture);
@@ -277,7 +277,7 @@ export const resetFonts = () => fnt.forEach(fa => resetFontAtlas(fa));
 
 const LF = "\n".codePointAt(0);
 export const drawText = (font: FontAtlas, text: string, size: number, x: number, y: number, lineHeight: number, lineSpacing: number, color: number = 0xFFFFFF) => {
-    const sc = size / font.size;
+    const sc = size / font._size;
     const startX = x;
     let cx = x;
     let cy = y;
@@ -290,15 +290,15 @@ export const drawText = (font: FontAtlas, text: string, size: number, x: number,
         }
 
         const gdata = getCharacter(font, code);
-        if (gdata.tex) {
-            draw(gdata.tex, cx + sc * gdata.x, cy + sc * gdata.y, 0, sc, sc, 1, color);
+        if (gdata._texture) {
+            draw(gdata._texture, cx + sc * gdata._x, cy + sc * gdata._y, 0, sc, sc, 1, color);
         }
-        cx += sc * gdata.a; // advance
+        cx += sc * gdata._a; // advance
     }
 }
 
 export const measureTextWidth = (font: FontAtlas, text: string, size: number): number => {
-    const sc = size / font.size;
+    const sc = size / font._size;
     let x = 0;
     let w = 0;
     for (const ch of text) {
@@ -308,7 +308,7 @@ export const measureTextWidth = (font: FontAtlas, text: string, size: number): n
             continue;
         }
         const gdata = getCharacter(font, code);
-        x += sc * gdata.a;
+        x += sc * gdata._a;
         if (x > w) {
             w = x;
         }

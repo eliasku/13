@@ -13,76 +13,76 @@ export let _debugLagK = 0;
 export const setDebugLagK = (a: number) => _debugLagK = a;
 
 export const GAME_CFG = {
-    npc: [{
-        initWeaponLen: 1,
-        period: 12,
-        max: 0,
+    _npc: [{
+        _initWeaponLen: 1,
+        _period: 12,
+        _max: 0,
     },{
-        initWeaponLen: 3,
-        period: 11,
-        max: 4,
+        _initWeaponLen: 3,
+        _period: 11,
+        _max: 4,
     },{
-        initWeaponLen: 4,
-        period: 10,
-        max: 8,
+        _initWeaponLen: 4,
+        _period: 10,
+        _max: 8,
     },{
         // allow all weapons?
         // initWeaponLen: 10,
-        initWeaponLen: 4,
-        period: 8,
-        max: 16,
+        _initWeaponLen: 4,
+        _period: 8,
+        _max: 16,
     }],
-    items: {
+    _items: {
         // should be < (2 ** 6)
         // div by 10
         // (10 * Const.NetFq) / 10 => 60
-        lifetime: 60,
+        _lifetime: 60,
     },
-    barrels: {
-        initCount: 32,
-        hp: [3, 7],
-        dropWeapon: {
-            chance: 70,
-            min: 4
+    _barrels: {
+        _initCount: 32,
+        _hp: [3, 7],
+        _dropWeapon: {
+            _chance: 70,
+            _min: 4
         },
     },
-    trees: {
-        initCount: 64,
+    _trees: {
+        _initCount: 64,
     },
-    camera: {
+    _camera: {
         // base resolution
-        size: 256,
-        listenerRadius: 256,
-        baseScale: 1.1,
+        _size: 256,
+        _listenerRadius: 256,
+        _baseScale: 1.1,
     },
-    player: {
+    _player: {
         // initial values for player's spawn
-        hp: 10,
-        sp: 0,
-        mags: 1,
-        jumpVel: 80,
-        runVel: 120,
-        walkVel: 60,
+        _hp: 10,
+        _sp: 0,
+        _mags: 1,
+        _jumpVel: 80,
+        _runVel: 120,
+        _walkVel: 60,
     },
-    world: {
-        gravity: 5,
-        gravityWeak: 3
+    _world: {
+        _gravity: 5,
+        _gravityWeak: 3
     },
-    minimap: {
-        size: 48,
-        markerScale: 1,
-        colors: {
-            me: parseRGB("#fff"),
-            player: parseRGB("#f00"),
-            npc: parseRGB("#d06"),
-            tree: parseRGB("#888"),
-            barrel: parseRGB("#07f"),
-            item: parseRGB("#0f0"),
-            background: parseRGB("#010"),
-            backgroundAlpha: 0.6,
+    _minimap: {
+        _size: 48,
+        _markerScale: 1,
+        _colors: {
+            _me: parseRGB("#fff"),
+            _player: parseRGB("#f00"),
+            _npc: parseRGB("#d06"),
+            _tree: parseRGB("#888"),
+            _barrel: parseRGB("#07f"),
+            _item: parseRGB("#0f0"),
+            _background: parseRGB("#010"),
+            _backgroundAlpha: 0.6,
         }
     },
-    bodyColor: [
+    _bodyColor: [
         parseRGB("#FF99DD"),
         parseRGB("#FFCC99"),
         parseRGB("#CCFF99"),
@@ -90,14 +90,14 @@ export const GAME_CFG = {
         parseRGB("#8855FF"),
         parseRGB("#CCCCCC"),
     ],
-    voice: {
-        killAB: [
+    _voice: {
+        _killAB: [
             "{0} CRUSHED {1}",
             "{0} destroyed {1}",
             "{0} killed {1}",
             "{0} took {1} life",
         ],
-        killNPC: [
+        _killNPC: [
             "warm-up for {0}",
             "{0} killed someone",
             "death by {0}",

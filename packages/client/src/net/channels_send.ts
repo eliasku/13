@@ -12,7 +12,7 @@ const sendSafeInner = (channel: RTCDataChannel, data: ArrayBuffer) => {
 }
 
 const sendSafe = (client: RemoteClient, data: ArrayBuffer) => {
-    const dc = client.dc_;
+    const dc = client._dc;
     if (dc.bufferedAmount > dc.bufferedAmountLowThreshold) {
         // dc.onbufferedamountlow = () => {
         //     dc.onbufferedamountlow = null;
@@ -24,7 +24,7 @@ const sendSafe = (client: RemoteClient, data: ArrayBuffer) => {
 }
 
 const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
-    client.debugPacketByteLength = data.byteLength;
+    client._debugPacketByteLength = data.byteLength;
     if (data.byteLength >= 1200 / 2) {
         //console.warn("HUGE packet could not be delivered: " + data.byteLength);
         //throw new Error("HUGE packet could not be delivered: " + data.byteLength);
@@ -61,6 +61,6 @@ export const channels_sendObjectData = (client: RemoteClient, data: ArrayBuffer)
 
 export const getChannelPacketSize = (client: RemoteClient): number =>
     process.env.NODE_ENV === "development" ?
-        (client.debugPacketByteLength | 0) :
-        (client.dc_.bufferedAmount);
+        (client._debugPacketByteLength | 0) :
+        (client._dc.bufferedAmount);
 

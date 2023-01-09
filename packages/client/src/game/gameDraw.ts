@@ -16,25 +16,25 @@ import {drawTextShadowCenter, fnt} from "../graphics/font";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
-        const prop = actorsConfig[actor.type_];
-        const shadowScale = (2 - actor.z_ / (WORLD_SCALE * 64)) * prop.shadowScale;
+        const prop = actorsConfig[actor._type];
+        const shadowScale = (2 - actor._z / (WORLD_SCALE * 64)) * prop._shadowScale;
         drawMeshSprite(
             img[Img.circle_4],
-            actor.x_ / WORLD_SCALE,
-            actor.y_ / WORLD_SCALE,
+            actor._x / WORLD_SCALE,
+            actor._y / WORLD_SCALE,
             0,
             shadowScale,
             shadowScale / 4,
             0.4,
-            prop.shadowColor,
-            prop.shadowAdd
+            prop._shadowColor,
+            prop._shadowAdd
         );
     }
 }
 
 export const drawCrosshair = (player: Actor | undefined, gameCamera: number[], screenScale: number) => {
     if (player && ((viewX | 0) || (viewY | 0))) {
-        const img = fnt[0].textureBoxT1;
+        const img = fnt[0]._textureBoxT1;
         const W = gl.drawingBufferWidth;
         const H = gl.drawingBufferHeight;
         const x = ((lookAtX - gameCamera[0]) / gameCamera[2] + W / 2) / screenScale;
@@ -42,12 +42,12 @@ export const drawCrosshair = (player: Actor | undefined, gameCamera: number[], s
         const t = lastFrameTs;
         // const x = lookAtX;
         // const y = lookAtY;
-        if (player.weapon_) {
-            const weapon = weapons[player.weapon_];
-            if (weapon.clipSize_) {
-                if (player.clipReload_ && player.mags_) {
+        if (player._weapon) {
+            const weapon = weapons[player._weapon];
+            if (weapon._clipSize) {
+                if (player._clipReload && player._mags) {
                     // reloading
-                    const t = 1.0 - player.clipReload_ / weapon.clipReload_;
+                    const t = 1.0 - player._clipReload / weapon._clipReload;
                     const N = 8;
                     for (let i = 0; i < N; ++i) {
                         const sc = clamp(t * N - i, 0, 1);
@@ -55,7 +55,7 @@ export const drawCrosshair = (player: Actor | undefined, gameCamera: number[], s
                     }
                     return;
                 }
-                if (!player.clipAmmo_) {
+                if (!player._clipAmmo) {
                     // blinking
                     if (sin(t * 32) >= 0) {
                         for (let i = 0; i < 4; ++i) {
@@ -67,7 +67,7 @@ export const drawCrosshair = (player: Actor | undefined, gameCamera: number[], s
             }
         }
 
-        const len = 4 + sin(2 * t) * cos(4 * t) / 4 + (player.detune_ / 8) + player.s_ / 10;
+        const len = 4 + sin(2 * t) * cos(4 * t) / 4 + (player._detune / 8) + player._s / 10;
         for (let i = 0; i < 4; ++i) {
             draw(img, x, y, t / 10 + i * PI / 2, 2, len);
         }
@@ -106,62 +106,62 @@ export const getHitColorOffset = (anim: number) =>
     getLumaColor32(0xFF * min(1, 2 * anim / ANIM_HIT_MAX));
 
 export const drawObjectMesh2D = (p: Actor, id: Img, z: number = 0, scale: number = 1, oy: number = 0.0) =>
-    drawMeshSpriteUp(img[id], p.x_ / WORLD_SCALE, p.y_ / WORLD_SCALE + oy, p.z_ / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p.animHit_));
+    drawMeshSpriteUp(img[id], p._x / WORLD_SCALE, p._y / WORLD_SCALE + oy, p._z / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p._animHit));
 
-export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p.btn_ + Img.barrel0);
-export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p.btn_ + Img.tree0);
+export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._btn + Img.barrel0);
+export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._btn + Img.tree0);
 
 export const drawItemOpaque = (item: Actor) => {
-    if (item.clipReload_) {
-        const limit = GAME_CFG.items.lifetime >>> 1;
-        if (item.clipReload_ < limit) {
-            const f = 1 - item.clipReload_ / limit;
+    if (item._clipReload) {
+        const limit = GAME_CFG._items._lifetime >>> 1;
+        if (item._clipReload < limit) {
+            const f = 1 - item._clipReload / limit;
             const fr = 1 + 4 * f;
             if (sin( fr * lastFrameTs) >= 0.5) {
                 return;
             }
         }
     }
-    if (item.btn_ & ItemType.Weapon) {
-        drawObjectMesh2D(item, Img.weapon0 + item.weapon_, 4, 0.8);
-        if (item.mags_) {
+    if (item._btn & ItemType.Weapon) {
+        drawObjectMesh2D(item, Img.weapon0 + item._weapon, 4, 0.8);
+        if (item._mags) {
             drawObjectMesh2D(item, Img.item0 + ItemType.Ammo, 8, 0.8, -0.1);
         }
     } else /*if (cat == ItemCategory.Effect)*/ {
-        const t = lastFrameTs * 4 + item.anim0_ / 25;
-        drawObjectMesh2D(item, Img.item0 + item.btn_, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
+        const t = lastFrameTs * 4 + item._anim0 / 25;
+        drawObjectMesh2D(item, Img.item0 + item._btn, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
     }
 }
 
 export const drawBullet = (actor: Actor) => {
-    const x = actor.x_ / WORLD_SCALE;
-    const y = actor.y_ / WORLD_SCALE;
-    const z = actor.z_ / WORLD_SCALE;
-    const a = atan2(actor.v_, actor.u_);
-    const type = actor.btn_ as BulletType;
+    const x = actor._x / WORLD_SCALE;
+    const y = actor._y / WORLD_SCALE;
+    const z = actor._z / WORLD_SCALE;
+    const a = atan2(actor._v, actor._u);
+    const type = actor._btn as BulletType;
     const bulletData = bullets[type];
-    const color = fxRandElement(bulletData.color);
-    const longing = bulletData.length;
-    const longing2 = bulletData.lightLength;
-    const sz = bulletData.size + bulletData.pulse * sin(32 * lastFrameTs + actor.anim0_) / 2;
+    const color = fxRandElement(bulletData._color);
+    const longing = bulletData._length;
+    const longing2 = bulletData._lightLength;
+    const sz = bulletData._size + bulletData._pulse * sin(32 * lastFrameTs + actor._anim0) / 2;
     setDrawZ(z - 0.1);
-    drawMeshSprite(img[bulletData.images[0]], x, y, a, sz * longing, sz, 0.1, 0xFFFFFF, 1);
+    drawMeshSprite(img[bulletData._images[0]], x, y, a, sz * longing, sz, 0.1, 0xFFFFFF, 1);
     setDrawZ(z);
-    drawMeshSprite(img[bulletData.images[1]], x, y, a, sz * longing / 2, sz / 2, 1, color);
+    drawMeshSprite(img[bulletData._images[1]], x, y, a, sz * longing / 2, sz / 2, 1, color);
     setDrawZ(z + 0.1);
-    drawMeshSprite(img[bulletData.images[2]], x, y, a, 2 * longing2, 2);
+    drawMeshSprite(img[bulletData._images[2]], x, y, a, 2 * longing2, 2);
 }
 
 export const drawHotUsableHint = (hotUsable?: Actor) => {
     if (hotUsable) {
-        if (hotUsable.btn_ & ItemType.Weapon) {
-            const weapon = weapons[hotUsable.weapon_];
-            let text = weapon.name_ + " " + EMOJI[Img.weapon0 + hotUsable.weapon_];
-            if (weapon.clipSize_) {
-                text += hotUsable.clipAmmo_;
+        if (hotUsable._btn & ItemType.Weapon) {
+            const weapon = weapons[hotUsable._weapon];
+            let text = weapon._name + " " + EMOJI[Img.weapon0 + hotUsable._weapon];
+            if (weapon._clipSize) {
+                text += hotUsable._clipAmmo;
             }
-            const x = hotUsable.x_ / WORLD_SCALE;
-            const y = hotUsable.y_ / WORLD_SCALE + drawZ;
+            const x = hotUsable._x / WORLD_SCALE;
+            const y = hotUsable._y / WORLD_SCALE + drawZ;
             drawTextShadowCenter(fnt[0], text, 7, x, y - 28);
             drawTextShadowCenter(fnt[0], "Pick [E]", 7, x, y - 20);
         }

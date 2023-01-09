@@ -87,37 +87,37 @@ type StateFunc = (ts?: number) => void | undefined;
         () => {
             const result = menuScreen(publicServerInfo);
             if (result) {
-                if (result.command === MenuCommand.StartPractice) {
+                if (result._command === MenuCommand.StartPractice) {
                     state = StartState.Connected;
                     resetGame();
                     connect({
-                        flags: GameModeFlag.Offline,
-                        playersLimit: 1,
-                        npcLevel: 1,
-                        theme: 0,
+                        _flags: GameModeFlag.Offline,
+                        _playersLimit: 1,
+                        _npcLevel: 1,
+                        _theme: 0,
                     });
                     gameMode.npcLevel = _room.npcLevel;
-                } else if (result.command === MenuCommand.QuickStart) {
+                } else if (result._command === MenuCommand.QuickStart) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
                     connect();
-                } else if (result.command === MenuCommand.JoinGame) {
+                } else if (result._command === MenuCommand.JoinGame) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
-                    connect(undefined, result.joinByCode);
-                } else if (result.command === MenuCommand.CreateGame) {
+                    connect(undefined, result._joinByCode);
+                } else if (result._command === MenuCommand.CreateGame) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
-                    connect(result.newGame);
+                    connect(result._newGame);
                 }
             }
         },

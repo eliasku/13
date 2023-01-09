@@ -16,9 +16,9 @@ const enum Menu {
 }
 
 export interface MenuResult {
-    command: MenuCommand;
-    newGame?: NewGameParams;
-    joinByCode?: string;
+    _command: MenuCommand;
+    _newGame?: NewGameParams;
+    _joinByCode?: string;
 }
 
 export const enum MenuCommand {
@@ -28,17 +28,17 @@ export const enum MenuCommand {
     CreateGame = 3,
 }
 
-let menu: Menu = Menu.Main;
-let devLock: number = 0;
+let menu = Menu.Main;
+let devLock = 0;
 
 // create game options
 const newGameSettings: MenuResult = {
-    command: MenuCommand.CreateGame,
-    newGame: {
-        flags: GameModeFlag.Public,
-        playersLimit: 8,
-        npcLevel: 2,
-        theme: 0,
+    _command: MenuCommand.CreateGame,
+    _newGame: {
+        _flags: GameModeFlag.Public,
+        _playersLimit: 8,
+        _npcLevel: 2,
+        _theme: 0,
     }
 };
 
@@ -78,7 +78,7 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                 w: 100,
                 h: 20
             })) {
-                result = {command: MenuCommand.QuickStart};
+                result = {_command: MenuCommand.QuickStart};
             }
 
             if (button("custom", "☰", centerX + 60, centerY + 50, {
@@ -89,7 +89,7 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
             }
 
             if (button("practice", "🏹 PRACTICE", centerX - 50, centerY + 75, {w: 100, h: 20})) {
-                result = {command: MenuCommand.StartPractice};
+                result = {_command: MenuCommand.StartPractice};
             }
             if (button("settings", "⚙️ SETTINGS", centerX - 50, centerY + 108, {w: 100, h: 16})) {
                 menu = Menu.Settings;
@@ -208,7 +208,7 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                     h: 20
                 })) {
                     if (room.players < room.max) {
-                        result = {command: MenuCommand.JoinGame, joinByCode: room.code};
+                        result = {_command: MenuCommand.JoinGame, _joinByCode: room.code};
                     }
                 }
                 y += 20;
@@ -225,7 +225,7 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                 const code = prompt("Enter Game Code", "0");
                 const v = parseRadix64String(code);
                 if (v) {
-                    result = {command: MenuCommand.JoinGame, joinByCode: code};
+                    result = {_command: MenuCommand.JoinGame, _joinByCode: code};
                 } else {
                     console.warn("bad game code");
                 }
@@ -248,43 +248,43 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
         } else if (menu === Menu.CreateGame) {
             label("⚙️ CREATE GAME ROOM", 20, centerX, 30);
             let y = centerY - 70;
-            if (button("visibility", "ACCESS: " + ((newGameSettings.newGame.flags & GameModeFlag.Public) ? "👁️ PUBLIC" : "🕵️ PRIVATE"), centerX - 50, y, {
+            if (button("visibility", "ACCESS: " + ((newGameSettings._newGame._flags & GameModeFlag.Public) ? "👁️ PUBLIC" : "🕵️ PRIVATE"), centerX - 50, y, {
                 w: 100,
                 h: 20
             })) {
-                newGameSettings.newGame.flags ^= GameModeFlag.Public;
+                newGameSettings._newGame._flags ^= GameModeFlag.Public;
             }
             y += 25;
-            if (button("players_limit", "MAX PLAYERS: " + newGameSettings.newGame.playersLimit, centerX - 50, y, {
+            if (button("players_limit", "MAX PLAYERS: " + newGameSettings._newGame._playersLimit, centerX - 50, y, {
                 w: 100,
                 h: 20
             })) {
                 const MAX_PLAYERS = 8;
-                ++newGameSettings.newGame.playersLimit;
-                if (newGameSettings.newGame.playersLimit > MAX_PLAYERS) {
-                    newGameSettings.newGame.playersLimit = 2;
+                ++newGameSettings._newGame._playersLimit;
+                if (newGameSettings._newGame._playersLimit > MAX_PLAYERS) {
+                    newGameSettings._newGame._playersLimit = 2;
                 }
             }
             y += 25
             const NPC_LEVELS = ["NONE", "RARE", "NORMAL", "CROWD"];
-            if (button("npc_level", "NPC: " + NPC_LEVELS[newGameSettings.newGame.npcLevel], centerX - 50, y, {
+            if (button("npc_level", "NPC: " + NPC_LEVELS[newGameSettings._newGame._npcLevel], centerX - 50, y, {
                 w: 100,
                 h: 20
             })) {
-                ++newGameSettings.newGame.npcLevel;
-                if (newGameSettings.newGame.npcLevel >= NPC_LEVELS.length) {
-                    newGameSettings.newGame.npcLevel = 0;
+                ++newGameSettings._newGame._npcLevel;
+                if (newGameSettings._newGame._npcLevel >= NPC_LEVELS.length) {
+                    newGameSettings._newGame._npcLevel = 0;
                 }
             }
             y += 25;
             const THEME_NAMES = ["? RANDOM", "🌲 FOREST", "🌵 DESERT", "❄ SNOW"];
-            if (button("map_theme", "MAP: " + THEME_NAMES[newGameSettings.newGame.theme], centerX - 50, y, {
+            if (button("map_theme", "MAP: " + THEME_NAMES[newGameSettings._newGame._theme], centerX - 50, y, {
                 w: 100,
                 h: 20
             })) {
-                ++newGameSettings.newGame.theme;
-                if (newGameSettings.newGame.theme > 3) {
-                    newGameSettings.newGame.theme = 0;
+                ++newGameSettings._newGame._theme;
+                if (newGameSettings._newGame._theme > 3) {
+                    newGameSettings._newGame._theme = 0;
                 }
             }
             y += 25;

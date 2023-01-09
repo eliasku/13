@@ -65,43 +65,43 @@ export const printDebugInfo = (
         text += `debug-lag K: ${_debugLagK}\n`;
     }
     text += "visible: " + drawList.length + "\n";
-    text += "players: " + state.actors_[ActorType.Player].length + "\n";
-    text += "barrels: " + state.actors_[ActorType.Barrel].length + "\n";
-    text += "items: " + state.actors_[ActorType.Item].length + "\n";
-    text += "bullets: " + state.actors_[ActorType.Bullet].length + "\n";
+    text += "players: " + state._actors[ActorType.Player].length + "\n";
+    text += "barrels: " + state._actors[ActorType.Barrel].length + "\n";
+    text += "items: " + state._actors[ActorType.Item].length + "\n";
+    text += "bullets: " + state._actors[ActorType.Bullet].length + "\n";
     text += "trees: " + trees.length + "\n";
     text += `* ${opaqueParticles.length} | t ${textParticles.length} | $ ${splats.length}\n`;
     //text += " | clients: " + clients.size + " | " + "remoteClients: " + remoteClients.size + "\n";
 
     text += `┌ ${clientName} #${clientId} | tic: ${gameTic}, net-game: ${netTic - gameTic}\n`;
     for (const [, remoteClient] of remoteClients) {
-        const pc = remoteClient.pc_;
-        const dc = remoteClient.dc_;
-        const cl = clients.get(remoteClient.id_);
-        text += `├ ${remoteClient.name_} #${remoteClient.id_}`;
+        const pc = remoteClient._pc;
+        const dc = remoteClient._dc;
+        const cl = clients.get(remoteClient._id);
+        text += `├ ${remoteClient._name} #${remoteClient._id}`;
         text += pc ? (icons_iceState[pc.iceConnectionState] ?? "❓") : "🧿";
         text += dc ? icons_channelState[dc.readyState] : "🧿";
         if (cl) {
-            text += `+${cl.tic_ - (gameTic - 1)}`;
+            text += `+${cl._tic - (gameTic - 1)}`;
             text += "| x" + getChannelPacketSize(remoteClient).toString(16);
         }
         text += "\n";
     }
 
-    for (let a of [].concat(...state.actors_)) {
-        if (a.x_ < _dmin[0]) _dmin[0] = a.x_;
-        if (a.x_ > _dmax[0]) _dmax[0] = a.x_;
-        if (a.y_ < _dmin[1]) _dmin[1] = a.y_;
-        if (a.y_ > _dmax[1]) _dmax[1] = a.y_;
-        if (a.z_ < _dmin[2]) _dmin[2] = a.z_;
-        if (a.z_ > _dmax[2]) _dmax[2] = a.z_;
+    for (let a of [].concat(...state._actors)) {
+        if (a._x < _dmin[0]) _dmin[0] = a._x;
+        if (a._x > _dmax[0]) _dmax[0] = a._x;
+        if (a._y < _dmin[1]) _dmin[1] = a._y;
+        if (a._y > _dmax[1]) _dmax[1] = a._y;
+        if (a._z < _dmin[2]) _dmin[2] = a._z;
+        if (a._z > _dmax[2]) _dmax[2] = a._z;
 
-        if (a.u_ < _dmin[0 + 3]) _dmin[0 + 3] = a.u_;
-        if (a.u_ > _dmax[0 + 3]) _dmax[0 + 3] = a.u_;
-        if (a.v_ < _dmin[1 + 3]) _dmin[1 + 3] = a.v_;
-        if (a.v_ > _dmax[1 + 3]) _dmax[1 + 3] = a.v_;
-        if (a.w_ < _dmin[2 + 3]) _dmin[2 + 3] = a.w_;
-        if (a.w_ > _dmax[2 + 3]) _dmax[2 + 3] = a.w_;
+        if (a._u < _dmin[0 + 3]) _dmin[0 + 3] = a._u;
+        if (a._u > _dmax[0 + 3]) _dmax[0 + 3] = a._u;
+        if (a._v < _dmin[1 + 3]) _dmin[1 + 3] = a._v;
+        if (a._v > _dmax[1 + 3]) _dmax[1 + 3] = a._v;
+        if (a._w < _dmin[2 + 3]) _dmin[2 + 3] = a._w;
+        if (a._w > _dmax[2 + 3]) _dmax[2 + 3] = a._w;
     }
 
     text += "x := [" + _dmin[0] + " .. " + _dmax[0] + "]\n";
@@ -135,13 +135,13 @@ export const updateDebugInput = () => {
 }
 
 const drawActorBoundingSphere = (p: Actor) => {
-    const prop = actorsConfig[p.type_];
-    const r = prop.radius;
-    const h = prop.height;
-    const x = p.x_ / WORLD_SCALE;
-    const y = (p.y_ - p.z_ - h) / WORLD_SCALE;
+    const prop = actorsConfig[p._type];
+    const r = prop._radius;
+    const h = prop._height;
+    const x = p._x / WORLD_SCALE;
+    const y = (p._y - p._z - h) / WORLD_SCALE;
     const s = (r / WORLD_SCALE) / 16;
-    draw(img[Img.box_t], x, y, 0, 1, (p.z_ + h) / WORLD_SCALE);
+    draw(img[Img.box_t], x, y, 0, 1, (p._z + h) / WORLD_SCALE);
     draw(img[Img.circle_16], x, y, 0, s, s, 0.5, 0xFF0000);
 }
 
@@ -155,35 +155,35 @@ export const drawCollisions = (list: Actor[]) => {
 export const saveDebugState = (stateData: StateData) => {
     if (debugStateEnabled) {
         debugState = stateData;
-        debugState.seed_ = _SEEDS[0];
-        ++debugState.tic_;
-        debugState.actors_.map(roundActors);
+        debugState._seed = _SEEDS[0];
+        ++debugState._tic;
+        debugState._actors.map(roundActors);
     }
 }
 
 export const addDebugState = (client: Client, packet: Packet, state: StateData) => {
-    if (debugStateEnabled && client.ready_ && client.isPlaying_) {
-        packet.state_ = state;
-        packet.debug.state = debugState;
+    if (debugStateEnabled && client._ready && client._isPlaying) {
+        packet._state = state;
+        packet._debug._state = debugState;
     }
 }
 
 export const assertStateInSync = (from: ClientID, data: Packet, state: StateData, gameTic: number) => {
-    if (data.debug && data.debug.tic === (gameTic - 1)) {
-        if (data.debug.seed !== _SEEDS[0]) {
-            console.warn("seed mismatch from client " + from + " at tic " + data.debug.tic);
-            console.warn(data.debug.seed + " != " + _SEEDS[0]);
+    if (data._debug && data._debug._tic === (gameTic - 1)) {
+        if (data._debug._seed !== _SEEDS[0]) {
+            console.warn("seed mismatch from client " + from + " at tic " + data._debug._tic);
+            console.warn(data._debug._seed + " != " + _SEEDS[0]);
         }
-        if (data.debug.nextId !== state.nextId_) {
-            console.warn("gen id mismatch from client " + from + " at tic " + data.debug.tic);
-            console.warn(data.debug.nextId + " != " + state.nextId_);
+        if (data._debug._nextId !== state._nextId) {
+            console.warn("gen id mismatch from client " + from + " at tic " + data._debug._tic);
+            console.warn(data._debug._nextId + " != " + state._nextId);
         }
         if (debugStateEnabled) {
-            if (data.debug.state && debugState) {
-                assertStateEquality("[DEBUG] ", debugState, data.debug.state);
+            if (data._debug._state && debugState) {
+                assertStateEquality("[DEBUG] ", debugState, data._debug._state);
             }
-            if (data.state_) {
-                assertStateEquality("[FINAL] ", state, data.state_);
+            if (data._state) {
+                assertStateEquality("[FINAL] ", state, data._state);
             }
         }
     }
@@ -191,52 +191,29 @@ export const assertStateInSync = (from: ClientID, data: Packet, state: StateData
 
 const assertStateEquality = (label: string, a: StateData, b: StateData) => {
 
-    if (a.nextId_ != b.nextId_) {
-        console.warn(label + "NEXT ID MISMATCH", a.nextId_, b.nextId_);
+    if (a._nextId != b._nextId) {
+        console.warn(label + "NEXT ID MISMATCH", a._nextId, b._nextId);
     }
-    if (a.seed_ != b.seed_) {
-        console.warn(label + "SEED MISMATCH", a.seed_, b.seed_);
+    if (a._seed != b._seed) {
+        console.warn(label + "SEED MISMATCH", a._seed, b._seed);
     }
-    if (a.mapSeed_ != b.mapSeed_) {
-        console.warn(label + "MAP SEED MISMATCH", a.mapSeed_, b.mapSeed_);
+    if (a._mapSeed != b._mapSeed) {
+        console.warn(label + "MAP SEED MISMATCH", a._mapSeed, b._mapSeed);
     }
-    for (let i = 0; i < a.actors_.length; ++i) {
-        const listA = a.actors_[i];
-        const listB = b.actors_[i];
+    for (let i = 0; i < a._actors.length; ++i) {
+        const listA = a._actors[i];
+        const listB = b._actors[i];
         if (listA.length == listB.length) {
             for (let j = 0; j < listA.length; ++j) {
                 const actorA = listA[j];
                 const actorB = listB[j];
-                const fields = [
-                    "x_",
-                    "y_",
-                    "z_",
-                    "u_",
-                    "v_",
-                    "w_",
-                    "s_",
-                    "detune_",
-                    "id_",
-                    "type_",
-                    "client_",
-                    "btn_",
-                    "weapon_",
-                    "hp_",
-                    "sp_",
-                    "mags_",
-                    "anim0_",
-                    "animHit_",
-                    "clipAmmo_",
-                    "clipReload_",
-                    "weapon2_",
-                    "clipAmmo2_",
-                    "trig_",
-                ];
-                for (const f of fields) {
-                    if ((actorA as any)[f] !== (actorB as any)[f]) {
-                        console.warn(label + "ACTOR DATA mismatch, field: " + f);
-                        console.warn("    MY: " + f + " = " + (actorA as any)[f]);
-                        console.warn("REMOTE: " + f + " = " + (actorB as any)[f]);
+                for (const key of Object.keys(actorA)) {
+                    const valueA = (actorA as any)[key];
+                    const valueB = (actorB as any)[key];
+                    if (valueA !== valueB) {
+                        console.warn(`${label} ACTOR DATA mismatch, key: ${key}`);
+                        console.warn(` local.${key} = ${valueA}`);
+                        console.warn(`remote.${key} = ${valueB}`);
                     }
                 }
             }

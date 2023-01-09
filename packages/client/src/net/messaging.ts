@@ -17,11 +17,11 @@ import {setSetting, settings} from "../game/settings";
 import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
 
 export interface RemoteClient {
-    id_: ClientID;
-    pc_?: RTCPeerConnection;
-    dc_?: RTCDataChannel;
-    name_?: string;
-    debugPacketByteLength?: number;
+    _id: ClientID;
+    _pc?: RTCPeerConnection;
+    _dc?: RTCDataChannel;
+    _name?: string;
+    _debugPacketByteLength?: number;
 }
 
 const getUrl = (endpoint: string) => endpoint;
@@ -32,7 +32,7 @@ const getJoinUrl = (joinRoomCode?: string, newGameParams?: NewGameParams) => {
         args.push(`r=${joinRoomCode}`);
     }
     if (newGameParams) {
-        const params = [newGameParams.flags, newGameParams.playersLimit, newGameParams.npcLevel, newGameParams.theme];
+        const params = [newGameParams._flags, newGameParams._playersLimit, newGameParams._npcLevel, newGameParams._theme];
         const data = encodeURIComponent(JSON.stringify(params));
         args.push(`c=${data}`);
     }
@@ -101,10 +101,10 @@ export const disconnect = () => {
 }
 
 const handleOffer = (rc: RemoteClient, offer: RTCSessionDescriptionInit) =>
-    rc.pc_.setRemoteDescription(offer)
-        .then(() => rc.pc_.createAnswer())
-        .then(answer => rc.pc_.setLocalDescription(answer))
-        .then(() => rc.pc_.localDescription.toJSON())
+    rc._pc.setRemoteDescription(offer)
+        .then(() => rc._pc.createAnswer())
+        .then(answer => rc._pc.setLocalDescription(answer))
+        .then(() => rc._pc.localDescription.toJSON())
         .catch(() => console.warn("setRemoteDescription error"));
 
 const handlers: Handler[] = [
@@ -117,13 +117,13 @@ const handlers: Handler[] = [
     (req, _rc?: RemoteClient): void => {
         if (req[MessageField.Data].candidate) {
             requireRemoteClient(req[MessageField.Source])
-                .pc_.addIceCandidate(new RTCIceCandidate(req[MessageField.Data]))
+                ._pc.addIceCandidate(new RTCIceCandidate(req[MessageField.Data]))
                 .catch(error => console.warn("ice candidate set failed: " + error.message));
         }
     },
     // MessageType.Name
     (req): void => {
-        requireRemoteClient(req[MessageField.Source]).name_ = req[MessageField.Data];
+        requireRemoteClient(req[MessageField.Source])._name = req[MessageField.Data];
     }
 ];
 
@@ -210,15 +210,15 @@ export const connect = (newGameParams?: NewGameParams, gameCode?: string) => {
         console.warn("connect: sse state already", _sseState);
         return;
     }
-    if (newGameParams && (newGameParams.flags & GameModeFlag.Offline)) {
+    if (newGameParams && (newGameParams._flags & GameModeFlag.Offline)) {
         // bypass all connection routine
         _sseState = 3;
         clientId = 1;
         _room = {
             code: "",
-            npcLevel: newGameParams.npcLevel,
-            flags: newGameParams.flags,
-            mapTheme: newGameParams.theme ? (newGameParams.theme - 1) : Math.floor(Math.random() * 3),
+            npcLevel: newGameParams._npcLevel,
+            flags: newGameParams._flags,
+            mapTheme: newGameParams._theme ? (newGameParams._theme - 1) : Math.floor(Math.random() * 3),
             mapSeed: newSeedFromTime(),
         };
     } else {
@@ -237,17 +237,17 @@ export const connect = (newGameParams?: NewGameParams, gameCode?: string) => {
 
 // RTC
 const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
-    rc.pc_.createOffer({iceRestart})
-        .then(offer => rc.pc_.setLocalDescription(offer))
+    rc._pc.createOffer({iceRestart})
+        .then(offer => rc._pc.setLocalDescription(offer))
         .then(() => remoteCall(
-            rc.id_, MessageType.RtcOffer, rc.pc_.localDescription.toJSON(),
-            (message) => rc.pc_.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
+            rc._id, MessageType.RtcOffer, rc._pc.localDescription.toJSON(),
+            (message) => rc._pc.setRemoteDescription(new RTCSessionDescription(message[MessageField.Data]))
         ));
 
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
-        id_: id,
-        pc_: _pc = new RTCPeerConnection({iceServers}),
+        _id: id,
+        _pc: _pc = new RTCPeerConnection({iceServers}),
     };
 
     _pc.onicecandidate = (e) => {
@@ -264,7 +264,7 @@ const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient =>
     _pc.ondatachannel = (e) => {
         console.log("received data-channel on Slave");
         //await new Promise<void>((resolve) => setTimeout(resolve, (1000 + 3000 * Math.random()) | 0));
-        rc.dc_ = e.channel;
+        rc._dc = e.channel;
         setupDataChannel(rc);
     };
 
@@ -276,21 +276,21 @@ const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient =>
 }
 
 const closePeerConnection = (rc?: RemoteClient) => {
-    if (remoteClients.delete(rc?.id_)) {
-        rc.dc_?.close();
-        rc.pc_?.close();
+    if (remoteClients.delete(rc?._id)) {
+        rc._dc?.close();
+        rc._pc?.close();
     }
 }
 
 const connectToRemote = async (rc: RemoteClient): Promise<void> => {
-    rc.pc_.oniceconnectionstatechange = _ => {
-        if ("fd".indexOf(rc.pc_?.iceConnectionState[0]) >= 0) {
+    rc._pc.oniceconnectionstatechange = _ => {
+        if ("fd".indexOf(rc._pc?.iceConnectionState[0]) >= 0) {
             sendOffer(rc, true).catch();
         }
     };
-    console.log("connecting to " + rc.id_);
+    console.log("connecting to " + rc._id);
     await sendOffer(rc);
-    rc.dc_ = rc.pc_.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
+    rc._dc = rc._pc.createDataChannel(0 as any as string, {ordered: false, maxRetransmits: 0});
     setupDataChannel(rc);
     await new Promise<void>((resolve, reject) => {
         let num = 50;
@@ -306,10 +306,10 @@ const connectToRemote = async (rc: RemoteClient): Promise<void> => {
 }
 
 const setupDataChannel = (rc: RemoteClient) => {
-    if (rc.dc_) {
+    if (rc._dc) {
         // TODO: rc.dc_?.
-        rc.dc_.binaryType = "arraybuffer";
-        rc.dc_.onmessage = (msg) => channels_processMessage(rc.id_, msg);
+        rc._dc.binaryType = "arraybuffer";
+        rc._dc.onmessage = (msg) => channels_processMessage(rc._id, msg);
         // TODO: debug
         // channel.onopen = () => console.log("data channel opened");
         // channel.onerror = (e) => console.warn("data channel error", e);
@@ -320,8 +320,8 @@ const requireRemoteClient = (id: ClientID): RemoteClient =>
     getOrCreate(remoteClients, id, newRemoteClient);
 
 export const isPeerConnected = (rc?: RemoteClient): boolean => {
-    const dataChannelState = rc?.dc_?.readyState;
-    const iceConnectionState = rc?.pc_?.iceConnectionState;
+    const dataChannelState = rc?._dc?.readyState;
+    const iceConnectionState = rc?._pc?.iceConnectionState;
     return dataChannelState === "open" &&
         (iceConnectionState == "connected" || iceConnectionState == "completed");
 };

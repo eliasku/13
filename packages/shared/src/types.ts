@@ -55,12 +55,14 @@ export type Request = [
 // number of processed messages
 export type PostMessagesResponse = number;
 
+/* DTO */
 export interface RoomInfo {
     code: string;
     players: number;
     max: number;
 }
 
+/* DTO */
 export interface RoomsInfoResponse {
     rooms: RoomInfo[],
     players: number,
@@ -74,8 +76,8 @@ export const enum GameModeFlag {
 }
 
 export interface NewGameParams {
-    flags: number;
-    playersLimit: number;
-    npcLevel: number;
-    theme: number;
+    _flags: number;
+    _playersLimit: number;
+    _npcLevel: number;
+    _theme: number;
 }

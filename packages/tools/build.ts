@@ -40,7 +40,7 @@ function sz(...files: string[]) {
             }
             opts.minifySyntax = true;
             opts.minify = true;
-            opts.mangleProps = /._$/;
+            opts.mangleProps = /^_[a-z]/;
         }
         opts.define = {
             __VERSION__: `"${buildVersion}"`,

@@ -62,12 +62,12 @@ export let reloadButton = false;
 export let swapButton = false;
 
 export const couldBeReloadedManually = (player: Actor): boolean => {
-    const weapon = weapons[player.weapon_];
-    return weapon && !player.clipReload_ && weapon.clipSize_ && player.clipAmmo_ < weapon.clipSize_;
+    const weapon = weapons[player._weapon];
+    return weapon && !player._clipReload && weapon._clipSize && player._clipAmmo < weapon._clipSize;
 }
 
 export const couldSwapWeaponSlot = (player: Actor): boolean => {
-    return !!player.weapon2_;
+    return !!player._weapon2;
 }
 
 export const updateControls = (player: Actor) => {
@@ -76,12 +76,12 @@ export const updateControls = (player: Actor) => {
 
     const mouse = mousePointer;
 
-    const px = (player.x_) / WORLD_SCALE;
-    const py = (player.y_ - player.z_) / WORLD_SCALE - 10;
+    const px = (player._x) / WORLD_SCALE;
+    const py = (player._y - player._z) / WORLD_SCALE - 10;
 
-    if (mouse.x_ >= 0 && mouse.x_ < W && mouse.y_ >= 0 && mouse.y_ < H) {
-        lookAtX = (mouse.x_ - W / 2) * gameCamera[2] + gameCamera[0];
-        lookAtY = (mouse.y_ - H / 2) * gameCamera[2] + gameCamera[1];
+    if (mouse._x >= 0 && mouse._x < W && mouse._y >= 0 && mouse._y < H) {
+        lookAtX = (mouse._x - W / 2) * gameCamera[2] + gameCamera[0];
+        lookAtY = (mouse._y - H / 2) * gameCamera[2] + gameCamera[1];
         viewX = lookAtX - px;
         viewY = lookAtY - py;
     } else {
@@ -89,7 +89,7 @@ export const updateControls = (player: Actor) => {
         viewY = 0;
     }
 
-    shootButtonDown = (viewX || viewY) && mouse.active_;
+    shootButtonDown = (viewX || viewY) && mouse._active;
 
     moveX = (keyboardState[KeyCode.D] | keyboardState[KeyCode.Right])
         - (keyboardState[KeyCode.A] | keyboardState[KeyCode.Left]);
@@ -111,16 +111,16 @@ export const updateControls = (player: Actor) => {
         const k = gameCamera[2];
         let control = vpad[0];
         let pp = control.pointer_;
-        moveX = pp ? (pp.x_ - pp.startX_) * k : 0;
-        moveY = pp ? (pp.y_ - pp.startY_) * k : 0;
+        moveX = pp ? (pp._x - pp._startX) * k : 0;
+        moveY = pp ? (pp._y - pp._startY) * k : 0;
         let len = hypot(moveX, moveY);
         moveFast = len > control.r1_;
         jumpButtonDown = len > control.r2_;
 
         control = vpad[1];
         pp = control.pointer_;
-        viewX = pp ? (pp.x_ - pp.startX_) * k : 0;
-        viewY = pp ? (pp.y_ - pp.startY_) * k : 0;
+        viewX = pp ? (pp._x - pp._startX) * k : 0;
+        viewY = pp ? (pp._y - pp._startY) * k : 0;
         len = hypot(viewX, viewY);
         lookAtX = px + viewX * 2;
         lookAtY = py + viewY * 2;
@@ -171,8 +171,8 @@ const updateVirtualPad = () => {
         if (!control.pointer_) {
             // capture
             for (const [, p] of inputPointers) {
-                if (p.downEvent_ &&
-                    testZone(control, p.startX_ / W, p.startY_ / H) &&
+                if (p._downEvent &&
+                    testZone(control, p._startX / W, p._startY / H) &&
                     checkPointerIsAvailableForCapturing(p)) {
                     control.pointer_ = p;
                 }
@@ -181,10 +181,10 @@ const updateVirtualPad = () => {
         // if captured
         if (control.pointer_) {
             const p = control.pointer_;
-            let release = !p.active_;
+            let release = !p._active;
             // out-of-zone mode
             if (control.isButton_) {
-                release ||= !testZone(control, p.x_ / W, p.y_ / H);
+                release ||= !testZone(control, p._x / W, p._y / H);
             }
             if (release) {
                 // release
@@ -195,8 +195,8 @@ const updateVirtualPad = () => {
         }
     }
 
-    if (mousePointer.downEvent_) {
-        touchPadActive = [...inputPointers.values()].some(p => p.active_);
+    if (mousePointer._downEvent) {
+        touchPadActive = [...inputPointers.values()].some(p => p._active);
         // [...a.values()].some(p=>p.b);
         // for(let [,p] of a) r|=p.v;
     }
@@ -207,7 +207,7 @@ export const drawVirtualPad = () => {
     if (!touchPadActive) {
         return;
     }
-    const boxTexture = fnt[0].textureBox;
+    const boxTexture = fnt[0]._textureBox;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
     const k = 1 / getScreenScale();
@@ -220,9 +220,9 @@ export const drawVirtualPad = () => {
             let cy = k * (H * control.t_ + h_ / 2);
             const pp = control.pointer_;
             if (!control.isButton_ && pp) {
-                cx = pp.startX_ * k;
-                cy = pp.startY_ * k;
-                drawCircle(boxTexture, pp.x_ * k, pp.y_ * k, 16, segments, 1, 1, 0.5);
+                cx = pp._startX * k;
+                cy = pp._startY * k;
+                drawCircle(boxTexture, pp._x * k, pp._y * k, 16, segments, 1, 1, 0.5);
             }
             if (control.r1_ !== undefined) {
                 drawTextShadowCenter(fnt[0], control.text1, 8, cx, cy - control.r1_ - 4, pp ? 0xFFFFFF : 0x777777);

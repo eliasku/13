@@ -9,42 +9,42 @@ import {GAME_CFG} from "./config";
 import {fnt} from "../graphics/font";
 
 const getPlayerColor = (player: Actor): number => {
-    const config = GAME_CFG.minimap;
-    if (!player.client_) {
-        return config.colors.npc;
-    } else if (player.client_ === clientId) {
-        return config.colors.me;
+    const config = GAME_CFG._minimap;
+    if (!player._client) {
+        return config._colors._npc;
+    } else if (player._client === clientId) {
+        return config._colors._me;
     }
-    return config.colors.player;
+    return config._colors._player;
 }
 
 const drawMiniMapList = (x: number, y: number, actors: Actor[] | undefined, color: number, r: number) => {
     if (actors) {
-        const config = GAME_CFG.minimap;
-        const s = config.markerScale * r / OBJECT_RADIUS;
-        const scale = config.size / WORLD_BOUNDS_SIZE;
+        const config = GAME_CFG._minimap;
+        const s = config._markerScale * r / OBJECT_RADIUS;
+        const scale = config._size / WORLD_BOUNDS_SIZE;
         for (const actor of actors) {
             let c = color;
-            if (actor.type_ === ActorType.Player) {
+            if (actor._type === ActorType.Player) {
                 c = getPlayerColor(actor);
             }
-            draw(fnt[0].textureBox,
-                x + scale * actor.x_,
-                y + scale * actor.y_,
+            draw(fnt[0]._textureBox,
+                x + scale * actor._x,
+                y + scale * actor._y,
                 PI / 4, s, s, 1, c);
         }
     }
 };
 
 export const drawMiniMap = (state: StateData, staticTrees: Actor[], right: number, top: number) => {
-    const config = GAME_CFG.minimap;
-    const size = config.size;
-    const colors = config.colors;
+    const config = GAME_CFG._minimap;
+    const size = config._size;
+    const colors = config._colors;
     const x = right - size - 1;
     const y = top + 1;
-    draw(img[Img.box_lt], x, y, 0, size, size, colors.backgroundAlpha, colors.background);
-    drawMiniMapList(x, y, staticTrees, colors.tree, actorsConfig[ActorType.Tree].radius);
-    drawMiniMapList(x, y, state.actors_[ActorType.Barrel], colors.barrel, actorsConfig[ActorType.Barrel].radius);
-    drawMiniMapList(x, y, state.actors_[ActorType.Item], colors.item, actorsConfig[ActorType.Item].radius);
-    drawMiniMapList(x, y, state.actors_[ActorType.Player], colors.player, actorsConfig[ActorType.Player].radius);
+    draw(img[Img.box_lt], x, y, 0, size, size, colors._backgroundAlpha, colors._background);
+    drawMiniMapList(x, y, staticTrees, colors._tree, actorsConfig[ActorType.Tree]._radius);
+    drawMiniMapList(x, y, state._actors[ActorType.Barrel], colors._barrel, actorsConfig[ActorType.Barrel]._radius);
+    drawMiniMapList(x, y, state._actors[ActorType.Item], colors._item, actorsConfig[ActorType.Item]._radius);
+    drawMiniMapList(x, y, state._actors[ActorType.Player], colors._player, actorsConfig[ActorType.Player]._radius);
 };
