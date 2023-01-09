@@ -107,7 +107,7 @@ const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: Server
             json.rooms.push({
                 code: room._code,
                 players,
-                _max: room._playersLimit,
+                max: room._playersLimit,
             });
         }
         json.players += players;

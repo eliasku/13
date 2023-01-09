@@ -20,13 +20,16 @@ import {generateMapBackground, mapTexture} from "../assets/map";
 import {
     Actor,
     ActorType,
+    BarrelActor, BulletActor,
     Client,
     ClientEvent,
+    ItemActor,
     ItemType,
     newStateData,
     packAngleByte,
     packDirByte,
     Packet,
+    PlayerActor,
     PlayerStat,
     StateData,
     unpackAngleByte,
@@ -174,10 +177,10 @@ let lastAudioTic = 0;
 
 // static state
 let trees: Actor[] = [];
-let playersGrid: Actor[][] = [];
-let barrelsGrid: Actor[][] = [];
+let playersGrid: PlayerActor[][] = [];
+let barrelsGrid: BarrelActor[][] = [];
 let treesGrid: Actor[][] = [];
-let hotUsable: Actor | null = null;
+let hotUsable: ItemActor | null = null;
 
 // dynamic state
 let state: StateData = newStateData();
@@ -199,10 +202,13 @@ let cameraShake = 0;
 let cameraFeedback = 0;
 
 // colors
-const newActorObject = (type: ActorType): Actor =>
+const newActor = (type: ActorType): Actor =>
     ({
         _id: state._nextId++,
+
         _type: type,
+        _subtype: 0,
+
         _x: 0,
         _y: 0,
         _z: 0,
@@ -211,11 +217,9 @@ const newActorObject = (type: ActorType): Actor =>
         _v: 0,
         _w: 0,
 
-        _btn: 0,
         _client: 0,
 
         _s: 0,
-        _detune: 0,
 
         _weapon: 0,
         _anim0: rand(0x100),
@@ -227,15 +231,20 @@ const newActorObject = (type: ActorType): Actor =>
         _clipAmmo: 0,
         _clipReload: 0,
 
-        _clipAmmo2: 0,
-        _weapon2: 0,
-        _trig: 0,
         _fstate: 0,
     });
 
+const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorType.Player), {
+    _input: 0,
+    _trig: 0,
+    _detune: 0,
+    _weapon2: 0,
+    _clipAmmo2: 0,
+});
+
 const createRandomItem = (): Actor => {
-    const item = newActorObject(ActorType.Item);
-    item._btn = rand(6);
+    const item = newActor(ActorType.Item);
+    item._subtype = rand(6);
     item._clipReload = GAME_CFG._items._lifetime;
     pushActor(item);
     return item;
@@ -294,8 +303,8 @@ const recreateMap = (themeIdx: number, seed: number) => {
     treesGrid.length = 0;
     const nextId = state._nextId;
     for (let i = 0; i < GAME_CFG._trees._initCount; ++i) {
-        const tree = newActorObject(ActorType.Tree);
-        tree._btn = theme.treeGfx[rand(theme.treeGfx.length)];
+        const tree = newActor(ActorType.Tree);
+        tree._subtype = theme.treeGfx[rand(theme.treeGfx.length)];
         tree._hp = 0;
         setRandomPosition(tree);
         trees.push(tree);
@@ -305,8 +314,8 @@ const recreateMap = (themeIdx: number, seed: number) => {
     state._nextId = nextId;
 }
 
-const pushActor = (a: Actor) => {
-    state._actors[a._type].push(a);
+const pushActor = <T extends Actor>(a: T) => {
+    (state._actors[a._type as (0 | 1 | 2 | 3)] as T[]).push(a);
 }
 
 function initBarrels() {
@@ -315,15 +324,15 @@ function initBarrels() {
     const weaponChance = GAME_CFG._barrels._dropWeapon._chance;
     const weaponMin = GAME_CFG._barrels._dropWeapon._min;
     for (let i = 0; i < count; ++i) {
-        const actor = newActorObject(ActorType.Barrel);
-        actor._hp = hp[0] + rand(hp[1] - hp[0]);
-        actor._btn = rand(2);
+        const barrel:BarrelActor = newActor(ActorType.Barrel);
+        barrel._hp = hp[0] + rand(hp[1] - hp[0]);
+        barrel._subtype = rand(2);
         // Drop weapon from barrels with 70% chance
         if (rand(100) < weaponChance) {
-            actor._weapon = weaponMin + rand(weapons.length - weaponMin);
+            barrel._weapon = weaponMin + rand(weapons.length - weaponMin);
         }
-        setRandomPosition(actor)
-        pushActor(actor);
+        setRandomPosition(barrel);
+        pushActor(barrel);
     }
 }
 
@@ -342,18 +351,18 @@ export const createSplashState = () => {
     recreateMap(Math.floor(Math.random() * 3), newSeedFromTime());
     for (let i = 0; i < 13; ++i) {
         const k = i / 13;
-        const actor = newActorObject(ActorType.Player);
-        actor._client = 1 + i;
-        actor._hp = 10;
-        actor._mags = 10;
-        actor._sp = 10;
-        setCurrentWeapon(actor, 1 + (i % (weapons.length - 1)));
-        actor._anim0 = i + rand(10) * Img.num_avatars;
-        actor._btn = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
+        const player = newPlayerActor();
+        player._client = 1 + i;
+        player._hp = 10;
+        player._mags = 10;
+        player._sp = 10;
+        setCurrentWeapon(player, 1 + (i % (weapons.length - 1)));
+        player._anim0 = i + rand(10) * Img.num_avatars;
+        player._input = packAngleByte(k, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
         const D = 80 + 20 * sqrt(random());
-        actor._x = (BOUNDS_SIZE / 2 + D * cos(k * PI2)) * WORLD_SCALE;
-        actor._y = (BOUNDS_SIZE / 2 + D * sin(k * PI2) + 10) * WORLD_SCALE;
-        pushActor(actor);
+        player._x = (BOUNDS_SIZE / 2 + D * cos(k * PI2)) * WORLD_SCALE;
+        player._y = (BOUNDS_SIZE / 2 + D * sin(k * PI2) + 10) * WORLD_SCALE;
+        pushActor(player);
     }
     gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
     gameMode.hasPlayer = false;
@@ -497,10 +506,10 @@ const printStatus = () => {
     }
 }
 
-const getMyPlayer = (): Actor | undefined =>
+const getMyPlayer = (): PlayerActor | undefined =>
     clientId ? getPlayerByClient(clientId) : undefined;
 
-const getPlayerByClient = (c: ClientID): Actor | undefined =>
+const getPlayerByClient = (c: ClientID): PlayerActor | undefined =>
     state._actors[ActorType.Player].find(p => p._client == c);
 
 const getLocalEvent = (tic: number, _e?: ClientEvent): ClientEvent => {
@@ -802,7 +811,7 @@ const cleaningUpClients = () => {
 
 /// Game logic
 
-const setCurrentWeapon = (player: Actor, weaponId: number) => {
+const setCurrentWeapon = (player: PlayerActor, weaponId: number) => {
     player._weapon = weaponId;
     const weapon = weapons[weaponId];
     if (weapon) {
@@ -811,19 +820,19 @@ const setCurrentWeapon = (player: Actor, weaponId: number) => {
     }
 }
 
-const dropWeapon1 = (player: Actor) => {
-    const lookAngle = unpackAngleByte(player._btn >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
+const dropWeapon1 = (player: PlayerActor) => {
+    const lookAngle = unpackAngleByte(player._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const lookDirX = cos(lookAngle);
     const lookDirY = sin(lookAngle);
 
-    const item = newActorObject(ActorType.Item);
+    const item:ItemActor = newActor(ActorType.Item);
     pushActor(item);
     copyPosFromActorCenter(item, player);
     addPos(item, lookDirX, lookDirY, 0, OBJECT_RADIUS);
     addVelFrom(item, player);
     addVelocityDir(item, lookDirX, lookDirY, 0, 64);
     // set weapon item
-    item._btn = ItemType.Weapon;
+    item._subtype = ItemType.Weapon;
     item._weapon = player._weapon;
     item._clipAmmo = player._clipAmmo;
     item._mags = 0;
@@ -833,8 +842,8 @@ const dropWeapon1 = (player: Actor) => {
     player._clipAmmo = 0;
 }
 
-const lateUpdateDropButton = (player: Actor) => {
-    if (player._btn & ControlsFlag.Drop) {
+const lateUpdateDropButton = (player: PlayerActor) => {
+    if (player._input & ControlsFlag.Drop) {
         if (!(player._trig & ControlsFlag.DownEvent_Drop)) {
             player._trig |= ControlsFlag.DownEvent_Drop;
             if (player._weapon) {
@@ -849,8 +858,8 @@ const lateUpdateDropButton = (player: Actor) => {
     }
 }
 
-const updateWeaponPickup = (item: Actor, player: Actor) => {
-    if (player._btn & ControlsFlag.Drop) {
+const updateWeaponPickup = (item: Actor, player: PlayerActor) => {
+    if (player._input & ControlsFlag.Drop) {
         if (!(player._trig & ControlsFlag.DownEvent_Drop)) {
             player._trig |= ControlsFlag.DownEvent_Drop;
             if (!player._weapon2) {
@@ -863,17 +872,17 @@ const updateWeaponPickup = (item: Actor, player: Actor) => {
             player._mags = min(10, player._mags + item._mags);
             player._clipAmmo = item._clipAmmo;
             playAt(player, Snd.pick);
-            item._hp = item._btn = 0;
+            item._hp = item._subtype = 0;
         }
     }
 }
 
-const isMyPlayer = (actor: Actor) => clientId && actor._client === clientId && actor._type === ActorType.Player;
+const isMyPlayer = (actor: PlayerActor) => clientId && actor._client === clientId && actor._type === ActorType.Player;
 
-const pickItem = (item: Actor, player: Actor) => {
+const pickItem = (item: ItemActor, player: PlayerActor) => {
     if (testIntersection(item, player)) {
         const withMyPlayer = isMyPlayer(player);
-        if (item._btn & ItemType.Weapon) {
+        if (item._subtype & ItemType.Weapon) {
             if (withMyPlayer && !hotUsable) {
                 hotUsable = item;
             }
@@ -890,42 +899,42 @@ const pickItem = (item: Actor, player: Actor) => {
             }
             updateWeaponPickup(item, player);
         } else {
-            if (item._btn === ItemType.Hp || item._btn === ItemType.Hp2) {
+            if (item._subtype === ItemType.Hp || item._subtype === ItemType.Hp2) {
                 if (player._hp < 10) {
-                    const qty = item._btn === ItemType.Hp2 ? 2 : 1;
+                    const qty = item._subtype === ItemType.Hp2 ? 2 : 1;
                     player._hp = min(10, player._hp + qty);
-                    item._hp = item._btn = 0;
+                    item._hp = item._subtype = 0;
                     playAt(player, Snd.heal);
                     if (withMyPlayer) {
                         addTextParticle(item, `+${qty} hp`);
                     }
                 }
-            } else if (item._btn === ItemType.Credit || item._btn === ItemType.Credit2) {
+            } else if (item._subtype === ItemType.Credit || item._subtype === ItemType.Credit2) {
                 if (player._client) {
                     const stat = requireStats(player._client);
-                    const qty = item._btn === ItemType.Credit2 ? 5 : 1;
+                    const qty = item._subtype === ItemType.Credit2 ? 5 : 1;
                     stat._scores += qty;
-                    item._hp = item._btn = 0;
+                    item._hp = item._subtype = 0;
                     playAt(player, Snd.pick);
                     if (withMyPlayer) {
                         addTextParticle(item, `+${qty} cr`);
                     }
                 }
-            } else if (item._btn === ItemType.Ammo) {
+            } else if (item._subtype === ItemType.Ammo) {
                 if (player._mags < 10) {
                     const qty = 1;
                     player._mags = min(10, player._mags + qty);
-                    item._hp = item._btn = 0;
+                    item._hp = item._subtype = 0;
                     playAt(player, Snd.pick);
                     if (withMyPlayer) {
                         addTextParticle(item, `+${qty} mags`);
                     }
                 }
-            } else if (item._btn === ItemType.Shield) {
+            } else if (item._subtype === ItemType.Shield) {
                 if (player._sp < 10) {
                     const qty = 1;
                     ++player._sp;
-                    item._hp = item._btn = 0;
+                    item._hp = item._subtype = 0;
                     playAt(player, Snd.med);
                     if (withMyPlayer) {
                         addTextParticle(item, `+${qty} sp`);
@@ -975,7 +984,7 @@ const normalizeState = () => {
     }
 }
 
-const checkBulletCollision = (bullet: Actor, actor: Actor) => {
+const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
     if (bullet._hp &&
         bullet._weapon &&
         (bullet._client > 0 ? (bullet._client - actor._client) : (-bullet._client - actor._id)) &&
@@ -992,9 +1001,9 @@ const simulateTic = () => {
             if (cmd._btn !== undefined) {
                 const player = getPlayerByClient(cmd._client);
                 if (player) {
-                    player._btn = cmd._btn;
+                    player._input = cmd._btn;
                 } else if (cmd._btn & ControlsFlag.Spawn) {
-                    const p = newActorObject(ActorType.Player);
+                    const p = newPlayerActor();
                     p._client = cmd._client;
                     setRandomPosition(p);
 
@@ -1005,7 +1014,7 @@ const simulateTic = () => {
                     p._hp = GAME_CFG._player._hp;
                     p._sp = GAME_CFG._player._sp;
                     p._mags = GAME_CFG._player._mags;
-                    p._btn = cmd._btn;
+                    p._input = cmd._btn;
                     setCurrentWeapon(p, 1 + rand(3));
                     pushActor(p);
                 }
@@ -1056,11 +1065,11 @@ const simulateTic = () => {
     }
 
     for (const bullet of state._actors[ActorType.Bullet]) {
-        if (bullet._btn != BulletType.Ray) {
+        if (bullet._subtype != BulletType.Ray) {
             updateBody(bullet, 0, 0);
             if (bullet._hp && collideWithBoundsA(bullet)) {
                 --bullet._hp;
-                addImpactParticles(8, bullet, bullet, bullets[bullet._btn as BulletType]._color);
+                addImpactParticles(8, bullet, bullet, bullets[bullet._subtype as BulletType]._color);
             }
             queryGridCollisions(bullet, playersGrid, checkBulletCollision);
             queryGridCollisions(bullet, barrelsGrid, checkBulletCollision);
@@ -1070,7 +1079,10 @@ const simulateTic = () => {
             bullet._hp = 0;
         }
     }
-    state._actors = state._actors.map(list => list.filter(x => x._hp > 0));
+    state._actors[0] = state._actors[0].filter(x => x._hp > 0);
+    state._actors[1] = state._actors[1].filter(x => x._hp > 0);
+    state._actors[2] = state._actors[2].filter(x => x._hp > 0);
+    state._actors[3] = state._actors[3].filter(x => x._hp > 0);
 
     for (const a of state._actors[ActorType.Player]) {
         a._fstate = 0;
@@ -1101,14 +1113,14 @@ const simulateTic = () => {
         const NPC_PERIOD_MASK = (1 << npcConfig._period) - 1;
         if ((gameTic & NPC_PERIOD_MASK) === 0) {
             let count = 0;
-            for (const actor of state._actors[ActorType.Player]) {
-                if (!actor._client) {
+            for (const player of state._actors[ActorType.Player]) {
+                if (!player._client) {
                     ++count;
                 }
             }
             // while (count < GAME_CFG.npc.max) {
             if (count < npcConfig._max) {
-                const p = newActorObject(ActorType.Player);
+                const p = newPlayerActor();
                 setRandomPosition(p);
                 p._hp = 10;
                 p._mags = 1;
@@ -1120,10 +1132,10 @@ const simulateTic = () => {
     }
 
     if (gameMode.bloodRain) {
-        const source = newActorObject(0);
-        source._x= fxRand(WORLD_BOUNDS_SIZE);
-        source._y= fxRand(WORLD_BOUNDS_SIZE);
-        source._z= fxRand(128) * WORLD_SCALE;
+        const source = newActor(0);
+        source._x = fxRand(WORLD_BOUNDS_SIZE);
+        source._y = fxRand(WORLD_BOUNDS_SIZE);
+        source._z = fxRand(128) * WORLD_SCALE;
         source._type = 0;
         spawnFleshParticles(source, 128, 1);
     }
@@ -1158,6 +1170,7 @@ const castRayBullet = (bullet: Actor, dx: number, dy: number) => {
 const kill = (actor: Actor) => {
     playAt(actor, Snd.death);
     const amount = 1 + rand(3);
+    const player = actor._type == ActorType.Player ? (actor as PlayerActor) : null;
     for (let i = 0; i < amount; ++i) {
         const item = createRandomItem();
         copyPosFromActorCenter(item, actor);
@@ -1167,7 +1180,7 @@ const kill = (actor: Actor) => {
         limitVelocity(item, 64);
         item._animHit = ANIM_HIT_MAX;
         if (actor._weapon) {
-            item._btn = ItemType.Weapon;
+            item._subtype = ItemType.Weapon;
             item._weapon = actor._weapon;
             //item.clipAmmo_ = actor.clipAmmo_;
             const weapon = weapons[actor._weapon];
@@ -1175,25 +1188,25 @@ const kill = (actor: Actor) => {
             item._mags = weapon._clipSize ? 1 : 0;
             item._clipReload = GAME_CFG._items._lifetime;
             actor._weapon = 0;
-        } else if (actor._weapon2) {
-            item._btn = ItemType.Weapon;
-            item._weapon = actor._weapon2;
+        } else if (player?._weapon2) {
+            item._subtype = ItemType.Weapon;
+            item._weapon = player._weapon2;
             //item.clipAmmo_ = actor.clipAmmo2_;
-            const weapon = weapons[actor._weapon2];
+            const weapon = weapons[player._weapon2];
             item._clipAmmo = weapon._clipSize;
             item._mags = weapon._clipSize ? 1 : 0;
             item._clipReload = GAME_CFG._items._lifetime;
-            actor._weapon2 = 0;
+            player._weapon2 = 0;
         }
     }
-    if (actor._type == ActorType.Player) {
-        const grave = newActorObject(ActorType.Barrel);
+    if (player) {
+        const grave = newActor(ActorType.Barrel);
         copyPosFromActorCenter(grave, actor);
         addVelFrom(grave, actor);
         grave._w += 32;
         grave._hp = 15;
         grave._sp = 4;
-        grave._btn = 2;
+        grave._subtype = 2;
         pushActor(grave);
 
         addFleshParticles(256, actor, 128, grave);
@@ -1201,12 +1214,12 @@ const kill = (actor: Actor) => {
     }
 }
 
-const hitWithBullet = (actor: Actor, bullet: Actor) => {
+const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
 
     let absorbed = false;
     addVelFrom(actor, bullet, 0.1);
     actor._animHit = ANIM_HIT_MAX;
-    addImpactParticles(8, bullet, bullet, bullets[bullet._btn as BulletType]._color);
+    addImpactParticles(8, bullet, bullet, bullets[bullet._subtype as BulletType]._color);
     playAt(actor, Snd.hit);
     if (actor._hp) {
         let damage = bullet._weapon;
@@ -1250,7 +1263,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
 
                 const killerID = bullet._client;
                 if (killerID > 0 && !actor._type) {
-                    const stat:PlayerStat = state._stats.get(killerID) ?? {_scores: 0, _frags: 0};
+                    const stat: PlayerStat = state._stats.get(killerID) ?? {_scores: 0, _frags: 0};
                     stat._scores += actor._client > 0 ? 5 : 1;
                     ++stat._frags;
                     state._stats.set(killerID, stat);
@@ -1268,7 +1281,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
             }
         }
     }
-    if (bullet._hp && bullet._btn != BulletType.Ray) {
+    if (bullet._hp && bullet._subtype != BulletType.Ray) {
         // bullet hit or bounced?
         if (absorbed) {
             bullet._hp = 0;
@@ -1291,7 +1304,7 @@ const hitWithBullet = (actor: Actor, bullet: Actor) => {
     }
 }
 
-const swapWeaponSlot = (player: Actor) => {
+const swapWeaponSlot = (player: PlayerActor) => {
     const weapon = player._weapon;
     const ammo = player._clipAmmo;
     player._weapon = player._weapon2;
@@ -1300,7 +1313,7 @@ const swapWeaponSlot = (player: Actor) => {
     player._clipAmmo2 = ammo;
 }
 
-const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
+const needReloadWeaponIfOutOfAmmo = (player: PlayerActor) => {
     if (player._weapon && !player._clipReload) {
         const weapon = weapons[player._weapon];
         if (weapon._clipSize && !player._clipAmmo) {
@@ -1322,17 +1335,17 @@ const needReloadWeaponIfOutOfAmmo = (player: Actor) => {
     }
 }
 
-function calcVelocityWithWeapon(player: Actor, velocity: number): number {
+function calcVelocityWithWeapon(player: PlayerActor, velocity: number): number {
     const k = player._weapon ? weapons[player._weapon]._moveWeightK : 1.0;
     return (velocity * k) | 0;
 }
 
-const updatePlayer = (player: Actor) => {
+const updatePlayer = (player: PlayerActor) => {
     if (gameMode.runAI && (!player._client || gameMode.playersAI)) {
         updateAI(state, player);
     }
     let landed = player._z == 0 && player._w == 0;
-    if (player._btn & ControlsFlag.Jump) {
+    if (player._input & ControlsFlag.Jump) {
         if (landed) {
             player._z = 1;
             player._w = calcVelocityWithWeapon(player, GAME_CFG._player._jumpVel);
@@ -1342,15 +1355,15 @@ const updatePlayer = (player: Actor) => {
         }
     }
     const c = (landed ? 16 : 8) / Const.NetFq;
-    const moveAngle = unpackAngleByte(player._btn >> ControlsFlag.MoveAngleBit, ControlsFlag.MoveAngleMax);
-    const lookAngle = unpackAngleByte(player._btn >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
+    const moveAngle = unpackAngleByte(player._input >> ControlsFlag.MoveAngleBit, ControlsFlag.MoveAngleMax);
+    const lookAngle = unpackAngleByte(player._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const moveDirX = cos(moveAngle);
     const moveDirY = sin(moveAngle);
     const lookDirX = cos(lookAngle);
     const lookDirY = sin(lookAngle);
-    if (player._btn & ControlsFlag.Move) {
+    if (player._input & ControlsFlag.Move) {
         const vel = calcVelocityWithWeapon(player,
-            (player._btn & ControlsFlag.Run) ? GAME_CFG._player._runVel : GAME_CFG._player._walkVel
+            (player._input & ControlsFlag.Run) ? GAME_CFG._player._runVel : GAME_CFG._player._walkVel
         );
         player._u = reach(player._u, vel * moveDirX, vel * c);
         player._v = reach(player._v, vel * moveDirY, vel * c);
@@ -1375,7 +1388,7 @@ const updatePlayer = (player: Actor) => {
         applyGroundFriction(player, 32 * c);
     }
 
-    if (player._btn & ControlsFlag.Swap) {
+    if (player._input & ControlsFlag.Swap) {
         if (!(player._trig & ControlsFlag.DownEvent_Swap)) {
             player._trig |= ControlsFlag.DownEvent_Swap;
             if (player._weapon2) {
@@ -1389,7 +1402,7 @@ const updatePlayer = (player: Actor) => {
     if (player._weapon) {
         const weapon = weapons[player._weapon];
         // Reload button
-        if (player._btn & ControlsFlag.Reload) {
+        if (player._input & ControlsFlag.Reload) {
             if (couldBeReloadedManually(player)) {
                 if (player._mags) {
                     player._clipReload = weapon._clipReload;
@@ -1410,7 +1423,7 @@ const updatePlayer = (player: Actor) => {
                 player._clipAmmo = weapon._clipSize;
             }
         }
-        if (player._btn & ControlsFlag.Fire) {
+        if (player._input & ControlsFlag.Fire) {
             // reload-tics = NetFq / Rate
             player._s = dec1(player._s);
             if (!player._s) {
@@ -1440,14 +1453,14 @@ const updatePlayer = (player: Actor) => {
                         const dx = cos(a);
                         const dy = sin(a);
                         const bulletVelocity = weapon._velocity + weapon._velocityVar * (random() - 0.5);
-                        const bullet = newActorObject(ActorType.Bullet);
+                        const bullet = newActor(ActorType.Bullet);
                         bullet._client = player._client || -player._id;
                         copyPosFromActorCenter(bullet, player);
                         addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon._offset);
                         bullet._z += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
                         addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
                         bullet._weapon = weapon._bulletDamage;
-                        bullet._btn = weapon._bulletType;
+                        bullet._subtype = weapon._bulletType;
                         bullet._hp = weapon._bulletHp;
                         bullet._s = weapon._bulletLifetime;
                         pushActor(bullet);
@@ -1492,7 +1505,12 @@ export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, 
 
 const cloneState = (_state: StateData = state): StateData => ({
     ..._state,
-    _actors: _state._actors.map(list => list.map(a => ({...a}))),
+    _actors: [
+        _state._actors[0].map(a => ({...a})),
+        _state._actors[1].map(a => ({...a})),
+        _state._actors[2].map(a => ({...a})),
+        _state._actors[3].map(a => ({...a})),
+    ],
     _stats: new Map(_state._stats.entries()),
 });
 
@@ -1681,7 +1699,7 @@ const collectVisibleActors = (...lists: Actor[][]) => {
             const x = a._x / WORLD_SCALE;
             const y = a._y / WORLD_SCALE;
             if ((x > l && x < r && y > t && y < b) ||
-                (a._type == ActorType.Bullet && a._btn == BulletType.Ray)) {
+                (a._type == ActorType.Bullet && a._subtype == BulletType.Ray)) {
                 drawList.push(a);
             }
         }
@@ -1689,7 +1707,7 @@ const collectVisibleActors = (...lists: Actor[][]) => {
 }
 
 
-function drawPlayerOpaque(p: Actor): void {
+function drawPlayerOpaque(p: PlayerActor): void {
     const co = getHitColorOffset(p._animHit);
     const basePhase = p._anim0 + lastFrameTs;
     const colorC = GAME_CFG._bodyColor[p._anim0 % GAME_CFG._bodyColor.length];
@@ -1699,7 +1717,7 @@ function drawPlayerOpaque(p: Actor): void {
     const y = p._y / WORLD_SCALE;
     const z = p._z / WORLD_SCALE;
     const speed = hypot(p._u, p._v, p._w);
-    const runK = (p._btn & ControlsFlag.Run) ? 1 : 0.8;
+    const runK = (p._input & ControlsFlag.Run) ? 1 : 0.8;
     const walk = min(1, speed / 100);
     let base = -0.5 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
     const idle_base = (1 - walk) * ((1 + sin(10 * basePhase) ** 2) / 4);
@@ -1710,7 +1728,7 @@ function drawPlayerOpaque(p: Actor): void {
     /////
 
     const wpn = weapons[p._weapon];
-    let viewAngle = unpackAngleByte(p._btn >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
+    let viewAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const weaponBaseAngle = wpn._gfxRot * TO_RAD;
     const weaponBaseScaleX = wpn._gfxSx;
     const weaponBaseScaleY = 1;

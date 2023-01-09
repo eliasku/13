@@ -1,6 +1,6 @@
 import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input";
 import {drawCircle, drawRing, gl} from "../graphics/draw2d";
-import {Actor} from "./types";
+import {PlayerActor} from "./types";
 import {
     PAD_FIRE_RADIUS_0,
     PAD_FIRE_RADIUS_1,
@@ -61,16 +61,16 @@ export let dropButton = false;
 export let reloadButton = false;
 export let swapButton = false;
 
-export const couldBeReloadedManually = (player: Actor): boolean => {
+export const couldBeReloadedManually = (player: PlayerActor): boolean => {
     const weapon = weapons[player._weapon];
     return weapon && !player._clipReload && weapon._clipSize && player._clipAmmo < weapon._clipSize;
 }
 
-export const couldSwapWeaponSlot = (player: Actor): boolean => {
+export const couldSwapWeaponSlot = (player: PlayerActor): boolean => {
     return !!player._weapon2;
 }
 
-export const updateControls = (player: Actor) => {
+export const updateControls = (player: PlayerActor) => {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
 

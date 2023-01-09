@@ -23,7 +23,6 @@ import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
-import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
 
 const enum StartState {
     Loading = 0,

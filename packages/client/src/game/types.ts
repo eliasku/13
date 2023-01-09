@@ -42,23 +42,26 @@ export interface Vel {
     hp: 5,
  */
 export interface Actor extends Pos, Vel {
+    // 0..4
+    _type: ActorType;
     // 32-bit identifier
     _id: number;
+
+    // Player: client ID or NPC ~entityID
+    // Bullet: owner ID
     // 32-bit identifier
     _client: ClientID;
 
-    // 0..4
-    _type: ActorType;
+    // Item: ItemType subtype
+    // Tree: GFX variation
+    // Bullet: BulletType subtype
+    // 4-bit
+    _subtype: number;
 
-    _btn: number;
-
-    // reload time
-    // bullet life-time
+    // Player: reload time
+    // Bullet: life-time
     // 8-bit
     _s: number;
-
-    // detune counter: 0...32 (max of weapon detune-speed parameter)
-    _detune: number;
 
     // Item, Player, Barrel : holding or contains Weapon ID
     // Bullet : Damage value
@@ -95,6 +98,11 @@ export interface Actor extends Pos, Vel {
     // 0...63 (max_weapon_clip_reload)
     // 6 bits
     _clipReload?: number;
+}
+
+export interface PlayerActor extends Actor {
+    // detune counter: 0...32 (max of weapon detune-speed parameter)
+    _detune: number;
 
     // 4 bits
     _weapon2?: number;
@@ -104,6 +112,22 @@ export interface Actor extends Pos, Vel {
 
     // oh... check down trigger 4 bits
     _trig?: number;
+
+    // Input buttons
+    // 32-bit
+    _input: number;
+}
+
+export interface BarrelActor extends Actor {
+
+}
+
+export interface BulletActor extends Actor {
+
+}
+
+export interface ItemActor extends Actor {
+
 }
 
 export interface Client {
@@ -129,6 +153,7 @@ export interface Client {
 
 export interface ClientEvent {
     _tic: number;
+    // TODO: rename to `_input`
     _btn?: number;
     // will be populated from packet info
     _client: ClientID;
@@ -144,7 +169,7 @@ export interface StateData {
     _tic: number;
     _seed: number;
     _mapSeed: number;
-    _actors: Actor[][];
+    _actors: [PlayerActor[], BarrelActor[], BulletActor[], ItemActor[]];
     _stats: Map<ClientID, PlayerStat>;
 }
 

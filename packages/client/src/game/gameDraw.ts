@@ -1,4 +1,4 @@
-import {Actor, ItemType} from "./types";
+import {Actor, BulletActor, ItemType, PlayerActor} from "./types";
 import {WORLD_SCALE} from "../assets/params";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {draw, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d";
@@ -8,7 +8,7 @@ import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orth
 import {weapons} from "./data/weapons";
 import {getLumaColor32} from "../utils/utils";
 import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS} from "./data/world";
-import {Const, GAME_CFG} from "./config";
+import {GAME_CFG} from "./config";
 import {bullets, BulletType} from "./data/bullets";
 import {fxRandElement} from "../utils/rnd";
 import {lastFrameTs} from "./gameState";
@@ -32,7 +32,7 @@ export const drawShadows = (drawList: Actor[]) => {
     }
 }
 
-export const drawCrosshair = (player: Actor | undefined, gameCamera: number[], screenScale: number) => {
+export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: number[], screenScale: number) => {
     if (player && ((viewX | 0) || (viewY | 0))) {
         const img = fnt[0]._textureBoxT1;
         const W = gl.drawingBufferWidth;
@@ -108,8 +108,8 @@ export const getHitColorOffset = (anim: number) =>
 export const drawObjectMesh2D = (p: Actor, id: Img, z: number = 0, scale: number = 1, oy: number = 0.0) =>
     drawMeshSpriteUp(img[id], p._x / WORLD_SCALE, p._y / WORLD_SCALE + oy, p._z / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p._animHit));
 
-export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._btn + Img.barrel0);
-export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._btn + Img.tree0);
+export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.barrel0);
+export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.tree0);
 
 export const drawItemOpaque = (item: Actor) => {
     if (item._clipReload) {
@@ -117,33 +117,33 @@ export const drawItemOpaque = (item: Actor) => {
         if (item._clipReload < limit) {
             const f = 1 - item._clipReload / limit;
             const fr = 1 + 4 * f;
-            if (sin( fr * lastFrameTs) >= 0.5) {
+            if (sin(fr * lastFrameTs) >= 0.5) {
                 return;
             }
         }
     }
-    if (item._btn & ItemType.Weapon) {
+    if (item._subtype & ItemType.Weapon) {
         drawObjectMesh2D(item, Img.weapon0 + item._weapon, 4, 0.8);
         if (item._mags) {
             drawObjectMesh2D(item, Img.item0 + ItemType.Ammo, 8, 0.8, -0.1);
         }
     } else /*if (cat == ItemCategory.Effect)*/ {
         const t = lastFrameTs * 4 + item._anim0 / 25;
-        drawObjectMesh2D(item, Img.item0 + item._btn, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
+        drawObjectMesh2D(item, Img.item0 + item._subtype, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
     }
 }
 
-export const drawBullet = (actor: Actor) => {
-    const x = actor._x / WORLD_SCALE;
-    const y = actor._y / WORLD_SCALE;
-    const z = actor._z / WORLD_SCALE;
-    const a = atan2(actor._v, actor._u);
-    const type = actor._btn as BulletType;
+export const drawBullet = (bullet: BulletActor) => {
+    const x = bullet._x / WORLD_SCALE;
+    const y = bullet._y / WORLD_SCALE;
+    const z = bullet._z / WORLD_SCALE;
+    const a = atan2(bullet._v, bullet._u);
+    const type = bullet._subtype as BulletType;
     const bulletData = bullets[type];
     const color = fxRandElement(bulletData._color);
     const longing = bulletData._length;
     const longing2 = bulletData._lightLength;
-    const sz = bulletData._size + bulletData._pulse * sin(32 * lastFrameTs + actor._anim0) / 2;
+    const sz = bulletData._size + bulletData._pulse * sin(32 * lastFrameTs + bullet._anim0) / 2;
     setDrawZ(z - 0.1);
     drawMeshSprite(img[bulletData._images[0]], x, y, a, sz * longing, sz, 0.1, 0xFFFFFF, 1);
     setDrawZ(z);
@@ -154,7 +154,7 @@ export const drawBullet = (actor: Actor) => {
 
 export const drawHotUsableHint = (hotUsable?: Actor) => {
     if (hotUsable) {
-        if (hotUsable._btn & ItemType.Weapon) {
+        if (hotUsable._subtype & ItemType.Weapon) {
             const weapon = weapons[hotUsable._weapon];
             let text = weapon._name + " " + EMOJI[Img.weapon0 + hotUsable._weapon];
             if (weapon._clipSize) {
