@@ -245,7 +245,7 @@ const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorType.Playe
 const createRandomItem = (): Actor => {
     const item = newActor(ActorType.Item);
     item._subtype = rand(6);
-    item._clipReload = GAME_CFG._items._lifetime;
+    item._s = GAME_CFG._items._lifetime;
     pushActor(item);
     return item;
 }
@@ -836,7 +836,7 @@ const dropWeapon1 = (player: PlayerActor) => {
     item._weapon = player._weapon;
     item._clipAmmo = player._clipAmmo;
     item._mags = 0;
-    item._clipReload = GAME_CFG._items._lifetime;
+    item._s = GAME_CFG._items._lifetime;
     item._animHit = ANIM_HIT_OVER;
     player._weapon = 0;
     player._clipAmmo = 0;
@@ -1045,23 +1045,23 @@ const simulateTic = () => {
     }
 
     hotUsable = null;
-    for (const a of state._actors[ActorType.Item]) {
-        updateActorPhysics(a);
-        if (!a._animHit) {
-            queryGridCollisions(a, playersGrid, pickItem);
+    for (const item of state._actors[ActorType.Item]) {
+        updateActorPhysics(item);
+        if (!item._animHit) {
+            queryGridCollisions(item, playersGrid, pickItem);
         }
-        if (a._hp && a._clipReload) {
-            if ((gameTic % 10) === 0) {
-                --a._clipReload;
-                if (!a._clipReload) {
-                    a._hp = 0;
+        if (item._hp && item._s) {
+            if ((gameTic % 3) === 0) {
+                --item._s;
+                if (!item._s) {
+                    item._hp = 0;
                 }
             }
         }
     }
 
-    for (const a of state._actors[ActorType.Player]) {
-        lateUpdateDropButton(a);
+    for (const player of state._actors[ActorType.Player]) {
+        lateUpdateDropButton(player);
     }
 
     for (const bullet of state._actors[ActorType.Bullet]) {
@@ -1186,7 +1186,7 @@ const kill = (actor: Actor) => {
             const weapon = weapons[actor._weapon];
             item._clipAmmo = weapon._clipSize;
             item._mags = weapon._clipSize ? 1 : 0;
-            item._clipReload = GAME_CFG._items._lifetime;
+            item._s = GAME_CFG._items._lifetime;
             actor._weapon = 0;
         } else if (player?._weapon2) {
             item._subtype = ItemType.Weapon;
@@ -1195,7 +1195,7 @@ const kill = (actor: Actor) => {
             const weapon = weapons[player._weapon2];
             item._clipAmmo = weapon._clipSize;
             item._mags = weapon._clipSize ? 1 : 0;
-            item._clipReload = GAME_CFG._items._lifetime;
+            item._s = GAME_CFG._items._lifetime;
             player._weapon2 = 0;
         }
     }
@@ -1830,16 +1830,16 @@ const drawPlayer = (p: Actor): void => {
 type ActorDrawFunction = (p: Actor) => void;
 const DRAW_BY_TYPE: (ActorDrawFunction)[] = [
     drawPlayer,
-    ,
+    undefined,
     drawBullet,
-    ,
-    ,
+    undefined,
+    undefined,
 ];
 
 const DRAW_OPAQUE_BY_TYPE: (ActorDrawFunction | undefined)[] = [
     drawPlayerOpaque,
     drawBarrelOpaque,
-    ,
+    undefined,
     drawItemOpaque,
     drawTreeOpaque,
 ];

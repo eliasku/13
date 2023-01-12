@@ -1,5 +1,4 @@
 import {parseRGB} from "../utils/utils";
-import {weapons} from "./data/weapons";
 
 export const enum Const {
     NetFq = 60,
@@ -33,10 +32,10 @@ export const GAME_CFG = {
         _max: 16,
     }],
     _items: {
-        // should be < (2 ** 6)
-        // div by 10
-        // (10 * Const.NetFq) / 10 => 60
-        _lifetime: 60,
+        // should be < (2 ** 8)
+        // div by 3
+        // (10 * Const.NetFq) / 3 => 200
+        _lifetime: 200,
     },
     _barrels: {
         _initCount: 32,

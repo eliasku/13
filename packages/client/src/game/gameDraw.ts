@@ -8,7 +8,7 @@ import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orth
 import {weapons} from "./data/weapons";
 import {getLumaColor32} from "../utils/utils";
 import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS} from "./data/world";
-import {GAME_CFG} from "./config";
+import {Const, GAME_CFG} from "./config";
 import {bullets, BulletType} from "./data/bullets";
 import {fxRandElement} from "../utils/rnd";
 import {lastFrameTs} from "./gameState";
@@ -112,12 +112,12 @@ export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subty
 export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.tree0);
 
 export const drawItemOpaque = (item: Actor) => {
-    if (item._clipReload) {
+    if (item._s) {
         const limit = GAME_CFG._items._lifetime >>> 1;
-        if (item._clipReload < limit) {
-            const f = 1 - item._clipReload / limit;
-            const fr = 1 + 4 * f;
-            if (sin(fr * lastFrameTs) >= 0.5) {
+        if (item._s < limit) {
+            const f = 1 - item._s / limit;
+            const fr = 8 + 16 * f;
+            if (sin(fr * (limit - item._s) / (Const.NetFq / 3)) >= 0.5) {
                 return;
             }
         }

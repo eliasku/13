@@ -34,13 +34,6 @@ export interface Vel {
     _w: number;
 }
 
-/* {
-    type: 3,
-    detune: 5,
-    anim-hit: 5
-    weapon: 4,
-    hp: 5,
- */
 export interface Actor extends Pos, Vel {
     // 0..4
     _type: ActorType;
@@ -60,6 +53,7 @@ export interface Actor extends Pos, Vel {
 
     // Player: reload time
     // Bullet: life-time
+    // Item: life-time / 3
     // 8-bit
     _s: number;
 
