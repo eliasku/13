@@ -152,13 +152,13 @@ export const drawBullet = (bullet: BulletActor) => {
     drawMeshSprite(img[bulletData._images[2]], x, y, a, 2 * longing2, 2);
 }
 
-export const drawHotUsableHint = (hotUsable?: Actor) => {
+export const drawHotUsableHint = (hotUsable?: ItemActor) => {
     if (hotUsable) {
         if (hotUsable._subtype & ItemType.Weapon) {
-            const weapon = weapons[hotUsable._weapon];
-            let text = weapon._name + " " + EMOJI[Img.weapon0 + hotUsable._weapon];
+            const weapon = weapons[hotUsable._itemWeapon];
+            let text = weapon._name + " " + EMOJI[Img.weapon0 + hotUsable._itemWeapon];
             if (weapon._clipSize) {
-                text += hotUsable._clipAmmo;
+                text += hotUsable._itemWeaponAmmo;
             }
             const x = hotUsable._x / WORLD_SCALE;
             const y = hotUsable._y / WORLD_SCALE + drawZ;

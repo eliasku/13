@@ -1,4 +1,4 @@
-import {Actor, ActorType, StateData} from "./types";
+import {Actor, ActorType, PlayerActor, StateData} from "./types";
 import {draw} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
 import {WORLD_BOUNDS_SIZE} from "../assets/params";
@@ -8,7 +8,7 @@ import {actorsConfig, OBJECT_RADIUS} from "./data/world";
 import {GAME_CFG} from "./config";
 import {fnt} from "../graphics/font";
 
-const getPlayerColor = (player: Actor): number => {
+const getPlayerColor = (player: PlayerActor): number => {
     const config = GAME_CFG._minimap;
     if (!player._client) {
         return config._colors._npc;
@@ -26,7 +26,7 @@ const drawMiniMapList = (x: number, y: number, actors: Actor[] | undefined, colo
         for (const actor of actors) {
             let c = color;
             if (actor._type === ActorType.Player) {
-                c = getPlayerColor(actor);
+                c = getPlayerColor(actor as PlayerActor);
             }
             draw(fnt[0]._textureBox,
                 x + scale * actor._x,

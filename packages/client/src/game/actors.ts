@@ -1,7 +1,8 @@
-import {Actor, ActorType, ItemActor, ItemType, PlayerActor} from "./types";
+import {Actor, ActorType, BulletActor, ItemActor, ItemType, PlayerActor} from "./types";
 import {rand} from "../utils/rnd";
 import {GAME_CFG} from "./config";
 import {ANIM_HIT_OVER} from "./data/world";
+import {ClientID} from "@eliasku/13-shared/src/types";
 
 export const newActor = (type: ActorType): Actor =>
     ({
@@ -18,11 +19,8 @@ export const newActor = (type: ActorType): Actor =>
         _v: 0,
         _w: 0,
 
-        _client: 0,
-
         _s: 0,
 
-        _weapon: 0,
         _anim0: rand(0x100),
         _animHit: 31,
         _hp: 1,
@@ -32,9 +30,11 @@ export const newActor = (type: ActorType): Actor =>
     });
 
 export const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorType.Player), {
+    _client: 0,
     _input: 0,
     _trig: 0,
     _detune: 0,
+    _weapon: 0,
     _weapon2: 0,
     _clipAmmo: 0,
     _clipAmmo2: 0,
@@ -53,3 +53,9 @@ export const newItemActor = (subtype: number): ItemActor => {
 }
 
 export const itemContainsAmmo = (item:ItemActor) => (item._subtype & ItemType.SubTypeMask) === ItemType.Ammo;
+
+export const newBulletActor = (ownerId: ClientID, subtype: number, damage: number): BulletActor => Object.assign(newActor(ActorType.Bullet), {
+    _ownerId: ownerId,
+    _damage: damage,
+    _subtype: subtype,
+});

@@ -20,10 +20,9 @@ const readActor = (p: Actor, i32: Int32Array, ptr: number): number => {
     const ux = i32[ptr++];
     const vy = i32[ptr++];
     const wz = i32[ptr++];
-    p._weapon = hdr & 15;
-    p._s = (hdr >> 4) & 0xFF;
-    p._anim0 = (hdr >> 12) & 0xFF;
-    p._hp = (hdr >> 20) & 0b1111;
+    p._s = hdr & 0xFF;
+    p._anim0 = (hdr >> 8) & 0xFF;
+    p._hp = (hdr >> 16) & 0b1111;
 
     p._x = ux & 0xFFFF;
     p._y = vy & 0xFFFF;
@@ -36,13 +35,15 @@ const readActor = (p: Actor, i32: Int32Array, ptr: number): number => {
     p._animHit = (wz >> 16) & 31;
 
     p._id = i32[ptr++];
-    p._client = i32[ptr++];
 
     return ptr;
 }
 const readPlayerActor = (list: PlayerActor[], i32: Int32Array, ptr: number): number => {
     const p = {_type: ActorType.Player} as PlayerActor;
     ptr = readActor(p, i32, ptr);
+
+    p._client = i32[ptr++];
+    p._input = i32[ptr++];
 
     const data = i32[ptr++];
     p._detune = data & 31;
@@ -54,8 +55,8 @@ const readPlayerActor = (list: PlayerActor[], i32: Int32Array, ptr: number): num
 
     const data2 = i32[ptr++];
     p._clipAmmo2 = (data2) & 63;
+    p._weapon = (data2 >> 6) & 0b1111;
 
-    p._input = i32[ptr++];
     list.push(p);
     return ptr;
 }
@@ -70,6 +71,9 @@ const readBarrelActor = (list: BarrelActor[], i32: Int32Array, ptr: number): num
 const readBulletActor = (list: BulletActor[], i32: Int32Array, ptr: number): number => {
     const p = {_type: ActorType.Bullet} as BulletActor;
     ptr = readActor(p, i32, ptr);
+    p._ownerId = i32[ptr++];
+    const data = i32[ptr++];
+    p._damage = data & 0b1111;
     list.push(p);
     return ptr;
 }
@@ -170,7 +174,6 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
 
 const validateFieldSize = (p: Actor) => {
     console.assert(p._type >= 0 && p._type < (2 ** 3));
-    console.assert(p._weapon >= 0 && p._weapon < (2 ** 4));
     console.assert(p._s >= 0 && p._s < (2 ** 8));
     console.assert(p._anim0 >= 0 && p._anim0 < (2 ** 8));
     console.assert(p._hp >= 0 && p._hp < (2 ** 4));
@@ -195,12 +198,11 @@ const writeActor = (p: Actor, i32: Int32Array, ptr: number): number => {
     // hp: 5
     // detune: 5
     // animHit: 5
-    i32[ptr++] = p._weapon | (p._s << 4) | (p._anim0 << 12) | (p._hp << 20);
+    i32[ptr++] = p._s | (p._anim0 << 8) | (p._hp << 16);
     i32[ptr++] = (p._u << 21) | (p._sp << 16) | p._x;
     i32[ptr++] = (p._v << 21) | (p._subtype << 16) | p._y;
     i32[ptr++] = (p._w << 21) | (p._animHit << 16) | p._z;
     i32[ptr++] = p._id;
-    i32[ptr++] = p._client;
     return ptr;
 };
 
@@ -215,10 +217,12 @@ const writePlayerActor = (p: PlayerActor, i32: Int32Array, ptr: number): number 
         console.assert(p._clipReload >= 0 && p._clipReload < 2 ** 6);
         console.assert(p._mags >= 0 && p._mags < 2 ** 4);
         console.assert(p._clipAmmo >= 0 && p._clipAmmo < 2 ** 6);
+        console.assert(p._weapon >= 0 && p._weapon < (2 ** 4));
     }
-    i32[ptr++] = p._detune | (p._clipAmmo << 5) | (p._weapon2 << 11) | (p._trig << 15) | (p._clipReload << 19) | (p._mags << 25) | (0 << 29);
-    i32[ptr++] = p._clipAmmo2;
+    i32[ptr++] = p._client;
     i32[ptr++] = p._input;
+    i32[ptr++] = p._detune | (p._clipAmmo << 5) | (p._weapon2 << 11) | (p._trig << 15) | (p._clipReload << 19) | (p._mags << 25) | (0 << 29);
+    i32[ptr++] = p._clipAmmo2 | (p._weapon << 6);
     return ptr;
 };
 
@@ -227,7 +231,13 @@ const writeBarrelActor = (p: BarrelActor, i32: Int32Array, ptr: number): number 
 };
 
 const writeBulletActor = (p: BulletActor, i32: Int32Array, ptr: number): number => {
-    return writeActor(p, i32, ptr);
+    ptr = writeActor(p, i32, ptr);
+    if (process.env.NODE_ENV === "development") {
+        console.assert(p._damage >= 0 && p._damage < (2 ** 4));
+    }
+    i32[ptr++] = p._ownerId;
+    i32[ptr++] = p._damage;
+    return ptr;
 };
 
 const writeItemActor = (p: ItemActor, i32: Int32Array, ptr: number): number => {

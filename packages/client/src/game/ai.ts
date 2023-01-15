@@ -16,8 +16,8 @@ const hasAmmo = (player: PlayerActor) => {
     return false;
 }
 
-const findClosestActor = <T extends Actor>(player: PlayerActor, actors: T[], pred: (item: T) => boolean): T | null => {
-    let minDistActor: T | null = null;
+const findClosestActor = <T extends Actor>(player: PlayerActor, actors: T[], pred: (item: T) => boolean): T | undefined => {
+    let minDistActor: T | undefined;
     let minDistSqr = WORLD_BOUNDS_SIZE * WORLD_BOUNDS_SIZE;
     for (const a of actors) {
         if (pred(a)) {

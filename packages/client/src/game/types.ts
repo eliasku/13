@@ -42,11 +42,6 @@ export interface Actor extends Pos, Vel {
     // 32-bit identifier
     _id: number;
 
-    // Player: client ID or NPC ~entityID
-    // Bullet: owner ID
-    // 32-bit identifier
-    _client: ClientID;
-
     // Item: ItemType subtype
     // Tree: GFX variation
     // Bullet: BulletType subtype
@@ -58,13 +53,6 @@ export interface Actor extends Pos, Vel {
     // Item: life-time / 3
     // 8-bit
     _s: number;
-
-    // Item, Player: holding or contains Weapon ID
-    // Bullet : Damage value
-    // Barrel : -
-    // range: 0...15 currently
-    // 4 bits
-    _weapon?: number;
 
     // all objects HP (0..15)
     // 4 bits
@@ -86,6 +74,10 @@ export interface Actor extends Pos, Vel {
 }
 
 export interface PlayerActor extends Actor {
+    // Player: client ID or NPC ~entityID
+    // 32-bit identifier
+    _client: ClientID;
+
     // Magazines (0..15)
     // 4 bits
     _mags?: number;
@@ -96,6 +88,11 @@ export interface PlayerActor extends Actor {
     // 0...63 (max_weapon_clip_reload)
     // 6 bits
     _clipReload?: number;
+
+    // holding Weapon ID
+    // range: 0...15 currently
+    // 4 bits
+    _weapon?: number;
 
     // 4 bits
     _weapon2?: number;
@@ -120,7 +117,14 @@ export interface BarrelActor extends Actor {
 }
 
 export interface BulletActor extends Actor {
+    // Bullet: owner ID
+    // 32-bit identifier
+    _ownerId: ClientID;
 
+    // damage amount
+    // range: 0...15 currently
+    // 4 bits
+    _damage: number;
 }
 
 export interface ItemActor extends Actor {

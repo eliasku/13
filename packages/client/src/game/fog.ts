@@ -1,4 +1,4 @@
-import {Actor, ActorType} from "./types";
+import {Actor, ActorType, PlayerActor} from "./types";
 import {imgSpotLight} from "../assets/gfx";
 import {
     beginRenderToTexture,
@@ -45,13 +45,12 @@ export const drawFogObjects = (...lists: Actor[][]) => {
             let type = actorsConfig[a._type];
             let r = type._lightRadiusK;
             let alpha = type._light;
-            if(r > 0 && alpha > 0) {
+            if (r > 0 && alpha > 0) {
                 // isMyPlayer
                 if (a._type === ActorType.Player) {
-                    if(clientId && a._client === clientId) {
+                    if (clientId && (a as PlayerActor)._client === clientId) {
                         //r *= 2;
-                    }
-                    else {
+                    } else {
                         r /= 4;
                         // alpha /= 2;
                     }

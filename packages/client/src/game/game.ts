@@ -155,7 +155,7 @@ import {getDevSetting, settings} from "./settings";
 import {bullets, BulletType} from "./data/bullets";
 import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
 import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
-import {itemContainsAmmo, newActor, newItemActor, newPlayerActor} from "./actors";
+import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors";
 
 const clients = new Map<ClientID, Client>()
 
@@ -947,8 +947,8 @@ const normalizeState = () => {
 
 const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
     if (bullet._hp &&
-        bullet._weapon &&
-        (bullet._client > 0 ? (bullet._client - actor._client) : (-bullet._client - actor._id)) &&
+        bullet._damage &&
+        (bullet._ownerId > 0 ? (bullet._ownerId - ((actor as PlayerActor)._client | 0)) : (-bullet._ownerId - actor._id)) &&
         testIntersection(bullet, actor)) {
         hitWithBullet(actor, bullet);
     }
@@ -1109,9 +1109,9 @@ const simulateTic = () => {
     state._tic = gameTic++;
 }
 
-const castRayBullet = (bullet: Actor, dx: number, dy: number) => {
+const castRayBullet = (bullet: BulletActor, dx: number, dy: number) => {
     for (const a of state._actors[ActorType.Player]) {
-        if (a._client - bullet._client &&
+        if (a._client - bullet._ownerId &&
             testRayWithSphere(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
@@ -1140,9 +1140,9 @@ const kill = (actor: Actor) => {
         if (rand(100) < weaponChance) {
             dropWeapon1 = weaponMin + rand(weapons.length - weaponMin);
         }
-    } else if (actor._weapon) {
-        dropWeapon1 = actor._weapon;
-        actor._weapon = 0;
+    } else if (player?._weapon) {
+        dropWeapon1 = player._weapon;
+        player._weapon = 0;
     }
 
     for (let i = 0; i < amount; ++i) {
@@ -1195,7 +1195,7 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
     addImpactParticles(8, bullet, bullet, bullets[bullet._subtype as BulletType]._color);
     playAt(actor, Snd.hit);
     if (actor._hp) {
-        let damage = bullet._weapon;
+        let damage = bullet._damage;
         if (actor._sp > 0) {
             const q = clamp(damage, 0, actor._sp);
             if (q > 0) {
@@ -1228,21 +1228,22 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
             // could be effect if damage is big
             kill(actor);
             if (actor._type === ActorType.Player) {
+                const player = actor as PlayerActor;
                 // reset frags on death
-                const killed = state._stats.get(actor._client);
+                const killed = state._stats.get(player._client);
                 if (killed) {
                     killed._frags = 0;
                 }
 
-                const killerID = bullet._client;
-                if (killerID > 0 && !actor._type) {
+                const killerID = bullet._ownerId;
+                if (killerID > 0) {
                     const stat: PlayerStat = state._stats.get(killerID) ?? {_scores: 0, _frags: 0};
-                    stat._scores += actor._client > 0 ? 5 : 1;
+                    stat._scores += player._client > 0 ? 5 : 1;
                     ++stat._frags;
                     state._stats.set(killerID, stat);
                     if (settings.speech && gameTic > lastAudioTic) {
                         const a = getNameByClientId(killerID);
-                        const b = getNameByClientId(actor._client);
+                        const b = getNameByClientId(player._client);
                         if (a) {
                             let text = fxRandElement(b ? GAME_CFG._voice._killAB : GAME_CFG._voice._killNPC);
                             text = text.replace("{0}", a);
@@ -1426,21 +1427,17 @@ const updatePlayer = (player: PlayerActor) => {
                         const dx = cos(a);
                         const dy = sin(a);
                         const bulletVelocity = weapon._velocity + weapon._velocityVar * (random() - 0.5);
-                        const bullet = newActor(ActorType.Bullet);
-                        bullet._client = player._client || -player._id;
+                        const bullet = newBulletActor(player._client || -player._id, weapon._bulletType, weapon._bulletDamage);
+                        bullet._hp = weapon._bulletHp;
+                        bullet._s = weapon._bulletLifetime;
                         copyPosFromActorCenter(bullet, player);
                         addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon._offset);
                         bullet._z += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
                         addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
-                        bullet._weapon = weapon._bulletDamage;
-                        bullet._subtype = weapon._bulletType;
-                        bullet._hp = weapon._bulletHp;
-                        bullet._s = weapon._bulletLifetime;
                         pushActor(bullet);
-
                         if (weapon._bulletType == BulletType.Ray) {
                             castRayBullet(bullet, dx, dy);
-                            bullet._weapon = 0;
+                            bullet._damage = 0;
                         }
                     }
 
@@ -1784,7 +1781,7 @@ function drawPlayerOpaque(p: PlayerActor): void {
     }
 }
 
-const drawPlayer = (p: Actor): void => {
+const drawPlayer = (p: PlayerActor): void => {
     const x = p._x / WORLD_SCALE;
     const y = p._y / WORLD_SCALE;
 
