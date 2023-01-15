@@ -76,6 +76,9 @@ const readBulletActor = (list: BulletActor[], i32: Int32Array, ptr: number): num
 const readItemActor = (list: ItemActor[], i32: Int32Array, ptr: number): number => {
     const p = {_type: ActorType.Item} as ItemActor;
     ptr = readActor(p, i32, ptr);
+    const data = i32[ptr++];
+    p._itemWeapon = data & 0b1111;
+    p._itemWeaponAmmo = (data >> 4) & 0b111111;
     list.push(p);
     return ptr;
 }
@@ -228,7 +231,13 @@ const writeBulletActor = (p: BulletActor, i32: Int32Array, ptr: number): number 
 };
 
 const writeItemActor = (p: ItemActor, i32: Int32Array, ptr: number): number => {
-    return writeActor(p, i32, ptr);
+    ptr = writeActor(p, i32, ptr);
+    if (process.env.NODE_ENV === "development") {
+        console.assert(p._itemWeapon >= 0 && p._itemWeapon < 2 ** 4, p._itemWeapon);
+        console.assert(p._itemWeaponAmmo >= 0 && p._itemWeaponAmmo < 2 ** 6, p._itemWeaponAmmo);
+    }
+    i32[ptr++] = p._itemWeapon | (p._itemWeaponAmmo << 4);
+    return ptr;
 };
 
 const writeState = (state: StateData | undefined, i32: Int32Array, ptr: number): number => {

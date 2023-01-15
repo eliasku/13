@@ -20,6 +20,8 @@ export const enum ItemType {
     Ammo = 5,
     // FLAG
     Weapon = 8,
+
+    SubTypeMask = 7,
 }
 
 export interface Pos {
@@ -122,8 +124,12 @@ export interface BulletActor extends Actor {
 }
 
 export interface ItemActor extends Actor {
-    // _itemWeapon: number;
-    // _itemWeaponAmmo: number;
+    // range: 0...15 currently
+    // 4 bits
+    _itemWeapon: number;
+    // 0...63 (max_weapon_clip_size)
+    // 6 bits
+    _itemWeaponAmmo: number;
 }
 
 export interface Client {

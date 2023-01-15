@@ -118,7 +118,6 @@ import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {
     actorsConfig,
     ANIM_HIT_MAX,
-    ANIM_HIT_OVER,
     BULLET_RADIUS,
     OBJECT_RADIUS,
     PLAYER_HANDS_PX_Z,
@@ -156,6 +155,7 @@ import {getDevSetting, settings} from "./settings";
 import {bullets, BulletType} from "./data/bullets";
 import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
 import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
+import {itemContainsAmmo, newActor, newItemActor, newPlayerActor} from "./actors";
 
 const clients = new Map<ClientID, Client>()
 
@@ -202,59 +202,13 @@ let cameraShake = 0;
 // 0...5
 let cameraFeedback = 0;
 
-// colors
-const newActor = (type: ActorType): Actor =>
-    ({
-        _id: state._nextId++,
-
-        _type: type,
-        _subtype: 0,
-
-        _x: 0,
-        _y: 0,
-        _z: 0,
-
-        _u: 0,
-        _v: 0,
-        _w: 0,
-
-        _client: 0,
-
-        _s: 0,
-
-        _weapon: 0,
-        _anim0: rand(0x100),
-        _animHit: 31,
-        _hp: 1,
-        _sp: 0,
-        _mags: 0,
-
-        _clipAmmo: 0,
-
-        _fstate: 0,
-    });
-
-const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorType.Player), {
-    _input: 0,
-    _trig: 0,
-    _detune: 0,
-    _weapon2: 0,
-    _clipAmmo2: 0,
-    _clipReload: 0,
-});
-
 const createItemActor = (subtype: number): ItemActor => {
-    const item = newActor(ActorType.Item) as ItemActor;
-    item._subtype = subtype;
-    item._s = GAME_CFG._items._lifetime;
-    item._animHit = ANIM_HIT_OVER;
+    const item = newItemActor(subtype);
     pushActor(item);
     return item;
-}
+};
 
-const createRandomItem = (): Actor => {
-    return createItemActor(rand(6));
-}
+const createRandomItem = (): ItemActor => createItemActor(rand(6));
 
 const requireClient = (id: ClientID): Client => getOrCreate(clients, id, () => ({
     _id: id,
@@ -325,6 +279,7 @@ const pushActor = <T extends Actor>(a: T) => {
     if (process.env.NODE_ENV === "development") {
         console.assert(list && list.indexOf(a) < 0);
     }
+    a._id = state._nextId++;
     list.push(a);
 }
 
@@ -835,9 +790,8 @@ const dropWeapon1 = (player: PlayerActor) => {
     addVelFrom(item, player);
     addVelocityDir(item, lookDirX, lookDirY, 0, 64);
     // set weapon item
-    item._weapon = player._weapon;
-    item._clipAmmo = player._clipAmmo;
-    item._mags = 0;
+    item._itemWeapon = player._weapon;
+    item._itemWeaponAmmo = player._clipAmmo;
     player._weapon = 0;
     player._clipAmmo = 0;
 }
@@ -858,7 +812,7 @@ const lateUpdateDropButton = (player: PlayerActor) => {
     }
 }
 
-const updateWeaponPickup = (item: Actor, player: PlayerActor) => {
+const updateWeaponPickup = (item: ItemActor, player: PlayerActor) => {
     if (player._input & ControlsFlag.Drop) {
         if (!(player._trig & ControlsFlag.DownEvent_Drop)) {
             player._trig |= ControlsFlag.DownEvent_Drop;
@@ -868,9 +822,12 @@ const updateWeaponPickup = (item: Actor, player: PlayerActor) => {
                 // if 2 slot occupied - replace 1-st weapon
                 dropWeapon1(player);
             }
-            setCurrentWeapon(player, item._weapon);
-            player._mags = min(10, player._mags + item._mags);
-            player._clipAmmo = item._clipAmmo;
+            setCurrentWeapon(player, item._itemWeapon);
+            if (item._subtype & ItemType.Ammo) {
+                const itemMags = 1;
+                player._mags = min(10, player._mags + itemMags);
+            }
+            player._clipAmmo = item._itemWeaponAmmo;
             playAt(player, Snd.pick);
             item._hp = item._subtype = 0;
         }
@@ -887,11 +844,15 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
                 hotUsable = item;
             }
             // suck in mags
-            if (item._mags && player._mags < 10) {
+            if (itemContainsAmmo(item) && player._mags < 10) {
+                const itemMags = 1;
                 const freeQty = 10 - player._mags;
-                const qty = clamp(0, item._mags, freeQty);
-                item._mags -= qty;
+                const qty = clamp(0, itemMags, freeQty);
                 player._mags = min(10, player._mags + qty);
+
+                // clear Ammo bits
+                item._subtype = ItemType.Weapon;
+
                 playAt(player, Snd.pick);
                 if (withMyPlayer) {
                     addTextParticle(item, `+${qty} mags`);
@@ -1193,17 +1154,21 @@ const kill = (actor: Actor) => {
         limitVelocity(item, 64);
         if (dropWeapon1) {
             item._subtype = ItemType.Weapon;
-            item._weapon = dropWeapon1;
+            item._itemWeapon = dropWeapon1;
             const weapon = weapons[dropWeapon1];
-            item._clipAmmo = weapon._clipSize;
-            item._mags = weapon._clipSize ? 1 : 0;
+            item._itemWeaponAmmo = weapon._clipSize;
+            if (weapon._clipSize) {
+                item._subtype |= ItemType.Ammo;
+            }
             dropWeapon1 = 0;
         } else if (player?._weapon2) {
             item._subtype = ItemType.Weapon;
-            item._weapon = player._weapon2;
+            item._itemWeapon = player._weapon2;
             const weapon = weapons[player._weapon2];
-            item._clipAmmo = weapon._clipSize;
-            item._mags = weapon._clipSize ? 1 : 0;
+            item._itemWeaponAmmo = weapon._clipSize;
+            if (weapon._clipSize) {
+                item._subtype |= ItemType.Ammo;
+            }
             player._weapon2 = 0;
         }
     }

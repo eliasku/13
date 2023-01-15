@@ -1,4 +1,4 @@
-import {Actor, BulletActor, ItemType, PlayerActor} from "./types";
+import {Actor, BulletActor, ItemActor, ItemType, PlayerActor} from "./types";
 import {WORLD_SCALE} from "../assets/params";
 import {EMOJI, img, Img} from "../assets/gfx";
 import {draw, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d";
@@ -111,7 +111,7 @@ export const drawObjectMesh2D = (p: Actor, id: Img, z: number = 0, scale: number
 export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.barrel0);
 export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.tree0);
 
-export const drawItemOpaque = (item: Actor) => {
+export const drawItemOpaque = (item: ItemActor) => {
     if (item._s) {
         const limit = GAME_CFG._items._lifetime >>> 1;
         if (item._s < limit) {
@@ -123,8 +123,8 @@ export const drawItemOpaque = (item: Actor) => {
         }
     }
     if (item._subtype & ItemType.Weapon) {
-        drawObjectMesh2D(item, Img.weapon0 + item._weapon, 4, 0.8);
-        if (item._mags) {
+        drawObjectMesh2D(item, Img.weapon0 + item._itemWeapon, 4, 0.8);
+        if (item._subtype & ItemType.Ammo) {
             drawObjectMesh2D(item, Img.item0 + ItemType.Ammo, 8, 0.8, -0.1);
         }
     } else /*if (cat == ItemCategory.Effect)*/ {

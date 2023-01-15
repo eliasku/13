@@ -6,6 +6,7 @@ import {weapons} from "./data/weapons";
 import {sqrDistXY} from "./phy";
 import {WORLD_BOUNDS_SIZE} from "../assets/params";
 import {actorsConfig} from "./data/world";
+import {itemContainsAmmo} from "./actors";
 
 const hasAmmo = (player: PlayerActor) => {
     if (player._weapon) {
@@ -84,8 +85,7 @@ export const updateAI = (state: StateData, player: PlayerActor) => {
 
             } else {
                 const items = state._actors[ActorType.Item];
-                const target = findClosestActor(player, items, (a) =>
-                    a._subtype === ItemType.Ammo || a._mags > 0);
+                const target = findClosestActor(player, items, itemContainsAmmo);
                 if (target) {
                     let dx = target._x - player._x;
                     let dy = target._y - player._y;
