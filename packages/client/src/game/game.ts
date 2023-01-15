@@ -20,7 +20,8 @@ import {generateMapBackground, mapTexture} from "../assets/map";
 import {
     Actor,
     ActorType,
-    BarrelActor, BulletActor,
+    BarrelActor,
+    BulletActor,
     Client,
     ClientEvent,
     ItemActor,
@@ -229,7 +230,6 @@ const newActor = (type: ActorType): Actor =>
         _mags: 0,
 
         _clipAmmo: 0,
-        _clipReload: 0,
 
         _fstate: 0,
     });
@@ -240,14 +240,20 @@ const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorType.Playe
     _detune: 0,
     _weapon2: 0,
     _clipAmmo2: 0,
+    _clipReload: 0,
 });
 
-const createRandomItem = (): Actor => {
-    const item = newActor(ActorType.Item);
-    item._subtype = rand(6);
+const createItemActor = (subtype: number): ItemActor => {
+    const item = newActor(ActorType.Item) as ItemActor;
+    item._subtype = subtype;
     item._s = GAME_CFG._items._lifetime;
+    item._animHit = ANIM_HIT_OVER;
     pushActor(item);
     return item;
+}
+
+const createRandomItem = (): Actor => {
+    return createItemActor(rand(6));
 }
 
 const requireClient = (id: ClientID): Client => getOrCreate(clients, id, () => ({
@@ -315,22 +321,20 @@ const recreateMap = (themeIdx: number, seed: number) => {
 }
 
 const pushActor = <T extends Actor>(a: T) => {
-    (state._actors[a._type as (0 | 1 | 2 | 3)] as T[]).push(a);
+    const list = state._actors[a._type as (0 | 1 | 2 | 3)] as T[];
+    if (process.env.NODE_ENV === "development") {
+        console.assert(list && list.indexOf(a) < 0);
+    }
+    list.push(a);
 }
 
 function initBarrels() {
     const count = GAME_CFG._barrels._initCount;
     const hp = GAME_CFG._barrels._hp;
-    const weaponChance = GAME_CFG._barrels._dropWeapon._chance;
-    const weaponMin = GAME_CFG._barrels._dropWeapon._min;
     for (let i = 0; i < count; ++i) {
-        const barrel:BarrelActor = newActor(ActorType.Barrel);
+        const barrel: BarrelActor = newActor(ActorType.Barrel);
         barrel._hp = hp[0] + rand(hp[1] - hp[0]);
         barrel._subtype = rand(2);
-        // Drop weapon from barrels with 70% chance
-        if (rand(100) < weaponChance) {
-            barrel._weapon = weaponMin + rand(weapons.length - weaponMin);
-        }
         setRandomPosition(barrel);
         pushActor(barrel);
     }
@@ -825,19 +829,15 @@ const dropWeapon1 = (player: PlayerActor) => {
     const lookDirX = cos(lookAngle);
     const lookDirY = sin(lookAngle);
 
-    const item:ItemActor = newActor(ActorType.Item);
-    pushActor(item);
+    const item = createItemActor(ItemType.Weapon);
     copyPosFromActorCenter(item, player);
     addPos(item, lookDirX, lookDirY, 0, OBJECT_RADIUS);
     addVelFrom(item, player);
     addVelocityDir(item, lookDirX, lookDirY, 0, 64);
     // set weapon item
-    item._subtype = ItemType.Weapon;
     item._weapon = player._weapon;
     item._clipAmmo = player._clipAmmo;
     item._mags = 0;
-    item._s = GAME_CFG._items._lifetime;
-    item._animHit = ANIM_HIT_OVER;
     player._weapon = 0;
     player._clipAmmo = 0;
 }
@@ -1171,6 +1171,19 @@ const kill = (actor: Actor) => {
     playAt(actor, Snd.death);
     const amount = 1 + rand(3);
     const player = actor._type == ActorType.Player ? (actor as PlayerActor) : null;
+
+    let dropWeapon1 = 0;
+    if (actor._type === ActorType.Barrel && actor._subtype < 2) {
+        const weaponChance = GAME_CFG._barrels._dropWeapon._chance;
+        const weaponMin = GAME_CFG._barrels._dropWeapon._min;
+        if (rand(100) < weaponChance) {
+            dropWeapon1 = weaponMin + rand(weapons.length - weaponMin);
+        }
+    } else if (actor._weapon) {
+        dropWeapon1 = actor._weapon;
+        actor._weapon = 0;
+    }
+
     for (let i = 0; i < amount; ++i) {
         const item = createRandomItem();
         copyPosFromActorCenter(item, actor);
@@ -1178,24 +1191,19 @@ const kill = (actor: Actor) => {
         const v = 16 + 48 * sqrt(random());
         addRadialVelocity(item, random(PI2), v, v);
         limitVelocity(item, 64);
-        item._animHit = ANIM_HIT_MAX;
-        if (actor._weapon) {
+        if (dropWeapon1) {
             item._subtype = ItemType.Weapon;
-            item._weapon = actor._weapon;
-            //item.clipAmmo_ = actor.clipAmmo_;
-            const weapon = weapons[actor._weapon];
+            item._weapon = dropWeapon1;
+            const weapon = weapons[dropWeapon1];
             item._clipAmmo = weapon._clipSize;
             item._mags = weapon._clipSize ? 1 : 0;
-            item._s = GAME_CFG._items._lifetime;
-            actor._weapon = 0;
+            dropWeapon1 = 0;
         } else if (player?._weapon2) {
             item._subtype = ItemType.Weapon;
             item._weapon = player._weapon2;
-            //item.clipAmmo_ = actor.clipAmmo2_;
             const weapon = weapons[player._weapon2];
             item._clipAmmo = weapon._clipSize;
             item._mags = weapon._clipSize ? 1 : 0;
-            item._s = GAME_CFG._items._lifetime;
             player._weapon2 = 0;
         }
     }

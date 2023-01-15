@@ -57,8 +57,9 @@ export interface Actor extends Pos, Vel {
     // 8-bit
     _s: number;
 
-    // Item, Player, Barrel : holding or contains Weapon ID
+    // Item, Player: holding or contains Weapon ID
     // Bullet : Damage value
+    // Barrel : -
     // range: 0...15 currently
     // 4 bits
     _weapon?: number;
@@ -88,15 +89,15 @@ export interface Actor extends Pos, Vel {
     // 0...63 (max_weapon_clip_size)
     // 6 bits
     _clipAmmo?: number;
-
-    // 0...63 (max_weapon_clip_reload)
-    // 6 bits
-    _clipReload?: number;
 }
 
 export interface PlayerActor extends Actor {
     // detune counter: 0...32 (max of weapon detune-speed parameter)
     _detune: number;
+
+    // 0...63 (max_weapon_clip_reload)
+    // 6 bits
+    _clipReload?: number;
 
     // 4 bits
     _weapon2?: number;
@@ -121,7 +122,8 @@ export interface BulletActor extends Actor {
 }
 
 export interface ItemActor extends Actor {
-
+    // _itemWeapon: number;
+    // _itemWeaponAmmo: number;
 }
 
 export interface Client {
