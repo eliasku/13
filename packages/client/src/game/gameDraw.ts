@@ -67,7 +67,7 @@ export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: numbe
             }
         }
 
-        const len = 4 + sin(2 * t) * cos(4 * t) / 4 + (player._detune / 8) + player._s / 10;
+        const len = 4 + sin(2 * t) * cos(4 * t) / 4 + (player._detune / 8) + player._lifetime / 10;
         for (let i = 0; i < 4; ++i) {
             draw(img, x, y, t / 10 + i * PI / 2, 2, len);
         }
@@ -112,12 +112,12 @@ export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subty
 export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.tree0);
 
 export const drawItemOpaque = (item: ItemActor) => {
-    if (item._s) {
+    if (item._lifetime) {
         const limit = GAME_CFG._items._lifetime >>> 1;
-        if (item._s < limit) {
-            const f = 1 - item._s / limit;
+        if (item._lifetime < limit) {
+            const f = 1 - item._lifetime / limit;
             const fr = 8 + 16 * f;
-            if (sin(fr * (limit - item._s) / (Const.NetFq / 3)) >= 0.5) {
+            if (sin(fr * (limit - item._lifetime) / (Const.NetFq / 3)) >= 0.5) {
                 return;
             }
         }

@@ -16,26 +16,27 @@ import {ClientID} from "../../../shared/src/types";
 const DEBUG_SIGN = 0xdeb51a1e;
 
 const readActor = (p: Actor, i32: Int32Array, ptr: number): number => {
-    const hdr = i32[ptr++];
-    const ux = i32[ptr++];
-    const vy = i32[ptr++];
-    const wz = i32[ptr++];
-    p._s = hdr & 0xFF;
-    p._anim0 = (hdr >> 8) & 0xFF;
-    p._hp = (hdr >> 16) & 0b1111;
-
-    p._x = ux & 0xFFFF;
-    p._y = vy & 0xFFFF;
-    p._z = wz & 0xFFFF;
-    p._u = ux >> 21;
-    p._v = vy >> 21;
-    p._w = wz >> 21;
-    p._sp = (ux >> 16) & 0b1111;
-    p._subtype = (vy >> 16) & 0b1111;
-    p._animHit = (wz >> 16) & 31;
-
     p._id = i32[ptr++];
-
+    {
+        const ux = i32[ptr++];
+        const vy = i32[ptr++];
+        const wz = i32[ptr++];
+        p._x = ux & 0xFFFF;
+        p._y = vy & 0xFFFF;
+        p._z = wz & 0xFFFF;
+        p._u = ux >> 21;
+        p._v = vy >> 21;
+        p._w = wz >> 21;
+        p._sp = (ux >> 16) & 0b1111;
+        p._subtype = (vy >> 16) & 0b1111;
+        p._animHit = (wz >> 16) & 31;
+    }
+    {
+        const hdr = i32[ptr++];
+        p._lifetime = hdr & 0xFF;
+        p._anim0 = (hdr >> 8) & 0xFF;
+        p._hp = (hdr >> 16) & 0b1111;
+    }
     return ptr;
 }
 const readPlayerActor = (list: PlayerActor[], i32: Int32Array, ptr: number): number => {
@@ -174,7 +175,7 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
 
 const validateFieldSize = (p: Actor) => {
     console.assert(p._type >= 0 && p._type < (2 ** 3));
-    console.assert(p._s >= 0 && p._s < (2 ** 8));
+    console.assert(p._lifetime >= 0 && p._lifetime < (2 ** 8));
     console.assert(p._anim0 >= 0 && p._anim0 < (2 ** 8));
     console.assert(p._hp >= 0 && p._hp < (2 ** 4));
 
@@ -198,11 +199,11 @@ const writeActor = (p: Actor, i32: Int32Array, ptr: number): number => {
     // hp: 5
     // detune: 5
     // animHit: 5
-    i32[ptr++] = p._s | (p._anim0 << 8) | (p._hp << 16);
+    i32[ptr++] = p._id;
     i32[ptr++] = (p._u << 21) | (p._sp << 16) | p._x;
     i32[ptr++] = (p._v << 21) | (p._subtype << 16) | p._y;
     i32[ptr++] = (p._w << 21) | (p._animHit << 16) | p._z;
-    i32[ptr++] = p._id;
+    i32[ptr++] = p._lifetime | (p._anim0 << 8) | (p._hp << 16);
     return ptr;
 };
 

@@ -992,7 +992,7 @@ const simulateTic = () => {
     for (const a of state._actors[ActorType.Player]) {
         updatePlayer(a);
         addToGrid(playersGrid, a);
-        a._fstate = 1;
+        a._localStateFlags = 1;
     }
 
     if (process.env.NODE_ENV === "development") {
@@ -1002,7 +1002,7 @@ const simulateTic = () => {
     for (const a of state._actors[ActorType.Barrel]) {
         updateActorPhysics(a);
         addToGrid(barrelsGrid, a);
-        a._fstate = 1;
+        a._localStateFlags = 1;
     }
 
     hotUsable = null;
@@ -1011,10 +1011,10 @@ const simulateTic = () => {
         if (!item._animHit) {
             queryGridCollisions(item, playersGrid, pickItem);
         }
-        if (item._hp && item._s) {
+        if (item._hp && item._lifetime) {
             if ((gameTic % 3) === 0) {
-                --item._s;
-                if (!item._s) {
+                --item._lifetime;
+                if (!item._lifetime) {
                     item._hp = 0;
                 }
             }
@@ -1036,7 +1036,7 @@ const simulateTic = () => {
             queryGridCollisions(bullet, barrelsGrid, checkBulletCollision);
             queryGridCollisions(bullet, treesGrid, checkBulletCollision);
         }
-        if (bullet._s && !--bullet._s) {
+        if (bullet._lifetime && !--bullet._lifetime) {
             bullet._hp = 0;
         }
     }
@@ -1046,13 +1046,13 @@ const simulateTic = () => {
     state._actors[3] = state._actors[3].filter(x => x._hp > 0);
 
     for (const a of state._actors[ActorType.Player]) {
-        a._fstate = 0;
+        a._localStateFlags = 0;
         queryGridCollisions(a, treesGrid, checkBodyCollision);
         queryGridCollisions(a, barrelsGrid, checkBodyCollision);
         queryGridCollisions(a, playersGrid, checkBodyCollision, 0);
     }
     for (const a of state._actors[ActorType.Barrel]) {
-        a._fstate = 0;
+        a._localStateFlags = 0;
         queryGridCollisions(a, treesGrid, checkBodyCollision);
         queryGridCollisions(a, barrelsGrid, checkBodyCollision, 0);
     }
@@ -1303,7 +1303,7 @@ const needReloadWeaponIfOutOfAmmo = (player: PlayerActor) => {
                 if (isMyPlayer(player) && !(player._trig & ControlsFlag.DownEvent_Fire)) {
                     addTextParticle(player, "EMPTY!");
                 }
-                player._s = weapon._reloadTime;
+                player._lifetime = weapon._reloadTime;
             }
         }
     }
@@ -1399,8 +1399,8 @@ const updatePlayer = (player: PlayerActor) => {
         }
         if (player._input & ControlsFlag.Fire) {
             // reload-tics = NetFq / Rate
-            player._s = dec1(player._s);
-            if (!player._s) {
+            player._lifetime = dec1(player._lifetime);
+            if (!player._lifetime) {
                 needReloadWeaponIfOutOfAmmo(player);
                 const loaded = !weapon._clipSize || (!player._clipReload && player._clipAmmo);
                 if (loaded) {
@@ -1414,7 +1414,7 @@ const updatePlayer = (player: PlayerActor) => {
                         cameraShake = max(weapon._cameraShake, cameraShake);
                         cameraFeedback = 5;
                     }
-                    player._s = weapon._reloadTime;
+                    player._lifetime = weapon._reloadTime;
                     player._detune = reach(player._detune, weapon._detuneSpeed, 1);
                     if (player._z <= 0) {
                         addVelocityDir(player, lookDirX, lookDirY, -1, -weapon._kickBack);
@@ -1429,7 +1429,7 @@ const updatePlayer = (player: PlayerActor) => {
                         const bulletVelocity = weapon._velocity + weapon._velocityVar * (random() - 0.5);
                         const bullet = newBulletActor(player._client || -player._id, weapon._bulletType, weapon._bulletDamage);
                         bullet._hp = weapon._bulletHp;
-                        bullet._s = weapon._bulletLifetime;
+                        bullet._lifetime = weapon._bulletLifetime;
                         copyPosFromActorCenter(bullet, player);
                         addPos(bullet, dx, dy, 0, WORLD_SCALE * weapon._offset);
                         bullet._z += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
@@ -1450,7 +1450,7 @@ const updatePlayer = (player: PlayerActor) => {
         } else {
             player._trig &= ~ControlsFlag.DownEvent_Fire;
             player._detune = (player._detune / 3) | 0;
-            player._s = reach(player._s, weapon._launchTime, weapon._relaunchSpeed);
+            player._lifetime = reach(player._lifetime, weapon._launchTime, weapon._relaunchSpeed);
         }
     }
 
@@ -1725,7 +1725,7 @@ function drawPlayerOpaque(p: PlayerActor): void {
     if (wpn._handsAnim) {
         // const t = max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
-        const t = min(1, wpn._launchTime > 0 ? (p._s / wpn._launchTime) : max(0, (p._s / wpn._reloadTime - 0.5) * 2));
+        const t = min(1, wpn._launchTime > 0 ? (p._lifetime / wpn._launchTime) : max(0, (p._lifetime / wpn._reloadTime - 0.5) * 2));
         wd += sin(t * PI) * wpn._handsAnim;
         weaponAngle -= -wx * PI * 0.25 * sin((1 - (1 - t) ** 2) * PI2);
     }

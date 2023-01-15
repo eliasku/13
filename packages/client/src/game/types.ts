@@ -52,7 +52,7 @@ export interface Actor extends Pos, Vel {
     // Bullet: life-time
     // Item: life-time / 3
     // 8-bit
-    _s: number;
+    _lifetime: number;
 
     // all objects HP (0..15)
     // 4 bits
@@ -70,7 +70,7 @@ export interface Actor extends Pos, Vel {
     _animHit?: number;
 
     // local frame-scope state
-    _fstate?: number;
+    _localStateFlags?: number;
 }
 
 export interface PlayerActor extends Actor {

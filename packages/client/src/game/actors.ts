@@ -19,14 +19,14 @@ export const newActor = (type: ActorType): Actor =>
         _v: 0,
         _w: 0,
 
-        _s: 0,
+        _lifetime: 0,
 
         _anim0: rand(0x100),
         _animHit: 31,
         _hp: 1,
         _sp: 0,
 
-        _fstate: 0,
+        _localStateFlags: 0,
     });
 
 export const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorType.Player), {
@@ -45,7 +45,7 @@ export const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorTyp
 export const newItemActor = (subtype: number): ItemActor => {
     const item = newActor(ActorType.Item) as ItemActor;
     item._subtype = subtype;
-    item._s = GAME_CFG._items._lifetime;
+    item._lifetime = GAME_CFG._items._lifetime;
     item._animHit = ANIM_HIT_OVER;
     item._itemWeapon = 0;
     item._itemWeaponAmmo = 0;

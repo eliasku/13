@@ -26,7 +26,7 @@ export const queryGridCollisions = (actor: Actor, grid: Actor[][], callback: (a:
         const cell = grid[h + NEIGHBOURS[i]];
         if (cell) {
             for (const b of cell) {
-                if ((b._fstate | disableMask) & 1) {
+                if ((b._localStateFlags | disableMask) & 1) {
                     callback(actor, b);
                 }
             }
