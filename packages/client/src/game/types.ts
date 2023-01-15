@@ -174,7 +174,6 @@ export interface StateData {
     _nextId: number;
     _tic: number;
     _seed: number;
-    _mapSeed: number;
     _actors: [PlayerActor[], BarrelActor[], BulletActor[], ItemActor[]];
     _stats: Map<ClientID, PlayerStat>;
 }
@@ -183,7 +182,6 @@ export const newStateData = (): StateData => ({
     _nextId: 0,
     _tic: 0,
     _seed: 0,
-    _mapSeed: 0,
     _actors: [[], [], [], []],
     _stats: new Map(),
 });

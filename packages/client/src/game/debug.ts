@@ -190,15 +190,11 @@ export const assertStateInSync = (from: ClientID, data: Packet, state: StateData
 }
 
 const assertStateEquality = (label: string, a: StateData, b: StateData) => {
-
     if (a._nextId != b._nextId) {
         console.warn(label + "NEXT ID MISMATCH", a._nextId, b._nextId);
     }
     if (a._seed != b._seed) {
         console.warn(label + "SEED MISMATCH", a._seed, b._seed);
-    }
-    if (a._mapSeed != b._mapSeed) {
-        console.warn(label + "MAP SEED MISMATCH", a._mapSeed, b._mapSeed);
     }
     for (let i = 0; i < a._actors.length; ++i) {
         const listA = a._actors[i];

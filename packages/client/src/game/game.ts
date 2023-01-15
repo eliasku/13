@@ -298,7 +298,7 @@ function initBarrels() {
 export const createSeedGameState = () => {
     startTic = 0;
     gameTic = 1;
-    state._mapSeed = state._seed = _SEEDS[0];
+    state._seed = _SEEDS[0];
     recreateMap(_room.mapTheme, _room.mapSeed);
     initBarrels();
 }
@@ -306,7 +306,7 @@ export const createSeedGameState = () => {
 export const createSplashState = () => {
     startTic = 0;
     gameTic = 1;
-    state._seed = state._mapSeed = _SEEDS[0];
+    state._seed = _SEEDS[0];
     recreateMap(Math.floor(Math.random() * 3), newSeedFromTime());
     for (let i = 0; i < 13; ++i) {
         const k = i / 13;

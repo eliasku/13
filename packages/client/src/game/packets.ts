@@ -93,7 +93,6 @@ const readState = (state: StateData, i32: Int32Array, ptr: number): number => {
     state._nextId = i32[ptr++];
     state._tic = i32[ptr++];
     state._seed = i32[ptr++] >>> 0;
-    state._mapSeed = i32[ptr++] >>> 0;
     {
         let count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
@@ -256,7 +255,6 @@ const writeState = (state: StateData | undefined, i32: Int32Array, ptr: number):
         i32[ptr++] = state._nextId;
         i32[ptr++] = state._tic;
         i32[ptr++] = state._seed;
-        i32[ptr++] = state._mapSeed;
         {
             const list = state._actors[ActorType.Player];
             i32[ptr++] = list.length;
