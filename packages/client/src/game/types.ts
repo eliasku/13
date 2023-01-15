@@ -74,10 +74,6 @@ export interface Actor extends Pos, Vel {
     // 4 bits
     _sp?: number;
 
-    // Magazines (0..15)
-    // 4 bits
-    _mags?: number;
-
     // 8-bit: just generated anim start point
     _anim0?: number;
 
@@ -87,13 +83,13 @@ export interface Actor extends Pos, Vel {
 
     // local frame-scope state
     _fstate?: number;
-
-    // 0...63 (max_weapon_clip_size)
-    // 6 bits
-    _clipAmmo?: number;
 }
 
 export interface PlayerActor extends Actor {
+    // Magazines (0..15)
+    // 4 bits
+    _mags?: number;
+
     // detune counter: 0...32 (max of weapon detune-speed parameter)
     _detune: number;
 
@@ -103,6 +99,10 @@ export interface PlayerActor extends Actor {
 
     // 4 bits
     _weapon2?: number;
+
+    // 0...63 (max_weapon_clip_size)
+    // 6 bits
+    _clipAmmo?: number;
 
     // 6 bits
     _clipAmmo2?: number;

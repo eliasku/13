@@ -27,9 +27,6 @@ export const newActor = (type: ActorType): Actor =>
         _animHit: 31,
         _hp: 1,
         _sp: 0,
-        _mags: 0,
-
-        _clipAmmo: 0,
 
         _fstate: 0,
     });
@@ -39,8 +36,10 @@ export const newPlayerActor = (): PlayerActor => Object.assign(newActor(ActorTyp
     _trig: 0,
     _detune: 0,
     _weapon2: 0,
+    _clipAmmo: 0,
     _clipAmmo2: 0,
     _clipReload: 0,
+    _mags: 0,
 });
 
 export const newItemActor = (subtype: number): ItemActor => {
