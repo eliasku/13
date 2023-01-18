@@ -25,51 +25,71 @@ export const enum ItemType {
 }
 
 export interface Pos {
+    /** uint16 **/
     _x: number;
+    /** uint16 **/
     _y: number;
+    /** uint16 */
     _z: number;
 }
 
 export interface Vel {
+    /** int11 [-1024; +1024] **/
     _u: number;
+    /** int11 [-1024; +1024] **/
     _v: number;
+    /** int11 [-1024; +1024] **/
     _w: number;
 }
 
 export interface Actor extends Pos, Vel {
-    // 0..4
+    /** uint:4 **/
     _type: ActorType;
-    // 32-bit identifier
+    /** uint32 **/
     _id: number;
 
     // Item: ItemType subtype
     // Tree: GFX variation
     // Bullet: BulletType subtype
     // 4-bit
+    /** uint:4 **/
     _subtype: number;
 
     // Player: reload time
     // Bullet: life-time
     // Item: life-time / 3
-    // 8-bit
+    /** uint8 **/
     _lifetime: number;
 
-    // all objects HP (0..15)
-    // 4 bits
+    /**
+     * health points [0; 15]
+     * @type uint4
+     **/
     _hp?: number;
 
-    // all objects SP (0..15)
-    // 4 bits
+    /**
+     * shield points [0; 15]
+     * @type uint4
+     **/
     _sp?: number;
 
-    // 8-bit: just generated anim start point
+    /**
+     * generated static variation seed value for animation
+     * @type uint8
+     **/
     _anim0?: number;
 
-    // Hit effect (5 bits: 0...31)
-    // For Items could not be picked up until it reach 0
+    /**
+     * Hit effect. For Items could not be picked up until it reach 0
+     * @type uint5
+     **/
     _animHit?: number;
 
-    // local frame-scope state
+    /**
+     * local frame-scope state
+     * @type uint32
+     * @transient
+     **/
     _localStateFlags?: number;
 }
 
