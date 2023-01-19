@@ -23,6 +23,7 @@ import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
+import {poki} from "./poki";
 
 const enum StartState {
     Loading = 0,
@@ -34,7 +35,7 @@ const enum StartState {
 
 type StateFunc = (ts?: number) => void | undefined;
 
-{
+async function start() {
     let state: StartState = StartState.Loading;
 
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
@@ -79,6 +80,7 @@ type StateFunc = (ts?: number) => void | undefined;
         createSplashState();
         gameMode.npcLevel = 0;
         completeLoading();
+        poki._gameLoadingFinished();
     });
     const preStates: StateFunc[] = [
         ,
@@ -196,3 +198,18 @@ type StateFunc = (ts?: number) => void | undefined;
         completeFrame();
     });
 }
+
+async function boot() {
+    try {
+        await poki._init();
+    } catch (e) {
+        console.log("adblock");
+    }
+    if (process.env.NODE_ENV === "development") {
+        poki._setDebug(true);
+    }
+    poki._gameLoadingStart();
+    await start();
+}
+
+boot();
