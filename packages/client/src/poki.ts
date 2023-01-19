@@ -5,7 +5,7 @@ declare const PokiSDK: {
     gameLoadingFinished(): void;
 } | undefined;
 
-const sdk: any | undefined = typeof PokiSDK === "undefined" ? PokiSDK : undefined;
+const sdk: typeof PokiSDK | undefined = typeof PokiSDK !== "undefined" ? PokiSDK : undefined;
 export const poki = {
     _init: () => {
         console.log("poki init");
