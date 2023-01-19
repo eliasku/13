@@ -200,11 +200,11 @@ async function start() {
 }
 
 async function boot() {
-    try {
-        await poki._init();
-    } catch (e) {
-        console.log("adblock");
-    }
+    await poki._init().then(() => {
+        console.log("Poki SDK successfully initialized");
+    }).catch(() => {
+        console.log("Initialized, but the user likely has adblock");
+    });
     if (process.env.NODE_ENV === "development") {
         poki._setDebug(true);
     }
