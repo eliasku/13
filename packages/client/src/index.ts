@@ -164,6 +164,7 @@ async function start() {
                 state = StartState.Connected;
                 speak("fight");
             } else if (!_sseState) {
+                // failed to connect and start the room
                 goToSplash();
             }
         },
@@ -173,6 +174,8 @@ async function start() {
                 disconnect();
             }
             if (!_sseState) {
+                // user disconnected or quit the game room
+                poki._gameplayStop();
                 goToSplash();
             }
         }
@@ -205,9 +208,9 @@ async function boot() {
     }).catch(() => {
         console.log("Initialized, but the user likely has adblock");
     });
-    if (process.env.NODE_ENV === "development") {
-        poki._setDebug(true);
-    }
+    //if (process.env.NODE_ENV === "development") {
+    poki._setDebug(true);
+    //}
     poki._gameLoadingStart();
     await start();
 }

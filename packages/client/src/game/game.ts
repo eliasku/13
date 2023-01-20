@@ -74,7 +74,6 @@ import {
     viewX,
     viewY
 } from "./controls";
-import {isAnyKeyDown} from "../utils/input";
 import {Snd, snd} from "../assets/sfx";
 import {weapons} from "./data/weapons";
 import {
@@ -156,6 +155,9 @@ import {bullets, BulletType} from "./data/bullets";
 import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
 import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
 import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors";
+import {poki} from "../poki";
+import {isAnyKeyDown} from "../utils/input";
+import {delay} from "../utils/delay";
 
 const clients = new Map<ClientID, Client>()
 
@@ -171,6 +173,7 @@ let joined = false;
 
 let waitToAutoSpawn = false;
 let waitToSpawn = false;
+let allowedToRespawn = false;
 
 let lastInputTic = 0;
 let lastInputCmd = 0;
@@ -239,6 +242,7 @@ export const resetGame = () => {
 
     waitToAutoSpawn = false;
     waitToSpawn = false;
+    allowedToRespawn = false;
 
     resetLastFrameTs();
     lastInputTic = 0;
@@ -531,11 +535,12 @@ const checkPlayerInput = () => {
     }
 
     // RESPAWN EVENT
-    if (!gameMode.title && clientId && !waitToSpawn && !player && joined) {
+    if (!gameMode.title && clientId && !waitToSpawn && !player && joined && allowedToRespawn) {
         if (isAnyKeyDown() || waitToAutoSpawn) {
             btn |= ControlsFlag.Spawn;
             waitToSpawn = true;
             waitToAutoSpawn = false;
+            allowedToRespawn = false;
         }
     }
 
@@ -574,6 +579,7 @@ const checkJoinSync = () => {
         // respawnPlayer();
         waitToSpawn = false;
         waitToAutoSpawn = true;
+        allowedToRespawn = true;
     }
 }
 
@@ -1058,6 +1064,7 @@ const simulateTic = () => {
     }
 
     if (waitToSpawn && getMyPlayer()) {
+        poki._gameplayStart();
         waitToSpawn = false;
     }
 
@@ -1184,6 +1191,22 @@ const kill = (actor: Actor) => {
 
         addFleshParticles(256, actor, 128, grave);
         addBoneParticles(32, actor, grave);
+
+        if (player === getMyPlayer()) {
+            delay(1000).then(() => {
+                poki._gameplayStop();
+                return poki._commercialBreak().catch((err) => {
+                    console.warn("ad error", err);
+                })
+            }).then(() => {
+                allowedToRespawn = true;
+                delay(3000).then(() => {
+                    if (allowedToRespawn) {
+                        waitToAutoSpawn = true;
+                    }
+                });
+            });
+        }
     }
 }
 
