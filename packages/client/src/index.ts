@@ -36,15 +36,23 @@ const enum StartState {
 type StateFunc = (ts?: number) => void | undefined;
 
 async function start() {
-    let state: StartState = StartState.Loading;
+    await poki._init().then(() => {
+        console.log("Poki SDK successfully initialized");
+    }).catch(() => {
+        console.log("Initialized, but the user likely has adblock");
+    });
+    poki._setDebug(process.env.NODE_ENV === "development");
+    poki._gameLoadingStart();
 
+    let state = StartState.Loading;
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
-    setInterval(async () => {
+
+    const refreshRoomsInfo = async () => {
         if (state > StartState.Loaded && _sseState < 3) {
             publicServerInfo = await loadRoomsInfo();
         }
-    }, 2000);
-
+        setTimeout(refreshRoomsInfo, 2000);
+    };
     const goToSplash = () => {
         state = StartState.TapToStart;
         resetGame();
@@ -126,6 +134,7 @@ async function start() {
     const _states: StateFunc[] = [
         ,
         (ts: number) => {
+            // game is loaded, user sees "PRESS ANY KEY" message and waits for first user click
             const scale = getScreenScale();
             const W = (gl.drawingBufferWidth / scale) | 0;
             const H = (gl.drawingBufferHeight / scale) | 0;
@@ -139,6 +148,9 @@ async function start() {
             flush();
             if (isAnyKeyDown()) {
                 state = StartState.TapToStart;
+                // begin fetch rooms info
+                refreshRoomsInfo();
+
                 gameMode.playersAI = true;
                 gameMode.npcLevel = 3;
             }
@@ -202,17 +214,4 @@ async function start() {
     });
 }
 
-async function boot() {
-    await poki._init().then(() => {
-        console.log("Poki SDK successfully initialized");
-    }).catch(() => {
-        console.log("Initialized, but the user likely has adblock");
-    });
-    //if (process.env.NODE_ENV === "development") {
-    poki._setDebug(true);
-    //}
-    poki._gameLoadingStart();
-    await start();
-}
-
-boot();
+start();

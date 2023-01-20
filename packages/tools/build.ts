@@ -1,4 +1,4 @@
-import {copyFileSync, readFileSync} from "fs";
+import {readFileSync} from "fs";
 import {build, BuildOptions} from 'esbuild';
 import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
 
@@ -53,7 +53,7 @@ function sz(...files: string[]) {
         build(addBuildOptions({
             entryPoints: ["packages/server/src/index.ts"],
             tsconfig: "packages/server/tsconfig.json",
-            outfile: "build/server0.js",
+            outfile: "server.js",
             platform: "node",
             target: "node16",
         })).catch(e => {
@@ -63,7 +63,7 @@ function sz(...files: string[]) {
         build(addBuildOptions({
             entryPoints: ["packages/client/src/index.ts"],
             tsconfig: "packages/client/tsconfig.json",
-            outfile: "build/client0.js",
+            outfile: "public/client.js",
             plugins: [],
             target: "es2020"
         })).catch(e => {
@@ -73,7 +73,7 @@ function sz(...files: string[]) {
         build(addBuildOptions({
             entryPoints: ["packages/client/src/index.ts"],
             tsconfig: "packages/client/tsconfig.json",
-            outfile: "build/debug.js",
+            outfile: "public/debug.js",
             target: "es2020",
             plugins: [],
         }, true)).catch(e => {
@@ -83,11 +83,7 @@ function sz(...files: string[]) {
     ]
 
     await Promise.all(esbuildTasks);
-    printSize("build", "public/index.html", "build/client0.js", "build/server0.js");
+    printSize("build", "public/index.html", "public/client.js", "server.js");
 }
-
-copyFileSync("build/server0.js", "server.js");
-copyFileSync("build/client0.js", "public/client.js");
-printSize("game", "public/index.html", "public/client.js", "server.js");
 
 console.info(report.join("\n"));
