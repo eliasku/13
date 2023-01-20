@@ -1,6 +1,7 @@
 ## 1.0.12
 
-
+- Optimize game state data, introduce types and fields
+- Add `PokiSDK`
 
 ## 1.0.11
 
