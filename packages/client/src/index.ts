@@ -14,7 +14,7 @@ import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
-import {updateSong} from "./audio/gen";
+import {updateSong} from "./audio/music";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
@@ -36,13 +36,7 @@ const enum StartState {
 type StateFunc = (ts?: number) => void | undefined;
 
 async function start() {
-    await poki._init().then(() => {
-        console.log("Poki SDK successfully initialized");
-    }).catch(() => {
-        console.log("Initialized, but the user likely has adblock");
-    });
-    poki._setDebug(process.env.NODE_ENV === "development");
-    poki._gameLoadingStart();
+    await poki._init();
 
     let state = StartState.Loading;
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};

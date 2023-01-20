@@ -1193,19 +1193,17 @@ const kill = (actor: Actor) => {
         addBoneParticles(32, actor, grave);
 
         if (player === getMyPlayer()) {
-            delay(1000).then(() => {
-                poki._gameplayStop();
-                return poki._commercialBreak().catch((err) => {
-                    console.warn("ad error", err);
-                })
-            }).then(() => {
-                allowedToRespawn = true;
-                delay(3000).then(() => {
-                    if (allowedToRespawn) {
-                        waitToAutoSpawn = true;
-                    }
+            poki._gameplayStop();
+            delay(1000)
+                .then(poki._commercialBreak)
+                .then(() => {
+                    allowedToRespawn = true;
+                    delay(3000).then(() => {
+                        if (allowedToRespawn) {
+                            waitToAutoSpawn = true;
+                        }
+                    });
                 });
-            });
         }
     }
 }

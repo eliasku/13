@@ -6,6 +6,7 @@ import {DEFAULT_FRAMERATE_LIMIT, setSetting, settings} from "../game/settings";
 import {keyboardDown, KeyCode} from "../utils/input";
 import {BuildVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@eliasku/13-shared/src/types";
 import {parseRadix64String} from "@eliasku/13-shared/src/radix64";
+import {poki} from "../poki";
 
 const enum Menu {
     Main = 0,
@@ -189,6 +190,13 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
             })) {
                 setSetting("dev", 0);
                 menu = Menu.Main;
+            }
+
+            if (button("dev_reward_video", "🎬", W - 20, 10, {
+                w: 10,
+                h: 20
+            })) {
+                poki._rewardedBreak();
             }
 
             if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
