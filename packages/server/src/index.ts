@@ -96,7 +96,7 @@ const removeClient = (client: ClientState) => {
 }
 
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
-    res.writeHead(200, HDR_JSON_NO_CACHE);
+    res.writeHead(200, {...HDR_JSON_NO_CACHE, ...getCorsHeaders(req)});
     const json: RoomsInfoResponse = {
         rooms: [],
         players: 0
@@ -165,7 +165,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         return;
     }
 
-    res.writeHead(200, HDR_EVENT_STREAM);
+    res.writeHead(200, {...HDR_EVENT_STREAM, ...getCorsHeaders(req)});
     let room: RoomState | undefined;
     if (params.has("r")) {
         const R = params.get("r");
@@ -286,7 +286,7 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
             }
             ++numProcessedMessages;
         }
-        res.writeHead(200, HDR_JSON_NO_CACHE);
+        res.writeHead(200, {...HDR_JSON_NO_CACHE, ...getCorsHeaders(req)});
         res.end("" + numProcessedMessages);
     } catch (e) {
         error(req, res, "Handle income message exception " + e);
@@ -311,22 +311,32 @@ const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
     },
 };
 
+const getCorsHeaders = (req: IncomingMessage): Record<string, string> => {
+    const headers: Record<string, string> = {};
+    if (req.headers.origin) {
+        const ss = [
+            //"https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com",
+            "https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com",
+            //"http://localhost:8080",
+        ];
+        const origin = ss.find(x => req.headers.origin.startsWith(x));
+        if (origin) {
+            headers["Access-Control-Allow-Origin"] = origin;
+        }
+    }
+    return headers;
+}
+
 createServer((req: IncomingMessage, res: ServerResponse) => {
     try {
         const parts = req.url.split("?");
         const url = parts[0];
         const handler = HANDLERS[url];
         if (handler) {
-            if (req.method === "OPTIONS" && req.headers.origin) {
-                const ss = [
-                    "https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com",
-                    //"http://localhost:8080",
-                ];
-                const origin = ss.find(x => req.headers.origin.startsWith(x));
-                if (origin) {
-                    res.writeHead(200, {
-                        "Access-Control-Allow-Origin": ss
-                    });
+            if (req.method === "OPTIONS") {
+                const cors = getCorsHeaders(req);
+                if(cors["Access-Control-Allow-Origin"]) {
+                    res.writeHead(200, cors);
                 } else {
                     res.writeHead(500);
                 }
