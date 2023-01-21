@@ -24,7 +24,7 @@ export interface RemoteClient {
     _debugPacketByteLength?: number;
 }
 
-const getUrl = (endpoint: string) => endpoint;
+const getUrl = (url: string) => (iioi_url ?? "") + url;
 const getPostUrl = () => getUrl(`_?v=${BuildVersion}&r=${_room.code}`);
 const getJoinUrl = (joinRoomCode?: string, newGameParams?: NewGameParams) => {
     const args = [`v=${BuildVersion}`];

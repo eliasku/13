@@ -317,6 +317,21 @@ createServer((req: IncomingMessage, res: ServerResponse) => {
         const url = parts[0];
         const handler = HANDLERS[url];
         if (handler) {
+            if (req.method === "OPTIONS" && req.headers.origin) {
+                const ss = [
+                    "https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com",
+                    //"http://localhost:8080",
+                ];
+                const origin = ss.find(x => req.headers.origin.startsWith(x));
+                if (origin) {
+                    res.writeHead(200, {
+                        "Access-Control-Allow-Origin": ss
+                    });
+                } else {
+                    res.writeHead(500);
+                }
+                return;
+            }
             const method = handler[req.method];
             if (method) {
                 const params = new URLSearchParams(parts[1] ?? "");
