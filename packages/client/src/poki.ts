@@ -9,6 +9,9 @@ declare const PokiSDK: {
     gameplayStop(): void;
     commercialBreak(): Promise<void>;
     rewardedBreak(): Promise<boolean>;
+    getURLParam(name: string): string | undefined;
+    shareableURL(params: Record<string, string>): Promise<string>;
+    isAdBlocked(): boolean;
 } | undefined;
 
 const sdk: typeof PokiSDK | undefined = typeof PokiSDK !== "undefined" ? PokiSDK : undefined;
@@ -72,5 +75,24 @@ export const poki = {
             audioMaster.gain.linearRampToValueAtTime(1, audioContext.currentTime + 1.0);
         }
         return rewarded;
+    },
+    _getURLParam: (name: string): string | undefined => {
+        if (sdk) {
+            return sdk.getURLParam(name);
+        }
+        else {
+            return new URL(location.href).searchParams.get(name);
+        }
+    },
+    _shareableURL: async (params: Record<string, string>): Promise<string> => {
+        if (sdk) {
+            return await sdk.shareableURL(params);
+        } else {
+            const url: URL = new URL(location.href);
+            for (const k in Object.keys(params)) {
+                url.searchParams.set(k, params[k]);
+            }
+            return url.toString();
+        }
     },
 };

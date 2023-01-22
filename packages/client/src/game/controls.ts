@@ -52,14 +52,25 @@ export let lookAtX = 0;
 export let lookAtY = 0;
 export let viewX = 0;
 export let viewY = 0;
-export let shootButtonDown = false;
-export let jumpButtonDown = false;
 export let moveX = 0;
 export let moveY = 0;
+export let shootButtonDown = false;
+export let jumpButtonDown = false;
 export let moveFast = false;
 export let dropButton = false;
 export let reloadButton = false;
 export let swapButton = false;
+
+export const resetPlayerControls = () => {
+    moveX = 0;
+    moveY = 0;
+    shootButtonDown = false;
+    jumpButtonDown = false;
+    moveFast = false;
+    dropButton = false;
+    reloadButton = false;
+    swapButton = false;
+};
 
 export const couldBeReloadedManually = (player: PlayerActor): boolean => {
     const weapon = weapons[player._weapon];
@@ -211,7 +222,8 @@ export const drawVirtualPad = () => {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
     const k = 1 / getScreenScale();
-    const segments = 16;
+    const segments1 = 12;
+    const segments2 = 16;
     for (const control of vpad) {
         if (!control.hidden_) {
             const w_ = W * (control.r_ - control.l_);
@@ -222,15 +234,15 @@ export const drawVirtualPad = () => {
             if (!control.isButton_ && pp) {
                 cx = pp._startX * k;
                 cy = pp._startY * k;
-                drawCircle(boxTexture, pp._x * k, pp._y * k, 16, segments, 1, 1, 0.5);
+                drawCircle(boxTexture, pp._x * k, pp._y * k, 16, segments1, 1, 1, 0.5);
             }
             if (control.r1_ !== undefined) {
                 drawTextShadowCenter(fnt[0], control.text1, 8, cx, cy - control.r1_ - 4, pp ? 0xFFFFFF : 0x777777);
-                drawRing(boxTexture, cx, cy, control.r1_ - 2, 4, segments, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+                drawRing(boxTexture, cx, cy, control.r1_ - 2, 4, segments1, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
             }
             if (control.r2_ !== undefined) {
                 drawTextShadowCenter(fnt[0], control.text2, 8, cx, cy - control.r2_ - 4, pp ? 0xFFFFFF : 0x777777);
-                drawRing(boxTexture, cx, cy, control.r2_ - 2, 4, segments, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+                drawRing(boxTexture, cx, cy, control.r2_ - 2, 4, segments2, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
             }
         }
     }

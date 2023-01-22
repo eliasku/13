@@ -53,6 +53,7 @@ export const GAME_CFG = {
         _size: 256,
         _listenerRadius: 256,
         _baseScale: 1.1,
+        _inGameMenuScale: 0.5,
     },
     _player: {
         // initial values for player's spawn

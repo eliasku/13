@@ -13,6 +13,8 @@ import {bullets, BulletType} from "./data/bullets";
 import {fxRandElement} from "../utils/rnd";
 import {lastFrameTs} from "./gameState";
 import {drawTextShadowCenter, fnt} from "../graphics/font";
+import {GameMenuState} from "./gameMenu";
+import {gameMenu} from "./game";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -33,7 +35,7 @@ export const drawShadows = (drawList: Actor[]) => {
 }
 
 export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: number[], screenScale: number) => {
-    if (player && ((viewX | 0) || (viewY | 0))) {
+    if (player && ((viewX | 0) || (viewY | 0)) && gameMenu._state === GameMenuState.InGame) {
         const img = fnt[0]._textureBoxT1;
         const W = gl.drawingBufferWidth;
         const H = gl.drawingBufferHeight;

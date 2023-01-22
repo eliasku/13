@@ -2,7 +2,7 @@ import {spawn} from "child_process";
 import {BuildOptions, context, PluginBuild} from 'esbuild';
 import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
 
-prepareFolders();
+prepareFolders("public");
 copyPublicAssets();
 const buildVersion = resolveVersion();
 

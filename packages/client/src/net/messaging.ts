@@ -25,7 +25,7 @@ export interface RemoteClient {
 }
 
 const getUrl = (url: string) => ServerUrl + url;
-const getPostUrl = () => getUrl(`_?v=${BuildVersion}&r=${_room.code}`);
+const getPostUrl = () => getUrl(`_?v=${BuildVersion}&r=${_room._code}`);
 const getJoinUrl = (joinRoomCode?: string, newGameParams?: NewGameParams) => {
     const args = [`v=${BuildVersion}`];
     if (joinRoomCode) {
@@ -40,11 +40,11 @@ const getJoinUrl = (joinRoomCode?: string, newGameParams?: NewGameParams) => {
 };
 
 interface RoomInstance {
-    code: string;
-    flags: number;
-    npcLevel: number;
-    mapSeed: number;
-    mapTheme: number;
+    _code: string;
+    _flags: number;
+    _npcLevel: number;
+    _mapSeed: number;
+    _mapTheme: number;
 }
 
 export let _room: RoomInstance | undefined;
@@ -168,11 +168,11 @@ const onSSE: ((data: string) => void)[] = [
         const json: [string, number[], number[]] = JSON.parse(data);
         const roomData: any[] = json[1];
         _room = {
-            code: json[0],
-            flags: roomData[0],
-            npcLevel: roomData[1],
-            mapTheme: roomData[2],
-            mapSeed: roomData[3],
+            _code: json[0],
+            _flags: roomData[0],
+            _npcLevel: roomData[1],
+            _mapTheme: roomData[2],
+            _mapSeed: roomData[3],
         };
         const ids: number[] = json[2];
         clientId = ids.shift();
@@ -215,11 +215,11 @@ export const connect = (newGameParams?: NewGameParams, gameCode?: string) => {
         _sseState = 3;
         clientId = 1;
         _room = {
-            code: "",
-            npcLevel: newGameParams._npcLevel,
-            flags: newGameParams._flags,
-            mapTheme: newGameParams._theme ? (newGameParams._theme - 1) : Math.floor(Math.random() * 3),
-            mapSeed: newSeedFromTime(),
+            _code: "",
+            _npcLevel: newGameParams._npcLevel,
+            _flags: newGameParams._flags,
+            _mapTheme: newGameParams._theme ? (newGameParams._theme - 1) : Math.floor(Math.random() * 3),
+            _mapSeed: newSeedFromTime(),
         };
     } else {
         _sseState = 1;

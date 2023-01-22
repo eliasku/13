@@ -1,8 +1,7 @@
 import {createTexture, draw, getSubTexture, Texture, uploadTexture} from "./draw2d";
 
-const SPACE_REGEX = /\s/gm;
 const SPACE_CODE = ' '.codePointAt(0);
-const DEFAULT_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,\'-\/';
+const DEFAULT_CHARACTERS = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,'-/`.split("").map(c => c.codePointAt(0));
 
 export interface CharacterData {
     // advance width
@@ -43,7 +42,7 @@ export interface FontAtlas {
     _nextSheetX: number;
     _nextSheetY: number;
     _sheetLineHeight: number;
-    _characters: string;
+    _characters: number[];
 
     // in pixels, resolution independent
     _border: number;
@@ -63,7 +62,7 @@ export const makeFontAtlas = (family: string,
                               scale: number,
                               style: FontStyleDef): FontAtlas => {
     const canvas = document.createElement("canvas");
-    const canvasSize = 128;
+    const canvasSize = 512;
     canvas.width = canvas.height = canvasSize;
 
     // canvas.style.position = "absolute";
@@ -83,7 +82,7 @@ export const makeFontAtlas = (family: string,
         _nextSheetX: 0,
         _nextSheetY: 0,
         _sheetLineHeight: 0,
-        _characters: "",
+        _characters: [],
         _border: Math.ceil(scale),
         _characterMap: new Map<number, CharacterData>(),
         _lineSize: 1.3,
@@ -128,8 +127,9 @@ const resetFontAtlas = (fa: FontAtlas, characters = DEFAULT_CHARACTERS) => {
     fa._nextSheetY = 0;
     fa._characterMap.clear();
     addSpaceCharacter(fa);
-    fa._characters = "";
-    addChars(fa, characters);
+    fa._characters = [];
+    // TODO: revert
+    // addChars(fa, characters);
     updateTexture(fa);
 }
 
@@ -146,10 +146,9 @@ const addSpaceCharacter = (fa: FontAtlas) => {
     );
 }
 
-const addChars = (fa: FontAtlas, characters: string) => {
-    const chars = characters.replace(SPACE_REGEX, '');
-    for (let i = 0; i < chars.length; i++) {
-        getCharacter(fa, chars.codePointAt(i));
+const addChars = (fa: FontAtlas, codePoints: number[]) => {
+    for (const codePoint of codePoints) {
+        getCharacter(fa, codePoint);
     }
 }
 
@@ -206,7 +205,7 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
         fa._sheetLineHeight = h;
     }
 
-    const data:CharacterData = {
+    const data: CharacterData = {
         _a: metrics.width * invScale,
         _x: -(bb._left + padding) * invScale,
         _y: -(bb._ascent + padding) * invScale,
@@ -216,7 +215,7 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
     };
 
     fa._characterMap.set(codepoint, data);
-    fa._characters += character;
+    fa._characters.push(codepoint);
     const px = x + bb._left + padding;
     const py = y + bb._ascent + padding;
     if (fa._strokeWidth > 0) {
