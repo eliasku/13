@@ -1,11 +1,10 @@
 import {build, BuildOptions} from 'esbuild';
-import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
+import {copyPublicAssets, getCompileDefines, prepareFolders} from "./common.js";
 import {execSync} from "child_process";
 
 const dist = "build/poki";
 prepareFolders(dist);
 copyPublicAssets(dist, false, "poki.html");
-const buildVersion = resolveVersion();
 
 {
     const addBuildOptions = (opts: BuildOptions, debug: boolean = false): BuildOptions => {
@@ -20,11 +19,7 @@ const buildVersion = resolveVersion();
             opts.minify = true;
             opts.mangleProps = /^_[a-z]/;
         }
-        opts.define = {
-            __SERVER_URL__: `"https://grtc.herokuapp.com/"`,
-            __VERSION__: `"${buildVersion}"`,
-            "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
-        };
+        opts.define = getCompileDefines(debug, "https://grtc.herokuapp.com/");
         return opts;
     }
 

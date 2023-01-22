@@ -1681,7 +1681,7 @@ const drawOverlay = () => {
     }
 
     if (getDevSetting("dev_fps")) {
-        drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls} |  ⃤ ${stats.triangles} | ∷${stats.vertices}`, 4, 2, 5, 0, 0);
+        drawText(fnt[0], `FPS: ${stats._fps} | DC: ${stats._drawCalls} |  ⃤ ${stats._triangles} | ∷${stats._vertices}`, 4, 2, 5, 0, 0);
     }
 
     if (getDevSetting("dev_info")) {

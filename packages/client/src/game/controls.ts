@@ -116,62 +116,62 @@ export const updateControls = (player: PlayerActor) => {
     reloadButton = !!keyboardState[KeyCode.R];
     swapButton = !!keyboardState[KeyCode.Q];
 
-    vpad[3].hidden_ = !couldBeReloadedManually(player);
-    vpad[4].hidden_ = !couldSwapWeaponSlot(player);
+    vpad[3]._hidden = !couldBeReloadedManually(player);
+    vpad[4]._hidden = !couldSwapWeaponSlot(player);
     if (updateVirtualPad()) {
         const k = gameCamera[2];
         let control = vpad[0];
-        let pp = control.pointer_;
+        let pp = control._pointer;
         moveX = pp ? (pp._x - pp._startX) * k : 0;
         moveY = pp ? (pp._y - pp._startY) * k : 0;
         let len = hypot(moveX, moveY);
-        moveFast = len > control.r1_;
-        jumpButtonDown = len > control.r2_;
+        moveFast = len > control._r1;
+        jumpButtonDown = len > control._r2;
 
         control = vpad[1];
-        pp = control.pointer_;
+        pp = control._pointer;
         viewX = pp ? (pp._x - pp._startX) * k : 0;
         viewY = pp ? (pp._y - pp._startY) * k : 0;
         len = hypot(viewX, viewY);
         lookAtX = px + viewX * 2;
         lookAtY = py + viewY * 2;
-        shootButtonDown = len > control.r2_;
+        shootButtonDown = len > control._r2;
 
-        dropButton = !!vpad[2].pointer_;
-        reloadButton = !!vpad[3].pointer_;
-        swapButton = !!vpad[4].pointer_;
+        dropButton = !!vpad[2]._pointer;
+        reloadButton = !!vpad[3]._pointer;
+        swapButton = !!vpad[4]._pointer;
     }
 }
 
 interface VPadControl {
-    l_: number;
-    t_: number;
-    r_: number;
-    b_: number;
-    isButton_?: number;
-    pointer_?: Pointer | undefined;
-    hidden_?: boolean;
+    _l: number;
+    _t: number;
+    _r: number;
+    _b: number;
+    _isButton?: number;
+    _pointer?: Pointer | undefined;
+    _hidden?: boolean;
     // any len > undefined = false (undefined is NaN)
-    r1_?: number | undefined;
-    r2_?: number | undefined;
-    text1?: string;
-    text2?: string;
+    _r1?: number | undefined;
+    _r2?: number | undefined;
+    _text1?: string;
+    _text2?: string;
 }
 
 const vpad: VPadControl[] = [
-    {l_: 0, t_: 0.5, r_: 0.5, b_: 1, r1_: PAD_MOVE_RADIUS_0, r2_: PAD_MOVE_RADIUS_1, text1: "RUN", text2: "JUMP"},
-    {l_: 0.5, t_: 0.5, r_: 1, b_: 1, r1_: PAD_FIRE_RADIUS_0, r2_: PAD_FIRE_RADIUS_1, text1: "AIM", text2: "FIRE"},
-    {l_: 0.5, t_: 0.25, r_: 0.66, b_: 0.5, isButton_: 1, r1_: 16, text1: "DROP"},
-    {l_: 0.66, t_: 0.25, r_: 0.82, b_: 0.5, isButton_: 1, r1_: 16, text1: "RELOAD"},
-    {l_: 0.82, t_: 0.25, r_: 1, b_: 0.5, isButton_: 1, r1_: 16, text1: "SWAP"},
+    {_l: 0, _t: 0.5, _r: 0.5, _b: 1, _r1: PAD_MOVE_RADIUS_0, _r2: PAD_MOVE_RADIUS_1, _text1: "RUN", _text2: "JUMP"},
+    {_l: 0.5, _t: 0.5, _r: 1, _b: 1, _r1: PAD_FIRE_RADIUS_0, _r2: PAD_FIRE_RADIUS_1, _text1: "AIM", _text2: "FIRE"},
+    {_l: 0.5, _t: 0.25, _r: 0.66, _b: 0.5, _isButton: 1, _r1: 16, _text1: "DROP"},
+    {_l: 0.66, _t: 0.25, _r: 0.82, _b: 0.5, _isButton: 1, _r1: 16, _text1: "RELOAD"},
+    {_l: 0.82, _t: 0.25, _r: 1, _b: 0.5, _isButton: 1, _r1: 16, _text1: "SWAP"},
 ];
 let touchPadActive = false;
 
 const checkPointerIsAvailableForCapturing = (pointer: Pointer) =>
-    !vpad.some(c => c.pointer_ == pointer);
+    !vpad.some(c => c._pointer == pointer);
 
 const testZone = (control: VPadControl, rx: number, ry: number) =>
-    rx > control.l_ && rx < control.r_ && ry > control.t_ && ry < control.b_;
+    rx > control._l && rx < control._r && ry > control._t && ry < control._b;
 
 const updateVirtualPad = () => {
     const W = gl.drawingBufferWidth;
@@ -179,27 +179,27 @@ const updateVirtualPad = () => {
 
     for (const control of vpad) {
         // if not captured
-        if (!control.pointer_) {
+        if (!control._pointer) {
             // capture
             for (const [, p] of inputPointers) {
                 if (p._downEvent &&
                     testZone(control, p._startX / W, p._startY / H) &&
                     checkPointerIsAvailableForCapturing(p)) {
-                    control.pointer_ = p;
+                    control._pointer = p;
                 }
             }
         }
         // if captured
-        if (control.pointer_) {
-            const p = control.pointer_;
+        if (control._pointer) {
+            const p = control._pointer;
             let release = !p._active;
             // out-of-zone mode
-            if (control.isButton_) {
+            if (control._isButton) {
                 release ||= !testZone(control, p._x / W, p._y / H);
             }
             if (release) {
                 // release
-                control.pointer_ = undefined;
+                control._pointer = undefined;
             } else {
                 touchPadActive = true;
             }
@@ -225,24 +225,24 @@ export const drawVirtualPad = () => {
     const segments1 = 12;
     const segments2 = 16;
     for (const control of vpad) {
-        if (!control.hidden_) {
-            const w_ = W * (control.r_ - control.l_);
-            const h_ = H * (control.b_ - control.t_);
-            let cx = k * (W * control.l_ + w_ / 2);
-            let cy = k * (H * control.t_ + h_ / 2);
-            const pp = control.pointer_;
-            if (!control.isButton_ && pp) {
+        if (!control._hidden) {
+            const w_ = W * (control._r - control._l);
+            const h_ = H * (control._b - control._t);
+            let cx = k * (W * control._l + w_ / 2);
+            let cy = k * (H * control._t + h_ / 2);
+            const pp = control._pointer;
+            if (!control._isButton && pp) {
                 cx = pp._startX * k;
                 cy = pp._startY * k;
                 drawCircle(boxTexture, pp._x * k, pp._y * k, 16, segments1, 1, 1, 0.5);
             }
-            if (control.r1_ !== undefined) {
-                drawTextShadowCenter(fnt[0], control.text1, 8, cx, cy - control.r1_ - 4, pp ? 0xFFFFFF : 0x777777);
-                drawRing(boxTexture, cx, cy, control.r1_ - 2, 4, segments1, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+            if (control._r1 !== undefined) {
+                drawTextShadowCenter(fnt[0], control._text1, 8, cx, cy - control._r1 - 4, pp ? 0xFFFFFF : 0x777777);
+                drawRing(boxTexture, cx, cy, control._r1 - 2, 4, segments1, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
             }
-            if (control.r2_ !== undefined) {
-                drawTextShadowCenter(fnt[0], control.text2, 8, cx, cy - control.r2_ - 4, pp ? 0xFFFFFF : 0x777777);
-                drawRing(boxTexture, cx, cy, control.r2_ - 2, 4, segments2, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+            if (control._r2 !== undefined) {
+                drawTextShadowCenter(fnt[0], control._text2, 8, cx, cy - control._r2 - 4, pp ? 0xFFFFFF : 0x777777);
+                drawRing(boxTexture, cx, cy, control._r2 - 2, 4, segments2, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
             }
         }
     }

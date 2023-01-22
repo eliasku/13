@@ -29,17 +29,6 @@ export function clean() {
     tryRemove("./public");
 }
 
-export function resolveVersion() {
-    let version = "1.0.0";
-    try {
-        const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { version: string };
-        version = pkg.version ?? "1.0.0";
-    } catch {
-    }
-    console.info("build version: " + version);
-    return version;
-}
-
 export function copyPublicAssets(publicDir = "public", debugAssets = true, indexTemplate: string = "index.html") {
     // copy html
     console.info("copy assets");
@@ -69,3 +58,23 @@ export function copyPublicAssets(publicDir = "public", debugAssets = true, index
         copyFileSync("packages/client/assets/debug4.html", `${publicDir}/debug4.html`);
     }
 }
+
+let version = "1.0.0";
+let pokiGameId = "";
+
+try {
+    const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { version: string, poki?: { game_id?: string } };
+    version = pkg.version ?? "1.0.0";
+    pokiGameId = pkg.poki?.game_id ?? "";
+} catch {
+}
+
+console.info("build version: " + version);
+
+export const getCompileDefines = (debug?: boolean, serverUrl = "") => ({
+    __SERVER_URL__: `"${serverUrl}"`,
+    __VERSION__: `"${version}"`,
+    __POKI_GAME_ID__: `"${pokiGameId}"`,
+    "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
+});
+

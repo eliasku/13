@@ -7,9 +7,11 @@ export type MessageTypeID = number;
 
 declare var __VERSION__: string;
 declare var __SERVER_URL__: string;
+declare var __POKI_GAME_ID__: string;
 
 export const BuildVersion = __VERSION__;
 export const ServerUrl = __SERVER_URL__;
+export const PokiGameId = __POKI_GAME_ID__;
 
 export const enum ServerEventName {
     Close = 0,

@@ -1,10 +1,9 @@
 import {spawn} from "child_process";
 import {BuildOptions, context, PluginBuild} from 'esbuild';
-import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
+import {copyPublicAssets, getCompileDefines, prepareFolders} from "./common.js";
 
 prepareFolders("public");
 copyPublicAssets();
-const buildVersion = resolveVersion();
 
 {
     console.info("esbuild: server, client, debug");
@@ -20,11 +19,7 @@ const buildVersion = resolveVersion();
             // opts.minify = true;
             opts.minifySyntax = true;
         }
-        opts.define = {
-            __SERVER_URL__: `""`,
-            __VERSION__: `"${buildVersion}"`,
-            "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
-        };
+        opts.define = getCompileDefines(debug);
         opts.plugins = [{
             name: 'watch-errors',
             setup(build: PluginBuild) {

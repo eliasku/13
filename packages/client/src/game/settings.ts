@@ -58,8 +58,22 @@ export const settings: Settings = {
     dev_info: 0,
 };
 
+const getItem = (key: string): any => {
+    try {
+        return localStorage.getItem(prefix + key);
+    } catch {
+    }
+}
+
+const setItem = (key: string, value: any) => {
+    try {
+        localStorage.setItem(prefix + key, value);
+    } catch {
+    }
+}
+
 for (const key of Object.keys(settings)) {
-    const v = localStorage.getItem(prefix + key);
+    const v = getItem(key);
     if (v != null) {
         const type = typeof (settings as any)[key];
         switch (type) {
@@ -75,7 +89,7 @@ for (const key of Object.keys(settings)) {
 
 export function setSetting(key: SettingsKey, value: any): any {
     (settings as any)[key] = value;
-    localStorage.setItem(prefix + key, value);
+    setItem(key, value);
     return value;
 }
 

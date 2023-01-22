@@ -5,6 +5,7 @@ import {
     GameModeFlag,
     MessageField,
     NewGameParams,
+    PokiGameId,
     Request,
     RoomsInfoResponse,
     ServerEventName
@@ -310,7 +311,10 @@ const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
     },
 };
 
-const hostWhitelist = ["https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com"];
+const hostWhitelist: string[] = [];
+if (PokiGameId) {
+    hostWhitelist.push(`https://${PokiGameId}.poki-gdn.com`)
+}
 if (process.env.NODE_ENV === "development") {
     hostWhitelist.push("http://localhost:8080");
 }

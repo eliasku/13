@@ -365,9 +365,9 @@ export const flush = (_indicesCount = currentIndex) => {
                 console.error("gl error");
             }
         }
-        ++stats.frameDrawCalls;
-        stats.frameTriangles += _indicesCount / 3;
-        stats.frameVertices += baseVertex;
+        ++stats._frameDrawCalls;
+        stats._frameTriangles += _indicesCount / 3;
+        stats._frameVertices += baseVertex;
         currentIndex = 0;
         baseVertex = 0;
     }
