@@ -1,5 +1,5 @@
 import {spawn} from "child_process";
-import {build, BuildOptions} from 'esbuild';
+import {BuildOptions, context, PluginBuild} from 'esbuild';
 import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
 
 prepareFolders();
@@ -12,12 +12,6 @@ const buildVersion = resolveVersion();
     const addBuildOptions = (opts: BuildOptions, debug: boolean = false): BuildOptions => {
         opts.bundle = true;
         opts.format = "esm";
-        opts.watch = {
-            onRebuild(error, result) {
-                if (error) console.error('watch build failed:', error)
-                else console.log('watch build succeeded:', result)
-            }
-        };
         if (!debug) {
             opts.drop = ["debugger"];
             // if ((opts.entryPoints as string[])[0] !== "server/src/index.ts") {
@@ -27,38 +21,49 @@ const buildVersion = resolveVersion();
             opts.minifySyntax = true;
         }
         opts.define = {
+            __SERVER_URL__: `""`,
             __VERSION__: `"${buildVersion}"`,
             "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
         };
+        opts.plugins = [{
+            name: 'watch-errors',
+            setup(build: PluginBuild) {
+                let count = 0;
+                build.onEnd(result => {
+                    if (result.errors.length > 0) console.error('watch build failed:');
+                    else console.log('watch build succeeded');
+                });
+            },
+        }];
         return opts;
     }
 
     const esbuildTasks = [
-        build(addBuildOptions({
+        context(addBuildOptions({
             entryPoints: ["packages/server/src/index.ts"],
             tsconfig: "packages/server/tsconfig.json",
             outfile: "server.js",
             platform: "node",
             target: "node16",
-        })).catch(e => {
+        })).then(_ => _.watch()).catch(e => {
             console.warn(e);
             process.exit(1);
         }),
-        build(addBuildOptions({
+        context(addBuildOptions({
             entryPoints: ["packages/client/src/index.ts"],
             tsconfig: "packages/client/tsconfig.json",
             outfile: "public/client.js",
             plugins: [],
-        })).catch(e => {
+        })).then(_ => _.watch()).catch(e => {
             console.warn(e);
             process.exit(1);
         }),
-        build(addBuildOptions({
+        context(addBuildOptions({
             entryPoints: ["packages/client/src/index.ts"],
             tsconfig: "packages/client/tsconfig.json",
             outfile: "public/debug.js",
             plugins: [],
-        }, true)).catch(e => {
+        }, true)).then(_ => _.watch()).catch(e => {
             console.warn(e);
             process.exit(1);
         }),

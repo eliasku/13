@@ -13,12 +13,12 @@ export const GRID_STRIDE_BITS = 5;//Math.log2(GRID_STRIDE);
 const NEIGHBOURS = [0, 1, GRID_STRIDE, GRID_STRIDE + 1];
 
 export const addToGrid = (grid: Actor[][], a: Actor) => {
-    (grid[(a.x_ >> GRID_D_BITS) + ((a.y_ >> GRID_D_BITS) << GRID_STRIDE_BITS)] ??= []).push(a);
+    (grid[(a._x >> GRID_D_BITS) + ((a._y >> GRID_D_BITS) << GRID_STRIDE_BITS)] ??= []).push(a);
 }
 
 export const queryGridCollisions = (actor: Actor, grid: Actor[][], callback: (a: Actor, b: Actor) => void, disableMask: number = 1) => {
-    let cx = (actor.x_ - GRID_R) >> GRID_D_BITS;
-    let cy = (actor.y_ - GRID_R) >> GRID_D_BITS;
+    let cx = (actor._x - GRID_R) >> GRID_D_BITS;
+    let cy = (actor._y - GRID_R) >> GRID_D_BITS;
     if (cx < 0) cx = 0;
     if (cy < 0) cy = 0;
     let h = (cy << GRID_STRIDE_BITS) + cx;
@@ -26,7 +26,7 @@ export const queryGridCollisions = (actor: Actor, grid: Actor[][], callback: (a:
         const cell = grid[h + NEIGHBOURS[i]];
         if (cell) {
             for (const b of cell) {
-                if ((b.fstate_ | disableMask) & 1) {
+                if ((b._localStateFlags | disableMask) & 1) {
                     callback(actor, b);
                 }
             }

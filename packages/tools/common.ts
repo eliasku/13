@@ -3,7 +3,7 @@ import {execSync} from "child_process";
 
 function ensureDir(dir: string) {
     try {
-        mkdirSync(dir);
+        mkdirSync(dir, {recursive: true});
     } catch {
     }
 }
@@ -17,9 +17,10 @@ function tryRemove(file: string) {
     }
 }
 
-export function prepareFolders() {
-    ensureDir("build");
-    ensureDir("public");
+export function prepareFolders(...folders: string[]) {
+    for (const folder of folders) {
+        ensureDir(folder);
+    }
 }
 
 export function clean() {
@@ -39,17 +40,32 @@ export function resolveVersion() {
     return version;
 }
 
-export function copyPublicAssets() {
+export function copyPublicAssets(publicDir = "public", debugAssets = true, indexTemplate: string = "index.html") {
     // copy html
-    console.info("build html files");
-    execSync(`html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o public/index.html packages/client/assets/index.html`);
-    copyFileSync("packages/client/assets/index4.html", "public/index4.html");
-    copyFileSync("packages/client/assets/debug4.html", "public/debug4.html");
-    copyFileSync("packages/client/assets/debug.html", "public/debug.html");
-    copyFileSync("packages/client/assets/e.ttf", "public/e.ttf");
-    copyFileSync("packages/client/assets/m.ttf", "public/m.ttf");
-    copyFileSync("packages/client/assets/fa-brands-400.ttf", "public/fa-brands-400.ttf");
-    copyFileSync("packages/client/assets/spot.png", "public/spot.png");
-    copyFileSync("packages/client/assets/main.png", "public/main.png");
-    copyFileSync("packages/client/assets/main.dat", "public/main.dat");
+    console.info("copy assets");
+    execSync([
+        `html-minifier`,
+        `--collapse-whitespace`,
+        `--remove-comments`,
+        `--remove-optional-tags`,
+        `--remove-redundant-attributes`,
+        `--remove-script-type-attributes`,
+        `--remove-tag-whitespace`,
+        `--use-short-doctype`,
+        `--minify-css true`,
+        `--minify-js true`,
+        `-o ${publicDir}/index.html`,
+        `packages/client/assets/${indexTemplate}`
+    ].join(" "));
+    copyFileSync("packages/client/assets/e.ttf", `${publicDir}/e.ttf`);
+    copyFileSync("packages/client/assets/m.ttf", `${publicDir}/m.ttf`);
+    copyFileSync("packages/client/assets/fa-brands-400.ttf", `${publicDir}/fa-brands-400.ttf`);
+    copyFileSync("packages/client/assets/spot.png", `${publicDir}/spot.png`);
+    copyFileSync("packages/client/assets/main.png", `${publicDir}/main.png`);
+    copyFileSync("packages/client/assets/main.dat", `${publicDir}/main.dat`);
+    if (debugAssets) {
+        copyFileSync("packages/client/assets/debug.html", `${publicDir}/debug.html`);
+        copyFileSync("packages/client/assets/index4.html", `${publicDir}/index4.html`);
+        copyFileSync("packages/client/assets/debug4.html", `${publicDir}/debug4.html`);
+    }
 }

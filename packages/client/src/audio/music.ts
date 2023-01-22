@@ -1,4 +1,4 @@
-import {audioContext} from "./context";
+import {audioContext, audioMaster} from "./context";
 import {Snd, snd} from "../assets/sfx";
 import {fxRand} from "../utils/rnd";
 import {sin} from "../utils/math";
@@ -11,10 +11,10 @@ const scalenotes = [0, 2, 3, 5, 7, 8, 10, 12, 12 + 2, 12 + 3, 12 + 5, 12 + 7, 12
 //scaleNaturalMinor = {2,1,2,2,1,2,2};
 
 const bassFilter = audioContext.createBiquadFilter();
-bassFilter.connect(audioContext.destination);
+bassFilter.connect(audioMaster);
 
 const playNote = (sndId: Snd, note: number, when: number,
-                  len: number = 1, dest: AudioNode = audioContext.destination) => {
+                  len: number = 1, dest = audioMaster) => {
     const s = audioContext.createBufferSource();
     s.buffer = snd[sndId];
     s.detune.value = note * 100;//2 ** ((note - 12) / 12);

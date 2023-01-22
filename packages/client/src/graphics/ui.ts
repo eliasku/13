@@ -40,7 +40,7 @@ const textOps: TextOp[] = [];
 const captureInputPointer = () => {
     pointer = mousePointer;
     for (const [, touchPointer] of inputPointers) {
-        if (touchPointer.active_ || touchPointer.upEvent_) {
+        if (touchPointer._active || touchPointer._upEvent) {
             pointer = touchPointer;
             break;
         }
@@ -55,7 +55,7 @@ export const ui_begin = (scale: number) => {
 }
 
 export const ui_finish = () => {
-    if (!pointer.active_) {
+    if (!pointer._active) {
         activeItem = "";
     } else {
         if (!activeItem) {
@@ -70,8 +70,8 @@ export const label = (text: string, size: number, x: number, y: number) => {
 
 // Check whether current mouse position is within a rectangle
 const isRegionHit = (x: number, y: number, w: number, h: number): number => {
-    const px = pointer.x_ / pointerScale;
-    const py = pointer.y_ / pointerScale;
+    const px = pointer._x / pointerScale;
+    const py = pointer._y / pointerScale;
     if (px < x ||
         py < y ||
         px >= x + w ||
@@ -87,7 +87,7 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
     const visible = config?.visible ?? true;
     if (isRegionHit(x, y, w, h)) {
         hotItem = id;
-        if (!activeItem && pointer.active_) {
+        if (!activeItem && pointer._active) {
             activeItem = id;
         }
     }
@@ -133,7 +133,7 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
     }
     // If button is hot and active, but mouse button is not
     // down, the user must have clicked the button.
-    if (!pointer.active_ && hotItem === id && activeItem === id) {
+    if (!pointer._active && hotItem === id && activeItem === id) {
         return 1;
     }
 

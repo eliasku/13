@@ -24,7 +24,7 @@ Select room, share the link and wait friends to play:
 
 1. [Play on `🚪 grtc` | `🇪🇺 Europe`](https://grtc.herokuapp.com/)
 2. [Play on `🚪 ga13` | `🇺🇸 US`](https://ga13.herokuapp.com/)
-2. [Play on `🚪 next13`](https://next13.herokuapp.com/) to check **unreleased** changes!
+2. [Play on `🚪 next13`](https://next13.herokuapp.com/) to review **unreleased** changes from [`develop` branch](https://github.com/eliasku/13/tree/develop)!
 
 ### 🎮 Controls
 

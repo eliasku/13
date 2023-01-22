@@ -16,6 +16,6 @@ export const updateFrameTime = (ts: number) => {
     }
 }
 
-export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG.camera.size;
+export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG._camera._size;
 
-export const getNameByClientId = (client: ClientID) => client === clientId ? clientName : remoteClients.get(client)?.name_;
+export const getNameByClientId = (client: ClientID) => client === clientId ? clientName : remoteClients.get(client)?._name;

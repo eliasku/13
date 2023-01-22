@@ -1,5 +1,4 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
-
 import {
     BuildVersion,
     ClientID,
@@ -7,7 +6,7 @@ import {
     MessageField,
     NewGameParams,
     Request,
-    RoomInfo,
+    RoomsInfoResponse,
     ServerEventName
 } from "../../shared/src/types";
 import {serveFile} from "./static";
@@ -15,12 +14,12 @@ import {newSeedFromTime, rollSeed32, temper} from "@eliasku/13-shared/src/seed";
 import {parseRadix64String, toRadix64String} from "@eliasku/13-shared/src/radix64";
 
 interface ClientState {
-    id_: ClientID;
+    _id: ClientID;
     // last time client or server communicates with client
-    ts_: number;
-    eventStream_: ServerResponse;
-    nextEventId_: number;
-    room: RoomState;
+    _ts: number;
+    _eventStream: ServerResponse;
+    _nextEventId: number;
+    _room: RoomState;
 }
 
 const HDR_EVENT_STREAM: OutgoingHttpHeaders = {
@@ -35,11 +34,11 @@ const HDR_JSON_NO_CACHE: OutgoingHttpHeaders = {
 };
 
 interface RoomState extends NewGameParams {
-    id: number;
-    code: string;
-    mapSeed: number;
-    nextClientIndex: ClientID;
-    clients: Map<ClientID, ClientState>;
+    _id: number;
+    _code: string;
+    _mapSeed: number;
+    _nextClientIndex: ClientID;
+    _clients: Map<ClientID, ClientState>;
 }
 
 let nextRoomId = 1;
@@ -47,12 +46,11 @@ const rooms: Map<number, RoomState> = new Map();
 
 setInterval(() => {
     for (const [, room] of rooms) {
-        for (const [, client] of room.clients) {
-            if ((performance.now() - client.ts_ > 5000) ||
+        for (const [, client] of room._clients) {
+            if ((performance.now() - client._ts > 5000) ||
                 !sendServerEvent(client, ServerEventName.Ping, "")) {
                 removeClient(client);
             }
-            // sendServerEvent(client, ServerEventName.Ping, "");
         }
     }
 }, 1000);
@@ -61,14 +59,14 @@ const constructMessage = (id: number, data: string) =>
     `id:${id}\ndata:${data}\n\n`;
 
 const sendServerEvent = (client: ClientState, event: ServerEventName, data: string) =>
-    client.eventStream_.write(
-        constructMessage(client.nextEventId_++, event + data),
+    client._eventStream.write(
+        constructMessage(client._nextEventId++, event + data),
         // REMOVE CLIENT IN CASE OF ANY ERRORS!
         (err) => err && removeClient(client)
     );
 
 const broadcastServerEvent = (room: RoomState, from: ClientID, event: ServerEventName, data: string) => {
-    for (const [id, client] of room.clients) {
+    for (const [id, client] of room._clients) {
         if (id != from) {
             sendServerEvent(client, event, data);
         }
@@ -78,37 +76,37 @@ const broadcastServerEvent = (room: RoomState, from: ClientID, event: ServerEven
 const removeClient = (client: ClientState) => {
     try {
         //sendCloseServerEvent(client);
-        client.eventStream_.write(
+        client._eventStream.write(
             constructMessage(-1, "")
         );
-        client.eventStream_.end();
+        client._eventStream.end();
     } catch {
     }
 
-    const room = client.room;
-    room.clients.delete(client.id_);
-    broadcastServerEvent(client.room, client.id_, ServerEventName.ClientListChange, `-${client.id_}`);
-    console.info(`[room ${room.id}] broadcast client ${client.id_} removed`);
+    const room = client._room;
+    room._clients.delete(client._id);
+    broadcastServerEvent(client._room, client._id, ServerEventName.ClientListChange, `-${client._id}`);
+    console.info(`[room ${room._id}] broadcast client ${client._id} removed`);
 
-    if (!room.clients.size) {
-        console.info(`[room ${room.id}] is removed because last player leaved`);
-        rooms.delete(room.id);
+    if (!room._clients.size) {
+        console.info(`[room ${room._id}] is removed because last player leaved`);
+        rooms.delete(room._id);
     }
 }
 
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
-    res.writeHead(200, HDR_JSON_NO_CACHE);
-    const json = {
-        rooms: [] as RoomInfo[],
+    res.writeHead(200, cors(req, {...HDR_JSON_NO_CACHE}));
+    const json: RoomsInfoResponse = {
+        rooms: [],
         players: 0
     };
     for (const [, room] of rooms) {
-        const players = room.clients.size;
-        if (room.flags & GameModeFlag.Public) {
+        const players = room._clients.size;
+        if (room._flags & GameModeFlag.Public) {
             json.rooms.push({
-                code: room.code,
+                code: room._code,
                 players,
-                max: room.playersLimit,
+                max: room._playersLimit,
             });
         }
         json.players += players;
@@ -126,35 +124,35 @@ function validateRequestBuildVersion(query: URLSearchParams, req: IncomingMessag
 }
 
 interface CreateRoomOptions extends NewGameParams {
-    id?: number;
+    _id?: number;
 }
 
 function createRoom(options?: CreateRoomOptions): RoomState {
-    const id = options?.id ?? nextRoomId++;
-    const flags = options?.flags ?? GameModeFlag.Public;
-    const npcLevel = options?.npcLevel ?? 2;
-    const playersLimit = options?.playersLimit ?? 8;
-    let theme = options?.theme ?? 0;
+    const id = options?._id ?? nextRoomId++;
+    const flags = options?._flags ?? GameModeFlag.Public;
+    const npcLevel = options?._npcLevel ?? 2;
+    const playersLimit = options?._playersLimit ?? 8;
+    let theme = options?._theme ?? 0;
     theme = theme ? (theme - 1) : Math.floor(Math.random() * 3);
     const room: RoomState = {
-        id,
-        flags,
-        npcLevel,
-        playersLimit,
-        theme,
-        mapSeed: newSeedFromTime(),
-        code: toRadix64String(temper(rollSeed32(id))),
-        nextClientIndex: 1,
-        clients: new Map()
+        _id: id,
+        _flags: flags,
+        _npcLevel: npcLevel,
+        _playersLimit: playersLimit,
+        _theme: theme,
+        _mapSeed: newSeedFromTime(),
+        _code: toRadix64String(temper(rollSeed32(id))),
+        _nextClientIndex: 1,
+        _clients: new Map()
     };
-    console.info(`[room ${room.id}] created`);
-    rooms.set(room.id, room);
+    console.info(`[room ${room._id}] created`);
+    rooms.set(room._id, room);
     return room;
 }
 
 function findRoomByCode(code: string): RoomState | undefined {
     for (const [, r] of rooms) {
-        if (r.code === code) {
+        if (r._code === code) {
             return r;
         }
     }
@@ -166,7 +164,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         return;
     }
 
-    res.writeHead(200, HDR_EVENT_STREAM);
+    res.writeHead(200, cors(req, HDR_EVENT_STREAM));
     let room: RoomState | undefined;
     if (params.has("r")) {
         const R = params.get("r");
@@ -180,7 +178,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
             error(req, res, `room #${R} not found`, 404);
             return;
         }
-        if (room.clients.size >= room.playersLimit) {
+        if (room._clients.size >= room._playersLimit) {
             error(req, res, `room #${R} is full`, 429);
             return;
         }
@@ -193,10 +191,10 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
             const npcLevel = data[2] ?? 2;
             const theme = data[3] ?? 0;
             room = createRoom({
-                flags,
-                playersLimit,
-                npcLevel,
-                theme
+                _flags: flags,
+                _playersLimit: playersLimit,
+                _npcLevel: npcLevel,
+                _theme: theme
             });
         } catch {
             error(req, res, `bad room create params: "${c}"`);
@@ -204,7 +202,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         }
     } else {
         for (const [, r] of rooms) {
-            if ((r.flags & GameModeFlag.Public) && r.clients.size < r.playersLimit) {
+            if ((r._flags & GameModeFlag.Public) && r._clients.size < r._playersLimit) {
                 room = r;
                 break;
             }
@@ -214,29 +212,29 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         }
     }
     // create new client connection
-    const ids: number[] = [...room.clients.keys()];
+    const ids: number[] = [...room._clients.keys()];
 
-    const id = room.nextClientIndex++;
+    const id = room._nextClientIndex++;
     const client: ClientState = {
-        id_: id,
-        ts_: performance.now(),
-        eventStream_: res,
-        nextEventId_: 0,
-        room,
+        _id: id,
+        _ts: performance.now(),
+        _eventStream: res,
+        _nextEventId: 0,
+        _room: room,
     };
-    room.clients.set(id, client);
+    room._clients.set(id, client);
     ids.unshift(id);
 
     req.on("close", () => removeClient(client));
 
-    console.info(`[room ${room.id}] init client ${client.id_}`);
+    console.info(`[room ${room._id}] init client ${client._id}`);
     sendServerEvent(client, ServerEventName.ClientInit, JSON.stringify([
-        room.code,
-        [room.flags, room.npcLevel, room.theme, room.mapSeed],
+        room._code,
+        [room._flags, room._npcLevel, room._theme, room._mapSeed],
         ids
     ]));
 
-    console.info(`[room ${room.id}] broadcast add client ${client.id_}`);
+    console.info(`[room ${room._id}] broadcast add client ${client._id}`);
     broadcastServerEvent(room, id, ServerEventName.ClientListChange, "" + id);
 }
 
@@ -270,7 +268,7 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
             return;
         }
         // process new clients
-        const client = room.clients.get(reqData[0]);
+        const client = room._clients.get(reqData[0]);
         if (!client) {
             // handle on client bad connection state (need to connect again and get new ID)
             console.warn("client is not active: ", reqData[0]);
@@ -278,16 +276,16 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
             res.end();
             return;
         }
-        client.ts_ = performance.now();
+        client._ts = performance.now();
         let numProcessedMessages = 0;
         for (const msg of reqData[1]) {
-            const toClient = room.clients.get(msg[MessageField.Destination]);
+            const toClient = room._clients.get(msg[MessageField.Destination]);
             if (toClient) {
                 sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
             }
             ++numProcessedMessages;
         }
-        res.writeHead(200, HDR_JSON_NO_CACHE);
+        res.writeHead(200, cors(req, HDR_JSON_NO_CACHE));
         res.end("" + numProcessedMessages);
     } catch (e) {
         error(req, res, "Handle income message exception " + e);
@@ -312,12 +310,43 @@ const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
     },
 };
 
+const hostWhitelist = ["https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com"];
+if (process.env.NODE_ENV === "development") {
+    hostWhitelist.push("http://localhost:8080");
+}
+
+const getAllowedOrigin = (req: IncomingMessage): string | undefined => {
+    if (req.headers.origin) {
+        return hostWhitelist.find(x => req.headers.origin.startsWith(x));
+    }
+}
+
+const cors = (req: IncomingMessage, headers: OutgoingHttpHeaders): OutgoingHttpHeaders => {
+    const allowedOrigin = getAllowedOrigin(req);
+    if (allowedOrigin) {
+        return {
+            ...headers,
+            "Access-Control-Allow-Origin": allowedOrigin,
+        };
+    }
+    return headers;
+}
+
 createServer((req: IncomingMessage, res: ServerResponse) => {
     try {
-        const parts: string[] = req.url.split("?");
+        const parts = req.url.split("?");
         const url = parts[0];
         const handler = HANDLERS[url];
         if (handler) {
+            if (req.method === "OPTIONS") {
+                const allowedOrigin = getAllowedOrigin(req);
+                if (allowedOrigin) {
+                    res.writeHead(200, cors(req, {}));
+                } else {
+                    res.writeHead(500);
+                }
+                return;
+            }
             const method = handler[req.method];
             if (method) {
                 const params = new URLSearchParams(parts[1] ?? "");

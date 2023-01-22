@@ -1,1 +1,1 @@
-declare const c:HTMLCanvasElement;
+declare const c: HTMLCanvasElement;

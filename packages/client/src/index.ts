@@ -14,7 +14,7 @@ import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
-import {updateSong} from "./audio/gen";
+import {updateSong} from "./audio/music";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
 import {GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
@@ -23,7 +23,7 @@ import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
-import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
+import {poki} from "./poki";
 
 const enum StartState {
     Loading = 0,
@@ -35,16 +35,18 @@ const enum StartState {
 
 type StateFunc = (ts?: number) => void | undefined;
 
-{
-    let state: StartState = StartState.Loading;
+async function start() {
+    await poki._init();
 
+    let state = StartState.Loading;
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
-    setInterval(async () => {
+
+    const refreshRoomsInfo = async () => {
         if (state > StartState.Loaded && _sseState < 3) {
             publicServerInfo = await loadRoomsInfo();
         }
-    }, 2000);
-
+        setTimeout(refreshRoomsInfo, 2000);
+    };
     const goToSplash = () => {
         state = StartState.TapToStart;
         resetGame();
@@ -80,6 +82,7 @@ type StateFunc = (ts?: number) => void | undefined;
         createSplashState();
         gameMode.npcLevel = 0;
         completeLoading();
+        poki._gameLoadingFinished();
     });
     const preStates: StateFunc[] = [
         ,
@@ -87,37 +90,37 @@ type StateFunc = (ts?: number) => void | undefined;
         () => {
             const result = menuScreen(publicServerInfo);
             if (result) {
-                if (result.command === MenuCommand.StartPractice) {
+                if (result._command === MenuCommand.StartPractice) {
                     state = StartState.Connected;
                     resetGame();
                     connect({
-                        flags: GameModeFlag.Offline,
-                        playersLimit: 1,
-                        npcLevel: 1,
-                        theme: 0,
+                        _flags: GameModeFlag.Offline,
+                        _playersLimit: 1,
+                        _npcLevel: 1,
+                        _theme: 0,
                     });
                     gameMode.npcLevel = _room.npcLevel;
-                } else if (result.command === MenuCommand.QuickStart) {
+                } else if (result._command === MenuCommand.QuickStart) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
                     connect();
-                } else if (result.command === MenuCommand.JoinGame) {
+                } else if (result._command === MenuCommand.JoinGame) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
-                    connect(undefined, result.joinByCode);
-                } else if (result.command === MenuCommand.CreateGame) {
+                    connect(undefined, result._joinByCode);
+                } else if (result._command === MenuCommand.CreateGame) {
                     state = StartState.Connecting;
                     resetGame();
                     gameMode.title = true;
                     gameMode.tiltCamera = 0.05;
                     gameMode.bloodRain = true;
-                    connect(result.newGame);
+                    connect(result._newGame);
                 }
             }
         },
@@ -125,6 +128,7 @@ type StateFunc = (ts?: number) => void | undefined;
     const _states: StateFunc[] = [
         ,
         (ts: number) => {
+            // game is loaded, user sees "PRESS ANY KEY" message and waits for first user click
             const scale = getScreenScale();
             const W = (gl.drawingBufferWidth / scale) | 0;
             const H = (gl.drawingBufferHeight / scale) | 0;
@@ -138,6 +142,9 @@ type StateFunc = (ts?: number) => void | undefined;
             flush();
             if (isAnyKeyDown()) {
                 state = StartState.TapToStart;
+                // begin fetch rooms info
+                refreshRoomsInfo();
+
                 gameMode.playersAI = true;
                 gameMode.npcLevel = 3;
             }
@@ -163,6 +170,7 @@ type StateFunc = (ts?: number) => void | undefined;
                 state = StartState.Connected;
                 speak("fight");
             } else if (!_sseState) {
+                // failed to connect and start the room
                 goToSplash();
             }
         },
@@ -172,6 +180,8 @@ type StateFunc = (ts?: number) => void | undefined;
                 disconnect();
             }
             if (!_sseState) {
+                // user disconnected or quit the game room
+                poki._gameplayStop();
                 goToSplash();
             }
         }
@@ -197,3 +207,5 @@ type StateFunc = (ts?: number) => void | undefined;
         completeFrame();
     });
 }
+
+start();

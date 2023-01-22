@@ -1,6 +1,7 @@
 ## 1.0.12
 
-
+- Optimize and refactoring game state data
+- Changes for [poki](https://poki.com/)
 
 ## 1.0.11
 

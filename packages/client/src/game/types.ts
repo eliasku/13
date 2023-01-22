@@ -20,203 +20,252 @@ export const enum ItemType {
     Ammo = 5,
     // FLAG
     Weapon = 8,
+
+    SubTypeMask = 7,
 }
 
 export interface Pos {
-    x_: number;
-    y_: number;
-    z_: number;
+    /** uint16 **/
+    _x: number;
+    /** uint16 **/
+    _y: number;
+    /** uint16 */
+    _z: number;
 }
 
 export interface Vel {
-    u_: number;
-    v_: number;
-    w_: number;
+    /** int11 [-1024; +1024] **/
+    _u: number;
+    /** int11 [-1024; +1024] **/
+    _v: number;
+    /** int11 [-1024; +1024] **/
+    _w: number;
 }
 
-/* {
-    type: 3,
-    detune: 5,
-    anim-hit: 5
-    weapon: 4,
-    hp: 5,
- */
 export interface Actor extends Pos, Vel {
+    /** uint:4 **/
+    _type: ActorType;
+    /** uint32 **/
+    _id: number;
+
+    // Item: ItemType subtype
+    // Tree: GFX variation
+    // Bullet: BulletType subtype
+    // 4-bit
+    /** uint:4 **/
+    _subtype: number;
+
+    // Player: reload time
+    // Bullet: life-time
+    // Item: life-time / 3
+    /** uint8 **/
+    _lifetime: number;
+
+    /**
+     * health points [0; 15]
+     * @type uint4
+     **/
+    _hp?: number;
+
+    /**
+     * shield points [0; 15]
+     * @type uint4
+     **/
+    _sp?: number;
+
+    /**
+     * generated static variation seed value for animation
+     * @type uint8
+     **/
+    _anim0?: number;
+
+    /**
+     * Hit effect. For Items could not be picked up until it reach 0
+     * @type uint5
+     **/
+    _animHit?: number;
+
+    /**
+     * local frame-scope state
+     * @type uint32
+     * @transient
+     **/
+    _localStateFlags?: number;
+}
+
+export interface PlayerActor extends Actor {
+    // Player: client ID or NPC ~entityID
     // 32-bit identifier
-    id_: number;
-    // 32-bit identifier
-    client_: ClientID;
-
-    // 0..4
-    type_: ActorType;
-
-    btn_: number;
-
-    // reload time
-    // bullet life-time
-    // 8-bit
-    s_: number;
-
-    // detune counter: 0...32 (max of weapon detune-speed parameter)
-    detune_: number;
-
-    // Item, Player, Barrel : holding or contains Weapon ID
-    // Bullet : Damage value
-    // range: 0...15 currently
-    // 4 bits
-    weapon_?: number;
-
-    // all objects HP (0..15)
-    // 4 bits
-    hp_?: number;
-
-    // all objects SP (0..15)
-    // 4 bits
-    sp_?: number;
+    _client: ClientID;
 
     // Magazines (0..15)
     // 4 bits
-    mags_?: number;
+    _mags?: number;
 
-    // 8-bit: just generated anim start point
-    anim0_?: number;
-
-    // Hit effect (5 bits: 0...31)
-    // For Items could not be picked up until it reach 0
-    animHit_?: number;
-
-    // local frame-scope state
-    fstate_?: number;
-
-    // 0...63 (max_weapon_clip_size)
-    // 6 bits
-    clipAmmo_?: number;
+    // detune counter: 0...32 (max of weapon detune-speed parameter)
+    _detune: number;
 
     // 0...63 (max_weapon_clip_reload)
     // 6 bits
-    clipReload_?: number;
+    _clipReload?: number;
+
+    // holding Weapon ID
+    // range: 0...15 currently
+    // 4 bits
+    _weapon?: number;
 
     // 4 bits
-    weapon2_?: number;
+    _weapon2?: number;
+
+    // 0...63 (max_weapon_clip_size)
+    // 6 bits
+    _clipAmmo?: number;
 
     // 6 bits
-    clipAmmo2_?: number;
+    _clipAmmo2?: number;
 
     // oh... check down trigger 4 bits
-    trig_?: number;
+    _trig?: number;
+
+    // Input buttons
+    // 32-bit
+    _input: number;
+}
+
+export interface BarrelActor extends Actor {
+
+}
+
+export interface BulletActor extends Actor {
+    // Bullet: owner ID
+    // 32-bit identifier
+    _ownerId: ClientID;
+
+    // damage amount
+    // range: 0...15 currently
+    // 4 bits
+    _damage: number;
+}
+
+export interface ItemActor extends Actor {
+    // range: 0...15 currently
+    // 4 bits
+    _itemWeapon: number;
+    // 0...63 (max_weapon_clip_size)
+    // 6 bits
+    _itemWeaponAmmo: number;
 }
 
 export interface Client {
-    id_: ClientID;
+    _id: ClientID;
 
     // how many MY inputs are acknowledged by remote [remote-ack + 1 .. local tic]
-    acknowledgedTic_: number;
+    _acknowledgedTic: number;
 
     // completed inputs received from remote
-    tic_: number;
+    _tic: number;
     _ts0: number;
     _ts1: number;
     _lag?: number;
 
     // client starts play my events
-    ready_?: boolean;
+    _ready?: boolean;
 
     // I'm playing client's events
-    isPlaying_?: boolean;
+    _isPlaying?: boolean;
 
-    startState?: StateData;
+    _startState?: StateData;
 }
 
 export interface ClientEvent {
-    tic_: number;
-    btn_?: number;
+    _tic: number;
+    // TODO: rename to `_input`
+    _btn?: number;
     // will be populated from packet info
-    client_: ClientID;
+    _client: ClientID;
 }
 
 export interface PlayerStat {
-    scores_: number;
-    frags_: number;
+    _scores: number;
+    _frags: number;
 }
 
 export interface StateData {
-    nextId_: number;
-    tic_: number;
-    seed_: number;
-    mapSeed_: number;
-    actors_: Actor[][];
-    stats_: Map<ClientID, PlayerStat>;
+    _nextId: number;
+    _tic: number;
+    _seed: number;
+    _actors: [PlayerActor[], BarrelActor[], BulletActor[], ItemActor[]];
+    _stats: Map<ClientID, PlayerStat>;
 }
 
 export const newStateData = (): StateData => ({
-    nextId_: 0,
-    tic_: 0,
-    seed_: 0,
-    mapSeed_: 0,
-    actors_: [[], [], [], []],
-    stats_: new Map(),
+    _nextId: 0,
+    _tic: 0,
+    _seed: 0,
+    _actors: [[], [], [], []],
+    _stats: new Map(),
 });
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
 export interface Packet {
-    sync_: boolean;
+    _sync: boolean;
     // confirm the last tic we received from Sender
-    receivedOnSender_: number;
+    _receivedOnSender: number;
     // packet contains info tic and before, 22 bits, for 19 hr of game session
-    tic_: number;
+    _tic: number;
 
     // timestamps to measure lag between 2 peers
     _ts0: number;
     _ts1: number;
 
     // events are not confirmed
-    events_: ClientEvent[];
+    _events: ClientEvent[];
     // init state
-    state_?: StateData;
+    _state?: StateData;
 
     // DEBUG: check current tic seed
-    debug?: PacketDebug;
+    _debug?: PacketDebug;
 }
 
 export interface PacketDebug {
-    nextId: number;
-    tic: number;
-    seed: number;
-    state?: StateData;
+    _nextId: number;
+    _tic: number;
+    _seed: number;
+    _state?: StateData;
 }
 
 export interface Particle extends Pos, Vel {
     // angle
-    a_: number;
+    _a: number;
     // rotation speed
-    r_: number;
+    _r: number;
 
     // gravity factor
-    gravity_: number;
+    _gravity: number;
 
-    scale_: number;
-    scaleDelta_: number;
-    color_: number;
+    _scale: number;
+    _scaleDelta: number;
+    _color: number;
 
-    lifeTime_: number;
-    lifeMax_: number;
+    _lifeTime: number;
+    _lifeMax: number;
 
-    img_: Img;
-    splashSizeX_: number;
-    splashSizeY_: number;
-    splashEachJump_: number;
-    splashScaleOnVelocity_: number;
-    splashImg_: number;
-    followVelocity_: number;
-    followScale_: number;
+    _img: Img;
+    _splashSizeX: number;
+    _splashSizeY: number;
+    _splashEachJump: number;
+    _splashScaleOnVelocity: number;
+    _splashImg: number;
+    _followVelocity: number;
+    _followScale: number;
 
-    shadowScale: number;
+    _shadowScale: number;
 }
 
 export interface TextParticle extends Pos {
-    text_: string;
-    lifetime_: number;
-    time_: number;
+    _text: string;
+    _lifetime: number;
+    _time: number;
 }
 
 export const unpackAngleByte = (angleByte: number, res: number) =>

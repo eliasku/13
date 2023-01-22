@@ -126,12 +126,12 @@ export async function loadMainAtlas(): Promise<void> {
             f32[ptr++],
             f32[ptr++]
         );
-        subImage.index0 = f32[ptr++] | 0;
-        subImage.triangles = f32[ptr++] | 0;
-        subImage.vertex0 = f32[ptr++] | 0;
-        subImage.vertexCount = f32[ptr++] | 0;
-        subImage.vertices = vertexData;
-        subImage.indices = indexData;
+        subImage._index0 = f32[ptr++] | 0;
+        subImage._triangles = f32[ptr++] | 0;
+        subImage._vertex0 = f32[ptr++] | 0;
+        subImage._vertexCount = f32[ptr++] | 0;
+        subImage._vertices = vertexData;
+        subImage._indices = indexData;
         img[i] = subImage;
     }
 }
@@ -139,7 +139,7 @@ export async function loadMainAtlas(): Promise<void> {
 export async function loadSpotLightTexture(): Promise<void> {
     const image = await loadImage("spot.png");
     imgSpotLight = createTexture(image.width, image.height);
-    imgSpotLight.x_ = 0.5;
-    imgSpotLight.y_ = 0.5;
+    imgSpotLight._x = 0.5;
+    imgSpotLight._y = 0.5;
     uploadTexture(imgSpotLight, image, GL.LINEAR);
 }
