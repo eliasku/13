@@ -51,7 +51,6 @@ setInterval(() => {
                 !sendServerEvent(client, ServerEventName.Ping, "")) {
                 removeClient(client);
             }
-            // sendServerEvent(client, ServerEventName.Ping, "");
         }
     }
 }, 1000);
@@ -96,7 +95,7 @@ const removeClient = (client: ClientState) => {
 }
 
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
-    res.writeHead(200, {...HDR_JSON_NO_CACHE, ...getCorsHeaders(req)});
+    res.writeHead(200, cors(req, {...HDR_JSON_NO_CACHE}));
     const json: RoomsInfoResponse = {
         rooms: [],
         players: 0
@@ -165,7 +164,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         return;
     }
 
-    res.writeHead(200, {...HDR_EVENT_STREAM, ...getCorsHeaders(req)});
+    res.writeHead(200, cors(req, HDR_EVENT_STREAM));
     let room: RoomState | undefined;
     if (params.has("r")) {
         const R = params.get("r");
@@ -286,7 +285,7 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
             }
             ++numProcessedMessages;
         }
-        res.writeHead(200, {...HDR_JSON_NO_CACHE, ...getCorsHeaders(req)});
+        res.writeHead(200, cors(req, HDR_JSON_NO_CACHE));
         res.end("" + numProcessedMessages);
     } catch (e) {
         error(req, res, "Handle income message exception " + e);
@@ -311,18 +310,24 @@ const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
     },
 };
 
-const getCorsHeaders = (req: IncomingMessage): Record<string, string> => {
-    const headers: Record<string, string> = {};
+const hostWhitelist = ["https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com"];
+if (process.env.NODE_ENV === "development") {
+    hostWhitelist.push("http://localhost:8080");
+}
+
+const getAllowedOrigin = (req: IncomingMessage): string | undefined => {
     if (req.headers.origin) {
-        const ss = [
-            //"https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com",
-            "https://fefa3d7b-e795-49d0-90a0-d6fa8659e41c.poki-gdn.com",
-            //"http://localhost:8080",
-        ];
-        const origin = ss.find(x => req.headers.origin.startsWith(x));
-        if (origin) {
-            headers["Access-Control-Allow-Origin"] = origin;
-        }
+        return hostWhitelist.find(x => req.headers.origin.startsWith(x));
+    }
+}
+
+const cors = (req: IncomingMessage, headers: OutgoingHttpHeaders): OutgoingHttpHeaders => {
+    const allowedOrigin = getAllowedOrigin(req);
+    if (allowedOrigin) {
+        return {
+            ...headers,
+            "Access-Control-Allow-Origin": allowedOrigin,
+        };
     }
     return headers;
 }
@@ -334,9 +339,9 @@ createServer((req: IncomingMessage, res: ServerResponse) => {
         const handler = HANDLERS[url];
         if (handler) {
             if (req.method === "OPTIONS") {
-                const cors = getCorsHeaders(req);
-                if(cors["Access-Control-Allow-Origin"]) {
-                    res.writeHead(200, cors);
+                const allowedOrigin = getAllowedOrigin(req);
+                if (allowedOrigin) {
+                    res.writeHead(200, cors(req, {}));
                 } else {
                     res.writeHead(500);
                 }

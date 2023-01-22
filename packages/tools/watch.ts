@@ -21,6 +21,7 @@ const buildVersion = resolveVersion();
             opts.minifySyntax = true;
         }
         opts.define = {
+            __SERVER_URL__: `""`,
             __VERSION__: `"${buildVersion}"`,
             "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
         };

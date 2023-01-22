@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "build": "ts-node --esm --swc packages/tools/build.ts",
+    "upload-poki": "ts-node --esm --swc packages/tools/upload-poki.ts",
     "watch": "ts-node --esm --swc packages/tools/watch.ts",
     "clean": "ts-node --esm --swc packages/tools/clean.ts",
     "typecheck": "npm run typecheck --workspaces --if-present"
@@ -14,5 +15,9 @@
   "license": "ISC",
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "poki": {
+    "game_id": "fefa3d7b-e795-49d0-90a0-d6fa8659e41c",
+    "build_dir": "build/poki"
+  }
 }

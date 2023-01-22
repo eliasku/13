@@ -6,7 +6,10 @@ export type MessageData = any;
 export type MessageTypeID = number;
 
 declare var __VERSION__: string;
+declare var __SERVER_URL__: string;
+
 export const BuildVersion = __VERSION__;
+export const ServerUrl = __SERVER_URL__;
 
 export const enum ServerEventName {
     Close = 0,

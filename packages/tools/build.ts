@@ -2,7 +2,7 @@ import {readFileSync} from "fs";
 import {build, BuildOptions} from 'esbuild';
 import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
 
-prepareFolders();
+prepareFolders("public");
 copyPublicAssets();
 const buildVersion = resolveVersion();
 
@@ -43,6 +43,7 @@ function sz(...files: string[]) {
             opts.mangleProps = /^_[a-z]/;
         }
         opts.define = {
+            __SERVER_URL__: `""`,
             __VERSION__: `"${buildVersion}"`,
             "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
         };
