@@ -1,23 +1,14 @@
-import {
-    _room,
-    _sseState,
-    clientName,
-    connect,
-    disconnect,
-    loadRoomsInfo,
-    processMessages,
-    setUserName
-} from "./net/messaging";
-import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
+import {_room, _sseState, clientName, connect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging";
+import {isAnyKeyDown, updateInput} from "./utils/input";
 import {resetPrinter, ui_renderComplete} from "./graphics/ui";
-import {createSplashState, gameMenu, gameMode, resetGame, updateGame} from "./game/game";
+import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/music";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
+import {RoomsInfoResponse} from "../../shared/src/types";
 import {sin} from "./utils/math";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
@@ -93,12 +84,7 @@ async function start() {
                 if (result._command === MenuCommand.StartPractice) {
                     state = StartState.Connected;
                     resetGame();
-                    connect({
-                        _flags: GameModeFlag.Offline,
-                        _playersLimit: 1,
-                        _npcLevel: 1,
-                        _theme: 0,
-                    });
+                    connect(result._newGame);
                     gameMode._npcLevel = _room._npcLevel;
                 } else if (result._command === MenuCommand.QuickStart) {
                     state = StartState.Connecting;

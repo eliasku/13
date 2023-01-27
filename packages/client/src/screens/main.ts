@@ -13,7 +13,8 @@ const enum Menu {
     Settings = 1,
     Dev = 2,
     Games = 3,
-    CreateGame = 4,
+    Practice = 4,
+    CreateGame = 5,
 }
 
 export interface MenuResult {
@@ -38,6 +39,16 @@ const newGameSettings: MenuResult = {
     _newGame: {
         _flags: GameModeFlag.Public,
         _playersLimit: 8,
+        _npcLevel: 2,
+        _theme: 0,
+    }
+};
+
+const newPracticeSettings: MenuResult = {
+    _command: MenuCommand.StartPractice,
+    _newGame: {
+        _flags: GameModeFlag.Offline,
+        _playersLimit: 1,
         _npcLevel: 2,
         _theme: 0,
     }
@@ -90,9 +101,10 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
             }
 
             if (button("practice", "🏹 PRACTICE", centerX - 50, centerY + 75, {w: 100, h: 20})) {
-                result = {_command: MenuCommand.StartPractice};
+                // result = {_command: MenuCommand.StartPractice};
+                menu = Menu.Practice;
             }
-            if (button("settings", "⚙️ SETTINGS", centerX - 50, centerY + 108, {w: 100, h: 16})) {
+            if (button("settings", "⚙️", W - 40, 20, {w: 20, h: 20})) {
                 menu = Menu.Settings;
             }
         } else if (menu === Menu.Settings) {
@@ -253,6 +265,47 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                 menu = Menu.Main;
             }
 
+        } else if (menu === Menu.Practice) {
+            label("🏹 PRACTICE", 20, centerX, 30);
+
+            let y = centerY - 70;
+            y += 25
+            const NPC_LEVELS = ["NONE", "RARE", "NORMAL", "CROWD"];
+            if (button("npc_level", "NPC: " + NPC_LEVELS[newPracticeSettings._newGame._npcLevel], centerX - 50, y, {
+                w: 100,
+                h: 20
+            })) {
+                ++newPracticeSettings._newGame._npcLevel;
+                if (newPracticeSettings._newGame._npcLevel >= NPC_LEVELS.length) {
+                    newPracticeSettings._newGame._npcLevel = 0;
+                }
+            }
+            y += 25;
+            const THEME_NAMES = ["? RANDOM", "🌲 FOREST", "🌵 DESERT", "❄ SNOW"];
+            if (button("map_theme", "MAP: " + THEME_NAMES[newPracticeSettings._newGame._theme], centerX - 50, y, {
+                w: 100,
+                h: 20
+            })) {
+                ++newPracticeSettings._newGame._theme;
+                if (newPracticeSettings._newGame._theme > 3) {
+                    newPracticeSettings._newGame._theme = 0;
+                }
+            }
+            y += 25;
+            y += 25;
+            if (button("create", "⚔ START GAME", centerX - 50, y, {
+                w: 100,
+                h: 20
+            })) {
+                result = newPracticeSettings;
+            }
+            y += 25;
+            if (button("back", "⬅ BACK", centerX - 50, y, {
+                w: 100,
+                h: 20
+            }) || keyboardDown[KeyCode.Escape]) {
+                menu = Menu.Main;
+            }
         } else if (menu === Menu.CreateGame) {
             label("⚙️ CREATE GAME ROOM", 20, centerX, 30);
             let y = centerY - 70;
