@@ -1,11 +1,9 @@
 import {readFileSync} from "fs";
 import {build, BuildOptions} from 'esbuild';
-import {copyPublicAssets, prepareFolders, resolveVersion} from "./common.js";
+import {copyPublicAssets, getCompileDefines, prepareFolders} from "./common.js";
 
 prepareFolders("public");
 copyPublicAssets();
-const buildVersion = resolveVersion();
-
 let report: string[] = [];
 
 const printSize = (label: string, ...files: string[]) => {
@@ -42,11 +40,7 @@ function sz(...files: string[]) {
             opts.minify = true;
             opts.mangleProps = /^_[a-z]/;
         }
-        opts.define = {
-            __SERVER_URL__: `""`,
-            __VERSION__: `"${buildVersion}"`,
-            "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
-        };
+        opts.define = getCompileDefines(debug);
         return opts;
     }
 

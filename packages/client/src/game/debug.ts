@@ -59,7 +59,7 @@ export const printDebugInfo = (
     prevSimulatedTic = gameTic;
 
     if (_room) {
-        text += `ROOM: ${_room.code} ${_room.npcLevel} ${gameMode.npcLevel}\n`;
+        text += `ROOM: ${_room._code} ${_room._npcLevel} ${gameMode._npcLevel}\n`;
     }
     if (_debugLagK) {
         text += `debug-lag K: ${_debugLagK}\n`;

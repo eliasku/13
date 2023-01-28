@@ -1,14 +1,5 @@
-import {
-    _room,
-    _sseState,
-    clientName,
-    connect,
-    disconnect,
-    loadRoomsInfo,
-    processMessages,
-    setUserName
-} from "./net/messaging";
-import {isAnyKeyDown, keyboardDown, KeyCode, updateInput} from "./utils/input";
+import {_room, _sseState, clientName, connect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging";
+import {isAnyKeyDown, updateInput} from "./utils/input";
 import {resetPrinter, ui_renderComplete} from "./graphics/ui";
 import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
@@ -17,7 +8,7 @@ import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/music";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
+import {RoomsInfoResponse} from "../../shared/src/types";
 import {sin} from "./utils/math";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
@@ -51,9 +42,9 @@ async function start() {
         state = StartState.TapToStart;
         resetGame();
         createSplashState();
-        gameMode.title = true;
-        gameMode.playersAI = true;
-        gameMode.npcLevel = 3;
+        gameMode._title = true;
+        gameMode._playersAI = true;
+        gameMode._npcLevel = 3;
         speak("13 the game");
     }
 
@@ -80,7 +71,7 @@ async function start() {
         state = StartState.Loaded;
         resetGame();
         createSplashState();
-        gameMode.npcLevel = 0;
+        gameMode._npcLevel = 0;
         completeLoading();
         poki._gameLoadingFinished();
     });
@@ -93,33 +84,28 @@ async function start() {
                 if (result._command === MenuCommand.StartPractice) {
                     state = StartState.Connected;
                     resetGame();
-                    connect({
-                        _flags: GameModeFlag.Offline,
-                        _playersLimit: 1,
-                        _npcLevel: 1,
-                        _theme: 0,
-                    });
-                    gameMode.npcLevel = _room.npcLevel;
+                    connect(result._newGame);
+                    gameMode._npcLevel = _room._npcLevel;
                 } else if (result._command === MenuCommand.QuickStart) {
                     state = StartState.Connecting;
                     resetGame();
-                    gameMode.title = true;
-                    gameMode.tiltCamera = 0.05;
-                    gameMode.bloodRain = true;
+                    gameMode._title = true;
+                    gameMode._tiltCamera = 0.05;
+                    gameMode._bloodRain = true;
                     connect();
                 } else if (result._command === MenuCommand.JoinGame) {
                     state = StartState.Connecting;
                     resetGame();
-                    gameMode.title = true;
-                    gameMode.tiltCamera = 0.05;
-                    gameMode.bloodRain = true;
+                    gameMode._title = true;
+                    gameMode._tiltCamera = 0.05;
+                    gameMode._bloodRain = true;
                     connect(undefined, result._joinByCode);
                 } else if (result._command === MenuCommand.CreateGame) {
                     state = StartState.Connecting;
                     resetGame();
-                    gameMode.title = true;
-                    gameMode.tiltCamera = 0.05;
-                    gameMode.bloodRain = true;
+                    gameMode._title = true;
+                    gameMode._tiltCamera = 0.05;
+                    gameMode._bloodRain = true;
                     connect(result._newGame);
                 }
             }
@@ -145,8 +131,8 @@ async function start() {
                 // begin fetch rooms info
                 refreshRoomsInfo();
 
-                gameMode.playersAI = true;
-                gameMode.npcLevel = 3;
+                gameMode._playersAI = true;
+                gameMode._npcLevel = 3;
             }
         },
         () => {
@@ -163,10 +149,10 @@ async function start() {
             drawTextShadowCenter(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 50, 0xdddddd);
             flush();
             if (_sseState == 3) {
-                gameMode.title = false;
-                gameMode.tiltCamera = 0.0;
-                gameMode.bloodRain = false;
-                gameMode.npcLevel = _room.npcLevel;
+                gameMode._title = false;
+                gameMode._tiltCamera = 0.0;
+                gameMode._bloodRain = false;
+                gameMode._npcLevel = _room._npcLevel;
                 state = StartState.Connected;
                 speak("fight");
             } else if (!_sseState) {
@@ -176,9 +162,9 @@ async function start() {
         },
         () => {
             // exit room / disconnect
-            if (keyboardDown[KeyCode.Escape]) {
-                disconnect();
-            }
+            // if (keyboardDown[KeyCode.Escape]) {
+            //     disconnect();
+            // }
             if (!_sseState) {
                 // user disconnected or quit the game room
                 poki._gameplayStop();

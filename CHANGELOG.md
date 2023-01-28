@@ -1,3 +1,10 @@
+## 1.0.13
+
+- Add in-game menu (graceful way to quit the game room)
+- Fix rare font atlas artifacts
+- Change settings button in Main Menu
+- Add settings for Practice Mode 
+
 ## 1.0.12
 
 - Optimize and refactoring game state data

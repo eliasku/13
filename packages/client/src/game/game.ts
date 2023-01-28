@@ -68,6 +68,7 @@ import {
     moveX,
     moveY,
     reloadButton,
+    resetPlayerControls,
     shootButtonDown,
     swapButton,
     updateControls,
@@ -158,6 +159,11 @@ import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor
 import {poki} from "../poki";
 import {isAnyKeyDown} from "../utils/input";
 import {delay} from "../utils/delay";
+import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu";
+
+export const gameMenu: GameMenu = {
+    _state: GameMenuState.InGame,
+};
 
 const clients = new Map<ClientID, Client>()
 
@@ -190,13 +196,13 @@ let hotUsable: ItemActor | null = null;
 let state: StateData = newStateData();
 let lastState: StateData;
 export const gameMode = {
-    title: false,
-    runAI: false,
-    playersAI: false,
-    hasPlayer: false,
-    tiltCamera: 0.0,
-    bloodRain: false,
-    npcLevel: 0,
+    _title: false,
+    _runAI: false,
+    _playersAI: false,
+    _hasPlayer: false,
+    _tiltCamera: 0.0,
+    _bloodRain: false,
+    _npcLevel: 0,
 };
 
 // 0...50
@@ -250,13 +256,15 @@ export const resetGame = () => {
     lastAudioTic = 0;
     console.log("reset game");
 
-    gameMode.title = false;
-    gameMode.runAI = true;
-    gameMode.playersAI = false;
-    gameMode.hasPlayer = true;
-    gameMode.tiltCamera = 0.0;
-    gameMode.npcLevel = 0;
-    gameMode.bloodRain = false;
+    gameMode._title = false;
+    gameMode._runAI = true;
+    gameMode._playersAI = false;
+    gameMode._hasPlayer = true;
+    gameMode._tiltCamera = 0.0;
+    gameMode._npcLevel = 0;
+    gameMode._bloodRain = false;
+
+    gameMenu._state = GameMenuState.InGame;
 }
 
 const recreateMap = (themeIdx: number, seed: number) => {
@@ -303,7 +311,7 @@ export const createSeedGameState = () => {
     startTic = 0;
     gameTic = 1;
     state._seed = _SEEDS[0];
-    recreateMap(_room.mapTheme, _room.mapSeed);
+    recreateMap(_room._mapTheme, _room._mapSeed);
     initBarrels();
 }
 
@@ -328,10 +336,10 @@ export const createSplashState = () => {
         pushActor(player);
     }
     gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
-    gameMode.hasPlayer = false;
-    gameMode.tiltCamera = 0.05;
-    gameMode.bloodRain = true;
-    gameMode.title = true;
+    gameMode._hasPlayer = false;
+    gameMode._tiltCamera = 0.05;
+    gameMode._bloodRain = true;
+    gameMode._title = true;
 }
 
 export const updateGame = (ts: number) => {
@@ -339,6 +347,10 @@ export const updateGame = (ts: number) => {
 
     if (clientId && startTic < 0 && !remoteClients.size) {
         createSeedGameState();
+    }
+
+    if (clientId && startTic >= 0) {
+        onGameMenu(gameMenu);
     }
 
     let predicted = false;
@@ -368,7 +380,7 @@ export const updateGame = (ts: number) => {
             prevTime = lastFrameTs;
             state = maxState;
             gameTic = startTic = state._tic + 1;
-            recreateMap(_room.mapTheme, _room.mapSeed);
+            recreateMap(_room._mapTheme, _room._mapSeed);
             normalizeState();
         }
     }
@@ -494,7 +506,11 @@ const updatePlayerControls = () => {
 
     const player = getMyPlayer();
     if (player) {
-        updateControls(player);
+        if (gameMenu._state == GameMenuState.InGame) {
+            updateControls(player);
+        } else {
+            resetPlayerControls();
+        }
     }
 }
 
@@ -535,7 +551,7 @@ const checkPlayerInput = () => {
     }
 
     // RESPAWN EVENT
-    if (!gameMode.title && clientId && !waitToSpawn && !player && joined && allowedToRespawn) {
+    if (!gameMode._title && clientId && !waitToSpawn && !player && joined && allowedToRespawn) {
         if (isAnyKeyDown() || waitToAutoSpawn) {
             btn |= ControlsFlag.Spawn;
             waitToSpawn = true;
@@ -920,7 +936,7 @@ const updateGameCamera = () => {
     let scale = GAME_CFG._camera._baseScale;
     let cameraX = gameCamera[0];
     let cameraY = gameCamera[1];
-    if (clientId && !gameMode.title) {
+    if (clientId && !gameMode._title) {
         const myPlayer = getMyPlayer();
         const p0 = myPlayer ?? getRandomPlayer();
         if (p0?._client) {
@@ -930,11 +946,15 @@ const updateGameCamera = () => {
             cameraX = px;
             cameraY = py;
             if (myPlayer) {
-                const viewM = 100 * wpn._cameraFeedback * cameraFeedback / (hypot(viewX, viewY) + 0.001);
-                cameraX += wpn._cameraLookForward * (lookAtX - px) - viewM * viewX;
-                cameraY += wpn._cameraLookForward * (lookAtY - py) - viewM * viewY;
+                if (gameMenu._state === GameMenuState.InGame) {
+                    const viewM = 100 * wpn._cameraFeedback * cameraFeedback / (hypot(viewX, viewY) + 0.001);
+                    cameraX += wpn._cameraLookForward * (lookAtX - px) - viewM * viewX;
+                    cameraY += wpn._cameraLookForward * (lookAtY - py) - viewM * viewY;
+                    scale *= wpn._cameraScale;
+                } else {
+                    scale = GAME_CFG._camera._inGameMenuScale;
+                }
             }
-            scale *= wpn._cameraScale;
         }
     }
     gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
@@ -1076,8 +1096,8 @@ const simulateTic = () => {
     cameraShake = dec1(cameraShake);
     cameraFeedback = dec1(cameraFeedback);
 
-    if (gameMode.npcLevel) {
-        const npcConfig = GAME_CFG._npc[gameMode.npcLevel];
+    if (gameMode._npcLevel) {
+        const npcConfig = GAME_CFG._npc[gameMode._npcLevel];
         const NPC_PERIOD_MASK = (1 << npcConfig._period) - 1;
         if ((gameTic & NPC_PERIOD_MASK) === 0) {
             let count = 0;
@@ -1099,7 +1119,7 @@ const simulateTic = () => {
         }
     }
 
-    if (gameMode.bloodRain) {
+    if (gameMode._bloodRain) {
         const source = newActor(0);
         source._x = fxRand(WORLD_BOUNDS_SIZE);
         source._y = fxRand(WORLD_BOUNDS_SIZE);
@@ -1336,7 +1356,7 @@ function calcVelocityWithWeapon(player: PlayerActor, velocity: number): number {
 }
 
 const updatePlayer = (player: PlayerActor) => {
-    if (gameMode.runAI && (!player._client || gameMode.playersAI)) {
+    if (gameMode._runAI && (!player._client || gameMode._playersAI)) {
         updateAI(state, player);
     }
     let landed = player._z == 0 && player._w == 0;
@@ -1546,7 +1566,7 @@ const drawGame = () => {
 
     beginFogRender();
     drawFogObjects(state._actors[ActorType.Player], state._actors[ActorType.Bullet], state._actors[ActorType.Item]);
-    if (gameMode.title) {
+    if (gameMode._title) {
         drawFogPoint(gameCamera[0], gameCamera[1], 3 + fxRandom(1), 1);
     }
     flush();
@@ -1576,8 +1596,8 @@ const drawGame = () => {
         const viewScale = 1 / gameCamera[2];
         let fx = fxRandomNorm(cameraShake / (8 * 50));
         let fz = fxRandomNorm(cameraShake / (8 * 50));
-        fx += gameMode.tiltCamera * Math.sin(lastFrameTs);
-        fz += gameMode.tiltCamera * Math.cos(lastFrameTs);
+        fx += gameMode._tiltCamera * Math.sin(lastFrameTs);
+        fz += gameMode._tiltCamera * Math.cos(lastFrameTs);
         setupWorldCameraMatrix(cameraCenterX, cameraCenterY, viewScale, fx, fz);
     }
 
@@ -1622,7 +1642,7 @@ const drawGame = () => {
         drawCollisions(drawList);
     }
 
-    if (gameMode.title) {
+    if (gameMode._title) {
         setDrawZ(1);
         for (let i = 10; i > 0; --i) {
             let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
@@ -1653,13 +1673,15 @@ const drawOverlay = () => {
         drawMiniMap(state, trees, gl.drawingBufferWidth / scale, 0);
     }
 
-    if (!gameMode.title) {
+    if (!gameMode._title) {
         printStatus();
-        drawVirtualPad();
+        if (gameMenu._state === GameMenuState.InGame) {
+            drawVirtualPad();
+        }
     }
 
     if (getDevSetting("dev_fps")) {
-        drawText(fnt[0], `FPS: ${stats.fps} | DC: ${stats.drawCalls} |  ⃤ ${stats.triangles} | ∷${stats.vertices}`, 4, 2, 5, 0, 0);
+        drawText(fnt[0], `FPS: ${stats._fps} | DC: ${stats._drawCalls} |  ⃤ ${stats._triangles} | ∷${stats._vertices}`, 4, 2, 5, 0, 0);
     }
 
     if (getDevSetting("dev_info")) {

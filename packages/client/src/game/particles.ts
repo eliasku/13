@@ -78,13 +78,10 @@ const updateParticleList = (list: Particle[], i = 0) => {
 
 export function updateParticles() {
     updateParticleList(opaqueParticles);
-    //updateParticleList(particles);
     updateTextParticleList(textParticles);
 }
 
 let seed0: number;
-// let particles0: Particle[];
-// let particles: Particle[] = [];
 let opaqueParticles0: Particle[];
 export let opaqueParticles: Particle[] = [];
 let textParticles0: TextParticle[] = [];
@@ -93,7 +90,6 @@ export let splats: number[] = [];
 
 export const saveParticles = () => {
     seed0 = _SEEDS[1];
-    //particles0 = particles.map(x => ({...x}));
     opaqueParticles0 = opaqueParticles.map(x => ({...x}));
     textParticles0 = textParticles.map(x => ({...x}));
 }
