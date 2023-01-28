@@ -2,7 +2,7 @@ import {audioContext, audioMaster} from "./context";
 import {Snd, snd} from "../assets/sfx";
 import {fxRand} from "../utils/rnd";
 import {sin} from "../utils/math";
-import {settings} from "../game/settings";
+import {hasSettingsFlag, SettingFlag} from "../game/settings";
 
 // 0 1 2 3 4 5 6 7 8 9 10 11 12
 // 0   2 3   5   7 8   10    12
@@ -82,7 +82,7 @@ export const updateSong = (mainMenu: boolean) => {
     if (time >= musicEndTime) {
         const k = (60 / (110 + 15 * sin(time / 10))) / 4;
         musicEndTime = time + 16 * k;
-        if (settings.music) {
+        if (hasSettingsFlag(SettingFlag.Music)) {
             generateNextBar(mainMenu, time, k);
         }
         ++currentBar;

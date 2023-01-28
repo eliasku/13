@@ -1,4 +1,4 @@
-import {settings} from "../game/settings";
+import {hasSettingsFlag, SettingFlag} from "../game/settings";
 
 export const audioContext = new AudioContext();
 
@@ -9,7 +9,7 @@ export const play = (audioBuffer: AudioBuffer,
                      vol: number | StereoPannerNode,
                      pan: number | AudioBufferSourceNode,
                      gain?: GainNode): void => {
-    if (!settings.sound) return;
+    if (!hasSettingsFlag(SettingFlag.Sound)) return;
 
     const testMasterVol = 0.5;
     gain = audioContext.createGain();
@@ -27,7 +27,7 @@ export const play = (audioBuffer: AudioBuffer,
 }
 
 export const speak = (text: string) => {
-    if (!settings.speech || audioMaster.gain.value <= 0) return;
+    if (!hasSettingsFlag(SettingFlag.Speech) || audioMaster.gain.value <= 0) return;
     if (!("SpeechSynthesisUtterance" in window)) return;
 
     const speech = new SpeechSynthesisUtterance(text);

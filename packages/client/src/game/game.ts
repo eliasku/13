@@ -138,7 +138,8 @@ import {getOrCreate, RGB} from "../utils/utils";
 import {drawText, drawTextShadowCenter, fnt} from "../graphics/font";
 import {stats} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
-import {updateAI} from "./ai";
+import {updateAI} from "./ai/npc";
+import {autoPlayInput, updateAutoPlay} from "./ai/autoplay";
 import {GL} from "../graphics/gl";
 import {
     drawBarrelOpaque,
@@ -151,7 +152,7 @@ import {
     getHitColorOffset,
     setupWorldCameraMatrix
 } from "./gameDraw";
-import {getDevSetting, settings} from "./settings";
+import {getDevFlag, hasSettingsFlag, SettingFlag} from "./settings";
 import {bullets, BulletType} from "./data/bullets";
 import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
 import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
@@ -160,6 +161,7 @@ import {poki} from "../poki";
 import {isAnyKeyDown} from "../utils/input";
 import {delay} from "../utils/delay";
 import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu";
+import {beginRecording, recordEvents} from "./replay";
 
 export const gameMenu: GameMenu = {
     _state: GameMenuState.InGame,
@@ -470,7 +472,7 @@ const printStatus = () => {
         termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
         for (const [id, rc] of remoteClients) {
             let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc._name + getPlayerStatInfo(id);
-            if (1 || settings.dev) {
+            if (getDevFlag()) {
                 const cl = clients.get(id);
                 if (cl && cl._lag !== undefined) {
                     text += " " + cl._lag;
@@ -504,12 +506,17 @@ const getNextInputTic = (tic: number) =>
 const updatePlayerControls = () => {
     updateDebugInput();
 
-    const player = getMyPlayer();
-    if (player) {
-        if (gameMenu._state == GameMenuState.InGame) {
-            updateControls(player);
+    const myPlayer = getMyPlayer();
+    if (myPlayer) {
+        if (gameMenu._state == GameMenuState.InGame && !hasSettingsFlag(SettingFlag.DevAutoPlay)) {
+            updateControls(myPlayer);
         } else {
             resetPlayerControls();
+        }
+
+        // process Auto-play tic
+        if (hasSettingsFlag(SettingFlag.DevAutoPlay)) {
+            updateAutoPlay(state, myPlayer);
         }
     }
 }
@@ -517,62 +524,66 @@ const updatePlayerControls = () => {
 const checkPlayerInput = () => {
     let inputTic = getNextInputTic(gameTic);
     const player = getMyPlayer();
-    let btn = 0;
+    let input = 0;
     if (player) {
-        if (moveX || moveY) {
-            btn |= (packDirByte(moveX, moveY, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
-            if (moveFast) {
-                btn |= ControlsFlag.Run;
+        if (getDevFlag(SettingFlag.DevAutoPlay)) {
+            input = autoPlayInput;
+        } else {
+            if (moveX || moveY) {
+                input |= (packDirByte(moveX, moveY, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
+                if (moveFast) {
+                    input |= ControlsFlag.Run;
+                }
             }
-        }
 
-        if (viewX || viewY) {
-            btn |= packDirByte(viewX, viewY, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
-            if (shootButtonDown) {
-                btn |= ControlsFlag.Fire;
+            if (viewX || viewY) {
+                input |= packDirByte(viewX, viewY, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
+                if (shootButtonDown) {
+                    input |= ControlsFlag.Fire;
+                }
             }
-        }
 
-        if (jumpButtonDown) {
-            btn |= ControlsFlag.Jump;
-        }
+            if (jumpButtonDown) {
+                input |= ControlsFlag.Jump;
+            }
 
-        if (dropButton) {
-            btn |= ControlsFlag.Drop;
-        }
+            if (dropButton) {
+                input |= ControlsFlag.Drop;
+            }
 
-        if (reloadButton) {
-            btn |= ControlsFlag.Reload;
-        }
+            if (reloadButton) {
+                input |= ControlsFlag.Reload;
+            }
 
-        if (swapButton) {
-            btn |= ControlsFlag.Swap;
+            if (swapButton) {
+                input |= ControlsFlag.Swap;
+            }
         }
     }
 
     // RESPAWN EVENT
     if (!gameMode._title && clientId && !waitToSpawn && !player && joined && allowedToRespawn) {
         if (isAnyKeyDown() || waitToAutoSpawn) {
-            btn |= ControlsFlag.Spawn;
+            input |= ControlsFlag.Spawn;
             waitToSpawn = true;
             waitToAutoSpawn = false;
             allowedToRespawn = false;
         }
     }
 
-    if (lastInputCmd !== btn) {
+    if (lastInputCmd !== input) {
         if (inputTic <= lastInputTic) {
             inputTic = lastInputTic + 1;
         }
         lastInputTic = inputTic;
         // copy flag in case of rewriting local event for ONE-SHOT events
         const g = getLocalEvent(inputTic);
-        if (g._btn & ControlsFlag.Spawn) {
-            btn |= ControlsFlag.Spawn;
+        if (g._input & ControlsFlag.Spawn) {
+            input |= ControlsFlag.Spawn;
         }
 
-        getLocalEvent(inputTic)._btn = btn;
-        lastInputCmd = btn;
+        getLocalEvent(inputTic)._input = input;
+        lastInputCmd = input;
     }
 }
 
@@ -596,6 +607,8 @@ const checkJoinSync = () => {
         waitToSpawn = false;
         waitToAutoSpawn = true;
         allowedToRespawn = true;
+
+        beginRecording();
     }
 }
 
@@ -945,7 +958,8 @@ const updateGameCamera = () => {
             const py = p0._y / WORLD_SCALE;
             cameraX = px;
             cameraY = py;
-            if (myPlayer) {
+            const autoPlay = hasSettingsFlag(SettingFlag.DevAutoPlay);
+            if (myPlayer && (!autoPlay || gameMenu._state !== GameMenuState.InGame)) {
                 if (gameMenu._state === GameMenuState.InGame) {
                     const viewM = 100 * wpn._cameraFeedback * cameraFeedback / (hypot(viewX, viewY) + 0.001);
                     cameraX += wpn._cameraLookForward * (lookAtX - px) - viewM * viewX;
@@ -981,15 +995,17 @@ const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
 };
 
 const simulateTic = () => {
-    const processTicCommands = (tic_events: number | ClientEvent[]) => {
-        tic_events = localEvents.concat(receivedEvents).filter(v => v._tic == tic_events);
-        tic_events.sort((a, b) => a._client - b._client);
-        for (const cmd of tic_events) {
-            if (cmd._btn !== undefined) {
+    const processTicCommands = (tic: number) => {
+        const tickEvents: ClientEvent[] = localEvents.concat(receivedEvents).filter(v => v._tic == tic);
+
+        tickEvents.sort((a, b) => a._client - b._client);
+        recordEvents(tic, tickEvents);
+        for (const cmd of tickEvents) {
+            if (cmd._input !== undefined) {
                 const player = getPlayerByClient(cmd._client);
                 if (player) {
-                    player._input = cmd._btn;
-                } else if (cmd._btn & ControlsFlag.Spawn) {
+                    player._input = cmd._input;
+                } else if (cmd._input & ControlsFlag.Spawn) {
                     const p = newPlayerActor();
                     p._client = cmd._client;
                     setRandomPosition(p);
@@ -1001,7 +1017,7 @@ const simulateTic = () => {
                     p._hp = GAME_CFG._player._hp;
                     p._sp = GAME_CFG._player._sp;
                     p._mags = GAME_CFG._player._mags;
-                    p._input = cmd._btn;
+                    // p._input = cmd._input;
                     setCurrentWeapon(p, 1 + rand(3));
                     pushActor(p);
                 }
@@ -1282,7 +1298,7 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
                     stat._scores += player._client > 0 ? 5 : 1;
                     ++stat._frags;
                     state._stats.set(killerID, stat);
-                    if (settings.speech && gameTic > lastAudioTic) {
+                    if (hasSettingsFlag(SettingFlag.Speech) && gameTic > lastAudioTic) {
                         const a = getNameByClientId(killerID);
                         const b = getNameByClientId(player._client);
                         if (a) {
@@ -1638,7 +1654,7 @@ const drawGame = () => {
 
     drawObjects();
 
-    if (getDevSetting("dev_collision")) {
+    if (getDevFlag(SettingFlag.DevShowCollisionInfo)) {
         drawCollisions(drawList);
     }
 
@@ -1680,11 +1696,11 @@ const drawOverlay = () => {
         }
     }
 
-    if (getDevSetting("dev_fps")) {
+    if (getDevFlag(SettingFlag.DevShowFrameStats)) {
         drawText(fnt[0], `FPS: ${stats._fps} | DC: ${stats._drawCalls} |  ⃤ ${stats._triangles} | ∷${stats._vertices}`, 4, 2, 5, 0, 0);
     }
 
-    if (getDevSetting("dev_info")) {
+    if (getDevFlag(SettingFlag.DevShowDebugInfo)) {
         printDebugInfo((lastState ?? state)._tic + 1, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
     }
 

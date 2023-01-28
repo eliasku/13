@@ -10,7 +10,7 @@ import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils";
 import {cubicOut} from "../utils/easing";
 import {drawTextShadowCenter, fnt} from "../graphics/font";
-import {settings} from "./settings";
+import {BloodMode, Setting, settings} from "./settings";
 import {GAME_CFG} from "./config";
 
 export const newParticle = (): Particle => ({
@@ -176,11 +176,12 @@ const MATURE_BLOOD_COLORS = [
 ];
 
 export const addFleshParticles = (amount: number, actor: Actor, explVel: number, vel?: Vel) => {
-    if (!settings.blood) return;
-    const colors = settings.blood === 1 ? MATURE_BLOOD_COLORS : KID_MODE_COLORS;
+    const bloodMode = settings[Setting.Blood];
+    if (!bloodMode) return;
+    const colors = bloodMode === BloodMode.Paint ? KID_MODE_COLORS : MATURE_BLOOD_COLORS;
     const idx = actor._id ?? random1i(colors.length);
     const color = colors[idx % colors.length];
-    amount = (amount * settings.particles) | 0;
+    amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {
         const particle = newParticle();
         copyPosFromActorCenter(particle, actor);
@@ -205,7 +206,7 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
 }
 
 export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
-    amount = (amount * settings.particles) | 0;
+    amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {
         const particle = newParticle();
         copyPosFromActorCenter(particle, actor);
@@ -302,7 +303,7 @@ export const updateMapTexture = (time: number) => {
 }
 
 export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, colors: number[]) => {
-    amount = (amount * settings.particles) | 0;
+    amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {
         const particle = newParticle();
         copyPosFromActorCenter(particle, actor);

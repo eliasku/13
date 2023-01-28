@@ -8,12 +8,13 @@ import {
     MessageType,
     NewGameParams,
     PostMessagesResponse,
-    RoomsInfoResponse, ServerUrl
+    RoomsInfoResponse,
+    ServerUrl
 } from "../../../shared/src/types";
 import {channels_processMessage} from "./channels";
 import {getOrCreate} from "../utils/utils";
 import {iceServers} from "./iceServers";
-import {setSetting, settings} from "../game/settings";
+import {setSetting, Setting, settings} from "../game/settings";
 import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
 
 export interface RemoteClient {
@@ -53,7 +54,7 @@ export let _sseState = 0;
 export const remoteClients = new Map<ClientID, RemoteClient>();
 let eventSource: EventSource | null = null;
 export let clientId: 0 | ClientID = 0;
-export let clientName: string | null = settings.name;
+export let clientName: string | null = settings[Setting.Name];
 let messagesToPost: Message[] = [];
 let messageUploading = false;
 let nextCallId = 1;
@@ -72,7 +73,7 @@ export const loadRoomsInfo = async (): Promise<RoomsInfoResponse> => {
 
 export const setUserName = (name?: string) => {
     name ||= "Guest " + ((Math.random() * 1000) | 0);
-    clientName = setSetting("name", name!.trim().substring(0, 32).trim());
+    clientName = setSetting(Setting.Name, name!.trim().substring(0, 32).trim());
 }
 
 const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>

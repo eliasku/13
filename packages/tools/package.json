@@ -1,6 +1,6 @@
 {
   "name": "@eliasku/13-tools",
-  "version": "1.0.11",
+  "version": "1.0.14",
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {

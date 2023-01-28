@@ -1,7 +1,8 @@
 import {drawText, drawTextShadowCenter, fnt} from "./font";
 import {inputPointers, mousePointer, Pointer} from "../utils/input";
 import {Img, img} from "../assets/gfx";
-import {draw, setDrawZ} from "./draw2d";
+import {draw, gl, setDrawZ} from "./draw2d";
+import {getScreenScale} from "../game/gameState";
 
 let y = 8;
 export const resetPrinter = () => {
@@ -16,26 +17,30 @@ export const termPrint = (text: string, size = 7) => {
 
 let hotItem = "";
 let activeItem = "!";
-let pointerScale = 1;
 let pointer: Pointer | null = mousePointer;
 
 interface OpaqueQuad {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    color: number;
+    _x: number;
+    _y: number;
+    _w: number;
+    _h: number;
+    _color: number;
 }
 
 interface TextOp {
-    x: number;
-    y: number;
-    size: number;
-    text: string;
+    _x: number;
+    _y: number;
+    _size: number;
+    _text: string;
 }
 
-const opaqueQuads: OpaqueQuad[] = [];
-const textOps: TextOp[] = [];
+export const uiState = {
+    _scale: 1,
+    _width: 1,
+    _height: 1,
+    _opaqueQuads: [] as OpaqueQuad[],
+    _textOps: [] as TextOp[],
+};
 
 const captureInputPointer = () => {
     pointer = mousePointer;
@@ -47,11 +52,13 @@ const captureInputPointer = () => {
     }
 }
 
-export const ui_begin = (scale: number) => {
+export const ui_begin = () => {
     captureInputPointer();
-    pointerScale = scale;
     hotItem = "";
     setDrawZ(1000);
+    uiState._scale = getScreenScale();
+    uiState._width = (gl.drawingBufferWidth / uiState._scale) | 0;
+    uiState._height = (gl.drawingBufferHeight / uiState._scale) | 0;
 }
 
 export const ui_finish = () => {
@@ -65,13 +72,13 @@ export const ui_finish = () => {
 }
 
 export const label = (text: string, size: number, x: number, y: number) => {
-    textOps.push({x, y, size, text,});
+    uiState._textOps.push({_x: x, _y: y, _size: size, _text: text,});
 }
 
 // Check whether current mouse position is within a rectangle
 const isRegionHit = (x: number, y: number, w: number, h: number): number => {
-    const px = pointer._x / pointerScale;
-    const py = pointer._y / pointerScale;
+    const px = pointer._x / uiState._scale;
+    const py = pointer._y / uiState._scale;
     if (px < x ||
         py < y ||
         px >= x + w ||
@@ -107,29 +114,25 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
             // button is not hot, but it may be active
             color = 0xAAAAAA;
         }
-        opaqueQuads.push({
-            x: x + offset,
-            y: y + offset,
-            w,
-            h,
-            color
+        uiState._opaqueQuads.push({
+            _x: x + offset,
+            _y: y + offset,
+            _w: w,
+            _h: h,
+            _color: color
+        }, {
+            _x: x + 2,
+            _y: y + 2,
+            _w: w,
+            _h: h,
+            _color: 0
         });
-        opaqueQuads.push({
-            x: x + 2,
-            y: y + 2,
-            w,
-            h,
-            color: 0
+        uiState._textOps.push({
+            _x: x + w / 2 + offset,
+            _y: y + h / 1.5 + offset,
+            _size: 8,
+            _text: text,
         });
-        // draw(img[Img.box_lt], x + 2, y + 2, 0, w, h, 1, 0);
-        // draw(img[Img.box_lt], x + offset, y + offset, 0, w, h, 1, color);
-        textOps.push({
-            x: x + w / 2 + offset,
-            y: y + h / 1.5 + offset,
-            size: 8,
-            text,
-        });
-        // drawTextShadowCenter(fnt[0], text, 8, x + w / 2 + offset, y + h / 1.5 + offset);
     }
     // If button is hot and active, but mouse button is not
     // down, the user must have clicked the button.
@@ -141,19 +144,19 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
 }
 
 export function ui_renderOpaque() {
-    for (const q of opaqueQuads) {
-        draw(img[Img.box_lt], q.x, q.y, 0, q.w, q.h, 1, q.color);
+    for (const q of uiState._opaqueQuads) {
+        draw(img[Img.box_lt], q._x, q._y, 0, q._w, q._h, 1, q._color);
     }
 }
 
 export function ui_renderNormal() {
-    for (const t of textOps) {
-        drawTextShadowCenter(fnt[0], t.text, t.size, t.x, t.y);
+    for (const t of uiState._textOps) {
+        drawTextShadowCenter(fnt[0], t._text, t._size, t._x, t._y);
     }
 }
 
 export function ui_renderComplete() {
-    opaqueQuads.length = 0;
-    textOps.length = 0;
+    uiState._opaqueQuads.length = 0;
+    uiState._textOps.length = 0;
 }
 

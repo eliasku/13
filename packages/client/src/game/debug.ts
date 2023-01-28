@@ -10,7 +10,7 @@ import {ClientID} from "../../../shared/src/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
 import {min} from "../utils/math";
-import {setSetting, settings} from "./settings";
+import {getDevFlag, SettingFlag, toggleSettingsFlag} from "./settings";
 import {WORLD_SCALE} from "../assets/params";
 import {actorsConfig} from "./data/world";
 import {opaqueParticles, splats, textParticles} from "./particles";
@@ -20,8 +20,6 @@ import {gameMode} from "./game";
 
 let debugState: StateData;
 let debugStateEnabled = process.env.NODE_ENV === "development";
-//let debugStateEnabled = false;
-let debugCheckAvatar = 0;
 let prevSimulatedTic = 0;
 
 const icons_iceState = {
@@ -115,20 +113,20 @@ export const printDebugInfo = (
 }
 
 export const updateDebugInput = () => {
-    if (settings.dev) {
-        if (keyboardDown[KeyCode.Digit0]) {
-            setSetting("dev_info", settings.dev_info ? 0 : 1);
-        }
+    if (getDevFlag()) {
         if (keyboardDown[KeyCode.Digit1]) {
-            ++debugCheckAvatar;
+            toggleSettingsFlag(SettingFlag.DevShowDebugInfo);
         }
         if (keyboardDown[KeyCode.Digit2]) {
-            setSetting("dev_collision", settings.dev_collision ? 0 : 1);
+            toggleSettingsFlag(SettingFlag.DevShowFrameStats);
         }
         if (keyboardDown[KeyCode.Digit3]) {
-            setDebugLagK((_debugLagK + 1) % 3);
+            toggleSettingsFlag(SettingFlag.DevShowCollisionInfo);
         }
         if (keyboardDown[KeyCode.Digit4]) {
+            setDebugLagK((_debugLagK + 1) % 3);
+        }
+        if (keyboardDown[KeyCode.Digit5]) {
             debugStateEnabled = !debugStateEnabled;
         }
     }

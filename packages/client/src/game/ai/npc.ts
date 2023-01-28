@@ -1,35 +1,12 @@
-import {Actor, ActorType, ItemType, packDirByte, PlayerActor, StateData} from "./types";
-import {hypot} from "../utils/math";
-import {ControlsFlag} from "./controls";
-import {rand} from "../utils/rnd";
-import {weapons} from "./data/weapons";
-import {sqrDistXY} from "./phy";
-import {WORLD_BOUNDS_SIZE} from "../assets/params";
-import {actorsConfig} from "./data/world";
-import {itemContainsAmmo} from "./actors";
+import {ActorType, ItemType, packDirByte, PlayerActor, StateData} from "../types";
+import {hypot} from "../../utils/math";
+import {ControlsFlag} from "../controls";
+import {rand} from "../../utils/rnd";
+import {weapons} from "../data/weapons";
+import {actorsConfig} from "../data/world";
+import {itemContainsAmmo} from "../actors";
+import {findClosestActor, hasAmmo} from "./common";
 
-const hasAmmo = (player: PlayerActor) => {
-    if (player._weapon) {
-        const weapon = weapons[player._weapon];
-        return !weapon._clipSize || player._clipAmmo || player._mags;
-    }
-    return false;
-}
-
-const findClosestActor = <T extends Actor>(player: PlayerActor, actors: T[], pred: (item: T) => boolean): T | undefined => {
-    let minDistActor: T | undefined;
-    let minDistSqr = WORLD_BOUNDS_SIZE * WORLD_BOUNDS_SIZE;
-    for (const a of actors) {
-        if (pred(a)) {
-            const distSqr = sqrDistXY(player, a);
-            if (distSqr < minDistSqr) {
-                minDistActor = a;
-                minDistSqr = distSqr;
-            }
-        }
-    }
-    return minDistActor;
-}
 
 export const updateAI = (state: StateData, player: PlayerActor) => {
     let lowHP = !player._sp && player._hp < 5;

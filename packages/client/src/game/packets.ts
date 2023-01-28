@@ -138,7 +138,7 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
         _events.push({
             _tic: event_tic,
             _client: client,
-            _btn: v & 0x1fffff,
+            _input: v & 0x1fffff,
         });
         event_tic += delta;
         if (!delta) break;
@@ -310,7 +310,7 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     while (i < events.length) {
         const e = events[i++];
         const c = events[i] ? (events[i]._tic - e._tic) : 0;
-        i32[ptr++] = (c << 21) | e._btn;
+        i32[ptr++] = (c << 21) | e._input;
     }
     ptr = writeState(packet._state, i32, ptr);
     if (process.env.NODE_ENV === "development") {

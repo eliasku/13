@@ -1,6 +1,6 @@
 {
   "name": "@eliasku/13-shared",
-  "version": "1.0.11",
+  "version": "1.0.14",
   "description": "13 Game shared library",
   "type": "module",
   "scripts": {

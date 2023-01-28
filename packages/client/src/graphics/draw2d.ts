@@ -5,7 +5,8 @@ import {
     SHADER_A_COLOR_MUL,
     SHADER_A_POSITION,
     SHADER_A_TEX_COORD,
-    SHADER_FRAGMENT, SHADER_U_AMBIENT_COLOR,
+    SHADER_FRAGMENT,
+    SHADER_U_AMBIENT_COLOR,
     SHADER_U_MVP,
     SHADER_U_TEX,
     SHADER_U_TEX_1,
@@ -13,7 +14,7 @@ import {
 } from "./shader";
 import {Mat4} from "../utils/mat4";
 import {stats} from "../utils/fpsMeter";
-import {settings} from "../game/settings";
+import {hasSettingsFlag, SettingFlag} from "../game/settings";
 import {createCanvas} from "../assets/gfx";
 
 export const gl = c.getContext("webgl", {
@@ -26,7 +27,7 @@ export const gl = c.getContext("webgl", {
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
-export const getDPR = () => settings.highDPI ? devicePixelRatio : 1.0;
+export const getDPR = () => hasSettingsFlag(SettingFlag.HighDPI) ? devicePixelRatio : 1.0;
 const onResize = () => {
     const dpr = getDPR();
     const width = document.body.clientWidth;

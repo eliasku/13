@@ -180,7 +180,7 @@ export interface Client {
 export interface ClientEvent {
     _tic: number;
     // TODO: rename to `_input`
-    _btn?: number;
+    _input?: number;
     // will be populated from packet info
     _client: ClientID;
 }

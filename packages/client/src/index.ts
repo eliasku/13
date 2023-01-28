@@ -15,6 +15,7 @@ import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
 import {poki} from "./poki";
+import {beginRecording, endRecording} from "./game/replay";
 
 const enum StartState {
     Loading = 0,
@@ -169,6 +170,7 @@ async function start() {
                 // user disconnected or quit the game room
                 poki._gameplayStop();
                 goToSplash();
+                endRecording();
             }
         }
     ];
