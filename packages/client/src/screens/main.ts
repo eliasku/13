@@ -1,4 +1,4 @@
-import {button, label, ui_begin, ui_finish, uiState} from "../graphics/ui";
+import {button, label, ui_begin, ui_finish, uiState} from "../graphics/gui";
 import {clientName, setUserName} from "../net/messaging";
 import {enableSettingsFlag, SettingFlag, settings} from "../game/settings";
 import {keyboardDown, KeyCode} from "../utils/input";

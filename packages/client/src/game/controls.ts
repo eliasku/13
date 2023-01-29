@@ -11,7 +11,7 @@ import {
 import {getScreenScale} from "./gameState";
 import {hypot} from "../utils/math";
 import {weapons} from "./data/weapons";
-import {drawTextShadowCenter, fnt} from "../graphics/font";
+import {drawTextAligned, fnt} from "../graphics/font";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -237,11 +237,11 @@ export const drawVirtualPad = () => {
                 drawCircle(boxTexture, pp._x * k, pp._y * k, 16, segments1, 1, 1, 0.5);
             }
             if (control._r1 !== undefined) {
-                drawTextShadowCenter(fnt[0], control._text1, 8, cx, cy - control._r1 - 4, pp ? 0xFFFFFF : 0x777777);
+                drawTextAligned(fnt[0], control._text1, 8, cx, cy - control._r1 - 4, pp ? 0xFFFFFF : 0x777777);
                 drawRing(boxTexture, cx, cy, control._r1 - 2, 4, segments1, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
             }
             if (control._r2 !== undefined) {
-                drawTextShadowCenter(fnt[0], control._text2, 8, cx, cy - control._r2 - 4, pp ? 0xFFFFFF : 0x777777);
+                drawTextAligned(fnt[0], control._text2, 8, cx, cy - control._r2 - 4, pp ? 0xFFFFFF : 0x777777);
                 drawRing(boxTexture, cx, cy, control._r2 - 2, 4, segments2, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
             }
         }

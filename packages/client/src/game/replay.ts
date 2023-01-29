@@ -1,7 +1,7 @@
 import {ClientEvent, newStateData, StateData} from "./types";
 import {readState, writeState} from "./packets";
 import {_room} from "../net/messaging";
-import {BuildVersion, ClientID} from "@eliasku/13-shared/src/types";
+import {BuildCommit, BuildHash, BuildVersion, ClientID} from "@eliasku/13-shared/src/types";
 import {getNameByClientId} from "./gameState";
 
 export interface ReplayMetaData {
@@ -12,7 +12,11 @@ export interface ReplayMetaData {
         mapTheme: number,
     };
     clients: Record<ClientID, string>;
-    version: string;
+    build?: {
+        version?: string,
+        commit?: string,
+        hash?: string,
+    };
     start: number;
     end: number;
 }
@@ -21,6 +25,11 @@ export interface ReplayFile {
     _meta: ReplayMetaData;
     _state: StateData;
     _stream: ClientEvent[];
+
+    // player state:
+    _playbackSpeed?: number;
+    _paused?: boolean;
+    _rewind?: number;
 }
 
 
@@ -30,7 +39,11 @@ const replayStream: number[] = [];
 let replayStartState: Int32Array;
 const replayMetaData: ReplayMetaData = {
     clients: {},
-    version: "",
+    build: {
+        version: BuildVersion,
+        commit: BuildCommit,
+        hash: BuildHash,
+    },
     start: 0,
     end: 0,
 };
@@ -50,7 +63,6 @@ export function beginRecording(state: StateData) {
         mapTheme: _room._mapTheme,
     };
     replayMetaData.clients = {};
-    replayMetaData.version = BuildVersion;
     replayMetaData.start = 0x7FFFFFFF;
     replayMetaData.end = 0;
 }
@@ -101,7 +113,7 @@ export function saveReplay() {
     a.click();
 }
 
-export function loadReplay(buffer: ArrayBuffer): ReplayFile {
+export function readReplayFile(buffer: ArrayBuffer): ReplayFile {
     let ptr = 0;
     const i32 = new Int32Array(buffer);
 
@@ -137,4 +149,52 @@ export function loadReplay(buffer: ArrayBuffer): ReplayFile {
         _state: startState,
         _stream: stream,
     };
+}
+
+export function validateReplayFile(replay: ReplayFile): boolean {
+    const meta = replay._meta;
+    if (meta) {
+        const build = meta.build;
+        if (build) {
+            if (build.hash !== BuildHash) {
+                console.warn("Mismatch game build version to play the replay file");
+                if (build.version !== BuildVersion)
+                    console.info(build.version + " != " + BuildVersion);
+                if (build.commit !== BuildCommit)
+                    console.info(build.commit + " != " + BuildCommit);
+                return false;
+            }
+        } else {
+            console.error("Replay build info is missing!");
+            return false;
+        }
+    } else {
+        console.error("Replay metadata is missing!");
+        return false;
+    }
+
+    return true;
+}
+
+
+export function openReplayFile(onSuccess: (replay: ReplayFile) => void) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.onchange = _ => {
+        if (input.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const result = e.target.result;
+                console.info(result);
+                if (result instanceof ArrayBuffer) {
+                    const replay = readReplayFile(result);
+                    if (validateReplayFile(replay)) {
+                        onSuccess(replay);
+                    }
+                }
+            };
+            reader.readAsArrayBuffer(input.files[0]);
+        }
+    }
+    input.click();
 }

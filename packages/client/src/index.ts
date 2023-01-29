@@ -1,21 +1,23 @@
 import {_room, _sseState, clientName, connect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
-import {resetPrinter, ui_renderComplete} from "./graphics/ui";
+import {resetPrinter, ui_renderComplete} from "./graphics/gui";
 import {createSplashState, enableReplayMode, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/music";
-import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
+import {drawTextAligned, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
+import {BuildCommit, BuildHash, BuildVersion, GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
 import {sin} from "./utils/math";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
 import {poki} from "./poki";
-import {loadReplay} from "./game/replay";
+import {openReplayFile} from "./game/replay";
+
+console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
 
 const enum StartState {
     Loading = 0,
@@ -109,34 +111,20 @@ async function start() {
                     gameMode._bloodRain = true;
                     connect(result._newGame);
                 } else if (result._command === MenuCommand.Replay) {
-                    const input = document.createElement("input");
-                    input.type = "file";
-                    input.onchange = (ev) => {
-                        if (input.files.length > 0) {
-                            const reader = new FileReader();
-                            reader.onload = function (e) {
-                                const result = e.target.result;
-                                console.info(result);
-                                if (result instanceof ArrayBuffer) {
-                                    const replay = loadReplay(result);
-                                    const replayRoom = replay._meta.room;
-                                    state = StartState.Connected;
-                                    resetGame();
-                                    connect({
-                                        _flags: replayRoom.flags | GameModeFlag.Offline,
-                                        _playersLimit: 1,
-                                        _npcLevel: replayRoom.npcLevel,
-                                        _theme: replayRoom.mapTheme + 1,
-                                    });
-                                    _room._mapSeed = replayRoom.mapSeed;
-                                    gameMode._npcLevel = _room._npcLevel;
-                                    enableReplayMode(replay);
-                                }
-                            };
-                            reader.readAsArrayBuffer(input.files[0]);
-                        }
-                    }
-                    input.click();
+                    openReplayFile(replay => {
+                        const replayRoom = replay._meta.room;
+                        state = StartState.Connected;
+                        resetGame();
+                        connect({
+                            _flags: replayRoom.flags | GameModeFlag.Offline,
+                            _playersLimit: 1,
+                            _npcLevel: replayRoom.npcLevel,
+                            _theme: replayRoom.mapTheme + 1,
+                        });
+                        _room._mapSeed = replayRoom.mapSeed;
+                        gameMode._npcLevel = _room._npcLevel;
+                        enableReplayMode(replay);
+                    });
                 }
             }
         },
@@ -153,7 +141,7 @@ async function start() {
             beginRenderToMain(0, 0, 0, 0, 0, scale);
             const fontSize = 14 + 0.5 * Math.sin(8 * ts);
             if (sin(ts * 8) <= 0) {
-                drawTextShadowCenter(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY + 50, 0xd9ff66);
+                drawTextAligned(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY + 50, 0xd9ff66);
             }
             flush();
             if (isAnyKeyDown()) {
@@ -175,8 +163,8 @@ async function start() {
             const centerY = H >> 1;
             beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
             const fontSize = 10 + 0.5 * Math.sin(4 * ts);
-            drawTextShadowCenter(fnt[0], "CONNECTING", fontSize, centerX, centerY + 40, 0xd9ff66);
-            drawTextShadowCenter(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 50, 0xdddddd);
+            drawTextAligned(fnt[0], "CONNECTING", fontSize, centerX, centerY + 40, 0xd9ff66);
+            drawTextAligned(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 50, 0xdddddd);
             flush();
             if (_sseState == 3) {
                 gameMode._title = false;

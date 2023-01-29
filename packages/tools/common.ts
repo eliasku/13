@@ -1,5 +1,6 @@
 import {copyFileSync, mkdirSync, readFileSync, rmSync} from "fs";
 import {execSync} from "child_process";
+import * as crypto from "crypto";
 
 function ensureDir(dir: string) {
     try {
@@ -61,7 +62,6 @@ export function copyPublicAssets(publicDir = "public", debugAssets = true, index
 
 let version = "1.0.0";
 let pokiGameId = "";
-
 try {
     const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { version: string, poki?: { game_id?: string } };
     version = pkg.version ?? "1.0.0";
@@ -69,11 +69,27 @@ try {
 } catch {
 }
 
+let gitCommit = "";
+const gitCommitBytes: number[] = [];
+try {
+    gitCommit = execSync('git rev-parse HEAD').toString().trim();
+    for (let i = 0; i < gitCommit.length; i += 2) {
+        gitCommitBytes.push(parseInt(gitCommit.substring(i, i + 2), 16));
+    }
+} catch {
+    console.warn("Failed to get git commit hash (required for build meta)");
+}
+
+let buildHash = crypto.createHash("md5").update(version).update(new Uint8Array(gitCommitBytes)).digest("base64url");
 console.info("build version: " + version);
+console.info("build commit: " + gitCommit);
+console.info("build hash: " + buildHash);
 
 export const getCompileDefines = (debug?: boolean, serverUrl = "") => ({
     __SERVER_URL__: `"${serverUrl}"`,
     __VERSION__: `"${version}"`,
+    __BUILD_HASH__: `"${buildHash}"`,
+    __BUILD_COMMIT__: `"${gitCommit}"`,
     __POKI_GAME_ID__: `"${pokiGameId}"`,
     "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
 });

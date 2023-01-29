@@ -1,5 +1,5 @@
 import {
-    BuildVersion,
+    BuildHash,
     ClientID,
     GameModeFlag,
     Message,
@@ -26,9 +26,9 @@ export interface RemoteClient {
 }
 
 const getUrl = (url: string) => ServerUrl + url;
-const getPostUrl = () => getUrl(`_?v=${BuildVersion}&r=${_room._code}`);
+const getPostUrl = () => getUrl(`_?v=${BuildHash}&r=${_room._code}`);
 const getJoinUrl = (joinRoomCode?: string, newGameParams?: NewGameParams) => {
-    const args = [`v=${BuildVersion}`];
+    const args = [`v=${BuildHash}`];
     if (joinRoomCode) {
         args.push(`r=${joinRoomCode}`);
     }
@@ -161,8 +161,9 @@ const onSSE: ((data: string) => void)[] = [
     disconnect as ((data: string) => void),
     // PING
     () => {
-        remoteSend(0, MessageType.Nop, 0);
-        processMessages();
+        // remoteSend(0, MessageType.Nop, 0);
+        // processMessages();
+        fetch(getPostUrl(), {method: "POST", body: `[${clientId}]`,}).catch(disconnect);
     },
     // INIT
     (data: string) => {
@@ -228,8 +229,8 @@ export const connect = (newGameParams?: NewGameParams, gameCode?: string) => {
         messagesToPost = [];
         callbacks = [];
         eventSource = new EventSource(getJoinUrl(gameCode, newGameParams));
-        eventSource.onerror = (e) => {
-            console.warn("server-event error");
+        eventSource.onerror = e => {
+            console.warn("server-event error", e);
             disconnect();
         };
         eventSource.onmessage = e => onSSE[e.data[0]]?.(e.data.substring(1));

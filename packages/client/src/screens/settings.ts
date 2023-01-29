@@ -1,4 +1,4 @@
-import {button, uiState} from "../graphics/ui";
+import {button, uiState} from "../graphics/gui";
 import {
     DEFAULT_FRAMERATE_LIMIT,
     hasSettingsFlag,

@@ -12,7 +12,7 @@ import {Const, GAME_CFG} from "./config";
 import {bullets, BulletType} from "./data/bullets";
 import {fxRandElement} from "../utils/rnd";
 import {lastFrameTs} from "./gameState";
-import {drawTextShadowCenter, fnt} from "../graphics/font";
+import {drawTextAligned, fnt} from "../graphics/font";
 import {GameMenuState} from "./gameMenu";
 import {gameMenu} from "./game";
 
@@ -164,8 +164,8 @@ export const drawHotUsableHint = (hotUsable?: ItemActor) => {
             }
             const x = hotUsable._x / WORLD_SCALE;
             const y = hotUsable._y / WORLD_SCALE + drawZ;
-            drawTextShadowCenter(fnt[0], text, 7, x, y - 28);
-            drawTextShadowCenter(fnt[0], "Pick [E]", 7, x, y - 20);
+            drawTextAligned(fnt[0], text, 7, x, y - 28);
+            drawTextAligned(fnt[0], "Pick [E]", 7, x, y - 20);
         }
     }
 };

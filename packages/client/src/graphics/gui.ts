@@ -1,8 +1,9 @@
-import {drawText, drawTextShadowCenter, fnt} from "./font";
+import {drawText, drawTextAligned, fnt} from "./font";
 import {inputPointers, mousePointer, Pointer} from "../utils/input";
 import {Img, img} from "../assets/gfx";
 import {draw, gl, setDrawZ} from "./draw2d";
 import {getScreenScale} from "../game/gameState";
+import {clamp} from "../utils/math";
 
 let y = 8;
 export const resetPrinter = () => {
@@ -32,6 +33,7 @@ interface TextOp {
     _y: number;
     _size: number;
     _text: string;
+    _alignX?: number;
 }
 
 export const uiState = {
@@ -71,8 +73,8 @@ export const ui_finish = () => {
     }
 }
 
-export const label = (text: string, size: number, x: number, y: number) => {
-    uiState._textOps.push({_x: x, _y: y, _size: size, _text: text,});
+export const label = (text: string, size: number, x: number, y: number, alignX: number = 0.5) => {
+    uiState._textOps.push({_x: x, _y: y, _size: size, _text: text, _alignX: alignX,});
 }
 
 // Check whether current mouse position is within a rectangle
@@ -86,6 +88,11 @@ const isRegionHit = (x: number, y: number, w: number, h: number): number => {
         return 0;
     }
     return 1;
+}
+
+const getRegionPointerX = (x: number, w: number): number => {
+    const px = pointer._x / uiState._scale;
+    return (px - x) / w;
 }
 
 export const button = (id: string, text: string, x: number, y: number, config?: { w?: number, h?: number, visible?: boolean }): number => {
@@ -143,7 +150,14 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
     return 0;
 };
 
-export function uiProgressBar(progress: number, x: number, y: number, w: number, h: number): void {
+export function uiProgressBar(id: string, current: number, total: number, x: number, y: number, w: number, h: number): undefined | number {
+    if (isRegionHit(x, y, w, h)) {
+        hotItem = id;
+        if (!activeItem && pointer._active) {
+            activeItem = id;
+        }
+    }
+    const progress = current / total;
     uiState._opaqueQuads.push({
         _x: x,
         _y: y,
@@ -157,6 +171,32 @@ export function uiProgressBar(progress: number, x: number, y: number, w: number,
         _h: h,
         _color: 0x333333,
     });
+
+    let r = getRegionPointerX(x, w);
+    r = clamp(r, 0, 1);
+    r = Math.round(r * total) / total;
+
+    if (!pointer._active && hotItem === id && activeItem === id) {
+        return r;
+    }
+
+    if (hotItem === id) {
+        if (activeItem === id) {
+            // Button is both 'hot' and 'active'
+        } else {
+            // Button is merely 'hot'
+        }
+        uiState._opaqueQuads.push({
+            _x: x,
+            _y: y - 1,
+            _w: w * r,
+            _h: 2,
+            _color: 0xFFFFFF,
+        });
+        return -r - 1;
+    } else {
+        // button is not hot, but it may be active
+    }
 }
 
 export function ui_renderOpaque() {
@@ -167,7 +207,7 @@ export function ui_renderOpaque() {
 
 export function ui_renderNormal() {
     for (const t of uiState._textOps) {
-        drawTextShadowCenter(fnt[0], t._text, t._size, t._x, t._y);
+        drawTextAligned(fnt[0], t._text, t._size, t._x, t._y, 0xFFFFFF, t._alignX);
     }
 }
 

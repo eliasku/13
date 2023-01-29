@@ -123,7 +123,7 @@ import {
     PLAYER_HANDS_PX_Z,
     PLAYER_HANDS_Z,
 } from "./data/world";
-import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/ui";
+import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/gui";
 import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog";
 import {
     addDebugState,
@@ -135,7 +135,7 @@ import {
 } from "./debug";
 import {addToGrid, queryGridCollisions} from "./grid";
 import {getOrCreate, RGB} from "../utils/utils";
-import {drawText, drawTextShadowCenter, fnt} from "../graphics/font";
+import {drawText, drawTextAligned, fnt} from "../graphics/font";
 import {stats} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai/npc";
@@ -209,8 +209,6 @@ export const gameMode = {
 };
 
 export function enableReplayMode(replay: ReplayFile) {
-    state = replay._state;
-    localEvents = replay._stream;
     remoteClients.clear();
     for (const sid in replay._meta.clients) {
         const id = parseInt(sid);
@@ -218,6 +216,14 @@ export function enableReplayMode(replay: ReplayFile) {
         remoteClients.set(id, {_id: id, _name: name});
     }
     gameMode._replay = replay;
+    rewindReplayToStart();
+}
+
+export function rewindReplayToStart() {
+    state = cloneState(gameMode._replay._state);
+    localEvents = gameMode._replay._stream.concat();
+    startTic = -1;
+    _SEEDS[0] = state._seed;
 }
 
 // 0...50
@@ -409,12 +415,39 @@ export const updateGame = (ts: number) => {
     }
     if (startTic >= 0) {
         if (gameMode._replay) {
-            let frames = ((ts - prevTime) * Const.NetFq) | 0;
+            const ticsPerSecond = Const.NetFq * (gameMode._replay._playbackSpeed ?? 1);
+            let frames = ((ts - prevTime) * ticsPerSecond) | 0;
             const end = gameMode._replay._meta.end;
+            const paused = gameMode._replay._paused;
+            if (paused) {
+                prevTime = ts;
+                frames = 0;
+            }
+            if (gameMode._replay._rewind != null) {
+                let toTic = gameMode._replay._rewind;
+                if (toTic > gameTic) {
+                    frames = toTic - gameTic + 3;
+                    prevTime = ts - frames / ticsPerSecond;
+                } else {
+                    //rewindReplayToStart();
+                    state = cloneState(gameMode._replay._state);
+                    localEvents = gameMode._replay._stream.concat();
+                    _SEEDS[0] = state._seed;
+                    gameTic = state._tic;
+                    frames = toTic + 1;
+                    prevTime = ts - frames / ticsPerSecond;
+                }
+                gameMode._replay._rewind = undefined;
+            }
+            if (gameTic >= end) {
+                prevTime = ts;
+                frames = 0;
+                rewindReplayToStart();
+            }
             while (gameTic <= end && frames--) {
                 simulateTic();
                 normalizeState();
-                prevTime += 1 / Const.NetFq;
+                prevTime += 1 / ticsPerSecond;
             }
         } else {
             cleaningUpClients();
@@ -1568,15 +1601,15 @@ export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, 
     addFleshParticles(amount, actor, expl, vel);
 }
 
-const cloneState = (_state: StateData = state): StateData => ({
-    ..._state,
+const cloneState = (stateToCopy: StateData = state): StateData => ({
+    ...stateToCopy,
     _actors: [
-        _state._actors[0].map(a => ({...a})),
-        _state._actors[1].map(a => ({...a})),
-        _state._actors[2].map(a => ({...a})),
-        _state._actors[3].map(a => ({...a})),
+        stateToCopy._actors[0].map(a => ({...a})),
+        stateToCopy._actors[1].map(a => ({...a})),
+        stateToCopy._actors[2].map(a => ({...a})),
+        stateToCopy._actors[3].map(a => ({...a})),
     ],
-    _stats: new Map(_state._stats.entries()),
+    _stats: new Map(stateToCopy._stats.entries()),
 });
 
 const beginPrediction = (): boolean => {
@@ -1889,7 +1922,7 @@ const drawPlayer = (p: PlayerActor): void => {
         }
         if (name) {
             setDrawZ(32 + p._z / WORLD_SCALE);
-            drawTextShadowCenter(fnt[0], name, 6, x, y + 2);
+            drawTextAligned(fnt[0], name, 6, x, y + 2);
         }
     }
 }

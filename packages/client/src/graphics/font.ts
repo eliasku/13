@@ -315,12 +315,9 @@ export const measureTextWidth = (font: FontAtlas, text: string, size: number): n
     return w;
 }
 
-export const drawTextShadow = (font: FontAtlas, text: string, size: number, x: number, y: number, color: number = 0xFFFFFF) => {
-    //drawText(font, text, size, x, y + 1, 0, 0, 0);
+export const drawTextAligned = (font: FontAtlas, text: string, size: number, x: number, y: number, color: number = 0xFFFFFF, alignX = 0.5) => {
+    if (alignX !== 0.0) {
+        x -= alignX * measureTextWidth(font, text, size);
+    }
     drawText(font, text, size, x, y, 0, 0, color);
-}
-
-export const drawTextShadowCenter = (font: FontAtlas, text: string, size: number, x: number, y: number, color: number = 0xFFFFFF) => {
-    x -= measureTextWidth(font, text, size) / 2;
-    drawTextShadow(font, text, size, x, y, color);
 }

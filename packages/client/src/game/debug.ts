@@ -2,7 +2,7 @@ import {Actor, ActorType, Client, Packet, StateData} from "./types";
 import {_debugLagK, Const, setDebugLagK} from "./config";
 import {_room, clientId, clientName, remoteClients} from "../net/messaging";
 import {getChannelPacketSize} from "../net/channels_send";
-import {termPrint} from "../graphics/ui";
+import {termPrint} from "../graphics/gui";
 import {keyboardDown, KeyCode} from "../utils/input";
 import {draw, setDrawZ} from "../graphics/draw2d";
 import {Img, img} from "../assets/gfx";
@@ -94,12 +94,12 @@ export const printDebugInfo = (
         if (a._z < _dmin[2]) _dmin[2] = a._z;
         if (a._z > _dmax[2]) _dmax[2] = a._z;
 
-        if (a._u < _dmin[0 + 3]) _dmin[0 + 3] = a._u;
-        if (a._u > _dmax[0 + 3]) _dmax[0 + 3] = a._u;
-        if (a._v < _dmin[1 + 3]) _dmin[1 + 3] = a._v;
-        if (a._v > _dmax[1 + 3]) _dmax[1 + 3] = a._v;
-        if (a._w < _dmin[2 + 3]) _dmin[2 + 3] = a._w;
-        if (a._w > _dmax[2 + 3]) _dmax[2 + 3] = a._w;
+        if (a._u < _dmin[3]) _dmin[3] = a._u;
+        if (a._u > _dmax[3]) _dmax[3] = a._u;
+        if (a._v < _dmin[4]) _dmin[4] = a._v;
+        if (a._v > _dmax[4]) _dmax[4] = a._v;
+        if (a._w < _dmin[5]) _dmin[5] = a._w;
+        if (a._w > _dmax[5]) _dmax[5] = a._w;
     }
 
     text += "x := [" + _dmin[0] + " .. " + _dmax[0] + "]\n";

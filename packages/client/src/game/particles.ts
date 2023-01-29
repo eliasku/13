@@ -9,7 +9,7 @@ import {mapTexture, mapTexture0} from "../assets/map";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
 import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils";
 import {cubicOut} from "../utils/easing";
-import {drawTextShadowCenter, fnt} from "../graphics/font";
+import {drawTextAligned, fnt} from "../graphics/font";
 import {BloodMode, Setting, settings} from "./settings";
 import {GAME_CFG} from "./config";
 
@@ -133,7 +133,7 @@ export const drawOpaqueParticles = () => {
 
 const drawListShadows = (particles: Particle[]) => {
     const maxH = 128 * WORLD_SCALE;
-    const minH = 1 * WORLD_SCALE;
+    const minH = WORLD_SCALE;
     for (const p of particles) {
         if (p._z > minH && p._z < maxH) {
             // if (p.z_ > minH) {//} && p.z_ < maxH) {
@@ -359,6 +359,6 @@ export const drawTextParticles = () => {
         const x = p._x / WORLD_SCALE;
         const offZ = (cubicOut(t) * 60 * WORLD_SCALE) | 0;
         const y = (p._y - p._z - offZ) / WORLD_SCALE;
-        drawTextShadowCenter(fnt[0], p._text, 8, x, y);
+        drawTextAligned(fnt[0], p._text, 8, x, y);
     }
 }

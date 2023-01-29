@@ -6,10 +6,14 @@ export type MessageData = any;
 export type MessageTypeID = number;
 
 declare var __VERSION__: string;
+declare var __BUILD_COMMIT__: string;
+declare var __BUILD_HASH__: string;
 declare var __SERVER_URL__: string;
 declare var __POKI_GAME_ID__: string;
 
 export const BuildVersion = __VERSION__;
+export const BuildHash = __BUILD_HASH__;
+export const BuildCommit = __BUILD_COMMIT__;
 export const ServerUrl = __SERVER_URL__;
 export const PokiGameId = __POKI_GAME_ID__;
 

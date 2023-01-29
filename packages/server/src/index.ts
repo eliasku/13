@@ -1,5 +1,6 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {
+    BuildHash,
     BuildVersion,
     ClientID,
     GameModeFlag,
@@ -117,7 +118,7 @@ const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: Server
 };
 
 function validateRequestBuildVersion(query: URLSearchParams, req: IncomingMessage, res: ServerResponse) {
-    if (query.get("v") !== BuildVersion) {
+    if (query.get("v") !== BuildHash) {
         error(req, res, "Build version mismatch");
         return false;
     }
@@ -279,12 +280,14 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
         }
         client._ts = performance.now();
         let numProcessedMessages = 0;
-        for (const msg of reqData[1]) {
-            const toClient = room._clients.get(msg[MessageField.Destination]);
-            if (toClient) {
-                sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
+        if (reqData[1]) {
+            for (const msg of reqData[1]) {
+                const toClient = room._clients.get(msg[MessageField.Destination]);
+                if (toClient) {
+                    sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
+                }
+                ++numProcessedMessages;
             }
-            ++numProcessedMessages;
         }
         res.writeHead(200, cors(req, HDR_JSON_NO_CACHE));
         res.end("" + numProcessedMessages);
@@ -336,7 +339,7 @@ const cors = (req: IncomingMessage, headers: OutgoingHttpHeaders): OutgoingHttpH
     return headers;
 }
 
-createServer((req: IncomingMessage, res: ServerResponse) => {
+createServer({keepAlive: true}, (req: IncomingMessage, res: ServerResponse) => {
     try {
         const parts = req.url.split("?");
         const url = parts[0];
