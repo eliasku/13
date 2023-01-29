@@ -19,7 +19,7 @@ copyPublicAssets(dist, false, "poki.html");
             opts.minify = true;
             opts.mangleProps = /^_[a-z]/;
         }
-        opts.define = getCompileDefines(debug, "https://grtc.herokuapp.com/");
+        opts.define = getCompileDefines(debug, "https://iioi.herokuapp.com/");
         return opts;
     }
 
