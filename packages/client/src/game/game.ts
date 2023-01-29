@@ -161,7 +161,7 @@ import {poki} from "../poki";
 import {isAnyKeyDown} from "../utils/input";
 import {delay} from "../utils/delay";
 import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu";
-import {beginRecording, recordEvents} from "./replay";
+import {addReplayTicEvents, beginRecording, ReplayFile} from "./replay";
 
 export const gameMenu: GameMenu = {
     _state: GameMenuState.InGame,
@@ -205,7 +205,20 @@ export const gameMode = {
     _tiltCamera: 0.0,
     _bloodRain: false,
     _npcLevel: 0,
+    _replay: undefined as (undefined | ReplayFile),
 };
+
+export function enableReplayMode(replay: ReplayFile) {
+    state = replay._state;
+    localEvents = replay._stream;
+    remoteClients.clear();
+    for (const sid in replay._meta.clients) {
+        const id = parseInt(sid);
+        const name = replay._meta.clients[id];
+        remoteClients.set(id, {_id: id, _name: name});
+    }
+    gameMode._replay = replay;
+}
 
 // 0...50
 let cameraShake = 0;
@@ -233,6 +246,7 @@ const requireStats = (id: ClientID): PlayerStat => getOrCreate(state._stats, id,
 
 export const resetGame = () => {
     resetParticles();
+    resetPlayerControls();
 
     clients.clear();
     localEvents.length = 0;
@@ -265,7 +279,7 @@ export const resetGame = () => {
     gameMode._tiltCamera = 0.0;
     gameMode._npcLevel = 0;
     gameMode._bloodRain = false;
-
+    gameMode._replay = undefined;
     gameMenu._state = GameMenuState.InGame;
 }
 
@@ -347,12 +361,19 @@ export const createSplashState = () => {
 export const updateGame = (ts: number) => {
     updateFrameTime(ts);
 
-    if (clientId && startTic < 0 && !remoteClients.size) {
-        createSeedGameState();
+    if (startTic < 0) {
+        if (gameMode._replay) {
+            startTic = state._tic;
+            gameTic = state._tic;
+            _SEEDS[0] = state._seed;
+            recreateMap(_room._mapTheme, _room._mapSeed);
+        } else if (clientId && !remoteClients.size) {
+            createSeedGameState();
+        }
     }
 
     if (clientId && startTic >= 0) {
-        onGameMenu(gameMenu);
+        onGameMenu(gameMenu, gameMode._replay, gameTic);
     }
 
     let predicted = false;
@@ -387,8 +408,18 @@ export const updateGame = (ts: number) => {
         }
     }
     if (startTic >= 0) {
-        cleaningUpClients();
-        tryRunTicks(lastFrameTs);
+        if (gameMode._replay) {
+            let frames = ((ts - prevTime) * Const.NetFq) | 0;
+            const end = gameMode._replay._meta.end;
+            while (gameTic <= end && frames--) {
+                simulateTic();
+                normalizeState();
+                prevTime += 1 / Const.NetFq;
+            }
+        } else {
+            cleaningUpClients();
+            tryRunTicks(lastFrameTs);
+        }
         predicted = beginPrediction();
     }
     if (!document.hidden) {
@@ -396,15 +427,21 @@ export const updateGame = (ts: number) => {
         drawOverlay();
         updateMapTexture(lastFrameTs);
     }
+    updateDebugInput();
+
     if (startTic >= 0) {
         // check input before overlay, or save camera settings
-        updatePlayerControls();
+        if (!gameMode._replay) {
+            updatePlayerControls();
+        }
 
         if (predicted) endPrediction();
 
-        checkJoinSync();
-        checkPlayerInput();
-        sendInput();
+        if (!gameMode._replay) {
+            checkJoinSync();
+            checkPlayerInput();
+            sendInput();
+        }
     }
 }
 
@@ -504,18 +541,16 @@ const getNextInputTic = (tic: number) =>
     );
 
 const updatePlayerControls = () => {
-    updateDebugInput();
-
     const myPlayer = getMyPlayer();
     if (myPlayer) {
-        if (gameMenu._state == GameMenuState.InGame && !hasSettingsFlag(SettingFlag.DevAutoPlay)) {
+        if (gameMenu._state == GameMenuState.InGame && !hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
             updateControls(myPlayer);
         } else {
             resetPlayerControls();
         }
 
         // process Auto-play tic
-        if (hasSettingsFlag(SettingFlag.DevAutoPlay)) {
+        if (hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
             updateAutoPlay(state, myPlayer);
         }
     }
@@ -608,11 +643,14 @@ const checkJoinSync = () => {
         waitToAutoSpawn = true;
         allowedToRespawn = true;
 
-        beginRecording();
+        beginRecording(state);
     }
 }
 
 const getMinTic = (_tic: number = 1 << 30) => {
+    if (gameMode._replay) {
+        return gameTic;
+    }
     if (!clientId || !joined) {
         _tic = gameTic + Const.InputDelay + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
     }
@@ -949,7 +987,7 @@ const updateGameCamera = () => {
     let scale = GAME_CFG._camera._baseScale;
     let cameraX = gameCamera[0];
     let cameraY = gameCamera[1];
-    if (clientId && !gameMode._title) {
+    if ((clientId && !gameMode._title) || gameMode._replay) {
         const myPlayer = getMyPlayer();
         const p0 = myPlayer ?? getRandomPlayer();
         if (p0?._client) {
@@ -959,7 +997,7 @@ const updateGameCamera = () => {
             cameraX = px;
             cameraY = py;
             const autoPlay = hasSettingsFlag(SettingFlag.DevAutoPlay);
-            if (myPlayer && (!autoPlay || gameMenu._state !== GameMenuState.InGame)) {
+            if (myPlayer && ((!autoPlay && !gameMode._replay) || gameMenu._state !== GameMenuState.InGame)) {
                 if (gameMenu._state === GameMenuState.InGame) {
                     const viewM = 100 * wpn._cameraFeedback * cameraFeedback / (hypot(viewX, viewY) + 0.001);
                     cameraX += wpn._cameraLookForward * (lookAtX - px) - viewM * viewX;
@@ -999,7 +1037,7 @@ const simulateTic = () => {
         const tickEvents: ClientEvent[] = localEvents.concat(receivedEvents).filter(v => v._tic == tic);
 
         tickEvents.sort((a, b) => a._client - b._client);
-        recordEvents(tic, tickEvents);
+        addReplayTicEvents(tic, tickEvents);
         for (const cmd of tickEvents) {
             if (cmd._input !== undefined) {
                 const player = getPlayerByClient(cmd._client);

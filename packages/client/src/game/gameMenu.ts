@@ -1,9 +1,10 @@
-import {button, ui_begin, ui_finish, uiState} from "../graphics/ui";
+import {button, ui_begin, ui_finish, uiProgressBar, uiState} from "../graphics/ui";
 import {settings} from "./settings";
 import {keyboardDown, KeyCode} from "../utils/input";
 import {disconnect} from "../net/messaging";
 import {GAME_CFG} from "./config";
 import {guiSettingsPanel} from "../screens/settings";
+import {ReplayFile, saveReplay} from "./replay";
 
 export const enum GameMenuState {
     InGame = 0,
@@ -15,7 +16,7 @@ export interface GameMenu {
     _state: GameMenuState;
 }
 
-export function onGameMenu(menu: GameMenu): void {
+export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): void {
     ui_begin();
     {
         const W = uiState._width;
@@ -30,18 +31,31 @@ export function onGameMenu(menu: GameMenu): void {
             }) || keyboardDown[KeyCode.Escape]) {
                 menu._state = GameMenuState.Paused;
             }
+
+            if (replay) {
+                const t0 = replay._meta.start;
+                const t1 = replay._meta.end;
+                uiProgressBar((tic - t0) / (t1 - t0), 20, H - 20, W - 40, 8);
+            }
         } else if (menu._state === GameMenuState.Paused) {
-            if (button("settings", "⚙️ SETTINGS", centerX - 50, centerY + 20, {w: 100, h: 20})) {
+            let y = centerY + 20;
+            if (button("settings", "⚙️ SETTINGS", centerX - 50, y, {w: 100, h: 20})) {
                 menu._state = GameMenuState.Settings;
             }
-            if (button("back_to_game", "⬅ BACK", centerX - 50, centerY + 50, {
+            y += 30;
+            if (button("save-replay", "💾 SAVE REPLAY", centerX - 50, y, {w: 100, h: 20})) {
+                saveReplay();
+            }
+            y += 30;
+            if (button("quit_room", "🏃 QUIT", centerX - 50, y, {w: 100, h: 20})) {
+                disconnect();
+            }
+            y += 30;
+            if (button("back_to_game", "⬅ BACK", centerX - 50, y, {
                 w: 100,
                 h: 20
             }) || keyboardDown[KeyCode.Escape]) {
                 menu._state = GameMenuState.InGame;
-            }
-            if (button("quit_room", "🏃 QUIT", centerX - 50, centerY + 80, {w: 100, h: 20})) {
-                disconnect();
             }
         } else if (menu._state === GameMenuState.Settings) {
             guiSettingsPanel(centerX, centerY);

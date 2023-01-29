@@ -1,21 +1,21 @@
 import {_room, _sseState, clientName, connect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging";
 import {isAnyKeyDown, updateInput} from "./utils/input";
 import {resetPrinter, ui_renderComplete} from "./graphics/ui";
-import {createSplashState, gameMode, resetGame, updateGame} from "./game/game";
+import {createSplashState, enableReplayMode, gameMode, resetGame, updateGame} from "./game/game";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
 import {speak} from "./audio/context";
 import {updateStats} from "./utils/fpsMeter";
 import {updateSong} from "./audio/music";
 import {drawTextShadowCenter, fnt, initFonts, updateFonts} from "./graphics/font";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {RoomsInfoResponse} from "../../shared/src/types";
+import {GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
 import {sin} from "./utils/math";
 import {setupRAF} from "./utils/raf";
 import {getScreenScale} from "./game/gameState";
 import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
 import {poki} from "./poki";
-import {beginRecording, endRecording} from "./game/replay";
+import {loadReplay} from "./game/replay";
 
 const enum StartState {
     Loading = 0,
@@ -108,6 +108,35 @@ async function start() {
                     gameMode._tiltCamera = 0.05;
                     gameMode._bloodRain = true;
                     connect(result._newGame);
+                } else if (result._command === MenuCommand.Replay) {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.onchange = (ev) => {
+                        if (input.files.length > 0) {
+                            const reader = new FileReader();
+                            reader.onload = function (e) {
+                                const result = e.target.result;
+                                console.info(result);
+                                if (result instanceof ArrayBuffer) {
+                                    const replay = loadReplay(result);
+                                    const replayRoom = replay._meta.room;
+                                    state = StartState.Connected;
+                                    resetGame();
+                                    connect({
+                                        _flags: replayRoom.flags | GameModeFlag.Offline,
+                                        _playersLimit: 1,
+                                        _npcLevel: replayRoom.npcLevel,
+                                        _theme: replayRoom.mapTheme + 1,
+                                    });
+                                    _room._mapSeed = replayRoom.mapSeed;
+                                    gameMode._npcLevel = _room._npcLevel;
+                                    enableReplayMode(replay);
+                                }
+                            };
+                            reader.readAsArrayBuffer(input.files[0]);
+                        }
+                    }
+                    input.click();
                 }
             }
         },
@@ -170,7 +199,6 @@ async function start() {
                 // user disconnected or quit the game room
                 poki._gameplayStop();
                 goToSplash();
-                endRecording();
             }
         }
     ];

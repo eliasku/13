@@ -89,7 +89,7 @@ const readItemActor = (list: ItemActor[], i32: Int32Array, ptr: number): number 
     return ptr;
 }
 
-const readState = (state: StateData, i32: Int32Array, ptr: number): number => {
+export const readState = (state: StateData, i32: Int32Array, ptr: number): number => {
     state._nextId = i32[ptr++];
     state._tic = i32[ptr++];
     state._seed = i32[ptr++] >>> 0;
@@ -250,7 +250,7 @@ const writeItemActor = (p: ItemActor, i32: Int32Array, ptr: number): number => {
     return ptr;
 };
 
-const writeState = (state: StateData | undefined, i32: Int32Array, ptr: number): number => {
+export const writeState = (state: StateData | undefined, i32: Int32Array, ptr: number): number => {
     if (state) {
         i32[ptr++] = state._nextId;
         i32[ptr++] = state._tic;

@@ -60,7 +60,7 @@ export const channels_sendObjectData = (client: RemoteClient, data: ArrayBuffer)
 }
 
 export const getChannelPacketSize = (client: RemoteClient): number =>
-    process.env.NODE_ENV === "development" ?
-        (client._debugPacketByteLength | 0) :
-        (client._dc.bufferedAmount);
+    (process.env.NODE_ENV === "development" ?
+        client._debugPacketByteLength :
+        client._dc?.bufferedAmount) | 0;
 

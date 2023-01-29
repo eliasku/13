@@ -1,6 +1,4 @@
-import {getScreenScale} from "../game/gameState";
 import {button, label, ui_begin, ui_finish, uiState} from "../graphics/ui";
-import {gl} from "../graphics/draw2d";
 import {clientName, setUserName} from "../net/messaging";
 import {enableSettingsFlag, SettingFlag, settings} from "../game/settings";
 import {keyboardDown, KeyCode} from "../utils/input";
@@ -28,6 +26,7 @@ export const enum MenuCommand {
     QuickStart = 1,
     JoinGame = 2,
     CreateGame = 3,
+    Replay = 4,
 }
 
 let menu = Menu.Main;
@@ -72,6 +71,10 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
             label("Welcome back,", 7, centerX, 14);
             if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
                 setUserName(prompt("your name", clientName));
+            }
+
+            if (button("replay", "📂 REPLAY...", centerX - 64 / 2, 50)) {
+                result = {_command: MenuCommand.Replay};
             }
 
             if (serverInfo.players) {

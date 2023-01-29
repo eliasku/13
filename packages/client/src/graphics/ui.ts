@@ -141,6 +141,22 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
     }
 
     return 0;
+};
+
+export function uiProgressBar(progress: number, x: number, y: number, w: number, h: number): void {
+    uiState._opaqueQuads.push({
+        _x: x,
+        _y: y,
+        _w: w * progress,
+        _h: h,
+        _color: 0xCCCCCC,
+    }, {
+        _x: x + w * progress,
+        _y: y,
+        _w: w * (1 - progress),
+        _h: h,
+        _color: 0x333333,
+    });
 }
 
 export function ui_renderOpaque() {
