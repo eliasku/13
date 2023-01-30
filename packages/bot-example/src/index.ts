@@ -1,16 +1,48 @@
-import {ActorType, ItemType, packDirByte, PlayerActor, StateData} from "../types";
-import {findClosestActor, hasAmmo} from "./common";
-import {ControlsFlag} from "../controls";
-import {hypot} from "../../utils/math";
-import {weapons} from "../data/weapons";
-import {itemContainsAmmo} from "../actors";
-import {actorsConfig} from "../data/world";
-import {fxRand} from "../../utils/rnd";
+import {
+    Actor,
+    actorsConfig,
+    ActorType,
+    ControlsFlag,
+    itemContainsAmmo,
+    ItemType,
+    packDirByte,
+    PlayerActor,
+    playerBot,
+    sqrDistXY,
+    StateData,
+    weapons,
+    WORLD_BOUNDS_SIZE
+} from "@eliasku/iioi-bot-api";
 
-export let autoPlayInput = 0;
+function rand(n: number) {
+    return (Math.random() * n) | 0;
+}
 
-export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
-    // autoPlayInput = 0;
+const hasAmmo = (player: PlayerActor) => {
+    if (player._weapon) {
+        const weapon = weapons[player._weapon];
+        return !weapon._clipSize || player._clipAmmo || player._mags;
+    }
+    return false;
+}
+
+const findClosestActor = <T extends Actor>(player: PlayerActor, actors: T[], pred: (item: T) => boolean): T | undefined => {
+    let minDistActor: T | undefined;
+    let minDistSqr = WORLD_BOUNDS_SIZE * WORLD_BOUNDS_SIZE;
+    for (const a of actors) {
+        if (pred(a)) {
+            const distSqr = sqrDistXY(player, a);
+            if (distSqr < minDistSqr) {
+                minDistActor = a;
+                minDistSqr = distSqr;
+            }
+        }
+    }
+    return minDistActor;
+}
+
+playerBot.update = (state: StateData, player: PlayerActor): number => {
+    let input = 0;
     let lowHP = !player._sp && player._hp < 5;
     let nothingToDo = false;
     if (lowHP) {
@@ -22,7 +54,7 @@ export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
             let dy = target._y - player._y;
             const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
             const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
-            autoPlayInput = (ld << ControlsFlag.LookAngleBit) |
+            input = (ld << ControlsFlag.LookAngleBit) |
                 (md << ControlsFlag.MoveAngleBit) |
                 ControlsFlag.Move | ControlsFlag.Run;
         } else {
@@ -41,7 +73,7 @@ export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
                     let mx = 0;
                     let my = 0;
                     const weapon = weapons[player._weapon];
-                    const dist = hypot(dx, dy);
+                    const dist = Math.hypot(dx, dy);
                     if (dist < weapon._ai_shootDistanceMin) {
                         mx = -dx;
                         my = -dy;
@@ -55,7 +87,7 @@ export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
                     }
                     const md = packDirByte(mx, my, ControlsFlag.MoveAngleMax);
                     const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
-                    autoPlayInput = (ld << ControlsFlag.LookAngleBit) |
+                    input = (ld << ControlsFlag.LookAngleBit) |
                         (md << ControlsFlag.MoveAngleBit) |
                         move | shoot;
                 } else {
@@ -69,7 +101,7 @@ export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
                     let dy = target._y - player._y;
                     const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
                     const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
-                    autoPlayInput = (ld << ControlsFlag.LookAngleBit) |
+                    input = (ld << ControlsFlag.LookAngleBit) |
                         (md << ControlsFlag.MoveAngleBit) |
                         ControlsFlag.Move | ControlsFlag.Run;
                 } else {
@@ -83,7 +115,7 @@ export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
             if (target) {
                 let dx = target._x - player._x;
                 let dy = target._y - player._y;
-                const dist = hypot(dx, dy);
+                const dist = Math.hypot(dx, dy);
                 const md = packDirByte(dx, dy, ControlsFlag.MoveAngleMax);
                 const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
                 let drop = 0;
@@ -91,7 +123,7 @@ export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
                     !(player._trig & ControlsFlag.DownEvent_Drop)) {
                     drop = ControlsFlag.Drop;
                 }
-                autoPlayInput = (ld << ControlsFlag.LookAngleBit) |
+                input = (ld << ControlsFlag.LookAngleBit) |
                     (md << ControlsFlag.MoveAngleBit) |
                     ControlsFlag.Move | ControlsFlag.Run | drop;
             } else {
@@ -100,11 +132,12 @@ export const updateAutoPlay = (state: StateData, player: PlayerActor) => {
         }
     }
     if (nothingToDo) {
-        const md = fxRand(ControlsFlag.MoveAngleMax);
-        autoPlayInput = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
-        autoPlayInput |= ControlsFlag.Run
-        if (!fxRand(100)) {
-            autoPlayInput |= ControlsFlag.Jump;
+        const md = rand(ControlsFlag.MoveAngleMax);
+        input = (md << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
+        input |= ControlsFlag.Run
+        if (!rand(100)) {
+            input |= ControlsFlag.Jump;
         }
     }
+    return input;
 }

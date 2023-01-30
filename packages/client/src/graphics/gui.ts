@@ -1,9 +1,10 @@
 import {drawText, drawTextAligned, fnt} from "./font";
 import {inputPointers, mousePointer, Pointer} from "../utils/input";
-import {Img, img} from "../assets/gfx";
+import {img} from "../assets/gfx";
 import {draw, gl, setDrawZ} from "./draw2d";
 import {getScreenScale} from "../game/gameState";
 import {clamp} from "../utils/math";
+import {Img} from "../assets/img";
 
 let y = 8;
 export const resetPrinter = () => {

@@ -1,6 +1,6 @@
-import {img, Img} from "../assets/gfx";
+import {img} from "../assets/gfx";
 import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
-import {Actor, Particle, TextParticle, Vel} from "./types";
+import {Actor, Pos, Vel} from "./types";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
 import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
@@ -12,6 +12,41 @@ import {cubicOut} from "../utils/easing";
 import {drawTextAligned, fnt} from "../graphics/font";
 import {BloodMode, Setting, settings} from "./settings";
 import {GAME_CFG} from "./config";
+import {Img} from "../assets/img";
+
+export interface Particle extends Pos, Vel {
+    // angle
+    _a: number;
+    // rotation speed
+    _r: number;
+
+    // gravity factor
+    _gravity: number;
+
+    _scale: number;
+    _scaleDelta: number;
+    _color: number;
+
+    _lifeTime: number;
+    _lifeMax: number;
+
+    _img: Img;
+    _splashSizeX: number;
+    _splashSizeY: number;
+    _splashEachJump: number;
+    _splashScaleOnVelocity: number;
+    _splashImg: number;
+    _followVelocity: number;
+    _followScale: number;
+
+    _shadowScale: number;
+}
+
+export interface TextParticle extends Pos {
+    _text: string;
+    _lifetime: number;
+    _time: number;
+}
 
 export const newParticle = (): Particle => ({
     _x: 0,

@@ -1,7 +1,6 @@
-import {Actor, ActorType, PlayerActor, Pos, Vel} from "./types";
+import {Actor, ActorType, ControlsFlag, PlayerActor, Pos, Vel} from "./types";
 import {rand} from "../utils/rnd";
 import {clamp, cos, reach, sin, sqrt} from "../utils/math";
-import {ControlsFlag} from "./controls";
 import {actorsConfig, OBJECT_RADIUS} from "./data/world";
 import {WORLD_BOUNDS_SIZE} from "../assets/params";
 import {GAME_CFG} from "./config";

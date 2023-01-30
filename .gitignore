@@ -3,6 +3,7 @@ node_modules/
 build/
 public/
 server.js
+dist/
 
 # pages
 pages/vendor/

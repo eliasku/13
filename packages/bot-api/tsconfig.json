@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "node",
+    "removeComments": false,
+    "preserveConstEnums": false,
+    "sourceMap": true,
+    "outDir": "dist",
+    "declaration": true,
+    "baseUrl": "src",
+    "isolatedModules": false,
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

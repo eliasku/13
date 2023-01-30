@@ -1,12 +1,13 @@
 import {Actor, ActorType, PlayerActor, StateData} from "./types";
 import {draw} from "../graphics/draw2d";
-import {Img, img} from "../assets/gfx";
+import {img} from "../assets/gfx";
 import {WORLD_BOUNDS_SIZE} from "../assets/params";
 import {clientId} from "../net/messaging";
 import {PI} from "../utils/math";
 import {actorsConfig, OBJECT_RADIUS} from "./data/world";
 import {GAME_CFG} from "./config";
 import {fnt} from "../graphics/font";
+import {Img} from "../assets/img";
 
 const getPlayerColor = (player: PlayerActor): number => {
     const config = GAME_CFG._minimap;

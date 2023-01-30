@@ -16,6 +16,7 @@ import {completeLoading, setLoadingProgress} from "./preloader";
 import {MenuCommand, menuScreen} from "./screens/main";
 import {poki} from "./poki";
 import {openReplayFile} from "./game/replay";
+import {loadPlayerCode} from "./game/ai/common";
 
 console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
 
@@ -77,6 +78,9 @@ async function start() {
         gameMode._npcLevel = 0;
         completeLoading();
         poki._gameLoadingFinished();
+
+        // test load ai
+        loadPlayerCode("./autoplay.js");
     });
     const preStates: StateFunc[] = [
         ,

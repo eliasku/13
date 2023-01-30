@@ -1,4 +1,4 @@
-import {Img} from "../../assets/gfx";
+import {Img} from "../../assets/img";
 
 export const enum BulletType {
     Melee = 0,

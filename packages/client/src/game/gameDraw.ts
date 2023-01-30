@@ -1,6 +1,6 @@
 import {Actor, BulletActor, ItemActor, ItemType, PlayerActor} from "./types";
 import {WORLD_SCALE} from "../assets/params";
-import {EMOJI, img, Img} from "../assets/gfx";
+import {EMOJI, img} from "../assets/gfx";
 import {draw, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d";
 import {lookAtX, lookAtY, viewX, viewY} from "./controls";
 import {atan2, clamp, cos, min, PI, sin} from "../utils/math";
@@ -15,6 +15,7 @@ import {lastFrameTs} from "./gameState";
 import {drawTextAligned, fnt} from "../graphics/font";
 import {GameMenuState} from "./gameMenu";
 import {gameMenu} from "./game";
+import {Img} from "../assets/img";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {

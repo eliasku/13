@@ -3,6 +3,7 @@
 - Add simple autoplay mode for debugging
 - Change user settings data
 - Add replay files initial support (wip)
+- Player bot API (wip)
 
 ## 1.0.13
 

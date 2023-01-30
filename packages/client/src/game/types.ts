@@ -1,5 +1,4 @@
 import {ClientID} from "../../../shared/src/types";
-import {Img} from "../assets/gfx";
 import {atan2, PI, PI2} from "../utils/math";
 
 export const enum ActorType {
@@ -234,40 +233,6 @@ export interface PacketDebug {
     _state?: StateData;
 }
 
-export interface Particle extends Pos, Vel {
-    // angle
-    _a: number;
-    // rotation speed
-    _r: number;
-
-    // gravity factor
-    _gravity: number;
-
-    _scale: number;
-    _scaleDelta: number;
-    _color: number;
-
-    _lifeTime: number;
-    _lifeMax: number;
-
-    _img: Img;
-    _splashSizeX: number;
-    _splashSizeY: number;
-    _splashEachJump: number;
-    _splashScaleOnVelocity: number;
-    _splashImg: number;
-    _followVelocity: number;
-    _followScale: number;
-
-    _shadowScale: number;
-}
-
-export interface TextParticle extends Pos {
-    _text: string;
-    _lifetime: number;
-    _time: number;
-}
-
 export const unpackAngleByte = (angleByte: number, res: number) =>
     PI2 * (angleByte & (res - 1)) / res - PI;
 
@@ -277,3 +242,32 @@ export const packAngleByte = (a: number, res: number) =>
 export const packDirByte = (x: number, y: number, res: number) =>
     packAngleByte((PI + atan2(y, x)) / PI2, res);
 
+
+/*
+    First 19 bits
+    [ ..... LA-LA-LA-LA-LA-LA-LA MA-MA-MA-MA-MA-MA Sp Dr Sh Ju Ru Mo ]
+
+    Next high 13 bits not used
+ */
+export const enum ControlsFlag {
+    Move = 0x1,
+    Run = 0x2,
+    Jump = 0x4,
+    Fire = 0x8,
+    Drop = 0x10,
+    Reload = 0x20,
+    Swap = 0x40,
+    Spawn = 0x80,
+
+    // 5-bits for Move angle (32 directions)
+    MoveAngleMax = 0x20,
+    MoveAngleBit = 8,
+    // 8-bits for Look angle (256 directions)
+    LookAngleMax = 0x100,
+    LookAngleBit = 13,
+
+    DownEvent_Fire = 1,
+    DownEvent_Drop = 2,
+    DownEvent_Reload = 4,
+    DownEvent_Swap = 8,
+}

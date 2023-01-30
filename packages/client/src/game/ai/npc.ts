@@ -1,6 +1,5 @@
-import {ActorType, ItemType, packDirByte, PlayerActor, StateData} from "../types";
+import {ActorType, ControlsFlag, ItemType, packDirByte, PlayerActor, StateData} from "../types";
 import {hypot} from "../../utils/math";
-import {ControlsFlag} from "../controls";
 import {rand} from "../../utils/rnd";
 import {weapons} from "../data/weapons";
 import {actorsConfig} from "../data/world";

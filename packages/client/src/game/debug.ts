@@ -5,7 +5,7 @@ import {getChannelPacketSize} from "../net/channels_send";
 import {termPrint} from "../graphics/gui";
 import {keyboardDown, KeyCode} from "../utils/input";
 import {draw, setDrawZ} from "../graphics/draw2d";
-import {Img, img} from "../assets/gfx";
+import {img} from "../assets/gfx";
 import {ClientID} from "../../../shared/src/types";
 import {_SEEDS} from "../utils/rnd";
 import {roundActors} from "./phy";
@@ -15,6 +15,7 @@ import {WORLD_SCALE} from "../assets/params";
 import {actorsConfig} from "./data/world";
 import {opaqueParticles, splats, textParticles} from "./particles";
 import {gameMode} from "./game";
+import {Img} from "../assets/img";
 
 //// DEBUG UTILITIES ////
 

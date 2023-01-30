@@ -14,7 +14,7 @@ import {
 } from "../graphics/draw2d";
 import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd";
 import {channels_sendObjectData} from "../net/channels_send";
-import {EMOJI, img, Img} from "../assets/gfx";
+import {EMOJI, img} from "../assets/gfx";
 import {Const, GAME_CFG} from "./config";
 import {generateMapBackground, mapTexture} from "../assets/map";
 import {
@@ -24,6 +24,7 @@ import {
     BulletActor,
     Client,
     ClientEvent,
+    ControlsFlag,
     ItemActor,
     ItemType,
     newStateData,
@@ -56,7 +57,6 @@ import {
     TO_RAD
 } from "../utils/math";
 import {
-    ControlsFlag,
     couldBeReloadedManually,
     drawVirtualPad,
     dropButton,
@@ -139,7 +139,6 @@ import {drawText, drawTextAligned, fnt} from "../graphics/font";
 import {stats} from "../utils/fpsMeter";
 import {drawMiniMap} from "./minimap";
 import {updateAI} from "./ai/npc";
-import {autoPlayInput, updateAutoPlay} from "./ai/autoplay";
 import {GL} from "../graphics/gl";
 import {
     drawBarrelOpaque,
@@ -162,6 +161,8 @@ import {isAnyKeyDown} from "../utils/input";
 import {delay} from "../utils/delay";
 import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu";
 import {addReplayTicEvents, beginRecording, ReplayFile} from "./replay";
+import {Img} from "../assets/img";
+import {autoplayInput, updateAutoplay} from "./ai/common";
 
 export const gameMenu: GameMenu = {
     _state: GameMenuState.InGame,
@@ -197,6 +198,7 @@ let hotUsable: ItemActor | null = null;
 // dynamic state
 let state: StateData = newStateData();
 let lastState: StateData;
+
 export const gameMode = {
     _title: false,
     _runAI: false,
@@ -584,7 +586,7 @@ const updatePlayerControls = () => {
 
         // process Auto-play tic
         if (hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
-            updateAutoPlay(state, myPlayer);
+            updateAutoplay(state, myPlayer._client);
         }
     }
 }
@@ -595,7 +597,7 @@ const checkPlayerInput = () => {
     let input = 0;
     if (player) {
         if (getDevFlag(SettingFlag.DevAutoPlay)) {
-            input = autoPlayInput;
+            input = autoplayInput;
         } else {
             if (moveX || moveY) {
                 input |= (packDirByte(moveX, moveY, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
