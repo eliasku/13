@@ -7,6 +7,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --dts --format esm --define.__VERSION__ \"\" --define.__BUILD_HASH__ \"\" --define.__BUILD_COMMIT__ \"\" --define.__SERVER_URL__ \"\" --define.__POKI_GAME_ID__ \"\"",
+    "pretypecheck": "npm run build",
     "typecheck": "tsc -p tsconfig.json"
   },
   "author": "eliasku",
