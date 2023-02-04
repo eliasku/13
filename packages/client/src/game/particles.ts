@@ -1,18 +1,18 @@
-import {img} from "../assets/gfx";
-import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
-import {Actor, Pos, Vel} from "./types";
-import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math";
-import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
-import {GL} from "../graphics/gl";
-import {mapTexture, mapTexture0} from "../assets/map";
-import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
-import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils";
-import {cubicOut} from "../utils/easing";
-import {drawTextAligned, fnt} from "../graphics/font";
-import {BloodMode, Setting, settings} from "./settings";
-import {GAME_CFG} from "./config";
-import {Img} from "../assets/img";
+import {img} from "../assets/gfx.js";
+import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d.js";
+import {Actor, Pos, Vel} from "./types.js";
+import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy.js";
+import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math.js";
+import {_SEEDS, random1, random1i, random1n} from "../utils/rnd.js";
+import {GL} from "../graphics/gl.js";
+import {mapTexture, mapTexture0} from "../assets/map.js";
+import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils.js";
+import {cubicOut} from "../utils/easing.js";
+import {drawTextAligned, fnt} from "../graphics/font.js";
+import {BloodMode, Setting, settings} from "./settings.js";
+import {GAME_CFG} from "./config.js";
+import {Img} from "../assets/img.js";
 
 export interface Particle extends Pos, Vel {
     // angle

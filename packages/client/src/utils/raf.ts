@@ -1,4 +1,4 @@
-import {Setting, settings} from "../game/settings";
+import {Setting, settings} from "../game/settings.js";
 
 export function setupRAF(callback: (now: DOMHighResTimeStamp) => void) {
     let then = performance.now();

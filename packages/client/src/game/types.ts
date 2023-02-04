@@ -1,27 +1,29 @@
-import {ClientID} from "../../../shared/src/types";
-import {atan2, PI, PI2} from "../utils/math";
+import {ClientID} from "@iioi/shared/types.js";
+import {atan2, PI, PI2} from "../utils/math.js";
 
-export const enum ActorType {
-    Player = 0,
-    Barrel = 1,
-    Bullet = 2,
-    Item = 3,
+export const ActorType = {
+    Player: 0,
+    Barrel: 1,
+    Bullet: 2,
+    Item: 3,
     // static game objects
-    Tree = 4,
-}
+    Tree: 4,
+} as const;
+export type ActorType = typeof ActorType[keyof typeof ActorType];
 
-export const enum ItemType {
-    Hp = 0,
-    Hp2 = 1,
-    Credit = 2,
-    Credit2 = 3,
-    Shield = 4,
-    Ammo = 5,
+export const ItemType = {
+    Hp: 0,
+    Hp2: 1,
+    Credit: 2,
+    Credit2: 3,
+    Shield: 4,
+    Ammo: 5,
     // FLAG
-    Weapon = 8,
+    Weapon: 8,
 
-    SubTypeMask = 7,
-}
+    SubTypeMask: 7,
+} as const;
+export type ItemType = typeof ItemType[keyof typeof ItemType];
 
 export interface Pos {
     /** uint16 **/
@@ -249,25 +251,29 @@ export const packDirByte = (x: number, y: number, res: number) =>
 
     Next high 13 bits not used
  */
-export const enum ControlsFlag {
-    Move = 0x1,
-    Run = 0x2,
-    Jump = 0x4,
-    Fire = 0x8,
-    Drop = 0x10,
-    Reload = 0x20,
-    Swap = 0x40,
-    Spawn = 0x80,
+export const ControlsFlag = {
+    Move: 0x1,
+    Run: 0x2,
+    Jump: 0x4,
+    Fire: 0x8,
+    Drop: 0x10,
+    Reload: 0x20,
+    Swap: 0x40,
+    Spawn: 0x80,
 
     // 5-bits for Move angle (32 directions)
-    MoveAngleMax = 0x20,
-    MoveAngleBit = 8,
+    MoveAngleMax: 0x20,
+    MoveAngleBit: 8,
     // 8-bits for Look angle (256 directions)
-    LookAngleMax = 0x100,
-    LookAngleBit = 13,
+    LookAngleMax: 0x100,
+    LookAngleBit: 13,
 
-    DownEvent_Fire = 1,
-    DownEvent_Drop = 2,
-    DownEvent_Reload = 4,
-    DownEvent_Swap = 8,
-}
+    DownEvent_Fire: 1,
+    DownEvent_Drop: 2,
+    DownEvent_Reload: 4,
+    DownEvent_Swap: 8,
+} as const;
+
+export type ControlsFlag = typeof ControlsFlag[keyof typeof ControlsFlag];
+
+

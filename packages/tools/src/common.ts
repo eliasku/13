@@ -1,5 +1,5 @@
 import {copyFileSync, mkdirSync, readFileSync, rmSync} from "fs";
-import {execSync} from "child_process";
+import {exec, execSync} from "child_process";
 import * as crypto from "crypto";
 
 function ensureDir(dir: string) {
@@ -24,10 +24,14 @@ export function prepareFolders(...folders: string[]) {
     }
 }
 
-export function clean() {
+export async function clean() {
+    await executeAsync("tsc -b --clean");
     tryRemove("./server.js");
+    tryRemove("./server.js.map");
     tryRemove("./build");
     tryRemove("./public");
+    // maybe tsc output
+    tryRemove("./dist");
 }
 
 export function copyPublicAssets(publicDir = "public", debugAssets = true, indexTemplate: string = "index.html") {
@@ -94,3 +98,13 @@ export const getCompileDefines = (debug?: boolean, serverUrl = "") => ({
     "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
 });
 
+export function executeAsync(cmd: string): Promise<string> {
+    return new Promise((resolve) => {
+        exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+                console.warn(error);
+            }
+            resolve(stdout ? stdout : stderr);
+        });
+    });
+}

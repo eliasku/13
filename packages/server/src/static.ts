@@ -13,6 +13,9 @@ const TYPE_HEADERS: Record<string, OutgoingHttpHeaders> = {
     ".js": {
         "cache-control": "no-cache"
     },
+    ".map": {
+        "cache-control": "no-cache"
+    },
     ".ttf": {
         "content-type": "font/ttf",
         "cache-control": "max-age=86400"

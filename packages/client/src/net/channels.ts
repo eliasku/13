@@ -1,8 +1,12 @@
-import {ClientID} from "../../../shared/src/types";
-import {_debugLagK} from "../game/config";
-import {onRTCPacket} from "../game/game";
-import {lerp} from "../utils/math";
-import {fxRandom} from "../utils/rnd";
+import {ClientID} from "@iioi/shared/types.js";
+import {_debugLagK} from "../game/config.js";
+import {lerp} from "../utils/math.js";
+import {fxRandom} from "../utils/rnd.js";
+
+let onRTCPacket:(from: ClientID, buffer: ArrayBuffer)=>void = ()=>{};
+export function setPacketHandler(callback:(from: ClientID, buffer: ArrayBuffer)=>void):void {
+    onRTCPacket = callback;
+}
 
 const channels_processMessageDebug = (from: ClientID, data: ArrayBuffer) => {
     if(!_debugLagK) {

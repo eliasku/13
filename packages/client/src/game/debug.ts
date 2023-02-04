@@ -1,21 +1,21 @@
-import {Actor, ActorType, Client, Packet, StateData} from "./types";
-import {_debugLagK, Const, setDebugLagK} from "./config";
-import {_room, clientId, clientName, remoteClients} from "../net/messaging";
-import {getChannelPacketSize} from "../net/channels_send";
-import {termPrint} from "../graphics/gui";
-import {keyboardDown, KeyCode} from "../utils/input";
-import {draw, setDrawZ} from "../graphics/draw2d";
-import {img} from "../assets/gfx";
-import {ClientID} from "../../../shared/src/types";
-import {_SEEDS} from "../utils/rnd";
-import {roundActors} from "./phy";
-import {min} from "../utils/math";
-import {getDevFlag, SettingFlag, toggleSettingsFlag} from "./settings";
-import {WORLD_SCALE} from "../assets/params";
-import {actorsConfig} from "./data/world";
-import {opaqueParticles, splats, textParticles} from "./particles";
-import {gameMode} from "./game";
-import {Img} from "../assets/img";
+import {Actor, ActorType, Client, Packet, StateData} from "./types.js";
+import {_debugLagK, Const, setDebugLagK} from "./config.js";
+import {_room, clientId, clientName, remoteClients} from "../net/messaging.js";
+import {getChannelPacketSize} from "../net/channels_send.js";
+import {termPrint} from "../graphics/gui.js";
+import {keyboardDown, KeyCode} from "../utils/input.js";
+import {draw, setDrawZ} from "../graphics/draw2d.js";
+import {img} from "../assets/gfx.js";
+import {ClientID} from "@iioi/shared/types.js";
+import {_SEEDS} from "../utils/rnd.js";
+import {roundActors} from "./phy.js";
+import {min} from "../utils/math.js";
+import {getDevFlag, SettingFlag, toggleSettingsFlag} from "./settings.js";
+import {WORLD_SCALE} from "../assets/params.js";
+import {actorsConfig} from "./data/world.js";
+import {opaqueParticles, splats, textParticles} from "./particles.js";
+import {gameMode} from "./game.js";
+import {Img} from "../assets/img.js";
 
 //// DEBUG UTILITIES ////
 

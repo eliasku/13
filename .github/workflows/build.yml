@@ -31,10 +31,6 @@ jobs:
         run: |
           npm i
 
-      - name: typecheck
-        run: |
-          npm run typecheck
-
       - name: build
         run: |
           npm run build

@@ -1,5 +1,5 @@
-import {ActorType, newStateData, PlayerActor, StateData} from "../../client/src/game/types";
-import {readState} from "../../client/src/game/packets";
+import {ActorType, newStateData, PlayerActor, StateData} from "@iioi/client/game/types.js";
+import {readState} from "@iioi/client/game/packets.js";
 
 export interface PlayerBot {
     update?: (state: StateData, player: PlayerActor) => number;
@@ -25,17 +25,19 @@ onmessage = e => {
 // export public types
 
 export {
-    Actor,
     ActorType,
     ControlsFlag,
     ItemType,
-    packDirByte,
+    packDirByte
+} from "@iioi/client/game/types.js";
+export type {
+    Actor,
     PlayerActor,
     StateData
-} from "../../client/src/game/types";
-export {WORLD_BOUNDS_SIZE} from "../../client/src/assets/params";
-export {itemContainsAmmo} from "../../client/src/game/actors";
-export {sqrDistXY} from "../../client/src/game/phy";
-export {weapons} from "../../client/src/game/data/weapons";
-export {actorsConfig} from "../../client/src/game/data/world";
-export {ClientID} from "../../shared/src/types";
+} from "@iioi/client/game/types.js";
+export {WORLD_BOUNDS_SIZE} from "@iioi/client/assets/params.js";
+export {itemContainsAmmo} from "@iioi/client/game/actors.js";
+export {sqrDistXY} from "@iioi/client/game/phy.js";
+export {weapons} from "@iioi/client/game/data/weapons.js";
+export {actorsConfig} from "@iioi/client/game/data/world.js";
+export type {ClientID} from "@iioi/shared/types.js";

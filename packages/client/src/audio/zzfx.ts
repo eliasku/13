@@ -1,6 +1,6 @@
-import {audioContext} from "./context";
-import {abs, clamp, cos, PI2, round, sign, sin, tan} from "../utils/math";
-import {fxRandom} from "../utils/rnd";
+import {audioContext} from "./context.js";
+import {abs, clamp, cos, PI2, round, sign, sin, tan} from "../utils/math.js";
+import {fxRandom} from "../utils/rnd.js";
 
 export const zzfx = (code: number[]): AudioBuffer => zzfxG(...code);
 

@@ -9,11 +9,11 @@ import {
     PokiGameId,
     Request,
     RoomsInfoResponse,
-    ServerEventName
-} from "../../shared/src/types";
-import {serveFile} from "./static";
-import {newSeedFromTime, rollSeed32, temper} from "@eliasku/13-shared/src/seed";
-import {parseRadix64String, toRadix64String} from "@eliasku/13-shared/src/radix64";
+    ServerEventName,
+} from "@iioi/shared/types.js";
+import {serveFile} from "./static.js";
+import {newSeedFromTime, rollSeed32, temper} from "@iioi/shared/seed.js";
+import {parseRadix64String, toRadix64String} from "@iioi/shared/radix64.js";
 
 interface ClientState {
     _id: ClientID;
@@ -104,7 +104,7 @@ const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: Server
     };
     for (const [, room] of rooms) {
         const players = room._clients.size;
-        if (room._flags & GameModeFlag.Public) {
+        if ((room._flags & GameModeFlag.Public) === GameModeFlag.Public) {
             json.rooms.push({
                 code: room._code,
                 players,

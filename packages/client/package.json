@@ -1,11 +1,23 @@
 {
-  "name": "@eliasku/13-client",
+  "name": "@iioi/client",
   "version": "1.0.14",
   "description": "13 Game Client",
   "type": "module",
+  "exports": {
+    "./*": {
+      "types": "./dist/*",
+      "default": "./dist/*"
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "author": "eliasku",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@iioi/shared": "1.0.14"
+  }
 }

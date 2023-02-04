@@ -1,4 +1,4 @@
-import {hasSettingsFlag, SettingFlag} from "../game/settings";
+import {hasSettingsFlag, SettingFlag} from "../game/settings.js";
 
 export const audioContext = new AudioContext();
 

@@ -1,11 +1,29 @@
 {
-  "name": "@eliasku/13-server",
+  "name": "@iioi/server",
   "version": "1.0.14",
   "description": "13 Game Server",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*",
+      "default": "./dist/*"
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "author": "eliasku",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@iioi/shared": "1.0.14"
+  }
 }

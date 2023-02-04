@@ -1,14 +1,10 @@
 {
+  "extends": "../../tsconfig.package.json",
   "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
-    "moduleResolution": "node",
-    "noImplicitAny": false,
-    "removeComments": false,
-    "preserveConstEnums": false,
-    "sourceMap": true,
-    "outDir": "build"
+    "rootDir": "src",
+    "outDir": "dist",
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

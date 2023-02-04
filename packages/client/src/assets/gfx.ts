@@ -1,29 +1,11 @@
-import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d";
-import {GL} from "../graphics/gl";
+import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d.js";
+import {GL} from "../graphics/gl.js";
+import {loadArrayBuffer, loadImage} from "../graphics/utils.js";
 
 export const EMOJI: Record<number, string> = [null, null, null, null, null, null, null, null, null, null, null, "🔪", "🪓", "🔫", "🖊️", "✏️️", "🪥", "⛏", "🔌", "🧵", "💀", "👹", "🤡", "🤖", "🎃", "🦝", "🐙", "🐰", "🦌", "🐺", "🐵", "🦊", "🐭", "🦍", "🍅", "😐", "🐷", "🧑‍🎄", "🎅🏻", "🎅🏼", "🎅🏾", "🎅", "🛢", "📦", "🪦", "❤️", "💊", "🪙", "💎", "🛡", "🧱", "🌳", "🌲", "🌵", "🌴", "🎄", "⛄", "🥓", "🦴"];
 
 export const img: Texture[] = [];
 export let imgSpotLight: Texture | undefined;
-
-const loadArrayBuffer = (url: string): Promise<ArrayBuffer> => fetch(url).then(b => b.arrayBuffer());
-
-const loadImage = (url: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onerror = (e) => reject(e);
-    image.onload = () => resolve(image);
-    image.src = url;
-});
-
-export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasRenderingContext2D): CanvasRenderingContext2D => {
-    _canvas = document.createElement("canvas");
-    _canvas.width = _canvas.height = size;
-    _canvas = _canvas.getContext("2d");
-    _canvas.fillStyle = _canvas.strokeStyle = "#fff";
-    _canvas.textAlign = "center";
-    _canvas.textBaseline = "alphabetic";
-    return _canvas;
-}
 
 export async function loadMainAtlas(): Promise<void> {
     const [image, buffer] = await Promise.all([

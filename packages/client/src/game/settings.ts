@@ -1,36 +1,41 @@
 const prefix = "iioi";
 
-export const enum BloodMode {
-    Off = 0,
-    Normal = 1,
-    Paint = 2,
-}
+
+export const BloodMode = {
+    Off: 0,
+    Normal: 1,
+    Paint: 2,
+} as const;
+export type BloodMode = typeof BloodMode[keyof typeof BloodMode];
 
 export const DEFAULT_FRAMERATE_LIMIT = 60;
 
-export const enum Setting {
-    Name,
-    Flags,
-    Blood,
-    Particles,
-    FrameRateCap
-}
+export const Setting = {
+    Name: 0,
+    Flags: 1,
+    Blood: 2,
+    Particles: 3,
+    FrameRateCap: 4,
+} as const;
+export type Setting = typeof Setting[keyof typeof Setting];
 
-export const enum SettingFlag {
-    Sound = 1 << 0,
-    Music = 1 << 1,
-    Speech = 1 << 2,
-    HighDPI = 1 << 3,
-    DevMode = 1 << 4,
-    DevShowFrameStats = 1 << 5,
-    DevShowCollisionInfo = 1 << 6,
-    DevShowDebugInfo = 1 << 7,
-    DevLogging = 1 << 8,
-    DevAutoPlay = 1 << 9,
 
-}
+export const SettingFlag = {
+    Sound: 1 << 0,
+    Music: 1 << 1,
+    Speech: 1 << 2,
+    HighDPI: 1 << 3,
+    DevMode: 1 << 4,
+    DevShowFrameStats: 1 << 5,
+    DevShowCollisionInfo: 1 << 6,
+    DevShowDebugInfo: 1 << 7,
+    DevLogging: 1 << 8,
+    DevAutoPlay: 1 << 9,
+} as const;
+export type SettingFlag = typeof SettingFlag[keyof typeof SettingFlag];
 
-interface SettingsMap {
+
+interface SettingsMap extends Record<Setting, any>{
     [Setting.Name]: string;
     [Setting.Flags]: SettingFlag;
     [Setting.Blood]: BloodMode;

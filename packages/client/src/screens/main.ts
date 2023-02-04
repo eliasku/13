@@ -1,19 +1,29 @@
-import {button, label, ui_begin, ui_finish, uiState} from "../graphics/gui";
-import {clientName, setUserName} from "../net/messaging";
-import {enableSettingsFlag, SettingFlag, settings} from "../game/settings";
-import {keyboardDown, KeyCode} from "../utils/input";
-import {BuildVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@eliasku/13-shared/src/types";
-import {parseRadix64String} from "@eliasku/13-shared/src/radix64";
-import {guiDevModePanel, guiSettingsPanel} from "./settings";
+import {button, label, ui_begin, ui_finish, uiState} from "../graphics/gui.js";
+import {clientName, setUserName} from "../net/messaging.js";
+import {enableSettingsFlag, SettingFlag, settings} from "../game/settings.js";
+import {keyboardDown, KeyCode} from "../utils/input.js";
+import {BuildVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@iioi/shared/types.js";
+import {parseRadix64String} from "@iioi/shared/radix64.js";
+import {guiDevModePanel, guiSettingsPanel} from "./settings.js";
 
-const enum Menu {
-    Main = 0,
-    Settings = 1,
-    Dev = 2,
-    Games = 3,
-    Practice = 4,
-    CreateGame = 5,
-}
+const Menu = {
+    Main: 0,
+    Settings: 1,
+    Dev: 2,
+    Games: 3,
+    Practice: 4,
+    CreateGame: 5,
+} as const;
+type Menu = typeof Menu[keyof typeof Menu];
+
+export const MenuCommand = {
+    StartPractice: 0,
+    QuickStart: 1,
+    JoinGame: 2,
+    CreateGame: 3,
+    Replay: 4,
+} as const;
+export type MenuCommand = typeof MenuCommand[keyof typeof MenuCommand];
 
 export interface MenuResult {
     _command: MenuCommand;
@@ -21,15 +31,7 @@ export interface MenuResult {
     _joinByCode?: string;
 }
 
-export const enum MenuCommand {
-    StartPractice = 0,
-    QuickStart = 1,
-    JoinGame = 2,
-    CreateGame = 3,
-    Replay = 4,
-}
-
-let menu = Menu.Main;
+let menu:Menu = Menu.Main;
 let devLock = 0;
 
 // create game options

@@ -12,7 +12,7 @@ import {
     StateData,
     weapons,
     WORLD_BOUNDS_SIZE
-} from "@eliasku/iioi-bot-api";
+} from "@iioi/bot-api";
 
 function rand(n: number) {
     return (Math.random() * n) | 0;

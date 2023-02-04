@@ -1,9 +1,9 @@
-import {Actor, PlayerActor, StateData} from "../types";
-import {WORLD_BOUNDS_SIZE} from "../../assets/params";
-import {sqrDistXY} from "../phy";
-import {weapons} from "../data/weapons";
-import {ClientID} from "@eliasku/13-shared/src/types";
-import {writeState} from "../packets";
+import {Actor, PlayerActor, StateData} from "../types.js";
+import {WORLD_BOUNDS_SIZE} from "../../assets/params.js";
+import {sqrDistXY} from "../phy.js";
+import {weapons} from "../data/weapons.js";
+import {ClientID} from "@iioi/shared/types.js";
+import {writeState} from "../packets.js";
 
 let autoplayWorker: Worker | undefined;
 export let autoplayInput = 0;

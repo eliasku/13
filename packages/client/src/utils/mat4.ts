@@ -1,7 +1,9 @@
 
 export type Mat4 = Float32Array;
 
+/* @__PURE__ */
 export const mat4_create = (d = 1) => new Float32Array([d, 0, 0, 0, 0, d, 0, 0, 0, 0, d, 0, 0, 0, 0, d]);
+
 export const mat4_orthoProjectionLH = (mat: Mat4, left: number, right: number, bottom: number, top: number, zNear: number, zFar: number) => {
     mat.set([
         2 / (right - left),

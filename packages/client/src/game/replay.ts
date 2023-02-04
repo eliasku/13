@@ -1,8 +1,8 @@
-import {ClientEvent, newStateData, StateData} from "./types";
-import {readState, writeState} from "./packets";
-import {_room} from "../net/messaging";
-import {BuildCommit, BuildHash, BuildVersion, ClientID} from "@eliasku/13-shared/src/types";
-import {getNameByClientId} from "./gameState";
+import {ClientEvent, newStateData, StateData} from "./types.js";
+import {readState, writeState} from "./packets.js";
+import {_room} from "../net/messaging.js";
+import {BuildCommit, BuildHash, BuildVersion, ClientID} from "@iioi/shared/types.js";
+import {getNameByClientId} from "./gameState.js";
 
 export interface ReplayMetaData {
     room?: {

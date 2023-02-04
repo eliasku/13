@@ -1,4 +1,4 @@
-import {audioContext, audioMaster} from "./audio/context";
+import {audioContext, audioMaster} from "./audio/context.js";
 
 declare const PokiSDK: {
     init(): Promise<void>;

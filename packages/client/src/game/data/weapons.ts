@@ -1,5 +1,5 @@
-import {WORLD_SCALE} from "../../assets/params";
-import {BulletType} from "./bullets";
+import {WORLD_SCALE} from "../../assets/params.js";
+import {BulletType} from "./bullets.js";
 
 export interface WeaponConfig {
     _name: string;

@@ -10,12 +10,12 @@ import {
     PostMessagesResponse,
     RoomsInfoResponse,
     ServerUrl
-} from "../../../shared/src/types";
-import {channels_processMessage} from "./channels";
-import {getOrCreate} from "../utils/utils";
-import {iceServers} from "./iceServers";
-import {setSetting, Setting, settings} from "../game/settings";
-import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
+} from "@iioi/shared/types.js";
+import {channels_processMessage} from "./channels.js";
+import {getOrCreate} from "../utils/utils.js";
+import {iceServers} from "./iceServers.js";
+import {setSetting, Setting, settings} from "../game/settings.js";
+import {newSeedFromTime} from "@iioi/shared/seed.js";
 
 export interface RemoteClient {
     _id: ClientID;
@@ -24,6 +24,8 @@ export interface RemoteClient {
     _name?: string;
     _debugPacketByteLength?: number;
 }
+
+
 
 const getUrl = (url: string) => ServerUrl + url;
 const getPostUrl = () => getUrl(`_?v=${BuildHash}&r=${_room._code}`);

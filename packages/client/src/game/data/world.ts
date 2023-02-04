@@ -1,5 +1,5 @@
-import {WORLD_SCALE} from "../../assets/params";
-import {ActorType} from "../types";
+import {WORLD_SCALE} from "../../assets/params.js";
+import {ActorType} from "../types.js";
 
 export const OBJECT_RADIUS = 10 * WORLD_SCALE;
 export const BULLET_RADIUS = 6 * WORLD_SCALE;

@@ -1,11 +1,13 @@
-import {parseRGB} from "../utils/utils";
+import {parseRGB} from "../utils/utils.js";
 
-export const enum Const {
-    NetFq = 60,
-    InputDelay = 8,
-    PredictionMax = 8,
-    Prediction = 1,
-}
+export const Const = {
+    NetFq: 60,
+    InputDelay: 8,
+    PredictionMax: 8,
+    Prediction: 1,
+} as const;
+export type Const = typeof Const[keyof typeof Const];
+
 
 export let _debugLagK = 0;
 
@@ -16,15 +18,15 @@ export const GAME_CFG = {
         _initWeaponLen: 1,
         _period: 12,
         _max: 0,
-    },{
+    }, {
         _initWeaponLen: 3,
         _period: 11,
         _max: 4,
-    },{
+    }, {
         _initWeaponLen: 4,
         _period: 10,
         _max: 8,
-    },{
+    }, {
         // allow all weapons?
         // initWeaponLen: 10,
         _initWeaponLen: 4,

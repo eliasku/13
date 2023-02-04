@@ -1,21 +1,19 @@
 {
-  "name": "@eliasku/iioi-bot-api",
+  "name": "@iioi/bot-api",
   "version": "1.0.14",
   "description": "API to control your Player in Game 13 project",
   "type": "module",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "scripts": {
-    "build": "tsup src/index.ts --dts --format esm --define.__VERSION__ \"\" --define.__BUILD_HASH__ \"\" --define.__BUILD_COMMIT__ \"\" --define.__SERVER_URL__ \"\" --define.__POKI_GAME_ID__ \"\"",
-    "pretypecheck": "npm run build",
-    "typecheck": "tsc -p tsconfig.json"
+  "module": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
   },
-  "author": "eliasku",
-  "license": "ISC",
-  "devDependencies": {
-    "tsup": "^6.5.0"
+  "dependencies": {
+    "@iioi/client": "1.0.14"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "author": "eliasku",
+  "license": "ISC"
 }

@@ -1,7 +1,7 @@
-import {_debugLagK} from "../game/config";
-import {isPeerConnected, RemoteClient} from "./messaging";
-import {lerp} from "../utils/math";
-import {fxRandom} from "../utils/rnd";
+import {_debugLagK} from "../game/config.js";
+import {isPeerConnected, RemoteClient} from "./messaging.js";
+import {lerp} from "../utils/math.js";
+import {fxRandom} from "../utils/rnd.js";
 
 const sendSafeInner = (channel: RTCDataChannel, data: ArrayBuffer) => {
     try {

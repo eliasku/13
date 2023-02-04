@@ -1,39 +1,39 @@
-import {_room, _sseState, clientName, connect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging";
-import {isAnyKeyDown, updateInput} from "./utils/input";
-import {resetPrinter, ui_renderComplete} from "./graphics/gui";
-import {createSplashState, enableReplayMode, gameMode, resetGame, updateGame} from "./game/game";
-import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx";
-import {speak} from "./audio/context";
-import {updateStats} from "./utils/fpsMeter";
-import {updateSong} from "./audio/music";
-import {drawTextAligned, fnt, initFonts, updateFonts} from "./graphics/font";
-import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d";
-import {BuildCommit, BuildHash, BuildVersion, GameModeFlag, RoomsInfoResponse} from "../../shared/src/types";
-import {sin} from "./utils/math";
-import {setupRAF} from "./utils/raf";
-import {getScreenScale} from "./game/gameState";
-import {completeLoading, setLoadingProgress} from "./preloader";
-import {MenuCommand, menuScreen} from "./screens/main";
-import {poki} from "./poki";
-import {openReplayFile} from "./game/replay";
-import {loadPlayerCode} from "./game/ai/common";
+import {_room, _sseState, clientName, connect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging.js";
+import {isAnyKeyDown, updateInput} from "./utils/input.js";
+import {resetPrinter, ui_renderComplete} from "./graphics/gui.js";
+import {createSplashState, enableReplayMode, gameMode, resetGame, updateGame} from "./game/game.js";
+import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx.js";
+import {speak} from "./audio/context.js";
+import {updateStats} from "./utils/fpsMeter.js";
+import {updateSong} from "./audio/music.js";
+import {drawTextAligned, fnt, initFonts, updateFonts} from "./graphics/font.js";
+import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d.js";
+import {BuildCommit, BuildHash, BuildVersion, GameModeFlag, RoomsInfoResponse} from "@iioi/shared/types.js";
+import {sin} from "./utils/math.js";
+import {setupRAF} from "./utils/raf.js";
+import {getScreenScale} from "./game/gameState.js";
+import {completeLoading, setLoadingProgress} from "./preloader.js";
+import {MenuCommand, menuScreen} from "./screens/main.js";
+import {poki} from "./poki.js";
+import {openReplayFile} from "./game/replay.js";
+import {loadPlayerCode} from "./game/ai/common.js";
 
 console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
 
-const enum StartState {
-    Loading = 0,
-    Loaded = 1,
-    TapToStart = 2,
-    Connecting = 3,
-    Connected = 4,
-}
-
+const StartState = {
+    Loading: 0,
+    Loaded: 1,
+    TapToStart: 2,
+    Connecting: 3,
+    Connected: 4,
+} as const;
+type StartState = typeof StartState[keyof typeof StartState];
 type StateFunc = (ts?: number) => void | undefined;
 
 async function start() {
     await poki._init();
 
-    let state = StartState.Loading;
+    let state:StartState = StartState.Loading;
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
 
     const refreshRoomsInfo = async () => {

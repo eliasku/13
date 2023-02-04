@@ -1,9 +1,11 @@
 .idea/
 node_modules/
+tsconfig.tsbuildinfo
 build/
+dist/
 public/
 server.js
-dist/
+server.js.map
 
 # pages
 pages/vendor/

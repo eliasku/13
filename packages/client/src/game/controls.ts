@@ -1,17 +1,17 @@
-import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input";
-import {drawCircle, drawRing, gl} from "../graphics/draw2d";
-import {PlayerActor} from "./types";
+import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input.js";
+import {drawCircle, drawRing, gl} from "../graphics/draw2d.js";
+import {PlayerActor} from "./types.js";
 import {
     PAD_FIRE_RADIUS_0,
     PAD_FIRE_RADIUS_1,
     PAD_MOVE_RADIUS_0,
     PAD_MOVE_RADIUS_1,
     WORLD_SCALE
-} from "../assets/params";
-import {getScreenScale} from "./gameState";
-import {hypot} from "../utils/math";
-import {weapons} from "./data/weapons";
-import {drawTextAligned, fnt} from "../graphics/font";
+} from "../assets/params.js";
+import {getScreenScale} from "./gameState.js";
+import {hypot} from "../utils/math.js";
+import {weapons} from "./data/weapons.js";
+import {drawTextAligned, fnt} from "../graphics/font.js";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius

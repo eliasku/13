@@ -1,22 +1,23 @@
-import {zzfx} from "../audio/zzfx";
+import {zzfx} from "../audio/zzfx.js";
 
-export const enum Snd {
-    heal = 0,
-    med = 0,
-    pick = 0,
-    shoot,
-    hurt,
-    death,
-    step,
-    jump,
-    blip,
-    hit,
+export const Snd = {
+    heal: 0,
+    med: 0,
+    pick: 0,
+    shoot: 1,
+    hurt: 3,
+    death: 4,
+    step: 5,
+    jump: 6,
+    blip: 7,
+    hit: 8,
     // instruments
-    bass,
-    kick,
-    snare,
-    hat,
-}
+    bass: 9,
+    kick: 10,
+    snare: 11,
+    hat: 12,
+} as const;
+export type Snd = typeof Snd[keyof typeof Snd];
 
 export let snd: AudioBuffer[] = [
     zzfx([, , 103, , .02, .06, , 1.24, -18, 4.4, , , , .7, , .1, , .95, .03]),

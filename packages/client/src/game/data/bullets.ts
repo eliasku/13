@@ -1,12 +1,14 @@
-import {Img} from "../../assets/img";
+import {Img} from "../../assets/img.js";
 
-export const enum BulletType {
-    Melee = 0,
-    Shell = 1,
-    Plasma = 2,
-    Arrow = 3,
-    Ray = 4,
-}
+export const BulletType = {
+    Melee: 0,
+    Shell: 1,
+    Plasma: 2,
+    Arrow: 3,
+    Ray: 4,
+} as const;
+export type BulletType = typeof BulletType[keyof typeof BulletType];
+
 
 export interface BulletData {
     readonly _length: number;

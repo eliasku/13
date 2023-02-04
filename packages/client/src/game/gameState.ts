@@ -1,8 +1,8 @@
-import {min} from "../utils/math";
-import {gl} from "../graphics/draw2d";
-import {GAME_CFG} from "./config";
-import {ClientID} from "../../../shared/src/types";
-import {clientId, clientName, remoteClients} from "../net/messaging";
+import {min} from "../utils/math.js";
+import {gl} from "../graphics/draw2d.js";
+import {GAME_CFG} from "./config.js";
+import {ClientID} from "@iioi/shared/types.js";
+import {clientId, clientName, remoteClients} from "../net/messaging.js";
 
 export let lastFrameTs = 0.0;
 

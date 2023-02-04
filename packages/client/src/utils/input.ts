@@ -1,6 +1,6 @@
-import {audioContext} from "../audio/context";
-import {getOrCreate} from "./utils";
-import {getDPR} from "../graphics/draw2d";
+import {audioContext} from "../audio/context.js";
+import {getOrCreate} from "./utils.js";
+import {getDPR} from "../graphics/draw2d.js";
 
 export interface Pointer {
     _id: number;
@@ -13,33 +13,34 @@ export interface Pointer {
     _active: boolean;
 }
 
-export const enum KeyCode {
-    Escape = 27,
-    Space = 32,
-    A = 65,
-    S = 83,
-    W = 87,
-    D = 68,
-    Right = 39,
-    Left = 37,
-    Up = 38,
-    Down = 40,
-    Shift = 16,
-    E = 69,
-    R = 82,
-    Q = 81,
+export const KeyCode = {
+    Escape: 27,
+    Space: 32,
+    A: 65,
+    S: 83,
+    W: 87,
+    D: 68,
+    Right: 39,
+    Left: 37,
+    Up: 38,
+    Down: 40,
+    Shift: 16,
+    E: 69,
+    R: 82,
+    Q: 81,
 
-    Digit0 = 48,
-    Digit1,
-    Digit2,
-    Digit3,
-    Digit4,
-    Digit5,
-    Digit6,
-    Digit7,
-    Digit8,
-    Digit9,
-}
+    Digit0: 48,
+    Digit1: 49,
+    Digit2: 50,
+    Digit3: 51,
+    Digit4: 52,
+    Digit5: 53,
+    Digit6: 54,
+    Digit7: 55,
+    Digit8: 56,
+    Digit9: 57,
+} as const;
+export type KeyCode = typeof KeyCode[keyof typeof KeyCode];
 
 export let mousePointer: Pointer;
 export const inputPointers = new Map<number, Pointer>();

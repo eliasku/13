@@ -1,6 +1,6 @@
-import {ClientID} from "../../../shared/src/types";
-import {_room, _sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
-import {play, speak} from "../audio/context";
+import {ClientID} from "@iioi/shared/types.js";
+import {_room, _sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients,} from "../net/messaging.js";
+import {play, speak} from "../audio/context.js";
 import {
     ambientColor,
     beginRenderToMain,
@@ -11,12 +11,13 @@ import {
     gl,
     setDrawZ,
     setLightMapTexture
-} from "../graphics/draw2d";
-import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd";
-import {channels_sendObjectData} from "../net/channels_send";
-import {EMOJI, img} from "../assets/gfx";
-import {Const, GAME_CFG} from "./config";
-import {generateMapBackground, mapTexture} from "../assets/map";
+} from "../graphics/draw2d.js";
+import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd.js";
+import {channels_sendObjectData} from "../net/channels_send.js";
+import {setPacketHandler} from "../net/channels.js";
+import {EMOJI, img} from "../assets/gfx.js";
+import {Const, GAME_CFG} from "./config.js";
+import {generateMapBackground, mapTexture} from "../assets/map.js";
 import {
     Actor,
     ActorType,
@@ -36,8 +37,8 @@ import {
     StateData,
     unpackAngleByte,
     Vel
-} from "./types";
-import {pack, unpack} from "./packets";
+} from "./types.js";
+import {pack, unpack} from "./packets.js";
 import {
     abs,
     atan2,
@@ -55,7 +56,7 @@ import {
     sin,
     sqrt,
     TO_RAD
-} from "../utils/math";
+} from "../utils/math.js";
 import {
     couldBeReloadedManually,
     drawVirtualPad,
@@ -74,9 +75,9 @@ import {
     updateControls,
     viewX,
     viewY
-} from "./controls";
-import {Snd, snd} from "../assets/sfx";
-import {weapons} from "./data/weapons";
+} from "./controls.js";
+import {Snd, snd} from "../assets/sfx.js";
+import {weapons} from "./data/weapons.js";
 import {
     addBoneParticles,
     addFleshParticles,
@@ -94,7 +95,7 @@ import {
     saveParticles,
     updateMapTexture,
     updateParticles
-} from "./particles";
+} from "./particles.js";
 import {
     addPos,
     addRadialVelocity,
@@ -113,8 +114,8 @@ import {
     updateActorPhysics,
     updateAnim,
     updateBody
-} from "./phy";
-import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
+} from "./phy.js";
+import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {
     actorsConfig,
     ANIM_HIT_MAX,
@@ -122,9 +123,9 @@ import {
     OBJECT_RADIUS,
     PLAYER_HANDS_PX_Z,
     PLAYER_HANDS_Z,
-} from "./data/world";
-import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/gui";
-import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog";
+} from "./data/world.js";
+import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/gui.js";
+import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog.js";
 import {
     addDebugState,
     assertStateInSync,
@@ -132,14 +133,14 @@ import {
     printDebugInfo,
     saveDebugState,
     updateDebugInput
-} from "./debug";
-import {addToGrid, queryGridCollisions} from "./grid";
-import {getOrCreate, RGB} from "../utils/utils";
-import {drawText, drawTextAligned, fnt} from "../graphics/font";
-import {stats} from "../utils/fpsMeter";
-import {drawMiniMap} from "./minimap";
-import {updateAI} from "./ai/npc";
-import {GL} from "../graphics/gl";
+} from "./debug.js";
+import {addToGrid, queryGridCollisions} from "./grid.js";
+import {getOrCreate, RGB} from "../utils/utils.js";
+import {drawText, drawTextAligned, fnt} from "../graphics/font.js";
+import {stats} from "../utils/fpsMeter.js";
+import {drawMiniMap} from "./minimap.js";
+import {updateAI} from "./ai/npc.js";
+import {GL} from "../graphics/gl.js";
 import {
     drawBarrelOpaque,
     drawBullet,
@@ -150,19 +151,19 @@ import {
     drawTreeOpaque,
     getHitColorOffset,
     setupWorldCameraMatrix
-} from "./gameDraw";
-import {getDevFlag, hasSettingsFlag, SettingFlag} from "./settings";
-import {bullets, BulletType} from "./data/bullets";
-import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
-import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
-import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors";
-import {poki} from "../poki";
-import {isAnyKeyDown} from "../utils/input";
-import {delay} from "../utils/delay";
-import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu";
-import {addReplayTicEvents, beginRecording, ReplayFile} from "./replay";
-import {Img} from "../assets/img";
-import {autoplayInput, updateAutoplay} from "./ai/common";
+} from "./gameDraw.js";
+import {getDevFlag, hasSettingsFlag, SettingFlag} from "./settings.js";
+import {bullets, BulletType} from "./data/bullets.js";
+import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState.js";
+import {newSeedFromTime} from "@iioi/shared/seed.js";
+import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors.js";
+import {poki} from "../poki.js";
+import {isAnyKeyDown} from "../utils/input.js";
+import {delay} from "../utils/delay.js";
+import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu.js";
+import {addReplayTicEvents, beginRecording, ReplayFile} from "./replay.js";
+import {Img} from "../assets/img.js";
+import {autoplayInput, updateAutoplay} from "./ai/common.js";
 
 export const gameMenu: GameMenu = {
     _state: GameMenuState.InGame,
@@ -838,7 +839,7 @@ const processPacket = (sender: Client, data: Packet) => {
     // }
 }
 
-export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
+setPacketHandler((from: ClientID, buffer: ArrayBuffer) => {
     if (_sseState < 3) {
         return;
     }
@@ -850,7 +851,7 @@ export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
             sendInput();
         }
     }
-}
+});
 
 let disconnectTimes = 0;
 

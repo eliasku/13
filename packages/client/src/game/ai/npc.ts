@@ -1,10 +1,10 @@
-import {ActorType, ControlsFlag, ItemType, packDirByte, PlayerActor, StateData} from "../types";
-import {hypot} from "../../utils/math";
-import {rand} from "../../utils/rnd";
-import {weapons} from "../data/weapons";
-import {actorsConfig} from "../data/world";
-import {itemContainsAmmo} from "../actors";
-import {findClosestActor, hasAmmo} from "./common";
+import {ActorType, ControlsFlag, ItemType, packDirByte, PlayerActor, StateData} from "../types.js";
+import {hypot} from "../../utils/math.js";
+import {rand} from "../../utils/rnd.js";
+import {weapons} from "../data/weapons.js";
+import {actorsConfig} from "../data/world.js";
+import {itemContainsAmmo} from "../actors.js";
+import {findClosestActor, hasAmmo} from "./common.js";
 
 
 export const updateAI = (state: StateData, player: PlayerActor) => {

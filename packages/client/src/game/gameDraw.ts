@@ -1,21 +1,21 @@
-import {Actor, BulletActor, ItemActor, ItemType, PlayerActor} from "./types";
-import {WORLD_SCALE} from "../assets/params";
-import {EMOJI, img} from "../assets/gfx";
-import {draw, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d";
-import {lookAtX, lookAtY, viewX, viewY} from "./controls";
-import {atan2, clamp, cos, min, PI, sin} from "../utils/math";
-import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4";
-import {weapons} from "./data/weapons";
-import {getLumaColor32} from "../utils/utils";
-import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS} from "./data/world";
-import {Const, GAME_CFG} from "./config";
-import {bullets, BulletType} from "./data/bullets";
-import {fxRandElement} from "../utils/rnd";
-import {lastFrameTs} from "./gameState";
-import {drawTextAligned, fnt} from "../graphics/font";
-import {GameMenuState} from "./gameMenu";
-import {gameMenu} from "./game";
-import {Img} from "../assets/img";
+import {Actor, BulletActor, ItemActor, ItemType, PlayerActor} from "./types.js";
+import {WORLD_SCALE} from "../assets/params.js";
+import {EMOJI, img} from "../assets/gfx.js";
+import {draw, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d.js";
+import {lookAtX, lookAtY, viewX, viewY} from "./controls.js";
+import {atan2, clamp, cos, min, PI, sin} from "../utils/math.js";
+import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4.js";
+import {weapons} from "./data/weapons.js";
+import {getLumaColor32} from "../utils/utils.js";
+import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS} from "./data/world.js";
+import {Const, GAME_CFG} from "./config.js";
+import {bullets, BulletType} from "./data/bullets.js";
+import {fxRandElement} from "../utils/rnd.js";
+import {lastFrameTs} from "./gameState.js";
+import {drawTextAligned, fnt} from "../graphics/font.js";
+import {GameMenuState} from "./gameMenu.js";
+import {gameMenu} from "./game.js";
+import {Img} from "../assets/img.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -108,7 +108,7 @@ export const setupWorldCameraMatrix = (x: number, y: number, scale: number, rx: 
 export const getHitColorOffset = (anim: number) =>
     getLumaColor32(0xFF * min(1, 2 * anim / ANIM_HIT_MAX));
 
-export const drawObjectMesh2D = (p: Actor, id: Img, z: number = 0, scale: number = 1, oy: number = 0.0) =>
+export const drawObjectMesh2D = (p: Actor, id: number | Img, z: number = 0, scale: number = 1, oy: number = 0.0) =>
     drawMeshSpriteUp(img[id], p._x / WORLD_SCALE, p._y / WORLD_SCALE + oy, p._z / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p._animHit));
 
 export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.barrel0);

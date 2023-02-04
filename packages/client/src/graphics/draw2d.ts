@@ -1,5 +1,5 @@
-import {GL} from "./gl";
-import {cos, PI2, sin} from "../utils/math";
+import {GL} from "./gl.js";
+import {cos, PI2, sin} from "../utils/math.js";
 import {
     SHADER_A_COLOR_ADD,
     SHADER_A_COLOR_MUL,
@@ -11,11 +11,11 @@ import {
     SHADER_U_TEX,
     SHADER_U_TEX_1,
     SHADER_VERTEX
-} from "./shader";
-import {Mat4} from "../utils/mat4";
-import {stats} from "../utils/fpsMeter";
-import {hasSettingsFlag, SettingFlag} from "../game/settings";
-import {createCanvas} from "../assets/gfx";
+} from "./shader.js";
+import {Mat4} from "../utils/mat4.js";
+import {stats} from "../utils/fpsMeter.js";
+import {hasSettingsFlag, SettingFlag} from "../game/settings.js";
+import {createCanvas} from "./utils.js";
 
 export const gl = c.getContext("webgl", {
     antialias: false,

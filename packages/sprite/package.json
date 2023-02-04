@@ -1,5 +1,5 @@
 {
-  "name": "@eliasku/13-sprite",
+  "name": "@iioi/sprite",
   "version": "1.0.0",
   "scripts": {
     "watch": "esbuild src/index.ts --watch --bundle --format=esm --outfile=public/index.js",

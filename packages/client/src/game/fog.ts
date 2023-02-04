@@ -1,5 +1,5 @@
-import {Actor, ActorType, PlayerActor} from "./types";
-import {imgSpotLight} from "../assets/gfx";
+import {Actor, ActorType, PlayerActor} from "./types.js";
+import {imgSpotLight} from "../assets/gfx.js";
 import {
     beginRenderToTexture,
     createTexture,
@@ -9,11 +9,11 @@ import {
     initFramebuffer,
     setLightMapTexture,
     uploadTexture
-} from "../graphics/draw2d";
-import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
-import {GL} from "../graphics/gl";
-import {clientId} from "../net/messaging";
-import {actorsConfig} from "./data/world";
+} from "../graphics/draw2d.js";
+import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {GL} from "../graphics/gl.js";
+import {clientId} from "../net/messaging.js";
+import {actorsConfig} from "./data/world.js";
 
 const FOG_DOWNSCALE = 4;
 const FOG_SIZE = BOUNDS_SIZE / FOG_DOWNSCALE;

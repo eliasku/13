@@ -1,8 +1,8 @@
-import {rand} from "../utils/rnd";
-import {createCanvas} from "./gfx";
-import {createTexture, initFramebuffer, uploadTexture} from "../graphics/draw2d";
-import {BOUNDS_SIZE} from "./params";
-import {PI2} from "../utils/math";
+import {rand} from "../utils/rnd.js";
+import {createTexture, initFramebuffer, uploadTexture} from "../graphics/draw2d.js";
+import {BOUNDS_SIZE} from "./params.js";
+import {PI2} from "../utils/math.js";
+import {createCanvas} from "../graphics/utils.js";
 
 interface MapTheme {
     primaryColor: string;

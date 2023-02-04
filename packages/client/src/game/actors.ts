@@ -1,8 +1,8 @@
-import {Actor, ActorType, BulletActor, ItemActor, ItemType, PlayerActor} from "./types";
-import {rand} from "../utils/rnd";
-import {GAME_CFG} from "./config";
-import {ANIM_HIT_OVER} from "./data/world";
-import {ClientID} from "@eliasku/13-shared/src/types";
+import {Actor, ActorType, BulletActor, ItemActor, ItemType, PlayerActor} from "./types.js";
+import {rand} from "../utils/rnd.js";
+import {GAME_CFG} from "./config.js";
+import {ANIM_HIT_OVER} from "./data/world.js";
+import {ClientID} from "@iioi/shared/types.js";
 
 export const newActor = (type: ActorType): Actor =>
     ({

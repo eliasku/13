@@ -1,5 +1,5 @@
-import {unorm_f32_from_u32} from "./bits";
-import {newSeedFromTime, rollSeed32, temper} from "@eliasku/13-shared/src/seed";
+import {unorm_f32_from_u32} from "./bits.js";
+import {newSeedFromTime, rollSeed32, temper} from "@iioi/shared/seed.js";
 
 // simple PRNG from libc with u32 state
 export const _SEEDS = [, , ,].fill(newSeedFromTime());

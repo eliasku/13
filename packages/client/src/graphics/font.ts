@@ -1,4 +1,4 @@
-import {createTexture, draw, getSubTexture, Texture, uploadTexture} from "./draw2d";
+import {createTexture, draw, getSubTexture, Texture, uploadTexture} from "./draw2d.js";
 
 const SPACE_CODE = ' '.codePointAt(0);
 const DEFAULT_CHARACTERS = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,'-/`.split("").map(c => c.codePointAt(0));
@@ -70,7 +70,7 @@ export const makeFontAtlas = (family: string,
     // canvas.style.left = "0px";
     // document.body.appendChild(canvas);
 
-    const ctx = canvas.getContext("2d", {willReadFrequently: true});
+    const ctx = canvas.getContext("2d", {willReadFrequently: c != null /* hack to enforce `true` against terser optimization */});
     const fallback = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif';
     const texture = createTexture(canvasSize);
     const fa: FontAtlas = {

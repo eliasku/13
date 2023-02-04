@@ -1,5 +1,6 @@
-import {button, uiState} from "../graphics/gui";
+import {button, uiState} from "../graphics/gui.js";
 import {
+    BloodMode,
     DEFAULT_FRAMERATE_LIMIT,
     hasSettingsFlag,
     setSetting,
@@ -7,8 +8,8 @@ import {
     SettingFlag,
     settings,
     toggleSettingsFlag
-} from "../game/settings";
-import {poki} from "../poki";
+} from "../game/settings.js";
+import {poki} from "../poki.js";
 
 export function guiSettingsPanel(x: number, y: number) {
     if (button("sounds", "🔊 SOUNDS: " + (hasSettingsFlag(SettingFlag.Sound) ? "ON" : "OFF"), x - 50, y - 70, {
@@ -35,7 +36,7 @@ export function guiSettingsPanel(x: number, y: number) {
         w: 80,
         h: 20
     })) {
-        setSetting(Setting.Blood, (settings[Setting.Blood] + 1) % 3);
+        setSetting(Setting.Blood, ((settings[Setting.Blood] + 1) % 3) as BloodMode);
     }
 
     let particlesMod = settings[Setting.Particles];

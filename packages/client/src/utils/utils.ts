@@ -11,6 +11,7 @@ export const RGB = (r: number, g: number, b: number) => r << 16 | g << 8 | b;
 /* @__PURE__ */
 export const getLumaColor32 = (luma: number): number => RGB(luma, luma, luma);
 
+/* @__PURE__ */
 export const parseRGB = (color: string): number => {
     const len = color.length;
     if (len) {
@@ -29,5 +30,6 @@ export const parseRGB = (color: string): number => {
     return 0;
 }
 
+/* @__PURE__ */
 export const rgb_scale = (rgb: number, factor: number) =>
     RGB(factor * ((rgb >>> 16) & 0xFF), factor * ((rgb >>> 8) & 0xFF), factor * (rgb & 0xFF));

@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "nodenext",
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "incremental": true,
+    "forceConsistentCasingInFileNames": true,
+    "disableSourceOfProjectReferenceRedirect": true,
+    "preserveConstEnums": false,
+    "rootDir": "./",
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "paths": {
+      "@iioi/autoplay/*": [
+        "./packages/autoplay/src/*"
+      ],
+      "@iioi/bot-api/*": [
+        "./packages/bot-api/src/*"
+      ],
+      "@iioi/bot-api": [
+        "./packages/bot-api/src/index.js"
+      ],
+      "@iioi/client/*": [
+        "./packages/client/src/*"
+      ],
+      "@iioi/server/*": [
+        "./packages/server/src/*"
+      ],
+      "@iioi/shared/*": [
+        "./packages/shared/src/*"
+      ],
+      "@iioi/sprite/*": [
+        "./packages/sprite/src/*"
+      ],
+      "@iioi/tools/*": [
+        "./packages/tools/src/*"
+      ]
+    }
+  },
+  "exclude": ["node_modules"]
+}

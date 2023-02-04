@@ -1,9 +1,9 @@
-import {Actor, ActorType, ControlsFlag, PlayerActor, Pos, Vel} from "./types";
-import {rand} from "../utils/rnd";
-import {clamp, cos, reach, sin, sqrt} from "../utils/math";
-import {actorsConfig, OBJECT_RADIUS} from "./data/world";
-import {WORLD_BOUNDS_SIZE} from "../assets/params";
-import {GAME_CFG} from "./config";
+import {Actor, ActorType, ControlsFlag, PlayerActor, Pos, Vel} from "./types.js";
+import {rand} from "../utils/rnd.js";
+import {clamp, cos, reach, sin, sqrt} from "../utils/math.js";
+import {actorsConfig, OBJECT_RADIUS} from "./data/world.js";
+import {WORLD_BOUNDS_SIZE} from "../assets/params.js";
+import {GAME_CFG} from "./config.js";
 
 export const setRandomPosition = (actor: Actor) => {
     actor._x = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);

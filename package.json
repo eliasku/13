@@ -1,23 +1,46 @@
 {
-  "name": "@eliasku/js13k-2022",
+  "name": "iioi",
   "version": "1.0.14",
+  "private": true,
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "build": "ts-node --esm --swc packages/tools/build.ts",
-    "upload-poki": "ts-node --esm --swc packages/tools/upload-poki.ts",
-    "watch": "ts-node --esm --swc packages/tools/watch.ts",
-    "clean": "ts-node --esm --swc packages/tools/clean.ts",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "build": "ts-node --esm --swc packages/tools/src/build.ts",
+    "watch": "ts-node --esm --swc packages/tools/src/watch.ts",
+    "clean": "ts-node --esm --swc packages/tools/src/clean.ts",
+    "upload-poki": "ts-node --esm --swc packages/tools/src/upload-poki.ts",
+    "ts:recompile": "tsc -b --clean && tsc -b -v --diagnostics"
   },
   "author": "eliasku",
   "license": "ISC",
   "workspaces": [
-    "packages/*"
+    "packages/tools",
+    "packages/sprite",
+    "packages/shared",
+    "packages/server",
+    "packages/client",
+    "packages/bot-api",
+    "packages/autoplay"
   ],
   "poki": {
     "game_id": "fefa3d7b-e795-49d0-90a0-d6fa8659e41c",
     "build_dir": "build/poki"
+  },
+  "devDependencies": {
+    "@poki/cli": "^0.1.12",
+    "@types/node": "^18.11.18",
+    "@swc/core": "^1.3.29",
+    "esbuild": "^0.17.5",
+    "html-minifier": "^4.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.4",
+    "rollup-plugin-esbuild": "^5.0.0",
+    "rollup-plugin-dts": "^5.1.1",
+    "rollup": "^3.12.0",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "rollup-plugin-sourcemaps": "^0.6.3",
+    "terser": "^5.16.2",
+    "@rollup/plugin-terser": "^0.4.0"
   }
 }

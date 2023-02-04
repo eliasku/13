@@ -1,5 +1,5 @@
-import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
-import {Actor} from "./types";
+import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {Actor} from "./types.js";
 
 export const GRID_R = 16 * WORLD_SCALE;
 export const GRID_D = GRID_R * 2;

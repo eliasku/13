@@ -1,16 +1,17 @@
-import {button, label, ui_begin, ui_finish, uiProgressBar, uiState} from "../graphics/gui";
-import {settings} from "./settings";
-import {keyboardDown, KeyCode} from "../utils/input";
-import {disconnect} from "../net/messaging";
-import {Const, GAME_CFG} from "./config";
-import {guiSettingsPanel} from "../screens/settings";
-import {ReplayFile, saveReplay} from "./replay";
+import {button, label, ui_begin, ui_finish, uiProgressBar, uiState} from "../graphics/gui.js";
+import {settings} from "./settings.js";
+import {keyboardDown, KeyCode} from "../utils/input.js";
+import {disconnect} from "../net/messaging.js";
+import {Const, GAME_CFG} from "./config.js";
+import {guiSettingsPanel} from "../screens/settings.js";
+import {ReplayFile, saveReplay} from "./replay.js";
 
-export const enum GameMenuState {
-    InGame = 0,
-    Paused = 1,
-    Settings = 2,
-}
+export const GameMenuState = {
+    InGame: 0,
+    Paused: 1,
+    Settings: 2,
+} as const;
+export type GameMenuState = typeof GameMenuState[keyof typeof GameMenuState];
 
 export interface GameMenu {
     _state: GameMenuState;

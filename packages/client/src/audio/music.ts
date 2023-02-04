@@ -1,8 +1,8 @@
-import {audioContext, audioMaster} from "./context";
-import {Snd, snd} from "../assets/sfx";
-import {fxRand} from "../utils/rnd";
-import {sin} from "../utils/math";
-import {hasSettingsFlag, SettingFlag} from "../game/settings";
+import {audioContext, audioMaster} from "./context.js";
+import {Snd, snd} from "../assets/sfx.js";
+import {fxRand} from "../utils/rnd.js";
+import {sin} from "../utils/math.js";
+import {hasSettingsFlag, SettingFlag} from "../game/settings.js";
 
 // 0 1 2 3 4 5 6 7 8 9 10 11 12
 // 0   2 3   5   7 8   10    12

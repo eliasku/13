@@ -10,8 +10,8 @@ import {
     PacketDebug,
     PlayerActor,
     StateData
-} from "./types";
-import {ClientID} from "../../../shared/src/types";
+} from "./types.js";
+import {ClientID} from "@iioi/shared/types.js";
 
 const DEBUG_SIGN = 0xdeb51a1e;
 
