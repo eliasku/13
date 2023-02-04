@@ -14,7 +14,6 @@ import {getDevFlag, SettingFlag, toggleSettingsFlag} from "./settings.js";
 import {WORLD_SCALE} from "../assets/params.js";
 import {actorsConfig} from "./data/world.js";
 import {opaqueParticles, splats, textParticles} from "./particles.js";
-import {gameMode} from "./game.js";
 import {Img} from "../assets/img.js";
 
 //// DEBUG UTILITIES ////
@@ -58,7 +57,7 @@ export const printDebugInfo = (
     prevSimulatedTic = gameTic;
 
     if (_room) {
-        text += `ROOM: ${_room._code} ${_room._npcLevel} ${gameMode._npcLevel}\n`;
+        text += `ROOM: ${_room._code} ${_room._npcLevel}\n`;
     }
     if (_debugLagK) {
         text += `debug-lag K: ${_debugLagK}\n`;

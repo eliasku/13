@@ -1780,7 +1780,9 @@ const drawOverlay = () => {
 
     ui_renderNormal();
 
-    drawCrosshair(getMyPlayer(), gameCamera, scale);
+    if (gameMenu._state === GameMenuState.InGame) {
+        drawCrosshair(getMyPlayer(), gameCamera, scale);
+    }
 
     flush();
 }
