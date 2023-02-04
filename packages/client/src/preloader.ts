@@ -11,9 +11,9 @@ preloader.style.background = "#000";
 preloader.innerHTML = `
 <div style="position: fixed;top: 50%;left: 50%;
 transform: translate(-50%, -50%); text-align: center">
-<h1 style="color:red">13</h1>
+<h1 style="color:red">iioi</h1>
 <h2 style="color:lightcyan">loading...</h2>
-<h3 id="preloader-progress">.</h3>
+<h3 id="preloader-progress">[ ................ ]</h3>
 </div>`;
 
 document.body.appendChild(preloader);
