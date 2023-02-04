@@ -2,6 +2,7 @@
   "name": "@iioi/client",
   "version": "1.0.14",
   "description": "13 Game Client",
+  "private": true,
   "type": "module",
   "exports": {
     "./*": {

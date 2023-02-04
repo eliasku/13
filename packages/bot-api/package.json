@@ -8,7 +8,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
+  "devDependencies": {
     "@iioi/client": "1.0.14"
   },
   "files": [

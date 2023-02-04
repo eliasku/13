@@ -60,7 +60,7 @@ function getRollupInput(options: BuildOptions): RollupOptions {
         plugins: [
             sourcemaps(),
             nodeResolve(),
-            typescriptPaths({tsConfigPath: "tsconfig.package.json", preserveExtensions: true}),
+            typescriptPaths({tsConfigPath: "tsconfig.base.json", preserveExtensions: true}),
             esbuild_(options),
             (options.debug || options.skipTerser) ? undefined : terser({
                 toplevel: true,
@@ -120,18 +120,18 @@ export async function build(options: BuildOptions) {
         const bundle = await rollup({
             input: options.input,
             plugins: [
-                nodeResolve(),
-                typescriptPaths({tsConfigPath: "tsconfig.package.json", preserveExtensions: true}),
                 dts({
-                    tsconfig: "tsconfig.dts.json",
+                    tsconfig: "tsconfig.base.json",
                 }),
             ],
         });
         if (bundle) {
+            const filename = options.output.replace(".js", ".d.ts");
             await bundle.write({
-                file: options.output.replace(".js", ".d.ts"),
+                file: filename,
                 format: "es",
             });
+            console.info(filename);
             await bundle.close();
         }
     }
@@ -143,14 +143,6 @@ export function watch(options: BuildOptions): Promise<void> {
     const watchOptions: RollupWatchOptions = {
         ...inputOptions,
         output: [outputOptions],
-        // watch: {
-        //     buildDelay,
-        //     chokidar,
-        //     clearScreen,
-        //     skipWrite,
-        //     exclude,
-        //     include
-        // }
     };
     let isReady = false;
     return new Promise((resolve, reject) => {
