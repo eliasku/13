@@ -4,9 +4,9 @@ import {build} from "./rollup.js";
 prepareFolders("public");
 copyPublicAssets();
 
-console.info("Compile typescript...");
-const res = await executeAsync("tsc -b -v");
-console.info(res);
+// console.info("Compile typescript...");
+// const res = await executeAsync("tsc -b -v");
+// console.info(res);
 
 console.info("Rollup game");
 const buildTasks = [

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.package.json",
+  "compilerOptions": {
+    "composite": false,
+    "incremental": false
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

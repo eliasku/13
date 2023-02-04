@@ -3,7 +3,7 @@ import sourcemaps from "rollup-plugin-sourcemaps";
 import terser from "@rollup/plugin-terser";
 import esbuild, {Options} from "rollup-plugin-esbuild";
 import dts from "rollup-plugin-dts";
-
+import {typescriptPaths} from 'rollup-plugin-typescript-paths';
 import {
     OutputOptions,
     rollup,
@@ -27,6 +27,7 @@ interface BuildOptions {
     debug?: boolean; // false
     keepConsole?: boolean; // false
     keepProps?: boolean; // false (!debug also)
+    skipTerser?: boolean;
 
     serverUrl?: string;
 
@@ -59,8 +60,9 @@ function getRollupInput(options: BuildOptions): RollupOptions {
         plugins: [
             sourcemaps(),
             nodeResolve(),
+            typescriptPaths({tsConfigPath: "tsconfig.package.json", preserveExtensions: true}),
             esbuild_(options),
-            options.debug ? undefined : terser({
+            (options.debug || options.skipTerser) ? undefined : terser({
                 toplevel: true,
                 module: true,
                 ecma: 2020,
@@ -119,13 +121,9 @@ export async function build(options: BuildOptions) {
             input: options.input,
             plugins: [
                 nodeResolve(),
+                typescriptPaths({tsConfigPath: "tsconfig.package.json", preserveExtensions: true}),
                 dts({
-                    compilerOptions: {
-                        incremental: false,
-                        composite: false,
-                        paths: {},
-                    },
-                    tsconfig: options.tsconfig,
+                    tsconfig: "tsconfig.dts.json",
                 }),
             ],
         });
@@ -157,25 +155,34 @@ export function watch(options: BuildOptions): Promise<void> {
     let isReady = false;
     return new Promise((resolve, reject) => {
         const watcher = rollupWatch(watchOptions);
-// This will make sure that bundles are properly closed after each run
         watcher.on('event', async (ev: RollupWatcherEvent) => {
-            console.info(ev.code);
+            // console.log("watcher " + ev.code.toLocaleLowerCase().replaceAll("_", " "));
             switch (ev.code) {
+                case "START":
+                    if (isReady) {
+                        console.info("👀Rebuild: " + outputOptions.file);
+                    }
+                    break;
                 case "ERROR":
                     if (ev.result) {
                         await ev.result.close();
                     }
+                    console.info("ERROR", ev.error);
                     reject(ev.error);
                     break;
                 case "BUNDLE_END":
                     if (ev.result) {
                         await ev.result.write(outputOptions);
+                        console.info("💾Saved: " + outputOptions.file);
                         await ev.result.close();
-                        if (!isReady) {
-                            isReady = true;
-                            resolve();
-                        }
                     }
+                    break;
+                case "END":
+                    if (!isReady) {
+                        isReady = true;
+                        resolve();
+                    }
+                    console.info("👍Updated: " + outputOptions.file);
                     break;
             }
         });

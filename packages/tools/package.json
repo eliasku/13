@@ -5,8 +5,5 @@
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
   "author": "eliasku",
-  "license": "ISC",
-  "scripts": {
-    "ts": "tsc -b -v"
-  }
+  "license": "ISC"
 }

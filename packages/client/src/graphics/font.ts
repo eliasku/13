@@ -265,7 +265,7 @@ const updateTexture = (fa: FontAtlas) => {
 export const fnt: FontAtlas[] = [];
 
 export const initFonts = () => {
-    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 24, 1, {_strokeWidth: 3});
+    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 26, 1, {_strokeWidth: 3});
 };
 
 export const updateFonts = () => fnt.forEach(updateTexture);

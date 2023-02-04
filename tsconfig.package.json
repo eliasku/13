@@ -11,10 +11,12 @@
     "composite": true,
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
-    "disableSourceOfProjectReferenceRedirect": true,
+    "disableSourceOfProjectReferenceRedirect": false,
     "preserveConstEnums": false,
     "rootDir": "./",
     "baseUrl": ".",
+    "emitDeclarationOnly": true,
+    "noEmitOnError": true,
     "lib": [
       "ESNext",
       "DOM",

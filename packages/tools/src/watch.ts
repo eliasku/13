@@ -5,14 +5,13 @@ import {watch} from "./rollup.js";
 prepareFolders("public");
 copyPublicAssets();
 
-console.info("Compile typescript...");
-const res = await executeAsync("tsc -b -v");
-console.info(res);
-console.info("Continue watching Typescript in background...");
-executeAsync("tsc -b -w -v");
+// console.info("Compile typescript...");
+// const res = await executeAsync("tsc -b -v");
+// console.info(res);
+// console.info("Continue watching Typescript in background...");
+// executeAsync("tsc -b -w -v");
 
 console.info("Start watch game bundle");
-
 const watchTasks = [
     watch({
         input: "packages/server/src/index.ts",
@@ -21,6 +20,7 @@ const watchTasks = [
         platform: "node",
         target: "node16",
         keepConsole: true,
+        skipTerser: true,
     }).catch(e => {
         console.warn(e);
         process.exit(1);
@@ -30,6 +30,7 @@ const watchTasks = [
         tsconfig: "packages/client/tsconfig.json",
         output: "public/client.js",
         keepConsole: true,
+        skipTerser: true,
     }).catch(e => {
         console.warn(e);
         process.exit(1);
@@ -43,21 +44,20 @@ const watchTasks = [
         console.warn(e);
         process.exit(1);
     }),
-    watch({
-        input: "packages/bot-api/src/index.ts",
-        tsconfig: "packages/bot-api/tsconfig.json",
-        output: "packages/bot-api/dist/index.js",
-        keepProps: true,
-        dts: true,
-    }).catch(e => {
-        console.warn(e);
-        process.exit(1);
-    }),
-    watch({
-        input: "packages/autoplay/src/index.ts",
-        tsconfig: "packages/autoplay/tsconfig.json",
-        output: "public/autoplay.js",
-    }).catch(e => {
+    (async () => {
+        await watch({
+            input: "packages/bot-api/src/index.ts",
+            tsconfig: "packages/bot-api/tsconfig.json",
+            output: "packages/bot-api/dist/index.js",
+            keepProps: true,
+            dts: true,
+        });
+        await watch({
+            input: "packages/autoplay/src/index.ts",
+            tsconfig: "packages/autoplay/tsconfig.json",
+            output: "public/autoplay.js",
+        });
+    })().catch(e => {
         console.warn(e);
         process.exit(1);
     }),
