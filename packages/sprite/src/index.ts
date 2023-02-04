@@ -8,7 +8,10 @@ c.width = w * devicePixelRatio;
 c.height = h * devicePixelRatio;
 c.style.width = w + "px";
 c.style.height = h + "px";
-const ctx = c.getContext("2d");
+const ctx = c.getContext("2d") as CanvasRenderingContext2D;
+if (!ctx) {
+    throw new Error("unable to create 2d rendering context");
+}
 
 
 /// BEGIN
@@ -74,17 +77,19 @@ async function start() {
 
     const page = buildAtlas();
     drawDetails(page);
-    page.image.toBlob((blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        document.body.appendChild(a);
-        a.href = url;
-        a.download = "main.png";
-        a.click();
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }, 0);
+    page.image.toBlob((blob: Blob | null) => {
+        if (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.href = url;
+            a.download = "main.png";
+            a.click();
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 0);
+        }
     }, "png");
 
     const url = URL.createObjectURL(new Blob([page.data], {type: "application/octet-stream"}));

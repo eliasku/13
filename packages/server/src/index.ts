@@ -168,8 +168,9 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
 
     res.writeHead(200, cors(req, HDR_EVENT_STREAM));
     let room: RoomState | undefined;
-    if (params.has("r")) {
-        const R = params.get("r");
+    const R = params.get("r");
+    const C = params.get("c");
+    if (R) {
         const v = parseRadix64String(R);
         if (!v) {
             error(req, res, `error parse room #${R}`);
@@ -184,8 +185,8 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
             error(req, res, `room #${R} is full`, 429);
             return;
         }
-    } else if (params.has("c")) {
-        const c = decodeURIComponent(params.get("c"));
+    } else if (C) {
+        const c = decodeURIComponent(C);
         try {
             const data: any[] = JSON.parse(c);
             const flags: number = data[0] ?? GameModeFlag.Public;
@@ -323,8 +324,9 @@ if (process.env.NODE_ENV === "development") {
 }
 
 const getAllowedOrigin = (req: IncomingMessage): string | undefined => {
-    if (req.headers.origin) {
-        return hostWhitelist.find(x => req.headers.origin.startsWith(x));
+    const origin = req.headers.origin;
+    if (origin) {
+        return hostWhitelist.find(x => origin.startsWith(x));
     }
 }
 
@@ -341,7 +343,7 @@ const cors = (req: IncomingMessage, headers: OutgoingHttpHeaders): OutgoingHttpH
 
 createServer({keepAlive: true}, (req: IncomingMessage, res: ServerResponse) => {
     try {
-        const parts = req.url.split("?");
+        const parts = req.url?.split("?") ?? [];
         const url = parts[0];
         const handler = HANDLERS[url];
         if (handler) {
@@ -354,7 +356,7 @@ createServer({keepAlive: true}, (req: IncomingMessage, res: ServerResponse) => {
                 }
                 return;
             }
-            const method = handler[req.method];
+            const method = handler[req.method ?? "GET"];
             if (method) {
                 const params = new URLSearchParams(parts[1] ?? "");
                 method(params, req, res);
@@ -367,7 +369,7 @@ createServer({keepAlive: true}, (req: IncomingMessage, res: ServerResponse) => {
     } catch (e) {
         error(req, res, "Request completed with unhandled exception: " + e);
     }
-}).listen(+process.env.PORT || 8080);
+}).listen(+(process.env.PORT ?? 8080));
 
 // console will be dropped for prod build
 console.log(`Server ${BuildVersion} http://localhost:8080`);

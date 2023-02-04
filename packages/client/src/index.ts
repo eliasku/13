@@ -117,17 +117,19 @@ async function start() {
                 } else if (result._command === MenuCommand.Replay) {
                     openReplayFile(replay => {
                         const replayRoom = replay._meta.room;
-                        state = StartState.Connected;
-                        resetGame();
-                        connect({
-                            _flags: replayRoom.flags | GameModeFlag.Offline,
-                            _playersLimit: 1,
-                            _npcLevel: replayRoom.npcLevel,
-                            _theme: replayRoom.mapTheme + 1,
-                        });
-                        _room._mapSeed = replayRoom.mapSeed;
-                        gameMode._npcLevel = _room._npcLevel;
-                        enableReplayMode(replay);
+                        if(replayRoom && _room) {
+                            state = StartState.Connected;
+                            resetGame();
+                            connect({
+                                _flags: replayRoom.flags | GameModeFlag.Offline,
+                                _playersLimit: 1,
+                                _npcLevel: replayRoom.npcLevel,
+                                _theme: replayRoom.mapTheme + 1,
+                            });
+                            _room._mapSeed = replayRoom.mapSeed;
+                            gameMode._npcLevel = _room._npcLevel;
+                            enableReplayMode(replay);
+                        }
                     });
                 }
             }

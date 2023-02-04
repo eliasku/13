@@ -66,32 +66,32 @@ export interface Actor extends Pos, Vel {
      * health points [0; 15]
      * @type uint4
      **/
-    _hp?: number;
+    _hp: number;
 
     /**
      * shield points [0; 15]
      * @type uint4
      **/
-    _sp?: number;
+    _sp: number;
 
     /**
      * generated static variation seed value for animation
      * @type uint8
      **/
-    _anim0?: number;
+    _anim0: number;
 
     /**
      * Hit effect. For Items could not be picked up until it reach 0
      * @type uint5
      **/
-    _animHit?: number;
+    _animHit: number;
 
     /**
      * local frame-scope state
      * @type uint32
      * @transient
      **/
-    _localStateFlags?: number;
+    _localStateFlags: number;
 }
 
 export interface PlayerActor extends Actor {
@@ -101,32 +101,32 @@ export interface PlayerActor extends Actor {
 
     // Magazines (0..15)
     // 4 bits
-    _mags?: number;
+    _mags: number;
 
     // detune counter: 0...32 (max of weapon detune-speed parameter)
     _detune: number;
 
     // 0...63 (max_weapon_clip_reload)
     // 6 bits
-    _clipReload?: number;
+    _clipReload: number;
 
     // holding Weapon ID
     // range: 0...15 currently
     // 4 bits
-    _weapon?: number;
+    _weapon: number;
 
     // 4 bits
-    _weapon2?: number;
+    _weapon2: number;
 
     // 0...63 (max_weapon_clip_size)
     // 6 bits
-    _clipAmmo?: number;
+    _clipAmmo: number;
 
     // 6 bits
-    _clipAmmo2?: number;
+    _clipAmmo2: number;
 
     // oh... check down trigger 4 bits
-    _trig?: number;
+    _trig: number;
 
     // Input buttons
     // 32-bit

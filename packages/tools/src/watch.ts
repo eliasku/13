@@ -70,4 +70,4 @@ console.info("First build OK. watching... " + process.cwd());
 const server = spawn("node", ["./server.js"]);
 server.stdout.on('data', data => process.stdout.write(data));
 server.stderr.on('data', data => process.stderr.write(data));
-server.on('exit', code => console.log('[SERVER] process exited with code ' + code.toString()));
+server.on('exit', code => console.log('[SERVER] process exited with code ' + code?.toString()));

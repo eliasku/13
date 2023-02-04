@@ -14,9 +14,7 @@ import {
     WORLD_BOUNDS_SIZE
 } from "@iioi/bot-api";
 
-function rand(n: number) {
-    return (Math.random() * n) | 0;
-}
+const rand = (n: number) => (Math.random() * n) | 0;
 
 const hasAmmo = (player: PlayerActor) => {
     if (player._weapon) {

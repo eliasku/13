@@ -1,5 +1,5 @@
 {
-//  "extends": "./tsconfig.package.json",
+  "extends": "./tsconfig.package.json",
   "references": [
     {
       "path": "./packages/bot-api/tsconfig.json"

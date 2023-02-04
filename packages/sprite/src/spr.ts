@@ -71,7 +71,7 @@ export function preview2(emoji:string, opts:{size?:number, sx?:number, sy? : num
     const canvas = document.createElement("canvas");
     canvas.width = w_;
     canvas.height = h_;
-    const ctx = canvas.getContext("2d", {alpha: true});
+    const ctx = canvas.getContext("2d", {alpha: true}) as CanvasRenderingContext2D;
     // ctx.imageSmoothingEnabled = false;
     ctx.font = emojiSize + "px e";
     ctx.textAlign = "center";
@@ -92,7 +92,7 @@ export function preview2(emoji:string, opts:{size?:number, sx?:number, sy? : num
         const cut2 = opts.cut ?? 0x80;
         lc.width = 1 + (bounds.w * scale + 2) | 0;
         lc.height = 1 + (bounds.h * scale + 2) | 0;
-        const ctx2 = lc.getContext("2d");
+        const ctx2 = lc.getContext("2d") as CanvasRenderingContext2D;
         ctx2.imageSmoothingEnabled = false;
         ctx2.scale(scale, scale);
         ctx2.translate(-bounds.x, -bounds.y);

@@ -93,7 +93,7 @@ export const img: Image[] = [];
 export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasRenderingContext2D): CanvasRenderingContext2D => {
     _canvas = document.createElement("canvas");
     _canvas.width = _canvas.height = size;
-    _canvas = _canvas.getContext("2d");
+    _canvas = _canvas.getContext("2d") as CanvasRenderingContext2D;
     _canvas.fillStyle = _canvas.strokeStyle = "#fff";
     _canvas.textAlign = "center";
     _canvas.textBaseline = "alphabetic";
@@ -402,16 +402,18 @@ export function makeSpotLightTexture() {
     circle(ctx, 32);
     ctx.fill();
     ctx.resetTransform();
-    ctx.canvas.toBlob((blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        document.body.appendChild(a);
-        a.href = url;
-        a.download = "spot.png";
-        a.click();
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }, 0);
+    ctx.canvas.toBlob((blob: Blob|null) => {
+        if(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.href = url;
+            a.download = "spot.png";
+            a.click();
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 0);
+        }
     }, "png");
 }

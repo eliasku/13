@@ -3,7 +3,8 @@
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "nodenext",
-    "noImplicitAny": true,
+    "allowJs": true,
+    "strict": true,
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
@@ -13,6 +14,7 @@
     "disableSourceOfProjectReferenceRedirect": true,
     "preserveConstEnums": false,
     "rootDir": "./",
+    "baseUrl": ".",
     "lib": [
       "ESNext",
       "DOM",

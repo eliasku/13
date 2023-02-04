@@ -23,7 +23,7 @@ export const gl = c.getContext("webgl", {
     // alpha: true, - don't emulate RGB24
     // depth: true,
     // stencil: false
-});
+}) as WebGLRenderingContext;
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
