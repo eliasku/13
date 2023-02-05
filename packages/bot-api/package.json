@@ -9,7 +9,7 @@
         "access": "public"
     },
     "devDependencies": {
-        "@iioi/client": "1.0.14"
+        "@iioi/client": "1.0.15"
     },
     "files": [
         "dist"
