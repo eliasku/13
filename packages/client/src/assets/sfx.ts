@@ -5,17 +5,17 @@ export const Snd = {
     med: 0,
     pick: 0,
     shoot: 1,
-    hurt: 3,
-    death: 4,
-    step: 5,
-    jump: 6,
-    blip: 7,
-    hit: 8,
+    hurt: 2,
+    death: 3,
+    step: 4,
+    jump: 5,
+    blip: 6,
+    hit: 7,
     // instruments
-    bass: 9,
-    kick: 10,
-    snare: 11,
-    hat: 12,
+    bass: 8,
+    kick: 9,
+    snare: 10,
+    hat: 11,
 } as const;
 export type Snd = (typeof Snd)[keyof typeof Snd];
 
