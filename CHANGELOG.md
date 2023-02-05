@@ -1,3 +1,7 @@
+## 1.0.15
+
+- (dev) `watch` script renamed to `start`  
+
 ## 1.0.14
 
 - Add simple autoplay mode for debugging

@@ -4,7 +4,7 @@
 [![Play Release](https://img.shields.io/badge/Play%20Release-online-pink.svg)](https://iioi.herokuapp.com/)
 [![Play Latest](https://img.shields.io/badge/Play%20Latest-online-olive.svg)](https://next13.herokuapp.com/)
 
-# ‍☠️ 13 ‍☠️
+# ☠️ 13 ☠️
 
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
 
@@ -22,9 +22,8 @@ Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https
 
 Select room, share the link and wait friends to play:
 
-1. [Play on `🚪 iioi` (main, stable)](https://iioi.herokuapp.com/)
-2. [Play on `🚪 grtc`](https://grtc.herokuapp.com/)
-3. [Play on `🚪 next13`](https://next13.herokuapp.com/) to review **unreleased** changes from [`develop` branch](https://github.com/eliasku/13/tree/develop)!
+- The latest release is available on [🚪iioi](https://iioi.herokuapp.com/) server
+- Unreleased `master` changes is always deployed to [🚪grtc](https://grtc.herokuapp.com/) or [🚪next13](https://next13.herokuapp.com/) servers
 
 ### 🎮 Controls
 
@@ -111,17 +110,26 @@ Emoji Font [Twemoji Mozilla](https://github.com/mozilla/twemoji-colr/releases) i
 
 Sound Effects - [ZZFX](https://github.com/KilledByAPixel/ZzFX).
 
-## Build instructions
+## How to build
 
+First of all, install dependencies:
 ```shell
 npm i
-npm run build
+```
+
+Use `start` script to build and watch for changes, run local server ([localhost:8080](http://localhost:8080))
+
+```shell 
 npm start
 ```
 
-Navigate to [localhost:8080](http://localhost:8080)
-
-Use `npm run build --dev` build development ⅓ version
+To deploy the game run the `build` script and then start the server
+```shell
+# build only
+npm build
+# run server
+node server.js
+```
 
 ### Build Pages (not a Game)
 

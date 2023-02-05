@@ -1,6 +1,6 @@
 {
     "name": "@iioi/tools",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "private": true,
     "description": "js13k game with p2p realtime multiplayer",
     "type": "module",

@@ -1,13 +1,12 @@
 {
   "name": "iioi",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "private": true,
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "ts-node --esm --swc packages/tools/src/watch.ts",
     "build": "ts-node --esm --swc packages/tools/src/build.ts",
-    "watch": "ts-node --esm --swc packages/tools/src/watch.ts",
     "clean": "ts-node --esm --swc packages/tools/src/clean.ts",
     "upload-poki": "ts-node --esm --swc packages/tools/src/upload-poki.ts",
     "typecheck": "tsc -b --clean && tsc -b -v --diagnostics",
