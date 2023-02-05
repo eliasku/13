@@ -23,6 +23,7 @@
     "build_dir": "build/poki"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.26.0",
     "@poki/cli": "^0.1.12",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-terser": "^0.4.0",

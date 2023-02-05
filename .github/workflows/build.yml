@@ -16,8 +16,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    name: Build
     steps:
-      - name: checkout
+      - name: Checkout Repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -38,3 +39,34 @@ jobs:
       - name: build
         run: |
           npm run build
+
+  release:
+    if: ${{ github.ref == 'refs/heads/master' }}
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: node18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install changesets
+        run: npm i @changesets/cli
+
+      - name: Create Release Pull Request or Publish to NPM
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # this step should build library with new version
+          publish: npm run release
+          version: npm run version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
