@@ -11,7 +11,9 @@
     "upload-poki": "ts-node --esm --swc packages/tools/src/upload-poki.ts",
     "typecheck": "tsc -b --clean && tsc -b -v --diagnostics",
     "lint": "eslint packages/*/src/ --ext .ts",
-    "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\""
+    "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\"",
+    "release": "changeset publish",
+    "version": "changeset version && npm i && git add package-lock.json"
   },
   "author": "eliasku",
   "license": "ISC",
