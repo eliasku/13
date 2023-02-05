@@ -2,4 +2,4 @@
 "@iioi/client": patch
 ---
 
-Fix sound samples ids
+Fix music and sound
