@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.package.json",
+  "references": [
+    {
+      "path": "./packages/bot-api/tsconfig.json"
+    },
+    {
+      "path": "./packages/autoplay/tsconfig.json"
+    },
+    {
+      "path": "./packages/client/tsconfig.json"
+    },
+    {
+      "path": "./packages/server/tsconfig.json"
+    },
+    {
+      "path": "./packages/shared/tsconfig.json"
+    },
+    {
+      "path": "./packages/sprite/tsconfig.json"
+    },
+    {
+      "path": "./packages/tools/tsconfig.json"
+    }
+  ],
+  "files": []
+}

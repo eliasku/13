@@ -1,7 +1,7 @@
 [![Build](https://github.com/eliasku/13/actions/workflows/build.yml/badge.svg)](https://github.com/eliasku/13/actions/workflows/build.yml)
 [![Pages](https://github.com/eliasku/13/actions/workflows/static.yml/badge.svg)](https://github.com/eliasku/13/actions/workflows/static.yml)
 [![Twitter](https://img.shields.io/twitter/follow/eliaskuvoice.svg?style=flat&label=Follow&logoColor=white&color=1da1f2&logo=twitter)](https://twitter.com/eliaskuvoice)
-[![Play Release](https://img.shields.io/badge/Play%20Release-online-pink.svg)](https://grtc.herokuapp.com/)
+[![Play Release](https://img.shields.io/badge/Play%20Release-online-pink.svg)](https://iioi.herokuapp.com/)
 [![Play Latest](https://img.shields.io/badge/Play%20Latest-online-olive.svg)](https://next13.herokuapp.com/)
 
 # ‍☠️ 13 ‍☠️
@@ -16,19 +16,20 @@ Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https
 - 🥇 **1-st place** in **Server** category
 - 🥉 **3-rd place** in **Mobile** category
 - Check out [13 game post-mortem](https://eliasku.hashnode.dev/13-game)
-- Check out initial 13`kb` submission source-code in [`js13k` branch](https://github.com/eliasku/13/tree/js13k) 
+- Check out initial 13`kb` submission source-code in [`js13k` branch](https://github.com/eliasku/13/tree/js13k)
 
 ## 📖 How to play
 
 Select room, share the link and wait friends to play:
 
-1. [Play on `🚪 grtc` | `🇪🇺 Europe`](https://grtc.herokuapp.com/)
-2. [Play on `🚪 ga13` | `🇺🇸 US`](https://ga13.herokuapp.com/)
-2. [Play on `🚪 next13`](https://next13.herokuapp.com/) to review **unreleased** changes from [`develop` branch](https://github.com/eliasku/13/tree/develop)!
+1. [Play on `🚪 iioi` (main, stable)](https://iioi.herokuapp.com/)
+2. [Play on `🚪 grtc`](https://grtc.herokuapp.com/)
+3. [Play on `🚪 next13`](https://next13.herokuapp.com/) to review **unreleased** changes from [`develop` branch](https://github.com/eliasku/13/tree/develop)!
 
 ### 🎮 Controls
 
 #### 🖱️Mouse | ⌨️ Keyboard
+
 - Move Mouse to aim and look around
 - Push Mouse button to shoot
 - Use `W A S D` / `↑ ← ↓ →` to move
@@ -39,13 +40,14 @@ Select room, share the link and wait friends to play:
 - Press `Q` to switch secondary weapon slot
 
 #### 📱 Touch-screen
+
 - Use Left Joystick to walk-run-jump
 - Use Right Joystick to aim-shoot (Move around aim-shoot zones to trigger some weapons like Pistol)
 - Use `DROP` button to pick weapon on the map or drop your current weapon
 - Use `RELOAD` button to reload the weapon
 - Use `SWAP` button to swap the secondary weapon slot
 
-### 📜 Rules 
+### 📜 Rules
 
 At spawn each Player or NPC has 10`hp` (hit points). You are able to get extra 10`sp` (shield points) on top of that.
 
@@ -80,6 +82,7 @@ Destroy objects 🛢 | 📦 | 🪦 to get items
 - 🧵 Rail-gun (piercing)
 
 ### Dev-menu
+
 Tap 4 times on the main game logo to unlock dev-mode and dev-settings.
 
 ## Minimal requirements

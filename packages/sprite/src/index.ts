@@ -8,8 +8,10 @@ c.width = w * devicePixelRatio;
 c.height = h * devicePixelRatio;
 c.style.width = w + "px";
 c.style.height = h + "px";
-const ctx = c.getContext("2d");
-
+const ctx = c.getContext("2d") as CanvasRenderingContext2D;
+if (!ctx) {
+    throw new Error("unable to create 2d rendering context");
+}
 
 /// BEGIN
 function drawDetails(atlas: AtlasPage) {
@@ -23,8 +25,8 @@ function drawDetails(atlas: AtlasPage) {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.lineWidth = 1;
-    let totalVerts = atlas.vertices.length;
-    let totalTris = atlas.indices.length / 3;
+    const totalVerts = atlas.vertices.length;
+    const totalTris = atlas.indices.length / 3;
     for (const img of atlas.images) {
         ctx.strokeStyle = "blue";
         ctx.strokeRect(img.tx * SCALE, img.ty * SCALE, img.tw * SCALE, img.th * SCALE);
@@ -47,20 +49,25 @@ function drawDetails(atlas: AtlasPage) {
     }
     for (const img of atlas.images) {
         ctx.fillStyle = "yellow";
-        ctx.fillRect((img.tx + img.x * img.tw) * SCALE - SCALE,
+        ctx.fillRect(
+            (img.tx + img.x * img.tw) * SCALE - SCALE,
             (img.ty + img.y * img.th) * SCALE - SCALE,
-            SCALE * 2, SCALE * 2);
+            SCALE * 2,
+            SCALE * 2,
+        );
         ctx.fillStyle = "black";
-        ctx.fillRect((img.tx + img.x * img.tw) * SCALE - SCALE * 0.5,
+        ctx.fillRect(
+            (img.tx + img.x * img.tw) * SCALE - SCALE * 0.5,
             (img.ty + img.y * img.th) * SCALE - SCALE * 0.5,
-            SCALE, SCALE);
+            SCALE,
+            SCALE,
+        );
     }
 
     ctx.font = "48px m";
     ctx.fillStyle = "black";
     ctx.fillText("verts: " + totalVerts + " | tris: " + totalTris, 80, 120);
 }
-
 
 async function start() {
     {
@@ -74,21 +81,23 @@ async function start() {
 
     const page = buildAtlas();
     drawDetails(page);
-    page.image.toBlob((blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        document.body.appendChild(a);
-        a.href = url;
-        a.download = "main.png";
-        a.click();
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }, 0);
+    page.image.toBlob((blob: Blob | null) => {
+        if (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            document.body.appendChild(a);
+            a.href = url;
+            a.download = "main.png";
+            a.click();
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 0);
+        }
     }, "png");
 
     const url = URL.createObjectURL(new Blob([page.data], {type: "application/octet-stream"}));
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     document.body.appendChild(a);
     a.href = url;
     a.download = "main.dat";

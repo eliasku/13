@@ -1,17 +1,52 @@
-import {img, Img} from "../assets/gfx";
-import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d";
-import {Actor, Particle, TextParticle, Vel} from "./types";
-import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy";
-import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math";
-import {_SEEDS, random1, random1i, random1n} from "../utils/rnd";
-import {GL} from "../graphics/gl";
-import {mapTexture, mapTexture0} from "../assets/map";
-import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
-import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils";
-import {cubicOut} from "../utils/easing";
-import {drawTextShadowCenter, fnt} from "../graphics/font";
-import {settings} from "./settings";
-import {GAME_CFG} from "./config";
+import {img} from "../assets/gfx.js";
+import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d.js";
+import {Actor, Pos, Vel} from "./types.js";
+import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy.js";
+import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math.js";
+import {_SEEDS, random1, random1i, random1n} from "../utils/rnd.js";
+import {GL} from "../graphics/gl.js";
+import {mapTexture, mapTexture0} from "../assets/map.js";
+import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils.js";
+import {cubicOut} from "../utils/easing.js";
+import {drawTextAligned, fnt} from "../graphics/font.js";
+import {BloodMode, Setting, settings} from "./settings.js";
+import {GAME_CFG} from "./config.js";
+import {Img} from "../assets/img.js";
+
+export interface Particle extends Pos, Vel {
+    // angle
+    _a: number;
+    // rotation speed
+    _r: number;
+
+    // gravity factor
+    _gravity: number;
+
+    _scale: number;
+    _scaleDelta: number;
+    _color: number;
+
+    _lifeTime: number;
+    _lifeMax: number;
+
+    _img: Img;
+    _splashSizeX: number;
+    _splashSizeY: number;
+    _splashEachJump: number;
+    _splashScaleOnVelocity: number;
+    _splashImg: number;
+    _followVelocity: number;
+    _followScale: number;
+
+    _shadowScale: number;
+}
+
+export interface TextParticle extends Pos {
+    _text: string;
+    _lifetime: number;
+    _time: number;
+}
 
 export const newParticle = (): Particle => ({
     _x: 0,
@@ -23,7 +58,7 @@ export const newParticle = (): Particle => ({
     _a: 0.0,
     _r: 0.0,
     _gravity: 1.0,
-    _color: 0xFFFFFF,
+    _color: 0xffffff,
     _scale: 1.0,
     _scaleDelta: 0.0,
     _lifeTime: 0,
@@ -52,7 +87,15 @@ const updateParticle = (p: Particle): boolean => {
                 if (p._followVelocity > 0) {
                     angle += p._followVelocity * atan2(p._v, p._u);
                 }
-                splats.push(p._splashImg, p._x / WORLD_SCALE, p._y / WORLD_SCALE, angle, p._splashSizeX * d, p._splashSizeY * sqrt(d), p._color);
+                splats.push(
+                    p._splashImg,
+                    p._x / WORLD_SCALE,
+                    p._y / WORLD_SCALE,
+                    angle,
+                    p._splashSizeX * d,
+                    p._splashSizeY * sqrt(d),
+                    p._color,
+                );
             }
             if (v < 4) {
                 return true;
@@ -66,15 +109,15 @@ const updateParticle = (p: Particle): boolean => {
     collideWithBounds(p, 4, 2);
 
     return p._lifeTime > p._lifeMax;
-}
+};
 
 const updateParticleList = (list: Particle[], i = 0) => {
-    for (; i < list.length;) {
+    for (; i < list.length; ) {
         if (updateParticle(list[i++])) {
             list.splice(--i, 1);
         }
     }
-}
+};
 
 export function updateParticles() {
     updateParticleList(opaqueParticles);
@@ -86,20 +129,20 @@ let opaqueParticles0: Particle[];
 export let opaqueParticles: Particle[] = [];
 let textParticles0: TextParticle[] = [];
 export let textParticles: TextParticle[] = [];
-export let splats: number[] = [];
+export const splats: number[] = [];
 
 export const saveParticles = () => {
     seed0 = _SEEDS[1];
     opaqueParticles0 = opaqueParticles.map(x => ({...x}));
     textParticles0 = textParticles.map(x => ({...x}));
-}
+};
 
 export const resetParticles = () => {
     // particles.length = 0;
     opaqueParticles.length = 0;
     textParticles.length = 0;
     splats.length = 0;
-}
+};
 
 export const restoreParticles = () => {
     _SEEDS[1] = seed0;
@@ -107,46 +150,37 @@ export const restoreParticles = () => {
     opaqueParticles = opaqueParticles0;
     textParticles = textParticles0;
     splats.length = 0;
-}
+};
 
 export const drawSplatsOpaque = (list = splats, i = 0) => {
     setDrawZ(0.1);
-    for (; i < list.length;) {
-        drawMeshSprite(
-            img[list[i++]],
-            list[i++],
-            list[i++],
-            list[i++],
-            list[i++],
-            list[i++],
-            1,
-            list[i++]
-        );
+    for (; i < list.length; ) {
+        drawMeshSprite(img[list[i++]], list[i++], list[i++], list[i++], list[i++], list[i++], 1, list[i++]);
     }
-}
+};
 
 export const drawOpaqueParticles = () => {
     for (const p of opaqueParticles) {
         drawParticle(p);
     }
-}
+};
 
 const drawListShadows = (particles: Particle[]) => {
     const maxH = 128 * WORLD_SCALE;
-    const minH = 1 * WORLD_SCALE;
+    const minH = WORLD_SCALE;
     for (const p of particles) {
         if (p._z > minH && p._z < maxH) {
             // if (p.z_ > minH) {//} && p.z_ < maxH) {
             const s = p._shadowScale * (0.5 - p._z / maxH);
-            const t = (1 - p._lifeTime / p._lifeMax);// * s;
+            const t = 1 - p._lifeTime / p._lifeMax; // * s;
             drawMeshSprite(img[Img.box], p._x / WORLD_SCALE, p._y / WORLD_SCALE, 0, s, s / 4, 0.4 * t, 0);
         }
     }
-}
+};
 
 export const drawParticleShadows = () => {
     drawListShadows(opaqueParticles);
-}
+};
 
 export const drawParticle = (p: Particle) => {
     // const velocityScale = max(1, 1 - p.followVelocity_ + p.followScale_ * hypot(p.u_, p.v_, p.w_));
@@ -156,8 +190,17 @@ export const drawParticle = (p: Particle) => {
     const scale = p._scale + p._scaleDelta * (lifeRatio * lifeRatio * lifeRatio);
     const angle = velocityAngle + p._a;
     setDrawZ(p._z / WORLD_SCALE + 0.1);
-    drawMeshSprite(img[p._img], p._x / WORLD_SCALE, p._y / WORLD_SCALE, angle, scale * velocityScale, scale, 1, p._color);
-}
+    drawMeshSprite(
+        img[p._img],
+        p._x / WORLD_SCALE,
+        p._y / WORLD_SCALE,
+        angle,
+        scale * velocityScale,
+        scale,
+        1,
+        p._color,
+    );
+};
 
 //////
 
@@ -171,16 +214,15 @@ const KID_MODE_COLORS = [
     parseRGB("#fffd00"),
 ];
 
-const MATURE_BLOOD_COLORS = [
-    parseRGB("#FF0000"),
-];
+const MATURE_BLOOD_COLORS = [parseRGB("#FF0000")];
 
 export const addFleshParticles = (amount: number, actor: Actor, explVel: number, vel?: Vel) => {
-    if (!settings.blood) return;
-    const colors = settings.blood === 1 ? MATURE_BLOOD_COLORS : KID_MODE_COLORS;
+    const bloodMode = settings[Setting.Blood];
+    if (!bloodMode) return;
+    const colors = bloodMode === BloodMode.Paint ? KID_MODE_COLORS : MATURE_BLOOD_COLORS;
     const idx = actor._id ?? random1i(colors.length);
     const color = colors[idx % colors.length];
-    amount = (amount * settings.particles) | 0;
+    amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {
         const particle = newParticle();
         copyPosFromActorCenter(particle, actor);
@@ -195,17 +237,17 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
         particle._splashImg = Img.circle_4;
         particle._splashEachJump = 1;
         particle._splashSizeX = 0.5;
-        particle._splashSizeY = 0.5 / 2;// / 4;
+        particle._splashSizeY = 0.5 / 2; // / 4;
         particle._splashScaleOnVelocity = (1 + sqrt(random1())) / 100;
         particle._scale = (1 + random1()) / 2;
         particle._followVelocity = 1;
         particle._followScale = 0.02;
         opaqueParticles.push(particle);
     }
-}
+};
 
 export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
-    amount = (amount * settings.particles) | 0;
+    amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {
         const particle = newParticle();
         copyPosFromActorCenter(particle, actor);
@@ -213,7 +255,7 @@ export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
             addVelFrom(particle, vel, random1(0.5));
         }
         addRadialVelocity(particle, random1n(PI), 64 - 128 * sqrt(random1()), random1(128));
-        const i = random1() < .3 ? Img.particle_flesh0 : Img.particle_flesh1;
+        const i = random1() < 0.3 ? Img.particle_flesh0 : Img.particle_flesh1;
         particle._img = i;
         particle._splashImg = i;
         particle._scale = 0.5 + random1(0.25);
@@ -224,7 +266,7 @@ export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
         particle._a = random1n(0.5);
         opaqueParticles.push(particle);
     }
-}
+};
 
 export const addShellParticle = (player: Actor, offsetZ: number, color: number) => {
     const particle = newParticle();
@@ -238,13 +280,18 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
     particle._a = random1n(PI);
     addRadialVelocity(particle, random1n(PI), 16 + random1(32), 32);
     opaqueParticles.push(particle);
-}
+};
 
 export function addStepSplat(player: Actor, dx: number) {
-    splats.push(Img.box,
+    splats.push(
+        Img.box,
         (player._x + dx) / WORLD_SCALE + random1n(1),
-        (player._y) / WORLD_SCALE + random1n(1),
-        0, 1 + random1(), 1, getLumaColor32(0x44 + random1(0x10)));
+        player._y / WORLD_SCALE + random1n(1),
+        0,
+        1 + random1(),
+        1,
+        getLumaColor32(0x44 + random1(0x10)),
+    );
 }
 
 export function addLandParticles(player: Actor, r: number, n: number) {
@@ -279,12 +326,7 @@ export const updateMapTexture = (time: number) => {
     if (splats.length || deltaFadeTime >= MAP_FADE_TIME_STEP) {
         gl.bindFramebuffer(GL.FRAMEBUFFER, mapTexture._fbo);
         beginRender();
-        setupProjection(
-            0, 0,
-            0, 1,
-            0, 1,
-            BOUNDS_SIZE, -BOUNDS_SIZE
-        );
+        setupProjection(0, 0, 0, 1, 0, 1, BOUNDS_SIZE, -BOUNDS_SIZE);
         gl.viewport(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
         gl.scissor(0, 0, BOUNDS_SIZE, BOUNDS_SIZE);
         gl.disable(GL.DEPTH_TEST);
@@ -299,10 +341,10 @@ export const updateMapTexture = (time: number) => {
         }
         flush();
     }
-}
+};
 
 export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, colors: number[]) => {
-    amount = (amount * settings.particles) | 0;
+    amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {
         const particle = newParticle();
         copyPosFromActorCenter(particle, actor);
@@ -318,7 +360,7 @@ export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, color
         particle._shadowScale = 0.0;
         opaqueParticles.push(particle);
     }
-}
+};
 
 // Text particles
 
@@ -328,22 +370,22 @@ export const newTextParticle = (source: Actor, text: string): TextParticle => ({
     _z: source._z,
     _text: text,
     _lifetime: 3 * 60,
-    _time: 0
+    _time: 0,
 });
 
 const updateTextParticle = (p: TextParticle): boolean => {
     ++p._time;
     const t = p._time / p._lifetime;
     return t >= 1;
-}
+};
 
 const updateTextParticleList = (list: TextParticle[], i = 0) => {
-    for (; i < list.length;) {
+    for (; i < list.length; ) {
         if (updateTextParticle(list[i++])) {
             list.splice(--i, 1);
         }
     }
-}
+};
 
 export const addTextParticle = (source: Actor, text: string) => {
     textParticles.push(newTextParticle(source, text));
@@ -358,6 +400,6 @@ export const drawTextParticles = () => {
         const x = p._x / WORLD_SCALE;
         const offZ = (cubicOut(t) * 60 * WORLD_SCALE) | 0;
         const y = (p._y - p._z - offZ) / WORLD_SCALE;
-        drawTextShadowCenter(fnt[0], p._text, 8, x, y);
+        drawTextAligned(fnt[0], p._text, 8, x, y);
     }
-}
+};

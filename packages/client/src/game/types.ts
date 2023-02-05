@@ -1,28 +1,29 @@
-import {ClientID} from "../../../shared/src/types";
-import {Img} from "../assets/gfx";
-import {atan2, PI, PI2} from "../utils/math";
+import {ClientID} from "@iioi/shared/types.js";
+import {atan2, PI, PI2} from "../utils/math.js";
 
-export const enum ActorType {
-    Player = 0,
-    Barrel = 1,
-    Bullet = 2,
-    Item = 3,
+export const ActorType = {
+    Player: 0,
+    Barrel: 1,
+    Bullet: 2,
+    Item: 3,
     // static game objects
-    Tree = 4,
-}
+    Tree: 4,
+} as const;
+export type ActorType = (typeof ActorType)[keyof typeof ActorType];
 
-export const enum ItemType {
-    Hp = 0,
-    Hp2 = 1,
-    Credit = 2,
-    Credit2 = 3,
-    Shield = 4,
-    Ammo = 5,
+export const ItemType = {
+    Hp: 0,
+    Hp2: 1,
+    Credit: 2,
+    Credit2: 3,
+    Shield: 4,
+    Ammo: 5,
     // FLAG
-    Weapon = 8,
+    Weapon: 8,
 
-    SubTypeMask = 7,
-}
+    SubTypeMask: 7,
+} as const;
+export type ItemType = (typeof ItemType)[keyof typeof ItemType];
 
 export interface Pos {
     /** uint16 **/
@@ -65,32 +66,32 @@ export interface Actor extends Pos, Vel {
      * health points [0; 15]
      * @type uint4
      **/
-    _hp?: number;
+    _hp: number;
 
     /**
      * shield points [0; 15]
      * @type uint4
      **/
-    _sp?: number;
+    _sp: number;
 
     /**
      * generated static variation seed value for animation
      * @type uint8
      **/
-    _anim0?: number;
+    _anim0: number;
 
     /**
      * Hit effect. For Items could not be picked up until it reach 0
      * @type uint5
      **/
-    _animHit?: number;
+    _animHit: number;
 
     /**
      * local frame-scope state
      * @type uint32
      * @transient
      **/
-    _localStateFlags?: number;
+    _localStateFlags: number;
 }
 
 export interface PlayerActor extends Actor {
@@ -100,41 +101,39 @@ export interface PlayerActor extends Actor {
 
     // Magazines (0..15)
     // 4 bits
-    _mags?: number;
+    _mags: number;
 
     // detune counter: 0...32 (max of weapon detune-speed parameter)
     _detune: number;
 
     // 0...63 (max_weapon_clip_reload)
     // 6 bits
-    _clipReload?: number;
+    _clipReload: number;
 
     // holding Weapon ID
     // range: 0...15 currently
     // 4 bits
-    _weapon?: number;
+    _weapon: number;
 
     // 4 bits
-    _weapon2?: number;
+    _weapon2: number;
 
     // 0...63 (max_weapon_clip_size)
     // 6 bits
-    _clipAmmo?: number;
+    _clipAmmo: number;
 
     // 6 bits
-    _clipAmmo2?: number;
+    _clipAmmo2: number;
 
     // oh... check down trigger 4 bits
-    _trig?: number;
+    _trig: number;
 
     // Input buttons
     // 32-bit
     _input: number;
 }
 
-export interface BarrelActor extends Actor {
-
-}
+export type BarrelActor = Actor;
 
 export interface BulletActor extends Actor {
     // Bullet: owner ID
@@ -180,7 +179,7 @@ export interface Client {
 export interface ClientEvent {
     _tic: number;
     // TODO: rename to `_input`
-    _btn?: number;
+    _input?: number;
     // will be populated from packet info
     _client: ClientID;
 }
@@ -208,7 +207,7 @@ export const newStateData = (): StateData => ({
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
 export interface Packet {
-    _sync: boolean;
+    _sync: number;
     // confirm the last tic we received from Sender
     _receivedOnSender: number;
     // packet contains info tic and before, 22 bits, for 19 hr of game session
@@ -234,46 +233,39 @@ export interface PacketDebug {
     _state?: StateData;
 }
 
-export interface Particle extends Pos, Vel {
-    // angle
-    _a: number;
-    // rotation speed
-    _r: number;
+export const unpackAngleByte = (angleByte: number, res: number) => (PI2 * (angleByte & (res - 1))) / res - PI;
 
-    // gravity factor
-    _gravity: number;
+export const packAngleByte = (a: number, res: number) => (res * a) & (res - 1);
 
-    _scale: number;
-    _scaleDelta: number;
-    _color: number;
+export const packDirByte = (x: number, y: number, res: number) => packAngleByte((PI + atan2(y, x)) / PI2, res);
 
-    _lifeTime: number;
-    _lifeMax: number;
+/*
+    First 19 bits
+    [ ..... LA-LA-LA-LA-LA-LA-LA MA-MA-MA-MA-MA-MA Sp Dr Sh Ju Ru Mo ]
 
-    _img: Img;
-    _splashSizeX: number;
-    _splashSizeY: number;
-    _splashEachJump: number;
-    _splashScaleOnVelocity: number;
-    _splashImg: number;
-    _followVelocity: number;
-    _followScale: number;
+    Next high 13 bits not used
+ */
+export const ControlsFlag = {
+    Move: 0x1,
+    Run: 0x2,
+    Jump: 0x4,
+    Fire: 0x8,
+    Drop: 0x10,
+    Reload: 0x20,
+    Swap: 0x40,
+    Spawn: 0x80,
 
-    _shadowScale: number;
-}
+    // 5-bits for Move angle (32 directions)
+    MoveAngleMax: 0x20,
+    MoveAngleBit: 8,
+    // 8-bits for Look angle (256 directions)
+    LookAngleMax: 0x100,
+    LookAngleBit: 13,
 
-export interface TextParticle extends Pos {
-    _text: string;
-    _lifetime: number;
-    _time: number;
-}
+    DownEvent_Fire: 1,
+    DownEvent_Drop: 2,
+    DownEvent_Reload: 4,
+    DownEvent_Swap: 8,
+} as const;
 
-export const unpackAngleByte = (angleByte: number, res: number) =>
-    PI2 * (angleByte & (res - 1)) / res - PI;
-
-export const packAngleByte = (a: number, res: number) =>
-    (res * a) & (res - 1);
-
-export const packDirByte = (x: number, y: number, res: number) =>
-    packAngleByte((PI + atan2(y, x)) / PI2, res);
-
+export type ControlsFlag = (typeof ControlsFlag)[keyof typeof ControlsFlag];

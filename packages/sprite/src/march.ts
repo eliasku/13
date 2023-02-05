@@ -8,31 +8,45 @@ export interface BB {
     t: number;
 }
 
-type MarchSampleFunc = (point: Vec2, data: any) => number;
-type MarchSegmentFunc = (v0: Vec2, v1: Vec2, data: any) => void;
+type MarchSampleFunc = (point: Vec2, data: ImageData) => number;
+type MarchSegmentFunc = (v0: Vec2, v1: Vec2, data: object) => void;
 
-type MarchCellFunc = (t: number, a: number, b: number, c: number, d: number,
-                      x0: number, x1: number, y0: number, y1: number,
-                      segment: MarchSegmentFunc, segment_data: any
+type MarchCellFunc = (
+    t: number,
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x0: number,
+    x1: number,
+    y0: number,
+    y1: number,
+    segment: MarchSegmentFunc,
+    segment_data: object,
 ) => void;
 
 // TODO should flip this around eventually.
-const seg = (v0: Vec2, v1: Vec2, f: MarchSegmentFunc, data: any) => {
+const seg = (v0: Vec2, v1: Vec2, f: MarchSegmentFunc, data: object) => {
     if (!vec2_eq(v0, v1)) f(v1, v0, data);
-}
+};
 
 // TODO should flip this around eventually.
-const segs = (a: Vec2, b: Vec2, c: Vec2, f: MarchSegmentFunc, data: any) => {
+const segs = (a: Vec2, b: Vec2, c: Vec2, f: MarchSegmentFunc, data: object) => {
     seg(b, c, f, data);
     seg(a, b, f, data);
 };
 
 // The looping and sample caching code is shared between cpMarchHard() and cpMarchSoft().
 const marchCells = (
-    bb: BB, x_samples: number, y_samples: number, t: number,
-    segment: MarchSegmentFunc, segment_data: any,
-    sample: MarchSampleFunc, sample_data: any,
-    cell: MarchCellFunc
+    bb: BB,
+    x_samples: number,
+    y_samples: number,
+    t: number,
+    segment: MarchSegmentFunc,
+    segment_data: object,
+    sample: MarchSampleFunc,
+    sample_data: ImageData,
+    cell: MarchCellFunc,
 ) => {
     x_samples = Math.ceil(x_samples);
     y_samples = Math.ceil(y_samples);
@@ -68,14 +82,27 @@ const marchCells = (
             cell(t, a, b, c, d, x0, x1, y0, y1, segment, segment_data);
         }
     }
-}
+};
 const marchCellSoft = (
-    t: number, a: number, b: number, c: number, d: number,
-    x0: number, x1: number, y0: number, y1: number,
-    segment: MarchSegmentFunc, segment_data: any
+    t: number,
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x0: number,
+    x1: number,
+    y0: number,
+    y1: number,
+    segment: MarchSegmentFunc,
+    segment_data: any,
 ) => {
     // TODO this switch part is super expensive, can it be NEONized?
-    switch ((a > t) as any as number << 0 | (b > t) as any as number << 1 | (c > t) as any as number << 2 | (d > t) as any as number << 3) {
+    switch (
+        (((a > t) as any as number) << 0) |
+        (((b > t) as any as number) << 1) |
+        (((c > t) as any as number) << 2) |
+        (((d > t) as any as number) << 3)
+    ) {
         case 0x1:
             seg(vec2(x0, midLerp(y0, y1, a, c, t)), vec2(midLerp(x0, x1, a, b, t), y0), segment, segment_data);
             break;
@@ -105,19 +132,19 @@ const marchCellSoft = (
             seg(vec2(x0, midLerp(y0, y1, a, c, t)), vec2(midLerp(x0, x1, a, b, t), y0), segment, segment_data);
             seg(vec2(x1, midLerp(y0, y1, b, d, t)), vec2(midLerp(x0, x1, c, d, t), y1), segment, segment_data);
             break;
-        case 0xA:
+        case 0xa:
             seg(vec2(midLerp(x0, x1, a, b, t), y0), vec2(midLerp(x0, x1, c, d, t), y1), segment, segment_data);
             break;
-        case 0xB:
+        case 0xb:
             seg(vec2(x0, midLerp(y0, y1, a, c, t)), vec2(midLerp(x0, x1, c, d, t), y1), segment, segment_data);
             break;
-        case 0xC:
+        case 0xc:
             seg(vec2(x1, midLerp(y0, y1, b, d, t)), vec2(x0, midLerp(y0, y1, a, c, t)), segment, segment_data);
             break;
-        case 0xD:
+        case 0xd:
             seg(vec2(x1, midLerp(y0, y1, b, d, t)), vec2(midLerp(x0, x1, a, b, t), y0), segment, segment_data);
             break;
-        case 0xE:
+        case 0xe:
             seg(vec2(midLerp(x0, x1, a, b, t), y0), vec2(x0, midLerp(y0, y1, a, c, t)), segment, segment_data);
             break;
         default:
@@ -125,17 +152,29 @@ const marchCellSoft = (
     }
 };
 
-
 const marchCellHard = (
-    t: number, a: number, b: number, c: number, d: number,
-    x0: number, x1: number, y0: number, y1: number,
-    segment: MarchSegmentFunc, segment_data: any
+    t: number,
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x0: number,
+    x1: number,
+    y0: number,
+    y1: number,
+    segment: MarchSegmentFunc,
+    segment_data: object,
 ) => {
     // midpoints
     const xm = lerp(x0, x1, 0.5);
     const ym = lerp(y0, y1, 0.5);
 
-    switch ((a > t) as any as number << 0 | (b > t) as any as number << 1 | (c > t) as any as number << 2 | (d > t) as any as number << 3) {
+    switch (
+        (((a > t) as unknown as number) << 0) |
+        (((b > t) as unknown as number) << 1) |
+        (((c > t) as unknown as number) << 2) |
+        (((d > t) as unknown as number) << 3)
+    ) {
         case 0x1:
             segs(vec2(x0, ym), vec2(xm, ym), vec2(xm, y0), segment, segment_data);
             break;
@@ -165,38 +204,48 @@ const marchCellHard = (
             segs(vec2(x1, ym), vec2(xm, ym), vec2(xm, y0), segment, segment_data);
             segs(vec2(x0, ym), vec2(xm, ym), vec2(xm, y1), segment, segment_data);
             break;
-        case 0xA:
+        case 0xa:
             seg(vec2(xm, y0), vec2(xm, y1), segment, segment_data);
             break;
-        case 0xB:
+        case 0xb:
             segs(vec2(x0, ym), vec2(xm, ym), vec2(xm, y1), segment, segment_data);
             break;
-        case 0xC:
+        case 0xc:
             seg(vec2(x1, ym), vec2(x0, ym), segment, segment_data);
             break;
-        case 0xD:
+        case 0xd:
             segs(vec2(x1, ym), vec2(xm, ym), vec2(xm, y0), segment, segment_data);
             break;
-        case 0xE:
+        case 0xe:
             segs(vec2(xm, y0), vec2(xm, ym), vec2(x0, ym), segment, segment_data);
             break;
         default:
             break; // 0x0 and 0xF
     }
-}
+};
 
 export const marchSoft = (
-    bb: BB, x_samples: number, y_samples: number, t: number,
-    segment: MarchSegmentFunc, segment_data: any,
-    sample: MarchSampleFunc, sample_data: any
+    bb: BB,
+    x_samples: number,
+    y_samples: number,
+    t: number,
+    segment: MarchSegmentFunc,
+    segment_data: object,
+    sample: MarchSampleFunc,
+    sample_data: ImageData,
 ) => {
     marchCells(bb, x_samples, y_samples, t, segment, segment_data, sample, sample_data, marchCellSoft);
-}
+};
 
 export const marchHard = (
-    bb: BB, x_samples: number, y_samples: number, t: number,
-    segment: MarchSegmentFunc, segment_data: any,
-    sample: MarchSampleFunc, sample_data: any
+    bb: BB,
+    x_samples: number,
+    y_samples: number,
+    t: number,
+    segment: MarchSegmentFunc,
+    segment_data: object,
+    sample: MarchSampleFunc,
+    sample_data: ImageData,
 ) => {
     marchCells(bb, x_samples, y_samples, t, segment, segment_data, sample, sample_data, marchCellHard);
-}
+};

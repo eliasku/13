@@ -1,98 +1,108 @@
-const prefix = "l3";
+const prefix = "iioi";
 
-export const enum BloodMode {
-    Off = 0,
-    Normal = 1,
-    Paint = 2,
-}
+export const BloodMode = {
+    Off: 0,
+    Normal: 1,
+    Paint: 2,
+} as const;
+export type BloodMode = (typeof BloodMode)[keyof typeof BloodMode];
 
 export const DEFAULT_FRAMERATE_LIMIT = 60;
 
-type DevSettingsKey =
-    "dev" |
-    "dev_fps" |
-    "dev_collision" |
-    "dev_console" |
-    "dev_info";
+export const Setting = {
+    Name: 0,
+    Flags: 1,
+    Blood: 2,
+    Particles: 3,
+    FrameRateCap: 4,
+} as const;
+export type Setting = (typeof Setting)[keyof typeof Setting];
 
-type SettingsKey = DevSettingsKey |
-    "name" |
-    "sound" |
-    "music" |
-    "speech" |
-    "blood" |
-    "particles" |
-    "highDPI" |
-    "frameRateCap";
+export const SettingFlag = {
+    Sound: 1 << 0,
+    Music: 1 << 1,
+    Speech: 1 << 2,
+    HighDPI: 1 << 3,
+    DevMode: 1 << 4,
+    DevShowFrameStats: 1 << 5,
+    DevShowCollisionInfo: 1 << 6,
+    DevShowDebugInfo: 1 << 7,
+    DevLogging: 1 << 8,
+    DevAutoPlay: 1 << 9,
+} as const;
+export type SettingFlag = (typeof SettingFlag)[keyof typeof SettingFlag];
 
-interface Settings {
-    name: string;
-    sound: number;
-    music: number;
-    speech: number;
-    blood: BloodMode;
-    particles: number;
-    highDPI: number;
-    frameRateCap: number;
-
-    dev: number;
-    dev_fps: number;
-    dev_collision: number;
-    dev_console: number;
-    dev_info: number;
+interface SettingsMap {
+    [Setting.Name]: string;
+    [Setting.Flags]: SettingFlag;
+    [Setting.Blood]: BloodMode;
+    [Setting.Particles]: number;
+    [Setting.FrameRateCap]: number;
 }
 
-export const settings: Settings = {
-    name: "",
-    sound: 1,
-    music: 1,
-    speech: 1,
-    blood: BloodMode.Normal,
-    particles: 1,
-    highDPI: 1,
-    frameRateCap: DEFAULT_FRAMERATE_LIMIT,
-    dev: 0,
-    dev_fps: 1,
-    dev_collision: 0,
-    dev_console: 1,
-    dev_info: 0,
+export const settings: SettingsMap = {
+    [Setting.Name]: "",
+    [Setting.Flags]:
+        SettingFlag.Sound |
+        SettingFlag.Music |
+        SettingFlag.Speech |
+        SettingFlag.DevShowFrameStats |
+        SettingFlag.DevShowDebugInfo |
+        SettingFlag.DevLogging,
+    [Setting.Blood]: BloodMode.Normal,
+    [Setting.Particles]: 1,
+    [Setting.FrameRateCap]: DEFAULT_FRAMERATE_LIMIT,
 };
 
-const getItem = (key: string): any => {
+const getItem = (key: Setting | string): string | undefined => {
     try {
         return localStorage.getItem(prefix + key);
     } catch {
+        // ignore
     }
-}
+};
 
-const setItem = (key: string, value: any) => {
+const setItem = (key: Setting, value: string) => {
     try {
         localStorage.setItem(prefix + key, value);
     } catch {
+        // ignore
     }
-}
+};
 
-for (const key of Object.keys(settings)) {
+for (const key in settings) {
     const v = getItem(key);
     if (v != null) {
-        const type = typeof (settings as any)[key];
+        const type = typeof settings[key];
         switch (type) {
             case "number":
-                (settings as any)[key] = parseFloat(v);
+                settings[key] = parseFloat(v);
                 break;
             case "string":
-                (settings as any)[key] = v;
+                settings[key] = v;
                 break;
         }
     }
 }
 
-export function setSetting(key: SettingsKey, value: any): any {
-    (settings as any)[key] = value;
-    setItem(key, value);
+export function setSetting<K extends keyof SettingsMap>(key: K, value: SettingsMap[K]): SettingsMap[K] {
+    settings[key] = value;
+    setItem(key, "" + value);
     return value;
 }
 
-export function getDevSetting(key: DevSettingsKey) {
-    return settings.dev && settings[key];
+export function getDevFlag(key: SettingFlag = 0) {
+    return (settings[Setting.Flags] & (SettingFlag.DevMode | key)) === (SettingFlag.DevMode | key);
+}
+
+export function enableSettingsFlag(flag: SettingFlag) {
+    setSetting(Setting.Flags, settings[Setting.Flags] | flag);
+}
+
+export function hasSettingsFlag(flag: SettingFlag) {
+    return settings[Setting.Flags] & flag;
+}
+
+export function toggleSettingsFlag(mask: SettingFlag) {
+    setSetting(Setting.Flags, settings[Setting.Flags] ^ mask);
 }

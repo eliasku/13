@@ -1,3 +1,10 @@
+## 1.0.14
+
+- Add simple autoplay mode for debugging
+- Change user settings data
+- Add replay files initial support (wip)
+- Player bot API (wip)
+
 ## 1.0.13
 
 - Add in-game menu (graceful way to quit the game room)

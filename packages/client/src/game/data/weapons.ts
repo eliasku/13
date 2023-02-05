@@ -1,5 +1,5 @@
-import {WORLD_SCALE} from "../../assets/params";
-import {BulletType} from "./bullets";
+import {WORLD_SCALE} from "../../assets/params.js";
+import {BulletType} from "./bullets.js";
 
 export interface WeaponConfig {
     _name: string;
@@ -67,7 +67,7 @@ const newWeapon = (): WeaponConfig => ({
     _clipSize: 0,
     _clipReload: 0,
     _ai_shootDistanceMin: 0,
-    _ai_shootDistanceMax: 0xFFFFFFFF,
+    _ai_shootDistanceMax: 0xffffffff,
     _moveWeightK: 1.0,
 });
 
@@ -98,7 +98,7 @@ const createGunWeapon = (): WeaponConfig => {
     w._cameraFeedback = 0.02 / 5;
     w._cameraLookForward = 0.2;
     w._bulletType = BulletType.Shell;
-    w._bulletShellColor = 0xFFDD22;
+    w._bulletShellColor = 0xffdd22;
     w._clipSize = 30;
     w._clipReload = 60;
     // w.ai_shootDistanceMin_ = 128 * WORLD_SCALE;
@@ -191,7 +191,7 @@ weapons[i]._handsAnim = 1;
 weapons[i]._angleVar = 0.5;
 weapons[i]._bulletHp = 2;
 weapons[i]._bulletDamage = 2;
-weapons[i]._bulletShellColor = 0xAA0000;
+weapons[i]._bulletShellColor = 0xaa0000;
 weapons[i]._clipSize = 7;
 weapons[i]._moveWeightK = 0.9;
 
@@ -206,7 +206,7 @@ weapons[i]._velocity = 960;
 weapons[i]._handsAnim = 1;
 weapons[i]._bulletDamage = 5;
 weapons[i]._bulletType = BulletType.Arrow;
-weapons[i]._bulletShellColor = 0x00FF00;
+weapons[i]._bulletShellColor = 0x00ff00;
 weapons[i]._clipSize = 7;
 weapons[i]._moveWeightK = 0.9;
 
@@ -222,7 +222,7 @@ weapons[i]._velocity = 420;
 weapons[i]._bulletDamage = 1;
 weapons[i]._bulletHp = 2;
 weapons[i]._bulletType = BulletType.Plasma;
-weapons[i]._bulletShellColor = 0x00FFFF;
+weapons[i]._bulletShellColor = 0x00ffff;
 weapons[i]._clipSize = 35;
 
 // 🧵 RAIL GUN

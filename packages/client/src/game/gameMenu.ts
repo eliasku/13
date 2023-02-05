@@ -1,107 +1,140 @@
-import {getScreenScale} from "./gameState";
-import {button, ui_begin, ui_finish} from "../graphics/ui";
-import {gl} from "../graphics/draw2d";
-import {DEFAULT_FRAMERATE_LIMIT, setSetting, settings} from "./settings";
-import {keyboardDown, KeyCode} from "../utils/input";
-import {disconnect} from "../net/messaging";
-import {GAME_CFG} from "./config";
+import {button, label, ui_begin, ui_finish, uiProgressBar, uiState} from "../graphics/gui.js";
+import {keyboardDown, KeyCode} from "../utils/input.js";
+import {disconnect} from "../net/messaging.js";
+import {Const, GAME_CFG} from "./config.js";
+import {guiSettingsPanel} from "../screens/settings.js";
+import {ReplayFile, saveReplay} from "./replay.js";
 
-export const enum GameMenuState {
-    InGame = 0,
-    Paused = 1,
-    Settings = 2,
-}
+export const GameMenuState = {
+    InGame: 0,
+    Paused: 1,
+    Settings: 2,
+} as const;
+export type GameMenuState = (typeof GameMenuState)[keyof typeof GameMenuState];
 
 export interface GameMenu {
     _state: GameMenuState;
 }
 
-export function onGameMenu(menu: GameMenu): void {
-    const scale = getScreenScale();
-    ui_begin(scale);
+function MM_SS(seconds: number) {
+    seconds = Math.ceil(seconds);
+    const min = (seconds / 60) | 0;
+    const sec = seconds % 60;
+    return (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec);
+}
+
+export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): void {
+    ui_begin();
     {
-        const W = (gl.drawingBufferWidth / scale) | 0;
-        const H = (gl.drawingBufferHeight / scale) | 0;
+        const W = uiState._width;
+        const H = uiState._height;
         const centerX = W >> 1;
         const centerY = H >> 1;
 
         if (menu._state === GameMenuState.InGame) {
-            if (button("menu", "⏸️", W - 16 - GAME_CFG._minimap._size - 4, 2, {w: 16, h: 16}) || keyboardDown[KeyCode.Escape]) {
-                menu._state = GameMenuState.Paused;
+            if (replay) {
+                const t0 = replay._meta.start;
+                const t1 = replay._meta.end;
+                const len = t1 - t0;
+                const rewindTo = uiProgressBar("replay_timeline", tic - t0, len, 10 + 40, H - 20, W - 50 - 10, 8);
+                const totalTime = Math.ceil(len / Const.NetFq);
+                const currentTime = Math.ceil((tic - t0) / Const.NetFq);
+                label(MM_SS(currentTime) + "/" + MM_SS(totalTime), 9, 10, H - 28, 0);
+
+                const paused = replay._paused ?? false;
+                if (
+                    button("replay_play", paused ? "►" : "▮▮", 10, H - 24, {w: 16, h: 16}) ||
+                    keyboardDown[KeyCode.Space]
+                ) {
+                    replay._paused = !paused;
+                }
+
+                const curPlaybackSpeed = replay._playbackSpeed ?? 1;
+                let nextPlaybackSpeed = curPlaybackSpeed;
+                if (
+                    button(
+                        "replay_playback_speed",
+                        (nextPlaybackSpeed < 1 ? ".5" : nextPlaybackSpeed) + "⨯",
+                        30,
+                        H - 24,
+                        {
+                            w: 16,
+                            h: 16,
+                        },
+                    )
+                ) {
+                    nextPlaybackSpeed *= 2;
+                    if (nextPlaybackSpeed > 4) {
+                        nextPlaybackSpeed = 0.5;
+                    }
+                    if (curPlaybackSpeed !== nextPlaybackSpeed) {
+                        replay._playbackSpeed = nextPlaybackSpeed;
+                    }
+                }
+
+                if (rewindTo != null) {
+                    if (rewindTo >= 0) {
+                        replay._rewind = Math.round(rewindTo * len);
+                    } else {
+                        const r = -(rewindTo + 1);
+                        const t = (r * len) | 0;
+                        label(MM_SS(Math.ceil(t / Const.NetFq)), 8, 10 + 40 + r * (W - 50 - 10), H - 20 - 4);
+                    }
+                }
+
+                if (
+                    button("close_replay", "❌", W - 16 - GAME_CFG._minimap._size - 4, 2, {
+                        w: 16,
+                        h: 16,
+                    }) ||
+                    keyboardDown[KeyCode.Escape]
+                ) {
+                    disconnect();
+                }
+            } else {
+                if (
+                    button("menu", "⏸️", W - 16 - GAME_CFG._minimap._size - 4, 2, {
+                        w: 16,
+                        h: 16,
+                    }) ||
+                    keyboardDown[KeyCode.Escape]
+                ) {
+                    menu._state = GameMenuState.Paused;
+                }
             }
         } else if (menu._state === GameMenuState.Paused) {
-            if (button("settings", "⚙️ SETTINGS", centerX - 50, centerY + 20, {w: 100, h: 20})) {
+            let y = centerY + 20;
+            if (button("settings", "⚙️ SETTINGS", centerX - 50, y, {w: 100, h: 20})) {
                 menu._state = GameMenuState.Settings;
             }
-            if (button("back_to_game", "⬅ BACK", centerX - 50, centerY + 50, {
-                w: 100,
-                h: 20
-            }) || keyboardDown[KeyCode.Escape]) {
-                menu._state = GameMenuState.InGame;
+            y += 30;
+            if (button("save-replay", "💾 SAVE REPLAY", centerX - 50, y, {w: 100, h: 20})) {
+                saveReplay();
             }
-            if (button("quit_room", "🏃 QUIT", centerX - 50, centerY + 80, {w: 100, h: 20})) {
+            y += 30;
+            if (button("quit_room", "🏃 QUIT", centerX - 50, y, {w: 100, h: 20})) {
                 disconnect();
             }
+            y += 30;
+            if (
+                button("back_to_game", "⬅ BACK", centerX - 50, y, {
+                    w: 100,
+                    h: 20,
+                }) ||
+                keyboardDown[KeyCode.Escape]
+            ) {
+                menu._state = GameMenuState.InGame;
+            }
         } else if (menu._state === GameMenuState.Settings) {
-            if (button("sounds", "🔊 SOUNDS: " + (settings.sound ? "ON" : "OFF"), centerX - 50, centerY - 70, {
-                w: 100,
-                h: 20
-            })) {
-                setSetting("sound", settings.sound ? 0 : 1);
-            }
-            if (button("music", "🎵 MUSIC: " + (settings.music ? "ON" : "OFF"), centerX - 50, centerY - 40, {
-                w: 100,
-                h: 20
-            })) {
-                setSetting("music", settings.music ? 0 : 1);
-            }
-            if (button("speech", "💬 SPEECH: " + (settings.speech ? "ON" : "OFF"), centerX - 50, centerY - 10, {
-                w: 100,
-                h: 20
-            })) {
-                setSetting("speech", settings.speech ? 0 : 1);
-            }
+            guiSettingsPanel(centerX, centerY);
 
-            const bloodModeText = ["️‍🩹 FX: NONE", "🩸 FX: BLOOD", "🎨 FX: PAINT "];
-            if (button("blood", bloodModeText[settings.blood], centerX - 65, centerY + 20, {
-                w: 80,
-                h: 20
-            })) {
-                setSetting("blood", (settings.blood + 1) % 3);
-            }
-
-            const pptext = settings.particles > 0 ? ("X" + settings.particles) : "OFF";
-            if (button("particles", "️✨ " + pptext, centerX + 25, centerY + 20, {
-                w: 40,
-                h: 20
-            })) {
-                settings.particles *= 2;
-                if (settings.particles <= 0) {
-                    settings.particles = 0.5;
-                }
-                if (settings.particles > 4) {
-                    settings.particles = 0;
-                }
-                setSetting("particles", settings.particles);
-            }
-            if (button("highDPI", "🖥️ HIGH-DPI: " + (settings.highDPI ? "ON" : "OFF"), centerX - 85, centerY + 50, {
-                w: 80,
-                h: 20
-            })) {
-                setSetting("highDPI", settings.highDPI ? 0 : 1);
-            }
-
-            if (button("frameRateCap", "FPS LIMIT: " + (settings.frameRateCap > 0 ? (settings.frameRateCap + "hz") : "OFF"), centerX + 5, centerY + 50, {
-                w: 80,
-                h: 20
-            })) {
-                setSetting("frameRateCap", settings.frameRateCap > 0 ? 0 : DEFAULT_FRAMERATE_LIMIT);
-            }
-
-            if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
-                w: 100,
-                h: 20
-            }) || keyboardDown[KeyCode.Escape]) {
+            if (
+                button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+                    w: 100,
+                    h: 20,
+                }) ||
+                keyboardDown[KeyCode.Escape]
+            ) {
                 menu._state = GameMenuState.Paused;
             }
         }

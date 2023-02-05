@@ -1,14 +1,14 @@
 {
-  "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
-    "moduleResolution": "node",
-    "noImplicitAny": true,
-    "removeComments": false,
-    "preserveConstEnums": false,
-    "sourceMap": true,
-    "outDir": "../build/client"
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+    "extends": "../../tsconfig.package.json",
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "dist",
+        "strict": false
+    },
+    "references": [
+        {
+            "path": "../shared/tsconfig.json"
+        }
+    ],
+    "include": ["src/**/*.ts"]
 }

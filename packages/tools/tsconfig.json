@@ -1,15 +1,11 @@
 {
-  "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
-    "moduleResolution": "node",
-    "noImplicitAny": true,
-    "removeComments": false,
-    "preserveConstEnums": false,
-    "sourceMap": false,
-    "outDir": "../build/tools",
-    "lib": ["es2021", "dom"]
-  },
-  "include": ["./*.ts"],
-  "exclude": ["node_modules"]
+    "extends": "../../tsconfig.package.json",
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "dist",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "moduleResolution": "Node"
+    },
+    "include": ["src/**/*.ts"]
 }

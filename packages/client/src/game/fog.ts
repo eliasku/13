@@ -1,5 +1,5 @@
-import {Actor, ActorType, PlayerActor} from "./types";
-import {imgSpotLight} from "../assets/gfx";
+import {Actor, ActorType, PlayerActor} from "./types.js";
+import {imgSpotLight} from "../assets/gfx.js";
 import {
     beginRenderToTexture,
     createTexture,
@@ -8,12 +8,12 @@ import {
     gl,
     initFramebuffer,
     setLightMapTexture,
-    uploadTexture
-} from "../graphics/draw2d";
-import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
-import {GL} from "../graphics/gl";
-import {clientId} from "../net/messaging";
-import {actorsConfig} from "./data/world";
+    uploadTexture,
+} from "../graphics/draw2d.js";
+import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {GL} from "../graphics/gl.js";
+import {clientId} from "../net/messaging.js";
+import {actorsConfig} from "./data/world.js";
 
 const FOG_DOWNSCALE = 4;
 const FOG_SIZE = BOUNDS_SIZE / FOG_DOWNSCALE;
@@ -33,18 +33,18 @@ export const beginFogRender = () => {
     gl.disable(GL.DEPTH_TEST);
     gl.depthMask(false);
     gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
-}
+};
 
 export const drawFogPoint = (x: number, y: number, r: number, alpha: number) => {
     draw(imgSpotLight, x, y, 0, r, r, alpha);
-}
+};
 
 export const drawFogObjects = (...lists: Actor[][]) => {
     for (const list of lists) {
         for (const a of list) {
-            let type = actorsConfig[a._type];
+            const type = actorsConfig[a._type];
             let r = type._lightRadiusK;
-            let alpha = type._light;
+            const alpha = type._light;
             if (r > 0 && alpha > 0) {
                 // isMyPlayer
                 if (a._type === ActorType.Player) {
@@ -59,4 +59,4 @@ export const drawFogObjects = (...lists: Actor[][]) => {
             }
         }
     }
-}
+};

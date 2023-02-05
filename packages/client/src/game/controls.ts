@@ -1,51 +1,22 @@
-import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input";
-import {drawCircle, drawRing, gl} from "../graphics/draw2d";
-import {PlayerActor} from "./types";
+import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input.js";
+import {drawCircle, drawRing, gl} from "../graphics/draw2d.js";
+import {PlayerActor} from "./types.js";
 import {
     PAD_FIRE_RADIUS_0,
     PAD_FIRE_RADIUS_1,
     PAD_MOVE_RADIUS_0,
     PAD_MOVE_RADIUS_1,
-    WORLD_SCALE
-} from "../assets/params";
-import {getScreenScale} from "./gameState";
-import {hypot} from "../utils/math";
-import {weapons} from "./data/weapons";
-import {drawTextShadowCenter, fnt} from "../graphics/font";
+    WORLD_SCALE,
+} from "../assets/params.js";
+import {getScreenScale} from "./gameState.js";
+import {hypot} from "../utils/math.js";
+import {weapons} from "./data/weapons.js";
+import {drawTextAligned, fnt} from "../graphics/font.js";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
 // TODO: return mouse control
 // TODO: combine pad + keyboard
-
-/*
-    First 19 bits
-    [ ..... LA-LA-LA-LA-LA-LA-LA MA-MA-MA-MA-MA-MA Sp Dr Sh Ju Ru Mo ]
-
-    Next high 13 bits not used
- */
-export const enum ControlsFlag {
-    Move = 0x1,
-    Run = 0x2,
-    Jump = 0x4,
-    Fire = 0x8,
-    Drop = 0x10,
-    Reload = 0x20,
-    Swap = 0x40,
-    Spawn = 0x80,
-
-    // 5-bits for Move angle (32 directions)
-    MoveAngleMax = 0x20,
-    MoveAngleBit = 8,
-    // 8-bits for Look angle (256 directions)
-    LookAngleMax = 0x100,
-    LookAngleBit = 13,
-
-    DownEvent_Fire = 1,
-    DownEvent_Drop = 2,
-    DownEvent_Reload = 4,
-    DownEvent_Swap = 8,
-}
 
 export const gameCamera: number[] = [0, 0, 1];
 export let lookAtX = 0;
@@ -75,11 +46,11 @@ export const resetPlayerControls = () => {
 export const couldBeReloadedManually = (player: PlayerActor): boolean => {
     const weapon = weapons[player._weapon];
     return weapon && !player._clipReload && weapon._clipSize && player._clipAmmo < weapon._clipSize;
-}
+};
 
 export const couldSwapWeaponSlot = (player: PlayerActor): boolean => {
     return !!player._weapon2;
-}
+};
 
 export const updateControls = (player: PlayerActor) => {
     const W = gl.drawingBufferWidth;
@@ -87,7 +58,7 @@ export const updateControls = (player: PlayerActor) => {
 
     const mouse = mousePointer;
 
-    const px = (player._x) / WORLD_SCALE;
+    const px = player._x / WORLD_SCALE;
     const py = (player._y - player._z) / WORLD_SCALE - 10;
 
     if (mouse._x >= 0 && mouse._x < W && mouse._y >= 0 && mouse._y < H) {
@@ -102,10 +73,12 @@ export const updateControls = (player: PlayerActor) => {
 
     shootButtonDown = (viewX || viewY) && mouse._active;
 
-    moveX = (keyboardState[KeyCode.D] | keyboardState[KeyCode.Right])
-        - (keyboardState[KeyCode.A] | keyboardState[KeyCode.Left]);
-    moveY = (keyboardState[KeyCode.S] | keyboardState[KeyCode.Down])
-        - (keyboardState[KeyCode.W] | keyboardState[KeyCode.Up]);
+    moveX =
+        (keyboardState[KeyCode.D] | keyboardState[KeyCode.Right]) -
+        (keyboardState[KeyCode.A] | keyboardState[KeyCode.Left]);
+    moveY =
+        (keyboardState[KeyCode.S] | keyboardState[KeyCode.Down]) -
+        (keyboardState[KeyCode.W] | keyboardState[KeyCode.Up]);
 
     //if (moveX || moveY) {
     moveFast = !keyboardState[KeyCode.Shift];
@@ -141,7 +114,7 @@ export const updateControls = (player: PlayerActor) => {
         reloadButton = !!vpad[3]._pointer;
         swapButton = !!vpad[4]._pointer;
     }
-}
+};
 
 interface VPadControl {
     _l: number;
@@ -167,8 +140,7 @@ const vpad: VPadControl[] = [
 ];
 let touchPadActive = false;
 
-const checkPointerIsAvailableForCapturing = (pointer: Pointer) =>
-    !vpad.some(c => c._pointer == pointer);
+const checkPointerIsAvailableForCapturing = (pointer: Pointer) => !vpad.some(c => c._pointer == pointer);
 
 const testZone = (control: VPadControl, rx: number, ry: number) =>
     rx > control._l && rx < control._r && ry > control._t && ry < control._b;
@@ -182,9 +154,11 @@ const updateVirtualPad = () => {
         if (!control._pointer) {
             // capture
             for (const [, p] of inputPointers) {
-                if (p._downEvent &&
+                if (
+                    p._downEvent &&
                     testZone(control, p._startX / W, p._startY / H) &&
-                    checkPointerIsAvailableForCapturing(p)) {
+                    checkPointerIsAvailableForCapturing(p)
+                ) {
                     control._pointer = p;
                 }
             }
@@ -212,7 +186,7 @@ const updateVirtualPad = () => {
         // for(let [,p] of a) r|=p.v;
     }
     return touchPadActive;
-}
+};
 
 export const drawVirtualPad = () => {
     if (!touchPadActive) {
@@ -237,13 +211,13 @@ export const drawVirtualPad = () => {
                 drawCircle(boxTexture, pp._x * k, pp._y * k, 16, segments1, 1, 1, 0.5);
             }
             if (control._r1 !== undefined) {
-                drawTextShadowCenter(fnt[0], control._text1, 8, cx, cy - control._r1 - 4, pp ? 0xFFFFFF : 0x777777);
-                drawRing(boxTexture, cx, cy, control._r1 - 2, 4, segments1, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+                drawTextAligned(fnt[0], control._text1, 8, cx, cy - control._r1 - 4, pp ? 0xffffff : 0x777777);
+                drawRing(boxTexture, cx, cy, control._r1 - 2, 4, segments1, 1, 1, 0.5, pp ? 0xffffff : 0);
             }
             if (control._r2 !== undefined) {
-                drawTextShadowCenter(fnt[0], control._text2, 8, cx, cy - control._r2 - 4, pp ? 0xFFFFFF : 0x777777);
-                drawRing(boxTexture, cx, cy, control._r2 - 2, 4, segments2, 1, 1, 0.5, pp ? 0xFFFFFF : 0);
+                drawTextAligned(fnt[0], control._text2, 8, cx, cy - control._r2 - 4, pp ? 0xffffff : 0x777777);
+                drawRing(boxTexture, cx, cy, control._r2 - 2, 4, segments2, 1, 1, 0.5, pp ? 0xffffff : 0);
             }
         }
     }
-}
+};

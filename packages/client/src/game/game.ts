@@ -1,6 +1,6 @@
-import {ClientID} from "../../../shared/src/types";
-import {_room, _sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging";
-import {play, speak} from "../audio/context";
+import {ClientID} from "@iioi/shared/types.js";
+import {_room, _sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging.js";
+import {play, speak} from "../audio/context.js";
 import {
     ambientColor,
     beginRenderToMain,
@@ -10,13 +10,14 @@ import {
     flush,
     gl,
     setDrawZ,
-    setLightMapTexture
-} from "../graphics/draw2d";
-import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd";
-import {channels_sendObjectData} from "../net/channels_send";
-import {EMOJI, img, Img} from "../assets/gfx";
-import {Const, GAME_CFG} from "./config";
-import {generateMapBackground, mapTexture} from "../assets/map";
+    setLightMapTexture,
+} from "../graphics/draw2d.js";
+import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd.js";
+import {channels_sendObjectData} from "../net/channels_send.js";
+import {setPacketHandler} from "../net/channels.js";
+import {EMOJI, img} from "../assets/gfx.js";
+import {Const, GAME_CFG} from "./config.js";
+import {generateMapBackground, mapTexture} from "../assets/map.js";
 import {
     Actor,
     ActorType,
@@ -24,6 +25,7 @@ import {
     BulletActor,
     Client,
     ClientEvent,
+    ControlsFlag,
     ItemActor,
     ItemType,
     newStateData,
@@ -34,9 +36,9 @@ import {
     PlayerStat,
     StateData,
     unpackAngleByte,
-    Vel
-} from "./types";
-import {pack, unpack} from "./packets";
+    Vel,
+} from "./types.js";
+import {pack, unpack} from "./packets.js";
 import {
     abs,
     atan2,
@@ -53,10 +55,9 @@ import {
     reach,
     sin,
     sqrt,
-    TO_RAD
-} from "../utils/math";
+    TO_RAD,
+} from "../utils/math.js";
 import {
-    ControlsFlag,
     couldBeReloadedManually,
     drawVirtualPad,
     dropButton,
@@ -73,10 +74,10 @@ import {
     swapButton,
     updateControls,
     viewX,
-    viewY
-} from "./controls";
-import {Snd, snd} from "../assets/sfx";
-import {weapons} from "./data/weapons";
+    viewY,
+} from "./controls.js";
+import {Snd, snd} from "../assets/sfx.js";
+import {weapons} from "./data/weapons.js";
 import {
     addBoneParticles,
     addFleshParticles,
@@ -93,8 +94,8 @@ import {
     restoreParticles,
     saveParticles,
     updateMapTexture,
-    updateParticles
-} from "./particles";
+    updateParticles,
+} from "./particles.js";
 import {
     addPos,
     addRadialVelocity,
@@ -112,9 +113,9 @@ import {
     testRayWithSphere,
     updateActorPhysics,
     updateAnim,
-    updateBody
-} from "./phy";
-import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params";
+    updateBody,
+} from "./phy.js";
+import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {
     actorsConfig,
     ANIM_HIT_MAX,
@@ -122,24 +123,24 @@ import {
     OBJECT_RADIUS,
     PLAYER_HANDS_PX_Z,
     PLAYER_HANDS_Z,
-} from "./data/world";
-import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/ui";
-import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog";
+} from "./data/world.js";
+import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/gui.js";
+import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog.js";
 import {
     addDebugState,
     assertStateInSync,
     drawCollisions,
     printDebugInfo,
     saveDebugState,
-    updateDebugInput
-} from "./debug";
-import {addToGrid, queryGridCollisions} from "./grid";
-import {getOrCreate, RGB} from "../utils/utils";
-import {drawText, drawTextShadowCenter, fnt} from "../graphics/font";
-import {stats} from "../utils/fpsMeter";
-import {drawMiniMap} from "./minimap";
-import {updateAI} from "./ai";
-import {GL} from "../graphics/gl";
+    updateDebugInput,
+} from "./debug.js";
+import {addToGrid, queryGridCollisions} from "./grid.js";
+import {getOrCreate, RGB} from "../utils/utils.js";
+import {drawText, drawTextAligned, fnt} from "../graphics/font.js";
+import {stats} from "../utils/fpsMeter.js";
+import {drawMiniMap} from "./minimap.js";
+import {updateAI} from "./ai/npc.js";
+import {GL} from "../graphics/gl.js";
 import {
     drawBarrelOpaque,
     drawBullet,
@@ -149,23 +150,26 @@ import {
     drawShadows,
     drawTreeOpaque,
     getHitColorOffset,
-    setupWorldCameraMatrix
-} from "./gameDraw";
-import {getDevSetting, settings} from "./settings";
-import {bullets, BulletType} from "./data/bullets";
-import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState";
-import {newSeedFromTime} from "@eliasku/13-shared/src/seed";
-import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors";
-import {poki} from "../poki";
-import {isAnyKeyDown} from "../utils/input";
-import {delay} from "../utils/delay";
-import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu";
+    setupWorldCameraMatrix,
+} from "./gameDraw.js";
+import {getDevFlag, hasSettingsFlag, SettingFlag} from "./settings.js";
+import {bullets, BulletType} from "./data/bullets.js";
+import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState.js";
+import {newSeedFromTime} from "@iioi/shared/seed.js";
+import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors.js";
+import {poki} from "../poki.js";
+import {isAnyKeyDown} from "../utils/input.js";
+import {delay} from "../utils/delay.js";
+import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu.js";
+import {addReplayTicEvents, beginRecording, ReplayFile} from "./replay.js";
+import {Img} from "../assets/img.js";
+import {autoplayInput, updateAutoplay} from "./ai/common.js";
 
 export const gameMenu: GameMenu = {
     _state: GameMenuState.InGame,
 };
 
-const clients = new Map<ClientID, Client>()
+const clients = new Map<ClientID, Client>();
 
 // TODO: check idea of storage events in map?
 let localEvents: ClientEvent[] = [];
@@ -186,15 +190,16 @@ let lastInputCmd = 0;
 let lastAudioTic = 0;
 
 // static state
-let trees: Actor[] = [];
-let playersGrid: PlayerActor[][] = [];
-let barrelsGrid: BarrelActor[][] = [];
-let treesGrid: Actor[][] = [];
+const trees: Actor[] = [];
+const playersGrid: PlayerActor[][] = [];
+const barrelsGrid: BarrelActor[][] = [];
+const treesGrid: Actor[][] = [];
 let hotUsable: ItemActor | null = null;
 
 // dynamic state
 let state: StateData = newStateData();
 let lastState: StateData;
+
 export const gameMode = {
     _title: false,
     _runAI: false,
@@ -203,7 +208,26 @@ export const gameMode = {
     _tiltCamera: 0.0,
     _bloodRain: false,
     _npcLevel: 0,
+    _replay: undefined as undefined | ReplayFile,
 };
+
+export function enableReplayMode(replay: ReplayFile) {
+    remoteClients.clear();
+    for (const sid in replay._meta.clients) {
+        const id = parseInt(sid);
+        const name = replay._meta.clients[id];
+        remoteClients.set(id, {_id: id, _name: name});
+    }
+    gameMode._replay = replay;
+    rewindReplayToStart();
+}
+
+export function rewindReplayToStart() {
+    state = cloneState(gameMode._replay._state);
+    localEvents = gameMode._replay._stream.concat();
+    startTic = -1;
+    _SEEDS[0] = state._seed;
+}
 
 // 0...50
 let cameraShake = 0;
@@ -219,18 +243,20 @@ const createItemActor = (subtype: number): ItemActor => {
 
 const createRandomItem = (): ItemActor => createItemActor(rand(6));
 
-const requireClient = (id: ClientID): Client => getOrCreate(clients, id, () => ({
-    _id: id,
-    _tic: 0,
-    _ts0: 0,
-    _ts1: 0,
-    _acknowledgedTic: 0
-}));
+const requireClient = (id: ClientID): Client =>
+    getOrCreate(clients, id, () => ({
+        _id: id,
+        _tic: 0,
+        _ts0: 0,
+        _ts1: 0,
+        _acknowledgedTic: 0,
+    }));
 
 const requireStats = (id: ClientID): PlayerStat => getOrCreate(state._stats, id, () => ({_frags: 0, _scores: 0}));
 
 export const resetGame = () => {
     resetParticles();
+    resetPlayerControls();
 
     clients.clear();
     localEvents.length = 0;
@@ -263,9 +289,9 @@ export const resetGame = () => {
     gameMode._tiltCamera = 0.0;
     gameMode._npcLevel = 0;
     gameMode._bloodRain = false;
-
+    gameMode._replay = undefined;
     gameMenu._state = GameMenuState.InGame;
-}
+};
 
 const recreateMap = (themeIdx: number, seed: number) => {
     // generate map
@@ -284,16 +310,16 @@ const recreateMap = (themeIdx: number, seed: number) => {
     }
     _SEEDS[0] = state._seed;
     state._nextId = nextId;
-}
+};
 
 const pushActor = <T extends Actor>(a: T) => {
-    const list = state._actors[a._type as (0 | 1 | 2 | 3)] as T[];
+    const list = state._actors[a._type as 0 | 1 | 2 | 3] as T[];
     if (process.env.NODE_ENV === "development") {
         console.assert(list && list.indexOf(a) < 0);
     }
     a._id = state._nextId++;
     list.push(a);
-}
+};
 
 function initBarrels() {
     const count = GAME_CFG._barrels._initCount;
@@ -313,7 +339,7 @@ export const createSeedGameState = () => {
     state._seed = _SEEDS[0];
     recreateMap(_room._mapTheme, _room._mapSeed);
     initBarrels();
-}
+};
 
 export const createSplashState = () => {
     startTic = 0;
@@ -340,17 +366,24 @@ export const createSplashState = () => {
     gameMode._tiltCamera = 0.05;
     gameMode._bloodRain = true;
     gameMode._title = true;
-}
+};
 
 export const updateGame = (ts: number) => {
     updateFrameTime(ts);
 
-    if (clientId && startTic < 0 && !remoteClients.size) {
-        createSeedGameState();
+    if (startTic < 0) {
+        if (gameMode._replay) {
+            startTic = state._tic;
+            gameTic = state._tic;
+            _SEEDS[0] = state._seed;
+            recreateMap(_room._mapTheme, _room._mapSeed);
+        } else if (clientId && !remoteClients.size) {
+            createSeedGameState();
+        }
     }
 
     if (clientId && startTic >= 0) {
-        onGameMenu(gameMenu);
+        onGameMenu(gameMenu, gameMode._replay, gameTic);
     }
 
     let predicted = false;
@@ -358,9 +391,9 @@ export const updateGame = (ts: number) => {
         const minTic = getMinTic();
         let actualStateCount = 0;
         let maxState: StateData | null = null;
-        let maxStateTic: number = 0;
+        let maxStateTic = 0;
         let playingClients = 0;
-        for (const [id, _] of remoteClients) {
+        for (const [id] of remoteClients) {
             const client = clients.get(id);
             if (client) {
                 if (client._isPlaying) {
@@ -385,8 +418,45 @@ export const updateGame = (ts: number) => {
         }
     }
     if (startTic >= 0) {
-        cleaningUpClients();
-        tryRunTicks(lastFrameTs);
+        if (gameMode._replay) {
+            const ticsPerSecond = Const.NetFq * (gameMode._replay._playbackSpeed ?? 1);
+            let frames = ((ts - prevTime) * ticsPerSecond) | 0;
+            const end = gameMode._replay._meta.end;
+            const paused = gameMode._replay._paused;
+            if (paused) {
+                prevTime = ts;
+                frames = 0;
+            }
+            if (gameMode._replay._rewind != null) {
+                const toTic = gameMode._replay._rewind;
+                if (toTic > gameTic) {
+                    frames = toTic - gameTic + 3;
+                    prevTime = ts - frames / ticsPerSecond;
+                } else {
+                    //rewindReplayToStart();
+                    state = cloneState(gameMode._replay._state);
+                    localEvents = gameMode._replay._stream.concat();
+                    _SEEDS[0] = state._seed;
+                    gameTic = state._tic;
+                    frames = toTic + 1;
+                    prevTime = ts - frames / ticsPerSecond;
+                }
+                gameMode._replay._rewind = undefined;
+            }
+            if (gameTic >= end) {
+                prevTime = ts;
+                frames = 0;
+                rewindReplayToStart();
+            }
+            while (gameTic <= end && frames--) {
+                simulateTic();
+                normalizeState();
+                prevTime += 1 / ticsPerSecond;
+            }
+        } else {
+            cleaningUpClients();
+            tryRunTicks(lastFrameTs);
+        }
         predicted = beginPrediction();
     }
     if (!document.hidden) {
@@ -394,25 +464,31 @@ export const updateGame = (ts: number) => {
         drawOverlay();
         updateMapTexture(lastFrameTs);
     }
+    updateDebugInput();
+
     if (startTic >= 0) {
         // check input before overlay, or save camera settings
-        updatePlayerControls();
+        if (!gameMode._replay) {
+            updatePlayerControls();
+        }
 
         if (predicted) endPrediction();
 
-        checkJoinSync();
-        checkPlayerInput();
-        sendInput();
+        if (!gameMode._replay) {
+            checkJoinSync();
+            checkPlayerInput();
+            sendInput();
+        }
     }
-}
+};
 
-const getWeaponInfoHeader = (wpn: number, ammo: number, reload: number = 0): string => {
+const getWeaponInfoHeader = (wpn: number, ammo: number, reload = 0): string => {
     if (wpn) {
         const weapon = weapons[wpn];
         let txt = EMOJI[Img.weapon0 + wpn];
         if (weapon._clipSize) {
             if (reload) {
-                txt += ((100 * (weapon._clipReload - reload) / weapon._clipReload) | 0) + "%";
+                txt += (((100 * (weapon._clipReload - reload)) / weapon._clipReload) | 0) + "%";
             } else {
                 txt += ammo;
             }
@@ -422,7 +498,7 @@ const getWeaponInfoHeader = (wpn: number, ammo: number, reload: number = 0): str
         return txt;
     }
     return "";
-}
+};
 
 const printStatus = () => {
     if (clientId) {
@@ -431,16 +507,16 @@ const printStatus = () => {
             if (p0) {
                 let str = "";
                 const hp = p0._hp;
-                for (let i = 0; i < 10;) {
+                for (let i = 0; i < 10; ) {
                     const o2 = hp > i++;
                     const o1 = hp > i++;
-                    str += o1 ? "❤️" : (o2 ? "💔" : "🖤");
+                    str += o1 ? "❤️" : o2 ? "💔" : "🖤";
                 }
                 const sp = p0._sp;
-                for (let i = 0; i < 10;) {
+                for (let i = 0; i < 10; ) {
                     const o2 = sp > i++;
                     const o1 = sp > i++;
-                    str += o1 ? "🛡" : (o2 ? "🪖️️" : "");
+                    str += o1 ? "🛡" : o2 ? "🪖️️" : "";
                 }
                 termPrint(str);
                 {
@@ -460,17 +536,17 @@ const printStatus = () => {
 
         const getPlayerIcon = (id?: ClientID) => {
             const player = getPlayerByClient(id);
-            return player ? EMOJI[Img.avatar0 + player._anim0 % Img.num_avatars] : "👁️";
-        }
+            return player ? EMOJI[Img.avatar0 + (player._anim0 % Img.num_avatars)] : "👁️";
+        };
         const getPlayerStatInfo = (id?: ClientID): string => {
             const stat = state._stats.get(id);
             return `|☠${stat?._frags ?? 0}|🪙${stat?._scores ?? 0}`;
-        }
+        };
 
         termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
         for (const [id, rc] of remoteClients) {
             let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc._name + getPlayerStatInfo(id);
-            if (1 || settings.dev) {
+            if (getDevFlag()) {
                 const cl = clients.get(id);
                 if (cl && cl._lag !== undefined) {
                     text += " " + cl._lag;
@@ -479,10 +555,9 @@ const printStatus = () => {
             termPrint(text);
         }
     }
-}
+};
 
-const getMyPlayer = (): PlayerActor | undefined =>
-    clientId ? getPlayerByClient(clientId) : undefined;
+const getMyPlayer = (): PlayerActor | undefined => (clientId ? getPlayerByClient(clientId) : undefined);
 
 const getPlayerByClient = (c: ClientID): PlayerActor | undefined =>
     state._actors[ActorType.Player].find(p => p._client == c);
@@ -493,88 +568,93 @@ const getLocalEvent = (tic: number, _e?: ClientEvent): ClientEvent => {
         localEvents.push(_e);
     }
     return _e;
-}
+};
 
-const getNextInputTic = (tic: number) =>
-    tic + max(
-        Const.InputDelay,
-        ((lastFrameTs - prevTime) * Const.NetFq) | 0
-    );
+const getNextInputTic = (tic: number) => tic + max(Const.InputDelay, ((lastFrameTs - prevTime) * Const.NetFq) | 0);
 
 const updatePlayerControls = () => {
-    updateDebugInput();
-
-    const player = getMyPlayer();
-    if (player) {
-        if (gameMenu._state == GameMenuState.InGame) {
-            updateControls(player);
+    const myPlayer = getMyPlayer();
+    if (myPlayer) {
+        if (gameMenu._state == GameMenuState.InGame && !hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
+            updateControls(myPlayer);
         } else {
             resetPlayerControls();
         }
+
+        // process Auto-play tic
+        if (hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
+            updateAutoplay(state, myPlayer._client);
+        }
     }
-}
+};
 
 const checkPlayerInput = () => {
     let inputTic = getNextInputTic(gameTic);
     const player = getMyPlayer();
-    let btn = 0;
+    let input = 0;
     if (player) {
-        if (moveX || moveY) {
-            btn |= (packDirByte(moveX, moveY, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) | ControlsFlag.Move;
-            if (moveFast) {
-                btn |= ControlsFlag.Run;
+        if (getDevFlag(SettingFlag.DevAutoPlay)) {
+            input = autoplayInput;
+        } else {
+            if (moveX || moveY) {
+                input |=
+                    (packDirByte(moveX, moveY, ControlsFlag.MoveAngleMax) << ControlsFlag.MoveAngleBit) |
+                    ControlsFlag.Move;
+                if (moveFast) {
+                    input |= ControlsFlag.Run;
+                }
             }
-        }
 
-        if (viewX || viewY) {
-            btn |= packDirByte(viewX, viewY, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
-            if (shootButtonDown) {
-                btn |= ControlsFlag.Fire;
+            if (viewX || viewY) {
+                input |= packDirByte(viewX, viewY, ControlsFlag.LookAngleMax) << ControlsFlag.LookAngleBit;
+                if (shootButtonDown) {
+                    input |= ControlsFlag.Fire;
+                }
             }
-        }
 
-        if (jumpButtonDown) {
-            btn |= ControlsFlag.Jump;
-        }
+            if (jumpButtonDown) {
+                input |= ControlsFlag.Jump;
+            }
 
-        if (dropButton) {
-            btn |= ControlsFlag.Drop;
-        }
+            if (dropButton) {
+                input |= ControlsFlag.Drop;
+            }
 
-        if (reloadButton) {
-            btn |= ControlsFlag.Reload;
-        }
+            if (reloadButton) {
+                input |= ControlsFlag.Reload;
+            }
 
-        if (swapButton) {
-            btn |= ControlsFlag.Swap;
+            if (swapButton) {
+                input |= ControlsFlag.Swap;
+            }
         }
     }
 
     // RESPAWN EVENT
     if (!gameMode._title && clientId && !waitToSpawn && !player && joined && allowedToRespawn) {
         if (isAnyKeyDown() || waitToAutoSpawn) {
-            btn |= ControlsFlag.Spawn;
+            input |= ControlsFlag.Spawn;
             waitToSpawn = true;
             waitToAutoSpawn = false;
             allowedToRespawn = false;
         }
     }
 
-    if (lastInputCmd !== btn) {
+    if (lastInputCmd !== input) {
         if (inputTic <= lastInputTic) {
             inputTic = lastInputTic + 1;
         }
         lastInputTic = inputTic;
         // copy flag in case of rewriting local event for ONE-SHOT events
         const g = getLocalEvent(inputTic);
-        if (g._btn & ControlsFlag.Spawn) {
-            btn |= ControlsFlag.Spawn;
+        if (g._input & ControlsFlag.Spawn) {
+            input |= ControlsFlag.Spawn;
         }
 
-        getLocalEvent(inputTic)._btn = btn;
-        lastInputCmd = btn;
+        getLocalEvent(inputTic)._input = input;
+        lastInputCmd = input;
     }
-}
+};
 
 const checkJoinSync = () => {
     if (!joined && startTic >= 0) {
@@ -596,10 +676,15 @@ const checkJoinSync = () => {
         waitToSpawn = false;
         waitToAutoSpawn = true;
         allowedToRespawn = true;
+
+        beginRecording(state);
     }
-}
+};
 
 const getMinTic = (_tic: number = 1 << 30) => {
+    if (gameMode._replay) {
+        return gameTic;
+    }
     if (!clientId || !joined) {
         _tic = gameTic + Const.InputDelay + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
     }
@@ -616,7 +701,7 @@ const getMinTic = (_tic: number = 1 << 30) => {
         _tic = gameTic + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
     }
     return _tic;
-}
+};
 
 // get minimum tic that already received by
 const getMinAckAndInput = (lastTic: number) => {
@@ -626,13 +711,13 @@ const getMinAckAndInput = (lastTic: number) => {
         }
     }
     return lastTic;
-}
+};
 
 const correctPrevTime = (netTic: number, ts: number) => {
     const lastTic = gameTic - 1;
     if (netTic === lastTic) {
         // limit predicted tics
-        if ((ts - prevTime) > Const.InputDelay / Const.NetFq) {
+        if (ts - prevTime > Const.InputDelay / Const.NetFq) {
             prevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
         }
     }
@@ -666,7 +751,7 @@ const tryRunTicks = (ts: number): number => {
     localEvents = localEvents.filter(v => v._tic > ackTic);
 
     return framesSimulated;
-}
+};
 
 const _packetBuffer = new Int32Array(1024 * 256);
 
@@ -677,9 +762,9 @@ const sendInput = () => {
             const cl = requireClient(id);
             const inputTic = getNextInputTic(lastTic);
             if (inputTic > cl._acknowledgedTic) {
-                cl._ts0 = performance.now() & 0x7FFFFFFF;
+                cl._ts0 = performance.now() & 0x7fffffff;
                 const packet: Packet = {
-                    _sync: cl._isPlaying,
+                    _sync: (cl._isPlaying as never) | 0,
                     // send to Client info that we know already
                     _receivedOnSender: cl._tic,
                     // t: lastTic + simTic + Const.InputDelay,
@@ -709,11 +794,11 @@ const sendInput = () => {
             }
         }
     }
-}
+};
 
 const processPacket = (sender: Client, data: Packet) => {
     sender._ts1 = data._ts0;
-    sender._lag = (performance.now() & 0x7FFFFFFF) - data._ts1;
+    sender._lag = (performance.now() & 0x7fffffff) - data._ts1;
     if (startTic < 0 && data._state) {
         if (!sender._startState || data._state._tic > sender._startState._tic) {
             sender._startState = data._state;
@@ -726,7 +811,7 @@ const processPacket = (sender: Client, data: Packet) => {
         }
     }
 
-    sender._ready = data._sync;
+    sender._ready = !!data._sync;
     // ignore old packets
     if (data._tic > sender._tic) {
         sender._isPlaying = true;
@@ -750,9 +835,9 @@ const processPacket = (sender: Client, data: Packet) => {
         sender._acknowledgedTic = data._receivedOnSender;
     }
     // }
-}
+};
 
-export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
+setPacketHandler((from: ClientID, buffer: ArrayBuffer) => {
     if (_sseState < 3) {
         return;
     }
@@ -764,12 +849,12 @@ export const onRTCPacket = (from: ClientID, buffer: ArrayBuffer) => {
             sendInput();
         }
     }
-}
+});
 
 let disconnectTimes = 0;
 
 const cleaningUpClients = () => {
-    for (const [id,] of clients) {
+    for (const [id] of clients) {
         //if (!isChannelOpen(remoteClients.get(id))) {
         if (!remoteClients.has(id)) {
             clients.delete(id);
@@ -788,7 +873,7 @@ const cleaningUpClients = () => {
         }
     }
     disconnectTimes = 0;
-}
+};
 
 /// Game logic
 
@@ -799,7 +884,7 @@ const setCurrentWeapon = (player: PlayerActor, weaponId: number) => {
         player._clipReload = 0;
         player._clipAmmo = weapon._clipSize;
     }
-}
+};
 
 const dropWeapon1 = (player: PlayerActor) => {
     const lookAngle = unpackAngleByte(player._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
@@ -816,7 +901,7 @@ const dropWeapon1 = (player: PlayerActor) => {
     item._itemWeaponAmmo = player._clipAmmo;
     player._weapon = 0;
     player._clipAmmo = 0;
-}
+};
 
 const lateUpdateDropButton = (player: PlayerActor) => {
     if (player._input & ControlsFlag.Drop) {
@@ -832,7 +917,7 @@ const lateUpdateDropButton = (player: PlayerActor) => {
     } else {
         player._trig &= ~ControlsFlag.DownEvent_Drop;
     }
-}
+};
 
 const updateWeaponPickup = (item: ItemActor, player: PlayerActor) => {
     if (player._input & ControlsFlag.Drop) {
@@ -854,7 +939,7 @@ const updateWeaponPickup = (item: ItemActor, player: PlayerActor) => {
             item._hp = item._subtype = 0;
         }
     }
-}
+};
 
 const isMyPlayer = (actor: PlayerActor) => clientId && actor._client === clientId && actor._type === ActorType.Player;
 
@@ -926,17 +1011,17 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
             }
         }
     }
-}
+};
 
 const updateGameCamera = () => {
     const getRandomPlayer = () => {
         const l = state._actors[ActorType.Player].filter(p => p._client && clients.has(p._client));
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
-    }
+    };
     let scale = GAME_CFG._camera._baseScale;
     let cameraX = gameCamera[0];
     let cameraY = gameCamera[1];
-    if (clientId && !gameMode._title) {
+    if ((clientId && !gameMode._title) || gameMode._replay) {
         const myPlayer = getMyPlayer();
         const p0 = myPlayer ?? getRandomPlayer();
         if (p0?._client) {
@@ -945,9 +1030,10 @@ const updateGameCamera = () => {
             const py = p0._y / WORLD_SCALE;
             cameraX = px;
             cameraY = py;
-            if (myPlayer) {
+            const autoPlay = hasSettingsFlag(SettingFlag.DevAutoPlay);
+            if (myPlayer && ((!autoPlay && !gameMode._replay) || gameMenu._state !== GameMenuState.InGame)) {
                 if (gameMenu._state === GameMenuState.InGame) {
-                    const viewM = 100 * wpn._cameraFeedback * cameraFeedback / (hypot(viewX, viewY) + 0.001);
+                    const viewM = (100 * wpn._cameraFeedback * cameraFeedback) / (hypot(viewX, viewY) + 0.001);
                     cameraX += wpn._cameraLookForward * (lookAtX - px) - viewM * viewX;
                     cameraY += wpn._cameraLookForward * (lookAtY - py) - viewM * viewY;
                     scale *= wpn._cameraScale;
@@ -960,7 +1046,7 @@ const updateGameCamera = () => {
     gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
     gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
     gameCamera[2] = lerpLog(gameCamera[2], scale / getScreenScale(), 0.05);
-}
+};
 
 const normalizeState = () => {
     for (const list of state._actors) {
@@ -969,27 +1055,31 @@ const normalizeState = () => {
         // normalize properties
         roundActors(list);
     }
-}
+};
 
 const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
-    if (bullet._hp &&
+    if (
+        bullet._hp &&
         bullet._damage &&
-        (bullet._ownerId > 0 ? (bullet._ownerId - ((actor as PlayerActor)._client | 0)) : (-bullet._ownerId - actor._id)) &&
-        testIntersection(bullet, actor)) {
+        (bullet._ownerId > 0 ? bullet._ownerId - ((actor as PlayerActor)._client | 0) : -bullet._ownerId - actor._id) &&
+        testIntersection(bullet, actor)
+    ) {
         hitWithBullet(actor, bullet);
     }
 };
 
 const simulateTic = () => {
-    const processTicCommands = (tic_events: number | ClientEvent[]) => {
-        tic_events = localEvents.concat(receivedEvents).filter(v => v._tic == tic_events);
-        tic_events.sort((a, b) => a._client - b._client);
-        for (const cmd of tic_events) {
-            if (cmd._btn !== undefined) {
+    const processTicCommands = (tic: number) => {
+        const tickEvents: ClientEvent[] = localEvents.concat(receivedEvents).filter(v => v._tic == tic);
+
+        tickEvents.sort((a, b) => a._client - b._client);
+        addReplayTicEvents(tic, tickEvents);
+        for (const cmd of tickEvents) {
+            if (cmd._input !== undefined) {
                 const player = getPlayerByClient(cmd._client);
                 if (player) {
-                    player._input = cmd._btn;
-                } else if (cmd._btn & ControlsFlag.Spawn) {
+                    player._input = cmd._input;
+                } else if (cmd._input & ControlsFlag.Spawn) {
                     const p = newPlayerActor();
                     p._client = cmd._client;
                     setRandomPosition(p);
@@ -1001,13 +1091,13 @@ const simulateTic = () => {
                     p._hp = GAME_CFG._player._hp;
                     p._sp = GAME_CFG._player._sp;
                     p._mags = GAME_CFG._player._mags;
-                    p._input = cmd._btn;
+                    // p._input = cmd._input;
                     setCurrentWeapon(p, 1 + rand(3));
                     pushActor(p);
                 }
             }
         }
-    }
+    };
     processTicCommands(gameTic);
 
     updateGameCamera();
@@ -1038,7 +1128,7 @@ const simulateTic = () => {
             queryGridCollisions(item, playersGrid, pickItem);
         }
         if (item._hp && item._lifetime) {
-            if ((gameTic % 3) === 0) {
+            if (gameTic % 3 === 0) {
                 --item._lifetime;
                 if (!item._lifetime) {
                     item._hp = 0;
@@ -1134,12 +1224,11 @@ const simulateTic = () => {
 
     state._seed = _SEEDS[0];
     state._tic = gameTic++;
-}
+};
 
 const castRayBullet = (bullet: BulletActor, dx: number, dy: number) => {
     for (const a of state._actors[ActorType.Player]) {
-        if (a._client - bullet._ownerId &&
-            testRayWithSphere(bullet, a, dx, dy)) {
+        if (a._client - bullet._ownerId && testRayWithSphere(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
     }
@@ -1226,10 +1315,9 @@ const kill = (actor: Actor) => {
                 });
         }
     }
-}
+};
 
 const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
-
     let absorbed = false;
     addVelFrom(actor, bullet, 0.1);
     actor._animHit = ANIM_HIT_MAX;
@@ -1243,7 +1331,7 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
                 actor._sp -= q;
                 damage -= q;
                 if (actor._type === ActorType.Player) {
-                    addImpactParticles(16, actor, bullet, [0x999999, 0x00CCCC, 0xFFFF00]);
+                    addImpactParticles(16, actor, bullet, [0x999999, 0x00cccc, 0xffff00]);
                     playAt(actor, Snd.hurt);
                 }
                 absorbed = true;
@@ -1282,7 +1370,7 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
                     stat._scores += player._client > 0 ? 5 : 1;
                     ++stat._frags;
                     state._stats.set(killerID, stat);
-                    if (settings.speech && gameTic > lastAudioTic) {
+                    if (hasSettingsFlag(SettingFlag.Speech) && gameTic > lastAudioTic) {
                         const a = getNameByClientId(killerID);
                         const b = getNameByClientId(player._client);
                         if (a) {
@@ -1317,7 +1405,7 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
             }
         }
     }
-}
+};
 
 const swapWeaponSlot = (player: PlayerActor) => {
     const weapon = player._weapon;
@@ -1326,7 +1414,7 @@ const swapWeaponSlot = (player: PlayerActor) => {
     player._clipAmmo = player._clipAmmo2;
     player._weapon2 = weapon;
     player._clipAmmo2 = ammo;
-}
+};
 
 const needReloadWeaponIfOutOfAmmo = (player: PlayerActor) => {
     if (player._weapon && !player._clipReload) {
@@ -1348,7 +1436,7 @@ const needReloadWeaponIfOutOfAmmo = (player: PlayerActor) => {
             }
         }
     }
-}
+};
 
 function calcVelocityWithWeapon(player: PlayerActor, velocity: number): number {
     const k = player._weapon ? weapons[player._weapon]._moveWeightK : 1.0;
@@ -1377,8 +1465,9 @@ const updatePlayer = (player: PlayerActor) => {
     const lookDirX = cos(lookAngle);
     const lookDirY = sin(lookAngle);
     if (player._input & ControlsFlag.Move) {
-        const vel = calcVelocityWithWeapon(player,
-            (player._input & ControlsFlag.Run) ? GAME_CFG._player._runVel : GAME_CFG._player._walkVel
+        const vel = calcVelocityWithWeapon(
+            player,
+            player._input & ControlsFlag.Run ? GAME_CFG._player._runVel : GAME_CFG._player._walkVel,
         );
         player._u = reach(player._u, vel * moveDirX, vel * c);
         player._v = reach(player._v, vel * moveDirY, vel * c);
@@ -1462,13 +1551,18 @@ const updatePlayer = (player: PlayerActor) => {
                     }
                     playAt(player, Snd.shoot);
                     for (let i = 0; i < weapon._spawnCount; ++i) {
-                        const a = lookAngle +
+                        const a =
+                            lookAngle +
                             weapon._angleVar * (random() - 0.5) +
                             weapon._angleSpread * (player._detune / weapon._detuneSpeed) * (random() - 0.5);
                         const dx = cos(a);
                         const dy = sin(a);
                         const bulletVelocity = weapon._velocity + weapon._velocityVar * (random() - 0.5);
-                        const bullet = newBulletActor(player._client || -player._id, weapon._bulletType, weapon._bulletDamage);
+                        const bullet = newBulletActor(
+                            player._client || -player._id,
+                            weapon._bulletType,
+                            weapon._bulletDamage,
+                        );
                         bullet._hp = weapon._bulletHp;
                         bullet._lifetime = weapon._bulletLifetime;
                         copyPosFromActorCenter(bullet, player);
@@ -1502,27 +1596,27 @@ const updatePlayer = (player: PlayerActor) => {
         const isLanded = player._z <= 0 && prevVelZ <= 0;
         if (isLanded) {
             const count = 8;
-            const n = abs(count * prevVelZ / GAME_CFG._player._jumpVel) | 0;
+            const n = abs((count * prevVelZ) / GAME_CFG._player._jumpVel) | 0;
             if (n > 0) {
                 addLandParticles(player, 240, n);
             }
         }
     }
-}
+};
 
 export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, vel?: Vel) => {
     addFleshParticles(amount, actor, expl, vel);
-}
+};
 
-const cloneState = (_state: StateData = state): StateData => ({
-    ..._state,
+const cloneState = (stateToCopy: StateData = state): StateData => ({
+    ...stateToCopy,
     _actors: [
-        _state._actors[0].map(a => ({...a})),
-        _state._actors[1].map(a => ({...a})),
-        _state._actors[2].map(a => ({...a})),
-        _state._actors[3].map(a => ({...a})),
+        stateToCopy._actors[0].map(a => ({...a})),
+        stateToCopy._actors[1].map(a => ({...a})),
+        stateToCopy._actors[2].map(a => ({...a})),
+        stateToCopy._actors[3].map(a => ({...a})),
     ],
-    _stats: new Map(_state._stats.entries()),
+    _stats: new Map(stateToCopy._stats.entries()),
 });
 
 const beginPrediction = (): boolean => {
@@ -1546,7 +1640,7 @@ const beginPrediction = (): boolean => {
         normalizeState();
     }
     return true;
-}
+};
 
 const endPrediction = () => {
     // global state
@@ -1555,7 +1649,7 @@ const endPrediction = () => {
     gameTic = state._tic + 1;
     // restore particles
     restoreParticles();
-}
+};
 
 /*** DRAWING ***/
 
@@ -1585,9 +1679,10 @@ const drawGame = () => {
     beginRenderToMain(
         gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0),
         gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0),
-        0.5, 0.5,
+        0.5,
+        0.5,
         fxRandomNorm(cameraShake / (8 * 50)),
-        1 / gameCamera[2]
+        1 / gameCamera[2],
     );
 
     {
@@ -1602,10 +1697,10 @@ const drawGame = () => {
     }
 
     {
-        const add = ((getHitColorOffset(getMyPlayer()?._animHit) & 0x990000) >>> 16) / 0xFF;
-        ambientColor[0] = clamp(0x40 / 0xFF + (0x20 / 0xFF) * sin(lastFrameTs) + add, 0, 1);
-        ambientColor[1] = 0x11 / 0xFF;
-        ambientColor[2] = 0x33 / 0xFF;
+        const add = ((getHitColorOffset(getMyPlayer()?._animHit) & 0x990000) >>> 16) / 0xff;
+        ambientColor[0] = clamp(0x40 / 0xff + (0x20 / 0xff) * sin(lastFrameTs) + add, 0, 1);
+        ambientColor[1] = 0x11 / 0xff;
+        ambientColor[2] = 0x33 / 0xff;
         ambientColor[3] = 0.8;
         setLightMapTexture(fogTexture._texture);
     }
@@ -1623,7 +1718,7 @@ const drawGame = () => {
     // skybox
     {
         const tex = fnt[0]._textureBoxLT;
-        const fullAmbientColor = RGB(ambientColor[0] * 0xFF, ambientColor[1] * 0xFF, ambientColor[2] * 0xFF);
+        const fullAmbientColor = RGB(ambientColor[0] * 0xff, ambientColor[1] * 0xff, ambientColor[2] * 0xff);
         draw(tex, -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
         draw(tex, -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
         draw(tex, -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
@@ -1638,20 +1733,30 @@ const drawGame = () => {
 
     drawObjects();
 
-    if (getDevSetting("dev_collision")) {
+    if (getDevFlag(SettingFlag.DevShowCollisionInfo)) {
         drawCollisions(drawList);
     }
 
     if (gameMode._title) {
         setDrawZ(1);
         for (let i = 10; i > 0; --i) {
-            let a = 0.5 * sin(i / 4 + lastFrameTs * 16);
-            const color = RGB((0x20 * (11 - i) + 0x20 * a) & 0xFF, 0, 0);
+            const a = 0.5 * sin(i / 4 + lastFrameTs * 16);
+            const color = RGB((0x20 * (11 - i) + 0x20 * a) & 0xff, 0, 0);
             const scale = 1 + i / 100;
-            const angle = a * i / 100;
+            const angle = (a * i) / 100;
             const i4 = i / 4;
             const y1 = gameCamera[1] + i4;
-            drawMeshSpriteUp(img[Img.logo_title], gameCamera[0] + fxRandomNorm(i4), y1 + 40 + fxRandomNorm(i4), 40, angle, scale, scale, 1, color);
+            drawMeshSpriteUp(
+                img[Img.logo_title],
+                gameCamera[0] + fxRandomNorm(i4),
+                y1 + 40 + fxRandomNorm(i4),
+                40,
+                angle,
+                scale,
+                scale,
+                1,
+                color,
+            );
         }
     }
     flush();
@@ -1662,7 +1767,7 @@ const drawGame = () => {
     drawTextParticles();
     drawHotUsableHint(hotUsable);
     flush();
-}
+};
 
 const drawOverlay = () => {
     setDrawZ(1000);
@@ -1680,26 +1785,45 @@ const drawOverlay = () => {
         }
     }
 
-    if (getDevSetting("dev_fps")) {
-        drawText(fnt[0], `FPS: ${stats._fps} | DC: ${stats._drawCalls} |  ⃤ ${stats._triangles} | ∷${stats._vertices}`, 4, 2, 5, 0, 0);
+    if (getDevFlag(SettingFlag.DevShowFrameStats)) {
+        drawText(
+            fnt[0],
+            `FPS: ${stats._fps} | DC: ${stats._drawCalls} |  ⃤ ${stats._triangles} | ∷${stats._vertices}`,
+            4,
+            2,
+            5,
+            0,
+            0,
+        );
     }
 
-    if (getDevSetting("dev_info")) {
-        printDebugInfo((lastState ?? state)._tic + 1, getMinTic(), lastFrameTs, prevTime, drawList, state, trees, clients);
+    if (getDevFlag(SettingFlag.DevShowDebugInfo)) {
+        printDebugInfo(
+            (lastState ?? state)._tic + 1,
+            getMinTic(),
+            lastFrameTs,
+            prevTime,
+            drawList,
+            state,
+            trees,
+            clients,
+        );
     }
 
     ui_renderNormal();
 
-    drawCrosshair(getMyPlayer(), gameCamera, scale);
+    if (gameMenu._state === GameMenuState.InGame) {
+        drawCrosshair(getMyPlayer(), gameCamera, scale);
+    }
 
     flush();
-}
+};
 
 const drawList: Actor[] = [];
 
 const collectVisibleActors = (...lists: Actor[][]) => {
     drawList.length = 0;
-    const pad = 2 * OBJECT_RADIUS / WORLD_SCALE;
+    const pad = (2 * OBJECT_RADIUS) / WORLD_SCALE;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
     const invScale = gameCamera[2] / 2;
@@ -1711,14 +1835,12 @@ const collectVisibleActors = (...lists: Actor[][]) => {
         for (const a of list) {
             const x = a._x / WORLD_SCALE;
             const y = a._y / WORLD_SCALE;
-            if ((x > l && x < r && y > t && y < b) ||
-                (a._type == ActorType.Bullet && a._subtype == BulletType.Ray)) {
+            if ((x > l && x < r && y > t && y < b) || (a._type == ActorType.Bullet && a._subtype == BulletType.Ray)) {
                 drawList.push(a);
             }
         }
     }
-}
-
+};
 
 function drawPlayerOpaque(p: PlayerActor): void {
     const co = getHitColorOffset(p._animHit);
@@ -1730,7 +1852,7 @@ function drawPlayerOpaque(p: PlayerActor): void {
     const y = p._y / WORLD_SCALE;
     const z = p._z / WORLD_SCALE;
     const speed = hypot(p._u, p._v, p._w);
-    const runK = (p._input & ControlsFlag.Run) ? 1 : 0.8;
+    const runK = p._input & ControlsFlag.Run ? 1 : 0.8;
     const walk = min(1, speed / 100);
     let base = -0.5 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
     const idle_base = (1 - walk) * ((1 + sin(10 * basePhase) ** 2) / 4);
@@ -1741,26 +1863,23 @@ function drawPlayerOpaque(p: PlayerActor): void {
     /////
 
     const wpn = weapons[p._weapon];
-    let viewAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
+    const viewAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
     const weaponBaseAngle = wpn._gfxRot * TO_RAD;
     const weaponBaseScaleX = wpn._gfxSx;
     const weaponBaseScaleY = 1;
     let weaponX = x;
     let weaponY = y;
-    let weaponZ = z + PLAYER_HANDS_PX_Z;
-    let weaponAngle = atan2(
-        y + 1000 * sin(viewAngle) - weaponY + weaponZ,
-        x + 1000 * cos(viewAngle) - weaponX
-    );
+    const weaponZ = z + PLAYER_HANDS_PX_Z;
+    let weaponAngle = atan2(y + 1000 * sin(viewAngle) - weaponY + weaponZ, x + 1000 * cos(viewAngle) - weaponX);
     let weaponSX = weaponBaseScaleX;
-    let weaponSY = weaponBaseScaleY;
+    const weaponSY = weaponBaseScaleY;
     let weaponBack = 0;
     if (weaponAngle < -0.2 && weaponAngle > -PI + 0.2) {
         weaponBack = 1;
         //weaponY -= 16 * 4;
     }
     const A = sin(weaponAngle - PI);
-    let wd = 6 + 12 * (weaponBack ? (A * A) : 0);
+    let wd = 6 + 12 * (weaponBack ? A * A : 0);
     let wx = 1;
     if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
         wx = -1;
@@ -1768,7 +1887,10 @@ function drawPlayerOpaque(p: PlayerActor): void {
     if (wpn._handsAnim) {
         // const t = max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
-        const t = min(1, wpn._launchTime > 0 ? (p._lifetime / wpn._launchTime) : max(0, (p._lifetime / wpn._reloadTime - 0.5) * 2));
+        const t = min(
+            1,
+            wpn._launchTime > 0 ? p._lifetime / wpn._launchTime : max(0, (p._lifetime / wpn._reloadTime - 0.5) * 2),
+        );
         wd += sin(t * PI) * wpn._handsAnim;
         weaponAngle -= -wx * PI * 0.25 * sin((1 - (1 - t) ** 2) * PI2);
     }
@@ -1783,7 +1905,15 @@ function drawPlayerOpaque(p: PlayerActor): void {
     weaponAngle += weaponBaseAngle;
 
     if (p._weapon) {
-        drawMeshSpriteUp(img[Img.weapon0 + p._weapon], weaponX, weaponY/* + (weaponBack ? -1 : 1)*/, weaponZ, weaponAngle, weaponSX, weaponSY);
+        drawMeshSpriteUp(
+            img[Img.weapon0 + p._weapon],
+            weaponX,
+            weaponY /* + (weaponBack ? -1 : 1)*/,
+            weaponZ,
+            weaponAngle,
+            weaponSX,
+            weaponSY,
+        );
     }
 
     drawMeshSpriteUp(img[Img.box_t], x - 3, y, z + 5, 0, 2, leg1, 1, colorArm, 0, co);
@@ -1813,14 +1943,26 @@ function drawPlayerOpaque(p: PlayerActor): void {
             armLen += 4;
         }
         drawMeshSpriteUp(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, sw1 + PI / 4, armLen, 2, 1, colorArm, 0, co);
-        drawMeshSpriteUp(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, sw2 + PI - PI / 4, armLen, 2, 1, colorArm, 0, co);
+        drawMeshSpriteUp(
+            img[Img.box_l],
+            x - 4,
+            y + 0.2,
+            z + 10 - base,
+            sw2 + PI - PI / 4,
+            armLen,
+            2,
+            1,
+            colorArm,
+            0,
+            co,
+        );
     }
 
     {
-        const imgHead = p._client ? (Img.avatar0 + p._anim0 % Img.num_avatars) : (Img.npc0 + p._anim0 % Img.num_npc);
+        const imgHead = p._client ? Img.avatar0 + (p._anim0 % Img.num_avatars) : Img.npc0 + (p._anim0 % Img.num_npc);
         const s = p._w / 500;
         const a = p._u / 500;
-        drawMeshSpriteUp(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xFFFFFF, 0, co);
+        drawMeshSpriteUp(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xffffff, 0, co);
     }
 }
 
@@ -1831,23 +1973,17 @@ const drawPlayer = (p: PlayerActor): void => {
     if (p._client > 0 && p._client !== clientId) {
         let name = getNameByClientId(p._client);
         if (process.env.NODE_ENV === "development") {
-            name = (name ?? "") + " #" + p._client
+            name = (name ?? "") + " #" + p._client;
         }
         if (name) {
             setDrawZ(32 + p._z / WORLD_SCALE);
-            drawTextShadowCenter(fnt[0], name, 6, x, y + 2);
+            drawTextAligned(fnt[0], name, 6, x, y + 2);
         }
     }
-}
+};
 
 type ActorDrawFunction = (p: Actor) => void;
-const DRAW_BY_TYPE: (ActorDrawFunction)[] = [
-    drawPlayer,
-    undefined,
-    drawBullet,
-    undefined,
-    undefined,
-];
+const DRAW_BY_TYPE: ActorDrawFunction[] = [drawPlayer, undefined, drawBullet, undefined, undefined];
 
 const DRAW_OPAQUE_BY_TYPE: (ActorDrawFunction | undefined)[] = [
     drawPlayerOpaque,
@@ -1871,7 +2007,7 @@ const drawObjects = () => {
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor._type]?.(actor);
     }
-}
+};
 
 const playAt = (actor: Actor, id: Snd) => {
     if (gameTic > lastAudioTic) {
@@ -1883,4 +2019,4 @@ const playAt = (actor: Actor, id: Snd) => {
             play(snd[id], v, clamp(dx, -1, 1));
         }
     }
-}
+};

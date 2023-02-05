@@ -1,18 +1,20 @@
-import {audioContext, audioMaster} from "./audio/context";
+import {audioContext, audioMaster} from "./audio/context.js";
 
-declare const PokiSDK: {
-    init(): Promise<void>;
-    setDebug(debugMode: boolean): void;
-    gameLoadingStart(): void;
-    gameLoadingFinished(): void;
-    gameplayStart(): void;
-    gameplayStop(): void;
-    commercialBreak(): Promise<void>;
-    rewardedBreak(): Promise<boolean>;
-    getURLParam(name: string): string | undefined;
-    shareableURL(params: Record<string, string>): Promise<string>;
-    isAdBlocked(): boolean;
-} | undefined;
+declare const PokiSDK:
+    | {
+          init(): Promise<void>;
+          setDebug(debugMode: boolean): void;
+          gameLoadingStart(): void;
+          gameLoadingFinished(): void;
+          gameplayStart(): void;
+          gameplayStop(): void;
+          commercialBreak(): Promise<void>;
+          rewardedBreak(): Promise<boolean>;
+          getURLParam(name: string): string | undefined;
+          shareableURL(params: Record<string, string>): Promise<string>;
+          isAdBlocked(): boolean;
+      }
+    | undefined;
 
 const sdk: typeof PokiSDK | undefined = typeof PokiSDK !== "undefined" ? PokiSDK : undefined;
 let adblock = false;
@@ -20,12 +22,15 @@ export const poki = {
     _init: async () => {
         console.log("poki init");
         if (sdk) {
-            await sdk.init().then(() => {
-                console.log("Poki SDK successfully initialized");
-            }).catch(() => {
-                adblock = true;
-                console.log("Initialized, but the user likely has adblock");
-            });
+            await sdk
+                .init()
+                .then(() => {
+                    console.log("Poki SDK successfully initialized");
+                })
+                .catch(() => {
+                    adblock = true;
+                    console.log("Initialized, but the user likely has adblock");
+                });
             sdk.setDebug(process.env.NODE_ENV === "development");
             sdk.gameLoadingStart();
         }
@@ -79,8 +84,7 @@ export const poki = {
     _getURLParam: (name: string): string | undefined => {
         if (sdk) {
             return sdk.getURLParam(name);
-        }
-        else {
+        } else {
             return new URL(location.href).searchParams.get(name);
         }
     },
