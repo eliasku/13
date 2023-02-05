@@ -1,6 +1,6 @@
 {
   "name": "iioi",
-  "version": "1.0.15",
+  "version": "0.0.0",
   "private": true,
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",

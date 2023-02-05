@@ -1,8 +1,8 @@
 {
     "name": "@iioi/tools",
-    "version": "1.0.15",
+    "version": "1.0.14",
     "private": true,
-    "description": "js13k game with p2p realtime multiplayer",
+    "description": "Helpers to build iioi game",
     "type": "module",
     "author": "eliasku",
     "license": "ISC"

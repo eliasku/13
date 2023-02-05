@@ -1,6 +1,6 @@
 {
     "name": "@iioi/autoplay",
-    "version": "1.0.15",
+    "version": "1.0.14",
     "description": "Default bot for Player autoplay, used mostly for testing",
     "private": true,
     "type": "module",

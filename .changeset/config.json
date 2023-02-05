@@ -3,7 +3,7 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "linked": [],
+  "linked": [["@iioi/*"]],
   "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "patch",

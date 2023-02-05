@@ -18,6 +18,6 @@
     "author": "eliasku",
     "license": "ISC",
     "dependencies": {
-        "@iioi/shared": "1.0.15"
+        "@iioi/shared": "1.0.14"
     }
 }

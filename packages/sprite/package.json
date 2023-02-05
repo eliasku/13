@@ -1,10 +1,10 @@
 {
     "name": "@iioi/sprite",
-    "version": "1.0.0",
+    "version": "1.0.14",
+    "description": "Helpers to make sprite assets for iioi game",
     "private": true,
     "scripts": {
-        "watch": "esbuild src/index.ts --watch --bundle --format=esm --outfile=public/index.js",
-        "typecheck": "tsc -p tsconfig.json --noEmit"
+        "watch": "esbuild src/index.ts --watch --bundle --format=esm --outfile=public/index.js"
     },
     "dependencies": {
         "earcut": "^2.2.4",

@@ -68,13 +68,20 @@ export function copyPublicAssets(publicDir = "public", debugAssets = true, index
 }
 
 let version = "1.0.0";
+try {
+    const pkg = JSON.parse(readFileSync("packages/client/package.json", "utf-8")) as {
+        version: string;
+    };
+    version = pkg.version ?? "1.0.0";
+} catch {
+    // ignore
+}
+
 let pokiGameId = "";
 try {
     const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as {
-        version: string;
-        poki?: {game_id?: string};
+        poki?: { game_id?: string };
     };
-    version = pkg.version ?? "1.0.0";
     pokiGameId = pkg.poki?.game_id ?? "";
 } catch {
     // ignore
