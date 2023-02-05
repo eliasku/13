@@ -17,11 +17,11 @@ export const vec2_normalize = (a: Vec2) => {
     const f = 1.0 / (Math.sqrt(a.x * a.x + a.y * a.y) + eps);
     return {
         x: a.x * f,
-        y: a.y * f
+        y: a.y * f,
     };
-}
+};
 /// Returns a perpendicular vector. (90 degree rotation)
-export const vec2_perp = (v: Vec2):Vec2 => ({
+export const vec2_perp = (v: Vec2): Vec2 => ({
     x: -v.y,
-    y: v.x
+    y: v.x,
 });

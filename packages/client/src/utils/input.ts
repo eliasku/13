@@ -40,7 +40,7 @@ export const KeyCode = {
     Digit8: 56,
     Digit9: 57,
 } as const;
-export type KeyCode = typeof KeyCode[keyof typeof KeyCode];
+export type KeyCode = (typeof KeyCode)[keyof typeof KeyCode];
 
 export let mousePointer: Pointer;
 export const inputPointers = new Map<number, Pointer>();
@@ -61,7 +61,7 @@ export const keyboardUp: number[] = [];
             // });
             audioContext.resume().catch();
         }
-    }
+    };
 
     /* @__PURE__ */
     const newPointer = (id_: number): Pointer => ({
@@ -83,36 +83,45 @@ export const keyboardUp: number[] = [];
         pointer._downEvent = true;
         pointer._active = true;
         // console.info("-down:", pointer.id_);
-    }
+    };
 
     const handleMove = (pointer: Pointer, x: number, y: number) => {
         pointer._x = x;
         pointer._y = y;
         // console.info("-move:", pointer.id_);
-    }
+    };
 
     const handleUp = (p: Pointer) => {
         p._upEvent = p._active;
         p._active = false;
         // console.info("-up:", pointer.id_);
-    }
-
-    const _handleMouse = (e: MouseEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect()) => {
-        fn(mousePointer,
-            ((e.clientX - _bb.x) * getDPR()) | 0,
-            ((e.clientY - _bb.y) * getDPR()) | 0);
     };
 
-    const _handleTouch = (e: TouchEvent, fn: (pointer: Pointer, x: number, y: number) => void, _bb: DOMRect = c.getBoundingClientRect(), _touch?: Touch) => {
+    const _handleMouse = (
+        e: MouseEvent,
+        fn: (pointer: Pointer, x: number, y: number) => void,
+        _bb: DOMRect = c.getBoundingClientRect(),
+    ) => {
+        fn(mousePointer, ((e.clientX - _bb.x) * getDPR()) | 0, ((e.clientY - _bb.y) * getDPR()) | 0);
+    };
+
+    const _handleTouch = (
+        e: TouchEvent,
+        fn: (pointer: Pointer, x: number, y: number) => void,
+        _bb: DOMRect = c.getBoundingClientRect(),
+        _touch?: Touch,
+    ) => {
         e.preventDefault();
         for (_touch of e.changedTouches) {
-            fn(getPointer(_touch.identifier),
+            fn(
+                getPointer(_touch.identifier),
                 ((_touch.clientX - _bb.x) * getDPR()) | 0,
-                ((_touch.clientY - _bb.y) * getDPR()) | 0);
+                ((_touch.clientY - _bb.y) * getDPR()) | 0,
+            );
         }
     };
 
-// INIT INPUT
+    // INIT INPUT
     mousePointer = newPointer(0);
 
     oncontextmenu = e => e.preventDefault();
@@ -131,30 +140,30 @@ export const keyboardUp: number[] = [];
         keyboardState[_kode] = 0;
     };
 
-    c.onmousedown = (e) => {
+    c.onmousedown = e => {
         _handleMouse(e, handleDown);
         // console.info("onmousedown");
     };
 
-    c.onmouseup = (e) => {
+    c.onmouseup = () => {
         unlockAudio();
         handleUp(mousePointer);
         // console.info("onmouseup");
     };
 
-    c.onmouseleave = (e) => {
+    c.onmouseleave = () => {
         handleUp(mousePointer);
         // console.info("onmouseleave");
     };
 
-    c.onmouseenter = (e) => {
+    c.onmouseenter = e => {
         if (e.buttons) {
             _handleMouse(e, handleDown);
         }
         // console.info("onmouseenter");
     };
 
-    c.onmousemove = (e) => {
+    c.onmousemove = e => {
         _handleMouse(e, handleMove);
         // console.info("onmousemove");
     };
@@ -177,17 +186,14 @@ export const keyboardUp: number[] = [];
     };
 }
 
-const resetPointer = (p: Pointer) =>
-    p._downEvent = p._upEvent = false;
+const resetPointer = (p: Pointer) => (p._downEvent = p._upEvent = false);
 
 export const updateInput = () => {
     keyboardDown.length = 0;
     keyboardUp.length = 0;
     resetPointer(mousePointer);
     inputPointers.forEach(resetPointer);
-}
+};
 
 export const isAnyKeyDown = () =>
-    keyboardDown.length ||
-    mousePointer._upEvent ||
-    [...inputPointers.values()].some(x => x._upEvent);
+    keyboardDown.length || mousePointer._upEvent || [...inputPointers.values()].some(x => x._upEvent);

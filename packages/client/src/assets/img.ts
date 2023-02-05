@@ -73,4 +73,4 @@ export const Img = {
     num_avatars: 15,
     num_npc: 8,
 } as const;
-export type Img = typeof Img[keyof typeof Img];
+export type Img = (typeof Img)[keyof typeof Img];

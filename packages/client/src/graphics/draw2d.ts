@@ -10,7 +10,7 @@ import {
     SHADER_U_MVP,
     SHADER_U_TEX,
     SHADER_U_TEX_1,
-    SHADER_VERTEX
+    SHADER_VERTEX,
 } from "./shader.js";
 import {Mat4} from "../utils/mat4.js";
 import {stats} from "../utils/fpsMeter.js";
@@ -27,7 +27,7 @@ export const gl = c.getContext("webgl", {
 
 gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
-export const getDPR = () => hasSettingsFlag(SettingFlag.HighDPI) ? devicePixelRatio : 1.0;
+export const getDPR = () => (hasSettingsFlag(SettingFlag.HighDPI) ? devicePixelRatio : 1.0);
 const onResize = () => {
     const dpr = getDPR();
     const width = document.body.clientWidth;
@@ -63,8 +63,8 @@ interface Program {
     u_ambientColor: WebGLUniformLocation;
     u_tex0: WebGLUniformLocation;
     u_tex1: WebGLUniformLocation;
-    a_position: GLint,
-    a_texCoord: GLint,
+    a_position: GLint;
+    a_texCoord: GLint;
     a_colorMul: GLint;
     a_colorAdd: GLint;
 }
@@ -82,19 +82,19 @@ const compileShader = (source: string, shader: GLenum | WebGLShader): WebGLShade
         }
     }
     return shader;
-}
+};
 
 const createBuffer = (type: GLenum, src: ArrayBufferLike, usage: GLenum) => {
     const buffer = gl.createBuffer();
     gl.bindBuffer(type, buffer);
     gl.bufferData(type, src, usage);
     return buffer;
-}
+};
 
 const bindAttrib = (name: GLint, size: number, stride: number, offset: number, type: GLenum, norm: boolean) => {
     gl.enableVertexAttribArray(name);
     gl.vertexAttribPointer(name, size, type, norm, stride, offset);
-}
+};
 
 const createProgram = (vs: string, fs: string): WebGLProgram => {
     const vertShader = compileShader(vs, GL.VERTEX_SHADER);
@@ -116,13 +116,13 @@ const createProgram = (vs: string, fs: string): WebGLProgram => {
     gl.deleteShader(fragShader);
 
     return program;
-}
+};
 
 let baseVertex = 0;
 let currentIndex = 0;
 let quadTexture: WebGLTexture;
 let lightMapTexture: WebGLTexture;
-export let ambientColor = new Float32Array([0, 0, 0, 0]);
+export const ambientColor = new Float32Array([0, 0, 0, 0]);
 
 export function setLightMapTexture(texture: WebGLTexture) {
     lightMapTexture = texture;
@@ -168,7 +168,7 @@ let dynamicBufferFrame = 0;
 export const completeFrame = () => {
     dynamicBufferIndex = 0;
     dynamicBufferFrame = (dynamicBufferFrame + 1) & 3;
-}
+};
 
 function bindProgramBuffers(program: Program, buffers: DynamicBuffers) {
     gl.bindBuffer(GL.ARRAY_BUFFER, buffers.vb);
@@ -201,7 +201,15 @@ export interface Texture {
     _vertices?: Float32Array;
 }
 
-export const getSubTexture = (src: Texture, x: number, y: number, w: number, h: number, ax: number = 0.5, ay: number = 0.5): Texture => ({
+export const getSubTexture = (
+    src: Texture,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    ax = 0.5,
+    ay = 0.5,
+): Texture => ({
     _texture: src._texture,
     _w: w,
     _h: h,
@@ -222,7 +230,7 @@ export const createTexture = (sizeOrWidth: number, height?: number): Texture => 
     _u0: 0,
     _v0: 0,
     _u1: 1,
-    _v1: 1
+    _v1: 1,
 });
 
 export const initFramebuffer = (texture: Texture) => {
@@ -230,7 +238,7 @@ export const initFramebuffer = (texture: Texture) => {
     gl.bindFramebuffer(GL.FRAMEBUFFER, texture._fbo);
     gl.bindTexture(GL.TEXTURE_2D, texture._texture);
     gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture._texture, 0);
-}
+};
 
 export const uploadTexture = (texture: Texture, source?: TexImageSource, filter: GLint = GL.NEAREST): void => {
     gl.bindTexture(GL.TEXTURE_2D, texture._texture);
@@ -241,7 +249,7 @@ export const uploadTexture = (texture: Texture, source?: TexImageSource, filter:
     } else {
         gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, texture._w, texture._h, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
     }
-}
+};
 
 export const emptyTexture = createTexture(4);
 {
@@ -253,10 +261,14 @@ export const emptyTexture = createTexture(4);
 
 // set projection and activate 0 texture level
 export const setupProjection = (
-    posX: number, posY: number,
-    pivotX: number, pivotY: number,
-    angle: number, scale: number,
-    width: number, height: number
+    posX: number,
+    posY: number,
+    pivotX: number,
+    pivotY: number,
+    angle: number,
+    scale: number,
+    width: number,
+    height: number,
 ) => {
     const x = posX - width * pivotX;
     const y = posY - height * pivotY;
@@ -290,29 +302,39 @@ export const setupProjection = (
     */
     const depth = 1e5;
     gl.uniformMatrix4fv(program.u_mvp, false, [
-        c * w, s * h, 0, 0,
-        -s * w, c * h, 0, 0,
-        0, 0, -1 / depth, 0,
-        (posX * (1 - c) + posY * s) * w - 2 * x / width - 1,
-        (posY * (1 - c) - posX * s) * h + 2 * y / height + 1,
-        0, 1,
+        c * w,
+        s * h,
+        0,
+        0,
+        -s * w,
+        c * h,
+        0,
+        0,
+        0,
+        0,
+        -1 / depth,
+        0,
+        (posX * (1 - c) + posY * s) * w - (2 * x) / width - 1,
+        (posY * (1 - c) - posX * s) * h + (2 * y) / height + 1,
+        0,
+        1,
     ]);
 
     gl.uniform1i(program.u_tex0, 0);
     gl.uniform1i(program.u_tex1, 1);
     gl.uniform4fv(program.u_ambientColor, ambientColor);
-}
+};
 
 export const beginRender = () => {
     gl.enable(GL.BLEND);
     gl.blendFunc(GL.ONE, GL.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(program.program);
-}
+};
 
 export const clear = (r: number, g: number, b: number, a: number) => {
     gl.clearColor(r, g, b, a);
     gl.clear(GL.COLOR_BUFFER_BIT);
-}
+};
 
 export const beginRenderToTexture = (texture: Texture, scale: number) => {
     beginRender();
@@ -322,22 +344,29 @@ export const beginRenderToTexture = (texture: Texture, scale: number) => {
     gl.bindFramebuffer(GL.FRAMEBUFFER, texture._fbo);
     gl.viewport(0, 0, w, h);
     gl.scissor(0, 0, w, h);
-}
+};
 
 export function setMVP(m: Mat4) {
     gl.uniformMatrix4fv(program.u_mvp, false, m);
 }
 
-export const beginRenderToMain = (x: number, y: number, px: number, py: number, angle: number, scale: number,
-                                  w = gl.drawingBufferWidth,
-                                  h = gl.drawingBufferHeight) => {
+export const beginRenderToMain = (
+    x: number,
+    y: number,
+    px: number,
+    py: number,
+    angle: number,
+    scale: number,
+    w = gl.drawingBufferWidth,
+    h = gl.drawingBufferHeight,
+) => {
     beginRender();
     setupProjection(x, y, px, py, angle, scale, w, h);
     gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     gl.viewport(0, 0, w, h);
     gl.enable(GL.SCISSOR_TEST);
     gl.scissor(0, 0, w, h);
-}
+};
 
 function nextDynamicBuffer(): DynamicBuffers {
     const streamBuffers = dynamicBuffers[dynamicBufferFrame];
@@ -372,20 +401,31 @@ export const flush = (_indicesCount = currentIndex) => {
         currentIndex = 0;
         baseVertex = 0;
     }
-}
+};
 
 export let drawZ = 0;
-export const setDrawZ = (z: number) => drawZ = z;
+export const setDrawZ = (z: number) => (drawZ = z);
 
-export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) => {
+export const draw = (
+    texture: Texture,
+    x: number,
+    y: number,
+    r = 0,
+    sx = 1,
+    sy = 1,
+    alpha = 1,
+    color = 0xffffff,
+    additive = 0,
+    offset = 0,
+) => {
     if (quadTexture != texture._texture || baseVertex + 4 >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
     }
     let i = baseVertex * floatSize;
 
-    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
-    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+    const colorMul = (((alpha * 0xff) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xff) << 24) | offset) >>> 0;
 
     // const anchorX = 0;
     // const anchorY = 0;
@@ -413,7 +453,7 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
     vertexF32[i++] = x0 * cs - y0 * sn + x;
     vertexF32[i++] = x0 * sn + y0 * cs + y;
     vertexF32[i++] = drawZ;
-    vertexF32[i++] = u0
+    vertexF32[i++] = u0;
     vertexF32[i++] = v0;
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
@@ -421,7 +461,7 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
     vertexF32[i++] = x1 * cs - y0 * sn + x;
     vertexF32[i++] = x1 * sn + y0 * cs + y;
     vertexF32[i++] = drawZ;
-    vertexF32[i++] = u1
+    vertexF32[i++] = u1;
     vertexF32[i++] = v0;
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
@@ -429,7 +469,7 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
     vertexF32[i++] = x1 * cs - y1 * sn + x;
     vertexF32[i++] = x1 * sn + y1 * cs + y;
     vertexF32[i++] = drawZ;
-    vertexF32[i++] = u1
+    vertexF32[i++] = u1;
     vertexF32[i++] = v1;
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
@@ -437,7 +477,7 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
     vertexF32[i++] = x0 * cs - y1 * sn + x;
     vertexF32[i++] = x0 * sn + y1 * cs + y;
     vertexF32[i++] = drawZ;
-    vertexF32[i++] = u0
+    vertexF32[i++] = u0;
     vertexF32[i++] = v1;
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
@@ -450,18 +490,29 @@ export const draw = (texture: Texture, x: number, y: number, r: number = 0, sx: 
     indexData[currentIndex++] = baseVertex;
 
     baseVertex += 4;
-}
+};
 
-
-export function drawBillboard(texture: Texture, x: number, y: number, z: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) {
+export function drawBillboard(
+    texture: Texture,
+    x: number,
+    y: number,
+    z: number,
+    r = 0,
+    sx = 1,
+    sy = 1,
+    alpha = 1,
+    color = 0xffffff,
+    additive = 0,
+    offset = 0,
+) {
     if (quadTexture != texture._texture || baseVertex + 4 >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
     }
     let i = baseVertex * floatSize;
 
-    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
-    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+    const colorMul = (((alpha * 0xff) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xff) << 24) | offset) >>> 0;
 
     const anchorX = texture._x;
     const anchorY = texture._y;
@@ -492,7 +543,7 @@ export function drawBillboard(texture: Texture, x: number, y: number, z: number,
     vertexF32[i++] = y;
     vertexF32[i++] = z - (x1 * sn + y0 * cs);
     // vertexF32[i++] = z - 10 * y0;
-    vertexF32[i++] = u1
+    vertexF32[i++] = u1;
     vertexF32[i++] = v0;
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
@@ -501,7 +552,7 @@ export function drawBillboard(texture: Texture, x: number, y: number, z: number,
     vertexF32[i++] = y;
     vertexF32[i++] = z - (x1 * sn + y1 * cs);
     // vertexF32[i++] = z - y1;
-    vertexF32[i++] = u1
+    vertexF32[i++] = u1;
     vertexF32[i++] = v1;
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
@@ -510,7 +561,7 @@ export function drawBillboard(texture: Texture, x: number, y: number, z: number,
     vertexF32[i++] = y;
     vertexF32[i++] = z - (x0 * sn + y1 * cs);
     // vertexF32[i++] = z - y1;
-    vertexF32[i++] = u0
+    vertexF32[i++] = u0;
     vertexF32[i++] = v1;
     vertexU32[i++] = colorMul;
     vertexU32[i++] = colorAdd;
@@ -525,14 +576,26 @@ export function drawBillboard(texture: Texture, x: number, y: number, z: number,
     baseVertex += 4;
 }
 
-export function drawMeshSpriteUp(texture: Texture, x: number, y: number, z: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) {
+export function drawMeshSpriteUp(
+    texture: Texture,
+    x: number,
+    y: number,
+    z: number,
+    r = 0,
+    sx = 1,
+    sy = 1,
+    alpha = 1,
+    color = 0xffffff,
+    additive = 0,
+    offset = 0,
+) {
     if (quadTexture != texture._texture || baseVertex + texture._vertexCount >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
     }
 
-    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
-    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+    const colorMul = (((alpha * 0xff) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xff) << 24) | offset) >>> 0;
 
     const cs = cos(r);
     const sn = sin(r);
@@ -553,8 +616,8 @@ export function drawMeshSpriteUp(texture: Texture, x: number, y: number, z: numb
         vertexF32[i++] = x + (sx * px * cs - sy * py * sn);
         vertexF32[i++] = y;
         vertexF32[i++] = z - (sx * px * sn + sy * py * cs);
-        vertexF32[i++] = u0 + u1 * vx / texture._w;
-        vertexF32[i++] = v0 + v1 * vy / texture._h;
+        vertexF32[i++] = u0 + (u1 * vx) / texture._w;
+        vertexF32[i++] = v0 + (v1 * vy) / texture._h;
         vertexU32[i++] = colorMul;
         vertexU32[i++] = colorAdd;
     }
@@ -569,14 +632,25 @@ export function drawMeshSpriteUp(texture: Texture, x: number, y: number, z: numb
     baseVertex += texture._vertexCount;
 }
 
-export function drawMeshSprite(texture: Texture, x: number, y: number, r: number = 0, sx: number = 1, sy: number = 1, alpha: number = 1, color: number = 0xFFFFFF, additive: number = 0, offset: number = 0) {
+export function drawMeshSprite(
+    texture: Texture,
+    x: number,
+    y: number,
+    r = 0,
+    sx = 1,
+    sy = 1,
+    alpha = 1,
+    color = 0xffffff,
+    additive = 0,
+    offset = 0,
+) {
     if (quadTexture != texture._texture || baseVertex + texture._vertexCount >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
     }
 
-    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
-    const colorAdd = (((additive * 0xFF) << 24) | offset) >>> 0;
+    const colorMul = (((alpha * 0xff) << 24) | color) >>> 0;
+    const colorAdd = (((additive * 0xff) << 24) | offset) >>> 0;
 
     const cs = cos(r);
     const sn = sin(r);
@@ -597,8 +671,8 @@ export function drawMeshSprite(texture: Texture, x: number, y: number, r: number
         vertexF32[i++] = x + (sx * px * cs - sy * py * sn);
         vertexF32[i++] = y + (sx * px * sn + sy * py * cs);
         vertexF32[i++] = drawZ;
-        vertexF32[i++] = u0 + u1 * vx / texture._w;
-        vertexF32[i++] = v0 + v1 * vy / texture._h;
+        vertexF32[i++] = u0 + (u1 * vx) / texture._w;
+        vertexF32[i++] = v0 + (v1 * vy) / texture._h;
         vertexU32[i++] = colorMul;
         vertexU32[i++] = colorAdd;
     }
@@ -613,13 +687,24 @@ export function drawMeshSprite(texture: Texture, x: number, y: number, r: number
     baseVertex += texture._vertexCount;
 }
 
-export function drawRing(texture: Texture, x: number, y: number, r: number, dr: number, segments: number, sx: number, sy: number, alpha: number = 1, color: number = 0xFFFFFF) {
+export function drawRing(
+    texture: Texture,
+    x: number,
+    y: number,
+    r: number,
+    dr: number,
+    segments: number,
+    sx: number,
+    sy: number,
+    alpha = 1,
+    color = 0xffffff,
+) {
     if (quadTexture !== texture._texture || baseVertex + segments * 2 >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
     }
 
-    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const colorMul = (((alpha * 0xff) << 24) | color) >>> 0;
     const u = texture._u0;
     const v = texture._v0;
 
@@ -669,14 +754,23 @@ export function drawRing(texture: Texture, x: number, y: number, r: number, dr: 
     baseVertex += segments * 2;
 }
 
-
-export function drawCircle(texture: Texture, x: number, y: number, r: number, segments: number, sx: number, sy: number, alpha: number = 1, color: number = 0xFFFFFF) {
+export function drawCircle(
+    texture: Texture,
+    x: number,
+    y: number,
+    r: number,
+    segments: number,
+    sx: number,
+    sy: number,
+    alpha = 1,
+    color = 0xffffff,
+) {
     if (quadTexture !== texture._texture || baseVertex + segments >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
     }
 
-    const colorMul = (((alpha * 0xFF) << 24) | color) >>> 0;
+    const colorMul = (((alpha * 0xff) << 24) | color) >>> 0;
     const u = texture._u0;
     const v = texture._v0;
 

@@ -15,7 +15,7 @@ await build({
     console.warn(e);
     process.exit(1);
 });
-const r = execSync(`poki upload --name "$(git rev-parse --short HEAD)" --notes "$(git log -1 --pretty=%B)"`, {encoding: "utf8"});
+const r = execSync(`poki upload --name "$(git rev-parse --short HEAD)" --notes "$(git log -1 --pretty=%B)"`, {
+    encoding: "utf8",
+});
 console.log(r);
-
-

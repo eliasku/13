@@ -28,13 +28,13 @@ export const drawShadows = (drawList: Actor[]) => {
             shadowScale / 4,
             0.4,
             prop._shadowColor,
-            prop._shadowAdd
+            prop._shadowAdd,
         );
     }
-}
+};
 
 export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: number[], screenScale: number) => {
-    if (player && ((viewX | 0) || (viewY | 0))) {
+    if (player && (viewX | 0 || viewY | 0)) {
         const img = fnt[0]._textureBoxT1;
         const W = gl.drawingBufferWidth;
         const H = gl.drawingBufferHeight;
@@ -52,7 +52,7 @@ export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: numbe
                     const N = 8;
                     for (let i = 0; i < N; ++i) {
                         const sc = clamp(t * N - i, 0, 1);
-                        draw(img, x, y, (i / N) * PI * 2 - PI, 2 * sc, 5 - 2 * sc, 1, 0xFFFF99);
+                        draw(img, x, y, (i / N) * PI * 2 - PI, 2 * sc, 5 - 2 * sc, 1, 0xffff99);
                     }
                     return;
                 }
@@ -60,7 +60,7 @@ export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: numbe
                     // blinking
                     if (sin(t * 32) >= 0) {
                         for (let i = 0; i < 4; ++i) {
-                            draw(img, x, y, t / 10 + i * PI / 2, 2, 4, 1, 0xFF3333);
+                            draw(img, x, y, t / 10 + (i * PI) / 2, 2, 4, 1, 0xff3333);
                         }
                     }
                     return;
@@ -68,12 +68,12 @@ export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: numbe
             }
         }
 
-        const len = 4 + sin(2 * t) * cos(4 * t) / 4 + (player._detune / 8) + player._lifetime / 10;
+        const len = 4 + (sin(2 * t) * cos(4 * t)) / 4 + player._detune / 8 + player._lifetime / 10;
         for (let i = 0; i < 4; ++i) {
-            draw(img, x, y, t / 10 + i * PI / 2, 2, len);
+            draw(img, x, y, t / 10 + (i * PI) / 2, 2, len);
         }
     }
-}
+};
 
 const mvp = mat4_create();
 const projection = mat4_create();
@@ -101,13 +101,24 @@ export const setupWorldCameraMatrix = (x: number, y: number, scale: number, rx: 
     mat4_mul(mvp, translateScale, mvp);
     mat4_mul(mvp, projection, mvp);
     setMVP(mvp);
-}
+};
 
-export const getHitColorOffset = (anim: number) =>
-    getLumaColor32(0xFF * min(1, 2 * anim / ANIM_HIT_MAX));
+export const getHitColorOffset = (anim: number) => getLumaColor32(0xff * min(1, (2 * anim) / ANIM_HIT_MAX));
 
-export const drawObjectMesh2D = (p: Actor, id: number | Img, z: number = 0, scale: number = 1, oy: number = 0.0) =>
-    drawMeshSpriteUp(img[id], p._x / WORLD_SCALE, p._y / WORLD_SCALE + oy, p._z / WORLD_SCALE + z, 0, scale, scale, 1, 0xFFFFFF, 0, getHitColorOffset(p._animHit));
+export const drawObjectMesh2D = (p: Actor, id: number | Img, z = 0, scale = 1, oy = 0.0) =>
+    drawMeshSpriteUp(
+        img[id],
+        p._x / WORLD_SCALE,
+        p._y / WORLD_SCALE + oy,
+        p._z / WORLD_SCALE + z,
+        0,
+        scale,
+        scale,
+        1,
+        0xffffff,
+        0,
+        getHitColorOffset(p._animHit),
+    );
 
 export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.barrel0);
 export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.tree0);
@@ -118,7 +129,7 @@ export const drawItemOpaque = (item: ItemActor) => {
         if (item._lifetime < limit) {
             const f = 1 - item._lifetime / limit;
             const fr = 8 + 16 * f;
-            if (sin(fr * (limit - item._lifetime) / (Const.NetFq / 3)) >= 0.5) {
+            if (sin((fr * (limit - item._lifetime)) / (Const.NetFq / 3)) >= 0.5) {
                 return;
             }
         }
@@ -128,11 +139,11 @@ export const drawItemOpaque = (item: ItemActor) => {
         if (item._subtype & ItemType.Ammo) {
             drawObjectMesh2D(item, Img.item0 + ItemType.Ammo, 8, 0.8, -0.1);
         }
-    } else /*if (cat == ItemCategory.Effect)*/ {
+    } /*if (cat == ItemCategory.Effect)*/ else {
         const t = lastFrameTs * 4 + item._anim0 / 25;
         drawObjectMesh2D(item, Img.item0 + item._subtype, BULLET_RADIUS / WORLD_SCALE + cos(t), 0.9 + 0.1 * sin(4 * t));
     }
-}
+};
 
 export const drawBullet = (bullet: BulletActor) => {
     const x = bullet._x / WORLD_SCALE;
@@ -144,14 +155,14 @@ export const drawBullet = (bullet: BulletActor) => {
     const color = fxRandElement(bulletData._color);
     const longing = bulletData._length;
     const longing2 = bulletData._lightLength;
-    const sz = bulletData._size + bulletData._pulse * sin(32 * lastFrameTs + bullet._anim0) / 2;
+    const sz = bulletData._size + (bulletData._pulse * sin(32 * lastFrameTs + bullet._anim0)) / 2;
     setDrawZ(z - 0.1);
-    drawMeshSprite(img[bulletData._images[0]], x, y, a, sz * longing, sz, 0.1, 0xFFFFFF, 1);
+    drawMeshSprite(img[bulletData._images[0]], x, y, a, sz * longing, sz, 0.1, 0xffffff, 1);
     setDrawZ(z);
-    drawMeshSprite(img[bulletData._images[1]], x, y, a, sz * longing / 2, sz / 2, 1, color);
+    drawMeshSprite(img[bulletData._images[1]], x, y, a, (sz * longing) / 2, sz / 2, 1, color);
     setDrawZ(z + 0.1);
     drawMeshSprite(img[bulletData._images[2]], x, y, a, 2 * longing2, 2);
-}
+};
 
 export const drawHotUsableHint = (hotUsable?: ItemActor) => {
     if (hotUsable) {

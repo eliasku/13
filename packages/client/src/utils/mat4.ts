@@ -1,10 +1,17 @@
-
 export type Mat4 = Float32Array;
 
 /* @__PURE__ */
 export const mat4_create = (d = 1) => new Float32Array([d, 0, 0, 0, 0, d, 0, 0, 0, 0, d, 0, 0, 0, 0, d]);
 
-export const mat4_orthoProjectionLH = (mat: Mat4, left: number, right: number, bottom: number, top: number, zNear: number, zFar: number) => {
+export const mat4_orthoProjectionLH = (
+    mat: Mat4,
+    left: number,
+    right: number,
+    bottom: number,
+    top: number,
+    zNear: number,
+    zFar: number,
+) => {
     mat.set([
         2 / (right - left),
         0,
@@ -21,62 +28,37 @@ export const mat4_orthoProjectionLH = (mat: Mat4, left: number, right: number, b
         -(right + left) / (right - left),
         -(top + bottom) / (top - bottom),
         -zNear / (zFar - zNear),
-        1
+        1,
     ]);
-}
+};
 
 export const mat4_makeXRotation = (mat: Mat4, radians: number) => {
     const c = Math.cos(radians);
     const s = Math.sin(radians);
 
-    mat.set([
-        1, 0, 0, 0,
-        0, c, s, 0,
-        0, -s, c, 0,
-        0, 0, 0, 1
-    ]);
+    mat.set([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]);
 };
 
 export const mat4_makeYRotation = (mat: Mat4, radians: number) => {
     const c = Math.cos(radians);
     const s = Math.sin(radians);
 
-    mat.set([
-        c, 0, -s, 0,
-        0, 1, 0, 0,
-        s, 0, c, 0,
-        0, 0, 0, 1
-    ]);
+    mat.set([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]);
 };
 
 export const mat4_makeZRotation = (mat: Mat4, radians: number) => {
     const c = Math.cos(radians);
     const s = Math.sin(radians);
 
-    mat.set([
-        c, s, 0, 0,
-        -s, c, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1,
-    ]);
+    mat.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 };
 
 export const mat4_makeScale = (mat: Mat4, scaleX: number, scaleY: number, scaleZ: number) => {
-    mat.set([
-        scaleX, 0, 0, 0,
-        0, scaleY, 0, 0,
-        0, 0, scaleZ, 0,
-        0, 0, 0, 1
-    ]);
+    mat.set([scaleX, 0, 0, 0, 0, scaleY, 0, 0, 0, 0, scaleZ, 0, 0, 0, 0, 1]);
 };
 
 export const mat4_makeTranslation = (mat: Mat4, x: number, y: number, z: number) => {
-    mat.set([
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        x, y, z, 1
-    ]);
+    mat.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
 };
 
 export const mat4_mul = (out: Mat4, a: Mat4, b: Mat4) => {
@@ -129,7 +111,7 @@ export const mat4_mul = (out: Mat4, a: Mat4, b: Mat4) => {
     out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
     out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
     out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-}
+};
 
 export function mat4_invert(out: Mat4, a: Mat4): boolean {
     const a00 = a[0],

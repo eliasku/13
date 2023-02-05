@@ -13,7 +13,7 @@ let autoplayBuffer = new Int32Array(1024 * 256);
 export function loadPlayerCode(url: string) {
     waitAutoplayResult = false;
     autoplayWorker = new Worker(url);
-    autoplayWorker.onmessage = (message) => {
+    autoplayWorker.onmessage = message => {
         autoplayInput = message.data[0] as number;
         //console.log("receive input:", autoplayInput);
         autoplayBuffer = message.data[1] as Int32Array;
@@ -36,9 +36,13 @@ export const hasAmmo = (player: PlayerActor) => {
         return !weapon._clipSize || player._clipAmmo || player._mags;
     }
     return false;
-}
+};
 
-export const findClosestActor = <T extends Actor>(player: PlayerActor, actors: T[], pred: (item: T) => boolean): T | undefined => {
+export const findClosestActor = <T extends Actor>(
+    player: PlayerActor,
+    actors: T[],
+    pred: (item: T) => boolean,
+): T | undefined => {
     let minDistActor: T | undefined;
     let minDistSqr = WORLD_BOUNDS_SIZE * WORLD_BOUNDS_SIZE;
     for (const a of actors) {
@@ -51,4 +55,4 @@ export const findClosestActor = <T extends Actor>(player: PlayerActor, actors: T
         }
     }
     return minDistActor;
-}
+};

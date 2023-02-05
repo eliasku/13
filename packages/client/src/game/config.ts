@@ -6,33 +6,37 @@ export const Const = {
     PredictionMax: 8,
     Prediction: 1,
 } as const;
-export type Const = typeof Const[keyof typeof Const];
-
+export type Const = (typeof Const)[keyof typeof Const];
 
 export let _debugLagK = 0;
 
-export const setDebugLagK = (a: number) => _debugLagK = a;
+export const setDebugLagK = (a: number) => (_debugLagK = a);
 
 export const GAME_CFG = {
-    _npc: [{
-        _initWeaponLen: 1,
-        _period: 12,
-        _max: 0,
-    }, {
-        _initWeaponLen: 3,
-        _period: 11,
-        _max: 4,
-    }, {
-        _initWeaponLen: 4,
-        _period: 10,
-        _max: 8,
-    }, {
-        // allow all weapons?
-        // initWeaponLen: 10,
-        _initWeaponLen: 4,
-        _period: 8,
-        _max: 16,
-    }],
+    _npc: [
+        {
+            _initWeaponLen: 1,
+            _period: 12,
+            _max: 0,
+        },
+        {
+            _initWeaponLen: 3,
+            _period: 11,
+            _max: 4,
+        },
+        {
+            _initWeaponLen: 4,
+            _period: 10,
+            _max: 8,
+        },
+        {
+            // allow all weapons?
+            // initWeaponLen: 10,
+            _initWeaponLen: 4,
+            _period: 8,
+            _max: 16,
+        },
+    ],
     _items: {
         // should be < (2 ** 8)
         // div by 3
@@ -44,7 +48,7 @@ export const GAME_CFG = {
         _hp: [3, 7],
         _dropWeapon: {
             _chance: 70,
-            _min: 4
+            _min: 4,
         },
     },
     _trees: {
@@ -68,7 +72,7 @@ export const GAME_CFG = {
     },
     _world: {
         _gravity: 5,
-        _gravityWeak: 3
+        _gravityWeak: 3,
     },
     _minimap: {
         _size: 48,
@@ -82,7 +86,7 @@ export const GAME_CFG = {
             _item: parseRGB("#0f0"),
             _background: parseRGB("#010"),
             _backgroundAlpha: 0.6,
-        }
+        },
     },
     _bodyColor: [
         parseRGB("#FF99DD"),
@@ -93,17 +97,7 @@ export const GAME_CFG = {
         parseRGB("#CCCCCC"),
     ],
     _voice: {
-        _killAB: [
-            "{0} CRUSHED {1}",
-            "{0} destroyed {1}",
-            "{0} killed {1}",
-            "{0} took {1} life",
-        ],
-        _killNPC: [
-            "warm-up for {0}",
-            "{0} killed someone",
-            "death by {0}",
-            "{0} sows DEATH",
-        ]
-    }
+        _killAB: ["{0} CRUSHED {1}", "{0} destroyed {1}", "{0} killed {1}", "{0} took {1} life"],
+        _killNPC: ["warm-up for {0}", "{0} killed someone", "death by {0}", "{0} sows DEATH"],
+    },
 };

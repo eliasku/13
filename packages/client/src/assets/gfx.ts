@@ -2,16 +2,73 @@ import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/
 import {GL} from "../graphics/gl.js";
 import {loadArrayBuffer, loadImage} from "../graphics/utils.js";
 
-export const EMOJI: Record<number, string> = [null, null, null, null, null, null, null, null, null, null, null, "🔪", "🪓", "🔫", "🖊️", "✏️️", "🪥", "⛏", "🔌", "🧵", "💀", "👹", "🤡", "🤖", "🎃", "🦝", "🐙", "🐰", "🦌", "🐺", "🐵", "🦊", "🐭", "🦍", "🍅", "😐", "🐷", "🧑‍🎄", "🎅🏻", "🎅🏼", "🎅🏾", "🎅", "🛢", "📦", "🪦", "❤️", "💊", "🪙", "💎", "🛡", "🧱", "🌳", "🌲", "🌵", "🌴", "🎄", "⛄", "🥓", "🦴"];
+export const EMOJI: Record<number, string> = [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    "🔪",
+    "🪓",
+    "🔫",
+    "🖊️",
+    "✏️️",
+    "🪥",
+    "⛏",
+    "🔌",
+    "🧵",
+    "💀",
+    "👹",
+    "🤡",
+    "🤖",
+    "🎃",
+    "🦝",
+    "🐙",
+    "🐰",
+    "🦌",
+    "🐺",
+    "🐵",
+    "🦊",
+    "🐭",
+    "🦍",
+    "🍅",
+    "😐",
+    "🐷",
+    "🧑‍🎄",
+    "🎅🏻",
+    "🎅🏼",
+    "🎅🏾",
+    "🎅",
+    "🛢",
+    "📦",
+    "🪦",
+    "❤️",
+    "💊",
+    "🪙",
+    "💎",
+    "🛡",
+    "🧱",
+    "🌳",
+    "🌲",
+    "🌵",
+    "🌴",
+    "🎄",
+    "⛄",
+    "🥓",
+    "🦴",
+];
 
 export const img: Texture[] = [];
 export let imgSpotLight: Texture | undefined;
 
 export async function loadMainAtlas(): Promise<void> {
-    const [image, buffer] = await Promise.all([
-        loadImage("main.png"),
-        loadArrayBuffer("main.dat")
-    ]);
+    const [image, buffer] = await Promise.all([loadImage("main.png"), loadArrayBuffer("main.dat")]);
     const texture = createTexture(image.width, image.height);
     uploadTexture(texture, image);
     const i32 = new Int32Array(buffer);
@@ -30,7 +87,7 @@ export async function loadMainAtlas(): Promise<void> {
             f32[ptr++] | 0,
             f32[ptr++] | 0,
             f32[ptr++],
-            f32[ptr++]
+            f32[ptr++],
         );
         subImage._index0 = f32[ptr++] | 0;
         subImage._triangles = f32[ptr++] | 0;

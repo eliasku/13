@@ -14,13 +14,13 @@ export const lerp = (a: number, b: number, t: number): number => (1 - t) * a + t
 export const lerpLog = (a: number, b: number, t: number): number => exp(lerp(log(a), log(b), t));
 
 /* @__PURE__ */
-export const dec1 = (x: number) => x ? --x : x;
+export const dec1 = (x: number) => (x ? --x : x);
 
 /* @__PURE__ */
 export const clamp = (x: number, _min: number, _max: number) => min(_max, max(x, _min));
 
 /* @__PURE__ */
-export const sign = (v: number) => v > 0 ? 1 : -1;
+export const sign = (v: number) => (v > 0 ? 1 : -1);
 
 /* @__PURE__ */
 export const reach = (t0: number, t1: number, v: number): number => {
@@ -30,4 +30,4 @@ export const reach = (t0: number, t1: number, v: number): number => {
         return max(t0 - v, t1);
     }
     return t0;
-}
+};

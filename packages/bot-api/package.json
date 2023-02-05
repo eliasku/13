@@ -1,19 +1,19 @@
 {
-  "name": "@iioi/bot-api",
-  "version": "1.0.14",
-  "description": "API to control your Player in Game 13 project",
-  "type": "module",
-  "types": "./dist/index.d.ts",
-  "module": "./dist/index.js",
-  "publishConfig": {
-    "access": "public"
-  },
-  "devDependencies": {
-    "@iioi/client": "1.0.14"
-  },
-  "files": [
-    "dist"
-  ],
-  "author": "eliasku",
-  "license": "ISC"
+    "name": "@iioi/bot-api",
+    "version": "1.0.14",
+    "description": "API to control your Player in Game 13 project",
+    "type": "module",
+    "types": "./dist/index.d.ts",
+    "module": "./dist/index.js",
+    "publishConfig": {
+        "access": "public"
+    },
+    "devDependencies": {
+        "@iioi/client": "1.0.14"
+    },
+    "files": [
+        "dist"
+    ],
+    "author": "eliasku",
+    "license": "ISC"
 }

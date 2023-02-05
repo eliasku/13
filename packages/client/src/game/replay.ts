@@ -6,16 +6,16 @@ import {getNameByClientId} from "./gameState.js";
 
 export interface ReplayMetaData {
     room?: {
-        flags: number,
-        npcLevel: number,
-        mapSeed: number,
-        mapTheme: number,
+        flags: number;
+        npcLevel: number;
+        mapSeed: number;
+        mapTheme: number;
     };
     clients: Record<ClientID, string>;
     build?: {
-        version?: string,
-        commit?: string,
-        hash?: string,
+        version?: string;
+        commit?: string;
+        hash?: string;
     };
     start: number;
     end: number;
@@ -31,7 +31,6 @@ export interface ReplayFile {
     _paused?: boolean;
     _rewind?: number;
 }
-
 
 // [tic1, client#, client#-input, ..., 0,
 //  tic4, client#, client#-input, ..., 0,]
@@ -63,7 +62,7 @@ export function beginRecording(state: StateData) {
         mapTheme: _room._mapTheme,
     };
     replayMetaData.clients = {};
-    replayMetaData.start = 0x7FFFFFFF;
+    replayMetaData.start = 0x7fffffff;
     replayMetaData.end = 0;
 }
 
@@ -87,7 +86,7 @@ export function addReplayTicEvents(tic: number, events: ClientEvent[]) {
 }
 
 export function saveReplay() {
-    if ((replayMetaData.end - replayMetaData.start) <= 0) {
+    if (replayMetaData.end - replayMetaData.start <= 0) {
         console.error("Bad replay state data");
         return;
     }
@@ -158,10 +157,8 @@ export function validateReplayFile(replay: ReplayFile): boolean {
         if (build) {
             if (build.hash !== BuildHash) {
                 console.warn("Mismatch game build version to play the replay file");
-                if (build.version !== BuildVersion)
-                    console.info(build.version + " != " + BuildVersion);
-                if (build.commit !== BuildCommit)
-                    console.info(build.commit + " != " + BuildCommit);
+                if (build.version !== BuildVersion) console.info(build.version + " != " + BuildVersion);
+                if (build.commit !== BuildCommit) console.info(build.commit + " != " + BuildCommit);
                 return false;
             }
         } else {
@@ -176,11 +173,10 @@ export function validateReplayFile(replay: ReplayFile): boolean {
     return true;
 }
 
-
 export function openReplayFile(onSuccess: (replay: ReplayFile) => void) {
     const input = document.createElement("input");
     input.type = "file";
-    input.onchange = _ => {
+    input.onchange = () => {
         if (input.files.length > 0) {
             const reader = new FileReader();
             reader.onload = function (e) {
@@ -195,6 +191,6 @@ export function openReplayFile(onSuccess: (replay: ReplayFile) => void) {
             };
             reader.readAsArrayBuffer(input.files[0]);
         }
-    }
+    };
     input.click();
 }

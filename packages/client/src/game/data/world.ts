@@ -13,9 +13,9 @@ export const ANIM_HIT_MAX = 15;
 export interface ActorProp {
     _radius: number;
     _height: number;
-    _groundLoss: number,
-    _boundsLoss: number,
-    _groundFriction: number,
+    _groundLoss: number;
+    _boundsLoss: number;
+    _groundFriction: number;
     _invMass: number;
     _shadowScale: number;
     _shadowAdd: number;
@@ -89,5 +89,5 @@ export const actorsConfig: Record<ActorType, ActorProp> = [
         _shadowColor: 0,
         _lightRadiusK: 0,
         _light: 0,
-    }
+    },
 ];

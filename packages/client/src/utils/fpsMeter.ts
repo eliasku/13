@@ -1,6 +1,6 @@
 let fpsAcc = 0;
 let fpsTime = 0;
-export let stats = {
+export const stats = {
     _drawCalls: 0,
     _vertices: 0,
     _triangles: 0,
@@ -24,9 +24,9 @@ export const updateStats = (ts: number) => {
 
     ++fpsAcc;
     const div = 1;
-    if ((ts - fpsTime) >= div) {
+    if (ts - fpsTime >= div) {
         stats._fps = fpsAcc / div;
         fpsAcc = 0;
         fpsTime += div;
     }
-}
+};

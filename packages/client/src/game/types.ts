@@ -9,7 +9,7 @@ export const ActorType = {
     // static game objects
     Tree: 4,
 } as const;
-export type ActorType = typeof ActorType[keyof typeof ActorType];
+export type ActorType = (typeof ActorType)[keyof typeof ActorType];
 
 export const ItemType = {
     Hp: 0,
@@ -23,7 +23,7 @@ export const ItemType = {
 
     SubTypeMask: 7,
 } as const;
-export type ItemType = typeof ItemType[keyof typeof ItemType];
+export type ItemType = (typeof ItemType)[keyof typeof ItemType];
 
 export interface Pos {
     /** uint16 **/
@@ -133,9 +133,7 @@ export interface PlayerActor extends Actor {
     _input: number;
 }
 
-export interface BarrelActor extends Actor {
-
-}
+export type BarrelActor = Actor;
 
 export interface BulletActor extends Actor {
     // Bullet: owner ID
@@ -209,7 +207,7 @@ export const newStateData = (): StateData => ({
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
 export interface Packet {
-    _sync: boolean;
+    _sync: number;
     // confirm the last tic we received from Sender
     _receivedOnSender: number;
     // packet contains info tic and before, 22 bits, for 19 hr of game session
@@ -235,15 +233,11 @@ export interface PacketDebug {
     _state?: StateData;
 }
 
-export const unpackAngleByte = (angleByte: number, res: number) =>
-    PI2 * (angleByte & (res - 1)) / res - PI;
+export const unpackAngleByte = (angleByte: number, res: number) => (PI2 * (angleByte & (res - 1))) / res - PI;
 
-export const packAngleByte = (a: number, res: number) =>
-    (res * a) & (res - 1);
+export const packAngleByte = (a: number, res: number) => (res * a) & (res - 1);
 
-export const packDirByte = (x: number, y: number, res: number) =>
-    packAngleByte((PI + atan2(y, x)) / PI2, res);
-
+export const packDirByte = (x: number, y: number, res: number) => packAngleByte((PI + atan2(y, x)) / PI2, res);
 
 /*
     First 19 bits
@@ -274,6 +268,4 @@ export const ControlsFlag = {
     DownEvent_Swap: 8,
 } as const;
 
-export type ControlsFlag = typeof ControlsFlag[keyof typeof ControlsFlag];
-
-
+export type ControlsFlag = (typeof ControlsFlag)[keyof typeof ControlsFlag];

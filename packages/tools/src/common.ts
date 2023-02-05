@@ -6,6 +6,7 @@ function ensureDir(dir: string) {
     try {
         mkdirSync(dir, {recursive: true});
     } catch {
+        // ignore
     }
 }
 
@@ -34,23 +35,25 @@ export async function clean() {
     tryRemove("./dist");
 }
 
-export function copyPublicAssets(publicDir = "public", debugAssets = true, indexTemplate: string = "index.html") {
+export function copyPublicAssets(publicDir = "public", debugAssets = true, indexTemplate = "index.html") {
     // copy html
     console.info("copy assets");
-    execSync([
-        `html-minifier`,
-        `--collapse-whitespace`,
-        `--remove-comments`,
-        `--remove-optional-tags`,
-        `--remove-redundant-attributes`,
-        `--remove-script-type-attributes`,
-        `--remove-tag-whitespace`,
-        `--use-short-doctype`,
-        `--minify-css true`,
-        `--minify-js true`,
-        `-o ${publicDir}/index.html`,
-        `packages/client/assets/${indexTemplate}`
-    ].join(" "));
+    execSync(
+        [
+            `html-minifier`,
+            `--collapse-whitespace`,
+            `--remove-comments`,
+            `--remove-optional-tags`,
+            `--remove-redundant-attributes`,
+            `--remove-script-type-attributes`,
+            `--remove-tag-whitespace`,
+            `--use-short-doctype`,
+            `--minify-css true`,
+            `--minify-js true`,
+            `-o ${publicDir}/index.html`,
+            `packages/client/assets/${indexTemplate}`,
+        ].join(" "),
+    );
     copyFileSync("packages/client/assets/e.ttf", `${publicDir}/e.ttf`);
     copyFileSync("packages/client/assets/m.ttf", `${publicDir}/m.ttf`);
     copyFileSync("packages/client/assets/fa-brands-400.ttf", `${publicDir}/fa-brands-400.ttf`);
@@ -67,16 +70,20 @@ export function copyPublicAssets(publicDir = "public", debugAssets = true, index
 let version = "1.0.0";
 let pokiGameId = "";
 try {
-    const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { version: string, poki?: { game_id?: string } };
+    const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as {
+        version: string;
+        poki?: {game_id?: string};
+    };
     version = pkg.version ?? "1.0.0";
     pokiGameId = pkg.poki?.game_id ?? "";
 } catch {
+    // ignore
 }
 
 let gitCommit = "";
 const gitCommitBytes: number[] = [];
 try {
-    gitCommit = execSync('git rev-parse HEAD').toString().trim();
+    gitCommit = execSync("git rev-parse HEAD").toString().trim();
     for (let i = 0; i < gitCommit.length; i += 2) {
         gitCommitBytes.push(parseInt(gitCommit.substring(i, i + 2), 16));
     }
@@ -84,7 +91,7 @@ try {
     console.warn("Failed to get git commit hash (required for build meta)");
 }
 
-let buildHash = crypto.createHash("md5").update(version).update(new Uint8Array(gitCommitBytes)).digest("base64url");
+const buildHash = crypto.createHash("md5").update(version).update(new Uint8Array(gitCommitBytes)).digest("base64url");
 console.info("build version: " + version);
 console.info("build commit: " + gitCommit);
 console.info("build hash: " + buildHash);
@@ -99,7 +106,7 @@ export const getCompileDefines = (debug?: boolean, serverUrl = "") => ({
 });
 
 export function executeAsync(cmd: string): Promise<string> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         exec(cmd, (error, stdout, stderr) => {
             if (error) {
                 console.warn(error);

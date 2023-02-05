@@ -1,9 +1,9 @@
 {
-  "name": "@iioi/tools",
-  "version": "1.0.14",
-  "private": true,
-  "description": "js13k game with p2p realtime multiplayer",
-  "type": "module",
-  "author": "eliasku",
-  "license": "ISC"
+    "name": "@iioi/tools",
+    "version": "1.0.14",
+    "private": true,
+    "description": "js13k game with p2p realtime multiplayer",
+    "type": "module",
+    "author": "eliasku",
+    "license": "ISC"
 }

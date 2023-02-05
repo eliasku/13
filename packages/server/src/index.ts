@@ -25,7 +25,7 @@ interface ClientState {
 }
 
 const HDR_EVENT_STREAM: OutgoingHttpHeaders = {
-    "connection": "keep-alive",
+    connection: "keep-alive",
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
 };
@@ -49,22 +49,20 @@ const rooms: Map<number, RoomState> = new Map();
 setInterval(() => {
     for (const [, room] of rooms) {
         for (const [, client] of room._clients) {
-            if ((performance.now() - client._ts > 5000) ||
-                !sendServerEvent(client, ServerEventName.Ping, "")) {
+            if (performance.now() - client._ts > 5000 || !sendServerEvent(client, ServerEventName.Ping, "")) {
                 removeClient(client);
             }
         }
     }
 }, 1000);
 
-const constructMessage = (id: number, data: string) =>
-    `id:${id}\ndata:${data}\n\n`;
+const constructMessage = (id: number, data: string) => `id:${id}\ndata:${data}\n\n`;
 
 const sendServerEvent = (client: ClientState, event: ServerEventName, data: string) =>
     client._eventStream.write(
         constructMessage(client._nextEventId++, event + data),
         // REMOVE CLIENT IN CASE OF ANY ERRORS!
-        (err) => err && removeClient(client)
+        err => err && removeClient(client),
     );
 
 const broadcastServerEvent = (room: RoomState, from: ClientID, event: ServerEventName, data: string) => {
@@ -73,16 +71,15 @@ const broadcastServerEvent = (room: RoomState, from: ClientID, event: ServerEven
             sendServerEvent(client, event, data);
         }
     }
-}
+};
 
 const removeClient = (client: ClientState) => {
     try {
         //sendCloseServerEvent(client);
-        client._eventStream.write(
-            constructMessage(-1, "")
-        );
+        client._eventStream.write(constructMessage(-1, ""));
         client._eventStream.end();
     } catch {
+        // ignore
     }
 
     const room = client._room;
@@ -94,13 +91,13 @@ const removeClient = (client: ClientState) => {
         console.info(`[room ${room._id}] is removed because last player leaved`);
         rooms.delete(room._id);
     }
-}
+};
 
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
     res.writeHead(200, cors(req, {...HDR_JSON_NO_CACHE}));
     const json: RoomsInfoResponse = {
         rooms: [],
-        players: 0
+        players: 0,
     };
     for (const [, room] of rooms) {
         const players = room._clients.size;
@@ -135,7 +132,7 @@ function createRoom(options?: CreateRoomOptions): RoomState {
     const npcLevel = options?._npcLevel ?? 2;
     const playersLimit = options?._playersLimit ?? 8;
     let theme = options?._theme ?? 0;
-    theme = theme ? (theme - 1) : Math.floor(Math.random() * 3);
+    theme = theme ? theme - 1 : Math.floor(Math.random() * 3);
     const room: RoomState = {
         _id: id,
         _flags: flags,
@@ -145,7 +142,7 @@ function createRoom(options?: CreateRoomOptions): RoomState {
         _mapSeed: newSeedFromTime(),
         _code: toRadix64String(temper(rollSeed32(id))),
         _nextClientIndex: 1,
-        _clients: new Map()
+        _clients: new Map(),
     };
     console.info(`[room ${room._id}] created`);
     rooms.set(room._id, room);
@@ -188,7 +185,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
     } else if (C) {
         const c = decodeURIComponent(C);
         try {
-            const data: any[] = JSON.parse(c);
+            const data: [number?, number?, number?, number?] = JSON.parse(c);
             const flags: number = data[0] ?? GameModeFlag.Public;
             const playersLimit = data[1] ?? 8;
             const npcLevel = data[2] ?? 2;
@@ -197,7 +194,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
                 _flags: flags,
                 _playersLimit: playersLimit,
                 _npcLevel: npcLevel,
-                _theme: theme
+                _theme: theme,
             });
         } catch {
             error(req, res, `bad room create params: "${c}"`);
@@ -205,7 +202,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
         }
     } else {
         for (const [, r] of rooms) {
-            if ((r._flags & GameModeFlag.Public) && r._clients.size < r._playersLimit) {
+            if (r._flags & GameModeFlag.Public && r._clients.size < r._playersLimit) {
                 room = r;
                 break;
             }
@@ -231,15 +228,15 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
     req.on("close", () => removeClient(client));
 
     console.info(`[room ${room._id}] init client ${client._id}`);
-    sendServerEvent(client, ServerEventName.ClientInit, JSON.stringify([
-        room._code,
-        [room._flags, room._npcLevel, room._theme, room._mapSeed],
-        ids
-    ]));
+    sendServerEvent(
+        client,
+        ServerEventName.ClientInit,
+        JSON.stringify([room._code, [room._flags, room._npcLevel, room._theme, room._mapSeed], ids]),
+    );
 
     console.info(`[room ${room._id}] broadcast add client ${client._id}`);
     broadcastServerEvent(room, id, ServerEventName.ClientListChange, "" + id);
-}
+};
 
 const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
     const buffers = [];
@@ -248,9 +245,13 @@ const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
     }
     const content = Buffer.concat(buffers).toString();
     return JSON.parse(content) as Request;
-}
+};
 
-const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessage, res: ServerResponse): Promise<void> => {
+const processIncomeMessages = async (
+    params: URLSearchParams,
+    req: IncomingMessage,
+    res: ServerResponse,
+): Promise<void> => {
     if (!validateRequestBuildVersion(params, req, res)) {
         return;
     }
@@ -295,15 +296,15 @@ const processIncomeMessages = async (params: URLSearchParams, req: IncomingMessa
     } catch (e) {
         error(req, res, "Handle income message exception " + e);
     }
-}
+};
 
-const error = (req: IncomingMessage, res: ServerResponse, error: Error | string, status: number = 500) => {
+const error = (req: IncomingMessage, res: ServerResponse, error: Error | string, status = 500) => {
     console.warn(`Generic error on ${req.url} : ${error}`);
     res.writeHead(status);
     res.end();
-}
+};
 
-type HandlerFunction = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => any;
+type HandlerFunction = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => void | Promise<void>;
 
 const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
     "/_": {
@@ -317,7 +318,7 @@ const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
 
 const hostWhitelist: string[] = [];
 if (PokiGameId) {
-    hostWhitelist.push(`https://${PokiGameId}.poki-gdn.com`)
+    hostWhitelist.push(`https://${PokiGameId}.poki-gdn.com`);
 }
 if (process.env.NODE_ENV === "development") {
     hostWhitelist.push("http://localhost:8080");
@@ -328,7 +329,7 @@ const getAllowedOrigin = (req: IncomingMessage): string | undefined => {
     if (origin) {
         return hostWhitelist.find(x => origin.startsWith(x));
     }
-}
+};
 
 const cors = (req: IncomingMessage, headers: OutgoingHttpHeaders): OutgoingHttpHeaders => {
     const allowedOrigin = getAllowedOrigin(req);
@@ -339,7 +340,7 @@ const cors = (req: IncomingMessage, headers: OutgoingHttpHeaders): OutgoingHttpH
         };
     }
     return headers;
-}
+};
 
 createServer({keepAlive: true}, (req: IncomingMessage, res: ServerResponse) => {
     try {

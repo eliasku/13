@@ -1,4 +1,4 @@
-import {copyPublicAssets, executeAsync, prepareFolders} from "./common.js";
+import {copyPublicAssets, prepareFolders} from "./common.js";
 import {build} from "./rollup.js";
 
 prepareFolders("public");
@@ -55,7 +55,7 @@ const buildTasks = [
         console.warn(e);
         process.exit(1);
     }),
-]
+];
 
 await Promise.all(buildTasks);
 

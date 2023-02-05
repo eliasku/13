@@ -1,5 +1,4 @@
 import {button, label, ui_begin, ui_finish, uiProgressBar, uiState} from "../graphics/gui.js";
-import {settings} from "./settings.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
 import {disconnect} from "../net/messaging.js";
 import {Const, GAME_CFG} from "./config.js";
@@ -11,7 +10,7 @@ export const GameMenuState = {
     Paused: 1,
     Settings: 2,
 } as const;
-export type GameMenuState = typeof GameMenuState[keyof typeof GameMenuState];
+export type GameMenuState = (typeof GameMenuState)[keyof typeof GameMenuState];
 
 export interface GameMenu {
     _state: GameMenuState;
@@ -21,7 +20,7 @@ function MM_SS(seconds: number) {
     seconds = Math.ceil(seconds);
     const min = (seconds / 60) | 0;
     const sec = seconds % 60;
-    return (min < 10 ? ("0" + min) : min) + ":" + (sec < 10 ? ("0" + sec) : sec);
+    return (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec);
 }
 
 export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): void {
@@ -42,18 +41,28 @@ export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): v
                 const currentTime = Math.ceil((tic - t0) / Const.NetFq);
                 label(MM_SS(currentTime) + "/" + MM_SS(totalTime), 9, 10, H - 28, 0);
 
-                let paused = replay._paused ?? false;
-                if (button("replay_play", paused ? "►" : "▮▮", 10, H - 24, {w: 16, h: 16}) ||
-                    keyboardDown[KeyCode.Space]) {
+                const paused = replay._paused ?? false;
+                if (
+                    button("replay_play", paused ? "►" : "▮▮", 10, H - 24, {w: 16, h: 16}) ||
+                    keyboardDown[KeyCode.Space]
+                ) {
                     replay._paused = !paused;
                 }
 
-                let curPlaybackSpeed = replay._playbackSpeed ?? 1;
+                const curPlaybackSpeed = replay._playbackSpeed ?? 1;
                 let nextPlaybackSpeed = curPlaybackSpeed;
-                if (button("replay_playback_speed", (nextPlaybackSpeed < 1 ? ".5" : nextPlaybackSpeed) + "⨯", 30, H - 24, {
-                    w: 16,
-                    h: 16
-                })) {
+                if (
+                    button(
+                        "replay_playback_speed",
+                        (nextPlaybackSpeed < 1 ? ".5" : nextPlaybackSpeed) + "⨯",
+                        30,
+                        H - 24,
+                        {
+                            w: 16,
+                            h: 16,
+                        },
+                    )
+                ) {
                     nextPlaybackSpeed *= 2;
                     if (nextPlaybackSpeed > 4) {
                         nextPlaybackSpeed = 0.5;
@@ -73,17 +82,23 @@ export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): v
                     }
                 }
 
-                if (button("close_replay", "❌", W - 16 - GAME_CFG._minimap._size - 4, 2, {
-                    w: 16,
-                    h: 16
-                }) || keyboardDown[KeyCode.Escape]) {
+                if (
+                    button("close_replay", "❌", W - 16 - GAME_CFG._minimap._size - 4, 2, {
+                        w: 16,
+                        h: 16,
+                    }) ||
+                    keyboardDown[KeyCode.Escape]
+                ) {
                     disconnect();
                 }
             } else {
-                if (button("menu", "⏸️", W - 16 - GAME_CFG._minimap._size - 4, 2, {
-                    w: 16,
-                    h: 16
-                }) || keyboardDown[KeyCode.Escape]) {
+                if (
+                    button("menu", "⏸️", W - 16 - GAME_CFG._minimap._size - 4, 2, {
+                        w: 16,
+                        h: 16,
+                    }) ||
+                    keyboardDown[KeyCode.Escape]
+                ) {
                     menu._state = GameMenuState.Paused;
                 }
             }
@@ -101,19 +116,25 @@ export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): v
                 disconnect();
             }
             y += 30;
-            if (button("back_to_game", "⬅ BACK", centerX - 50, y, {
-                w: 100,
-                h: 20
-            }) || keyboardDown[KeyCode.Escape]) {
+            if (
+                button("back_to_game", "⬅ BACK", centerX - 50, y, {
+                    w: 100,
+                    h: 20,
+                }) ||
+                keyboardDown[KeyCode.Escape]
+            ) {
                 menu._state = GameMenuState.InGame;
             }
         } else if (menu._state === GameMenuState.Settings) {
             guiSettingsPanel(centerX, centerY);
 
-            if (button("back", "⬅ BACK", centerX - 50, centerY + 90, {
-                w: 100,
-                h: 20
-            }) || keyboardDown[KeyCode.Escape]) {
+            if (
+                button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+                    w: 100,
+                    h: 20,
+                }) ||
+                keyboardDown[KeyCode.Escape]
+            ) {
                 menu._state = GameMenuState.Paused;
             }
         }

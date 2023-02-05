@@ -2,14 +2,14 @@
 // NPC are using entity identifier, negative (-entity.id)
 export type ClientID = number;
 export type CallID = number;
-export type MessageData = any;
+export type MessageData = unknown;
 export type MessageTypeID = number;
 
-declare var __VERSION__: string;
-declare var __BUILD_COMMIT__: string;
-declare var __BUILD_HASH__: string;
-declare var __SERVER_URL__: string;
-declare var __POKI_GAME_ID__: string;
+declare let __VERSION__: string;
+declare let __BUILD_COMMIT__: string;
+declare let __BUILD_HASH__: string;
+declare let __SERVER_URL__: string;
+declare let __POKI_GAME_ID__: string;
 
 export const BuildVersion = __VERSION__;
 export const BuildHash = __BUILD_HASH__;
@@ -24,7 +24,7 @@ export const ServerEventName = {
     ClientUpdate: 3,
     ClientListChange: 4,
 } as const;
-export type ServerEventName = typeof ServerEventName[keyof typeof ServerEventName];
+export type ServerEventName = (typeof ServerEventName)[keyof typeof ServerEventName];
 
 export const MessageType = {
     Nop: 0,
@@ -32,7 +32,7 @@ export const MessageType = {
     RtcCandidate: 2,
     Name: 3,
 } as const;
-export type MessageType = typeof MessageType[keyof typeof MessageType];
+export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
 export const MessageField = {
     Source: 0,
@@ -41,7 +41,7 @@ export const MessageField = {
     Call: 3,
     Data: 4,
 } as const;
-export type MessageField = typeof MessageField[keyof typeof MessageField];
+export type MessageField = (typeof MessageField)[keyof typeof MessageField];
 
 export type Message = [
     // source - from
@@ -61,7 +61,7 @@ export type Request = [
     // source - from
     ClientID,
     // messages array
-    Message[]
+    Message[],
 ];
 
 // number of processed messages
@@ -76,8 +76,8 @@ export interface RoomInfo {
 
 /* DTO */
 export interface RoomsInfoResponse {
-    rooms: RoomInfo[],
-    players: number,
+    rooms: RoomInfo[];
+    players: number;
 }
 
 export const GameModeFlag = {
@@ -86,7 +86,7 @@ export const GameModeFlag = {
     Timer: 4,
     Offline: 1 << 16,
 } as const;
-export type GameModeFlag = typeof GameModeFlag[keyof typeof GameModeFlag];
+export type GameModeFlag = (typeof GameModeFlag)[keyof typeof GameModeFlag];
 
 export interface NewGameParams {
     _flags: number;

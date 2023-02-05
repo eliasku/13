@@ -1,12 +1,11 @@
 const prefix = "iioi";
 
-
 export const BloodMode = {
     Off: 0,
     Normal: 1,
     Paint: 2,
 } as const;
-export type BloodMode = typeof BloodMode[keyof typeof BloodMode];
+export type BloodMode = (typeof BloodMode)[keyof typeof BloodMode];
 
 export const DEFAULT_FRAMERATE_LIMIT = 60;
 
@@ -17,8 +16,7 @@ export const Setting = {
     Particles: 3,
     FrameRateCap: 4,
 } as const;
-export type Setting = typeof Setting[keyof typeof Setting];
-
+export type Setting = (typeof Setting)[keyof typeof Setting];
 
 export const SettingFlag = {
     Sound: 1 << 0,
@@ -32,10 +30,9 @@ export const SettingFlag = {
     DevLogging: 1 << 8,
     DevAutoPlay: 1 << 9,
 } as const;
-export type SettingFlag = typeof SettingFlag[keyof typeof SettingFlag];
+export type SettingFlag = (typeof SettingFlag)[keyof typeof SettingFlag];
 
-
-interface SettingsMap extends Record<Setting, any>{
+interface SettingsMap {
     [Setting.Name]: string;
     [Setting.Flags]: SettingFlag;
     [Setting.Blood]: BloodMode;
@@ -45,44 +42,52 @@ interface SettingsMap extends Record<Setting, any>{
 
 export const settings: SettingsMap = {
     [Setting.Name]: "",
-    [Setting.Flags]: SettingFlag.Sound | SettingFlag.Music | SettingFlag.Speech | SettingFlag.DevShowFrameStats | SettingFlag.DevShowDebugInfo | SettingFlag.DevLogging,
+    [Setting.Flags]:
+        SettingFlag.Sound |
+        SettingFlag.Music |
+        SettingFlag.Speech |
+        SettingFlag.DevShowFrameStats |
+        SettingFlag.DevShowDebugInfo |
+        SettingFlag.DevLogging,
     [Setting.Blood]: BloodMode.Normal,
     [Setting.Particles]: 1,
     [Setting.FrameRateCap]: DEFAULT_FRAMERATE_LIMIT,
 };
 
-const getItem = (key: Setting): any => {
+const getItem = (key: Setting | string): string | undefined => {
     try {
         return localStorage.getItem(prefix + key);
     } catch {
+        // ignore
     }
-}
+};
 
-const setItem = (key: Setting, value: any) => {
+const setItem = (key: Setting, value: string) => {
     try {
         localStorage.setItem(prefix + key, value);
     } catch {
+        // ignore
     }
-}
+};
 
 for (const key in settings) {
-    const v = getItem(key as any as Setting);
+    const v = getItem(key);
     if (v != null) {
-        const type = typeof (settings as any)[key];
+        const type = typeof settings[key];
         switch (type) {
             case "number":
-                (settings as any)[key] = parseFloat(v);
+                settings[key] = parseFloat(v);
                 break;
             case "string":
-                (settings as any)[key] = v;
+                settings[key] = v;
                 break;
         }
     }
 }
 
-export function setSetting<K extends keyof SettingsMap>(key: K, value: SettingsMap[K]): any {
+export function setSetting<K extends keyof SettingsMap>(key: K, value: SettingsMap[K]): SettingsMap[K] {
     settings[key] = value;
-    setItem(key, value);
+    setItem(key, "" + value);
     return value;
 }
 

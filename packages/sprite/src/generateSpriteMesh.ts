@@ -11,7 +11,7 @@ polybool.epsilon(1e-6);
 const pickAlpha = (x: number, y: number, img: ImageData) => {
     if (x < 0 || x >= img.width || y < 0 || y >= img.height) return 0.0;
     return img.data[4 * ((x | 0) + (y | 0) * img.width) + 3] / 255;
-}
+};
 
 export const sampleAlpha = (x: number, y: number, img: ImageData) => {
     x -= 0.5;
@@ -31,7 +31,7 @@ export const sampleAlpha = (x: number, y: number, img: ImageData) => {
         console.error(v);
     }
     return v;
-}
+};
 
 const sampleAlphaHard = (x: number, y: number, img: ImageData) => {
     // x -= 0.5;
@@ -39,7 +39,7 @@ const sampleAlphaHard = (x: number, y: number, img: ImageData) => {
     const x0 = Math.floor(x);
     const y0 = Math.floor(y);
     return pickAlpha(x0, y0, img);
-}
+};
 
 export interface MeshSprite {
     indices: number[];
@@ -47,25 +47,40 @@ export interface MeshSprite {
 }
 
 /// BEGIN
-export function generateMeshSprite(img: ImageData, soft: boolean, subsample: number, tol: number, threshold: number): MeshSprite {
+export function generateMeshSprite(
+    img: ImageData,
+    soft: boolean,
+    subsample: number,
+    tol: number,
+    threshold: number,
+): MeshSprite {
     let polylineSet: PolylineSet = [];
     const marchFn = soft ? marchSoft : marchHard;
     const sample = soft ? sampleAlpha : sampleAlphaHard;
-    marchFn({
-        l: -0.5 / subsample,
-        t: -0.5 / subsample,
-        r: img.width + 0.5 / subsample,
-        b: img.height + 0.5 / subsample
-    }, subsample * (img.width + 1), subsample * (img.height + 1), threshold, (v0: Vec2, v1: Vec2, _: any) => {
-        //console.info(v0, v1);
-        if (!isFinite(v0.x)) console.error("bad v0.x", v0.x);
-        if (!isFinite(v0.y)) console.error("bad v0.y", v0.y);
-        if (!isFinite(v1.x)) console.error("bad v1.x", v1.x);
-        if (!isFinite(v1.y)) console.error("bad v1.y", v1.y);
-        polylineSetCollectSegment(v0, v1, polylineSet);
-    }, {}, (point: Vec2, data: any) => {
-        return sample(point.x, point.y, data);
-    }, img);
+    marchFn(
+        {
+            l: -0.5 / subsample,
+            t: -0.5 / subsample,
+            r: img.width + 0.5 / subsample,
+            b: img.height + 0.5 / subsample,
+        },
+        subsample * (img.width + 1),
+        subsample * (img.height + 1),
+        threshold,
+        (v0: Vec2, v1: Vec2, _: any) => {
+            //console.info(v0, v1);
+            if (!isFinite(v0.x)) console.error("bad v0.x", v0.x);
+            if (!isFinite(v0.y)) console.error("bad v0.y", v0.y);
+            if (!isFinite(v1.x)) console.error("bad v1.x", v1.x);
+            if (!isFinite(v1.y)) console.error("bad v1.y", v1.y);
+            polylineSetCollectSegment(v0, v1, polylineSet);
+        },
+        {},
+        (point: Vec2, data: ImageData) => {
+            return sample(point.x, point.y, data);
+        },
+        img,
+    );
 
     if (tol > 0.0) {
         for (let i = 0; i < polylineSet.length; ++i) {
@@ -87,7 +102,7 @@ export function generateMeshSprite(img: ImageData, soft: boolean, subsample: num
     polylineSet = polylineSet.filter(p => p.length > 1);
     let polygon = {
         regions: polylineSet.map(p => p.map(v => [v.x, v.y])),
-        inverted: false
+        inverted: false,
     };
 
     //console.info(polygon);

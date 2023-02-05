@@ -5,7 +5,7 @@ export interface PlayerBot {
     update?: (state: StateData, player: PlayerActor) => number;
 }
 
-export let playerBot: PlayerBot = {};
+export const playerBot: PlayerBot = {};
 
 onmessage = e => {
     const stateBuffer = e.data[0] as Int32Array;
@@ -20,21 +20,12 @@ onmessage = e => {
         }
     }
     postMessage([input, stateBuffer], {transfer: [stateBuffer.buffer]});
-}
+};
 
 // export public types
 
-export {
-    ActorType,
-    ControlsFlag,
-    ItemType,
-    packDirByte
-} from "@iioi/client/game/types.js";
-export type {
-    Actor,
-    PlayerActor,
-    StateData
-} from "@iioi/client/game/types.js";
+export {ActorType, ControlsFlag, ItemType, packDirByte} from "@iioi/client/game/types.js";
+export type {Actor, PlayerActor, StateData} from "@iioi/client/game/types.js";
 export {WORLD_BOUNDS_SIZE} from "@iioi/client/assets/params.js";
 export {itemContainsAmmo} from "@iioi/client/game/actors.js";
 export {sqrDistXY} from "@iioi/client/game/phy.js";

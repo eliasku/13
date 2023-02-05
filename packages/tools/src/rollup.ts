@@ -3,7 +3,7 @@ import sourcemaps from "rollup-plugin-sourcemaps";
 import terser from "@rollup/plugin-terser";
 import esbuild, {Options} from "rollup-plugin-esbuild";
 import dts from "rollup-plugin-dts";
-import {typescriptPaths} from 'rollup-plugin-typescript-paths';
+import {typescriptPaths} from "rollup-plugin-typescript-paths";
 import {
     OutputOptions,
     rollup,
@@ -11,7 +11,7 @@ import {
     RollupOptions,
     RollupWatcherEvent,
     RollupWatchOptions,
-    watch as rollupWatch
+    watch as rollupWatch,
 } from "rollup";
 import {getCompileDefines} from "./common.js";
 
@@ -21,8 +21,8 @@ interface BuildOptions {
 
     // esbuild
     tsconfig: string;
-    platform?: "node" | "browser",
-    target?: "node16" | "es2020",
+    platform?: "node" | "browser";
+    target?: "node16" | "es2020";
 
     debug?: boolean; // false
     keepConsole?: boolean; // false
@@ -60,38 +60,45 @@ function getRollupInput(options: BuildOptions): RollupOptions {
         plugins: [
             sourcemaps(),
             nodeResolve(),
-            typescriptPaths({tsConfigPath: "tsconfig.base.json", preserveExtensions: true}),
-            esbuild_(options),
-            (options.debug || options.skipTerser) ? undefined : terser({
-                toplevel: true,
-                module: true,
-                ecma: 2020,
-                compress: {
-                    booleans_as_integers: true,
-                    unsafe_arrows: true,
-                    passes: 10000,
-                    keep_fargs: false,
-                    hoist_funs: true,
-                    // hoist_vars: true,
-                    pure_getters: true,
-                    dead_code: true,
-                    //pure_funcs: pureFunc,
-                    unsafe_methods: true,
-                    inline: 3,
-                    expression: true,
-                    unsafe_math: true,
-                    unsafe: true
-                },
-                format: {
-                    wrap_func_args: false,
-                    inline_script: false,
-                },
-                mangle: options.keepProps ? undefined : {
-                    properties: {
-                        regex: /^_[a-z]/
-                    },
-                },
+            typescriptPaths({
+                tsConfigPath: "tsconfig.base.json",
+                preserveExtensions: true,
             }),
+            esbuild_(options),
+            options.debug || options.skipTerser
+                ? undefined
+                : terser({
+                      toplevel: true,
+                      module: true,
+                      ecma: 2020,
+                      compress: {
+                          booleans_as_integers: true,
+                          unsafe_arrows: true,
+                          passes: 10000,
+                          keep_fargs: false,
+                          hoist_funs: true,
+                          // hoist_vars: true,
+                          pure_getters: true,
+                          dead_code: true,
+                          //pure_funcs: pureFunc,
+                          unsafe_methods: true,
+                          inline: 3,
+                          expression: true,
+                          unsafe_math: true,
+                          unsafe: true,
+                      },
+                      format: {
+                          wrap_func_args: false,
+                          inline_script: false,
+                      },
+                      mangle: options.keepProps
+                          ? undefined
+                          : {
+                                properties: {
+                                    regex: /^_[a-z]/,
+                                },
+                            },
+                  }),
         ],
     };
 }
@@ -99,7 +106,7 @@ function getRollupInput(options: BuildOptions): RollupOptions {
 function getRollupOutput(options: BuildOptions): OutputOptions {
     return {
         file: options.output,
-        format: 'es',
+        format: "es",
         sourcemap: true,
     };
 }
@@ -147,7 +154,7 @@ export function watch(options: BuildOptions): Promise<void> {
     let isReady = false;
     return new Promise((resolve, reject) => {
         const watcher = rollupWatch(watchOptions);
-        watcher.on('event', async (ev: RollupWatcherEvent) => {
+        watcher.on("event", async (ev: RollupWatcherEvent) => {
             // console.log("watcher " + ev.code.toLocaleLowerCase().replaceAll("_", " "));
             switch (ev.code) {
                 case "START":
@@ -185,7 +192,6 @@ export function watch(options: BuildOptions): Promise<void> {
 }
 
 async function generateOutputs(bundle: RollupBuild, outputOptions: OutputOptions) {
-
     // generate output specific code in-memory
     // you can call this function multiple times on the same bundle object
     // replace bundle.generate with bundle.write to directly write to disk
@@ -193,14 +199,14 @@ async function generateOutputs(bundle: RollupBuild, outputOptions: OutputOptions
     const {output} = await bundle.write(outputOptions);
 
     for (const chunkOrAsset of output) {
-        if (chunkOrAsset.type === 'asset') {
+        if (chunkOrAsset.type === "asset") {
             // For assets, this contains
             // {
             //   fileName: string,              // the asset file name
             //   source: string | Uint8Array    // the asset source
             //   type: 'asset'                  // signifies that this is an asset
             // }
-            console.log('Asset', chunkOrAsset.fileName);
+            console.log("Asset", chunkOrAsset.fileName);
         } else {
             // For chunks, this contains
             // {
@@ -229,7 +235,7 @@ async function generateOutputs(bundle: RollupBuild, outputOptions: OutputOptions
             //   referencedFiles: string[]      // files referenced via import.meta.ROLLUP_FILE_URL_<id>
             //   type: 'chunk',                 // signifies that this is a chunk
             // }
-            console.log('Chunk', chunkOrAsset.fileName);
+            console.log("Chunk", chunkOrAsset.fileName);
         }
     }
 }

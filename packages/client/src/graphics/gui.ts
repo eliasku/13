@@ -9,11 +9,11 @@ import {Img} from "../assets/img.js";
 let y = 8;
 export const resetPrinter = () => {
     y = 8;
-}
+};
 export const termPrint = (text: string, size = 7) => {
     drawText(fnt[0], text, size, 2, y, size, 1);
     y += size + 1;
-}
+};
 
 // https://sol.gfxile.net/imgui/ch03.html
 
@@ -53,7 +53,7 @@ const captureInputPointer = () => {
             break;
         }
     }
-}
+};
 
 export const ui_begin = () => {
     captureInputPointer();
@@ -62,7 +62,7 @@ export const ui_begin = () => {
     uiState._scale = getScreenScale();
     uiState._width = (gl.drawingBufferWidth / uiState._scale) | 0;
     uiState._height = (gl.drawingBufferHeight / uiState._scale) | 0;
-}
+};
 
 export const ui_finish = () => {
     if (!pointer._active) {
@@ -72,31 +72,34 @@ export const ui_finish = () => {
             activeItem = "!";
         }
     }
-}
+};
 
-export const label = (text: string, size: number, x: number, y: number, alignX: number = 0.5) => {
-    uiState._textOps.push({_x: x, _y: y, _size: size, _text: text, _alignX: alignX,});
-}
+export const label = (text: string, size: number, x: number, y: number, alignX = 0.5) => {
+    uiState._textOps.push({_x: x, _y: y, _size: size, _text: text, _alignX: alignX});
+};
 
 // Check whether current mouse position is within a rectangle
 const isRegionHit = (x: number, y: number, w: number, h: number): number => {
     const px = pointer._x / uiState._scale;
     const py = pointer._y / uiState._scale;
-    if (px < x ||
-        py < y ||
-        px >= x + w ||
-        py >= y + h) {
+    if (px < x || py < y || px >= x + w || py >= y + h) {
         return 0;
     }
     return 1;
-}
+};
 
 const getRegionPointerX = (x: number, w: number): number => {
     const px = pointer._x / uiState._scale;
     return (px - x) / w;
-}
+};
 
-export const button = (id: string, text: string, x: number, y: number, config?: { w?: number, h?: number, visible?: boolean }): number => {
+export const button = (
+    id: string,
+    text: string,
+    x: number,
+    y: number,
+    config?: {w?: number; h?: number; visible?: boolean},
+): number => {
     const w = config?.w ?? 64;
     const h = config?.h ?? 16;
     const visible = config?.visible ?? true;
@@ -108,7 +111,7 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
     }
     if (visible) {
         let offset = 0;
-        let color = 0xFFFFFF;
+        let color = 0xffffff;
 
         if (hotItem === id) {
             if (activeItem === id) {
@@ -120,21 +123,24 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
             }
         } else {
             // button is not hot, but it may be active
-            color = 0xAAAAAA;
+            color = 0xaaaaaa;
         }
-        uiState._opaqueQuads.push({
-            _x: x + offset,
-            _y: y + offset,
-            _w: w,
-            _h: h,
-            _color: color
-        }, {
-            _x: x + 2,
-            _y: y + 2,
-            _w: w,
-            _h: h,
-            _color: 0
-        });
+        uiState._opaqueQuads.push(
+            {
+                _x: x + offset,
+                _y: y + offset,
+                _w: w,
+                _h: h,
+                _color: color,
+            },
+            {
+                _x: x + 2,
+                _y: y + 2,
+                _w: w,
+                _h: h,
+                _color: 0,
+            },
+        );
         uiState._textOps.push({
             _x: x + w / 2 + offset,
             _y: y + h / 1.5 + offset,
@@ -151,7 +157,15 @@ export const button = (id: string, text: string, x: number, y: number, config?: 
     return 0;
 };
 
-export function uiProgressBar(id: string, current: number, total: number, x: number, y: number, w: number, h: number): undefined | number {
+export function uiProgressBar(
+    id: string,
+    current: number,
+    total: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+): undefined | number {
     if (isRegionHit(x, y, w, h)) {
         hotItem = id;
         if (!activeItem && pointer._active) {
@@ -159,19 +173,22 @@ export function uiProgressBar(id: string, current: number, total: number, x: num
         }
     }
     const progress = current / total;
-    uiState._opaqueQuads.push({
-        _x: x,
-        _y: y,
-        _w: w * progress,
-        _h: h,
-        _color: 0xCCCCCC,
-    }, {
-        _x: x + w * progress,
-        _y: y,
-        _w: w * (1 - progress),
-        _h: h,
-        _color: 0x333333,
-    });
+    uiState._opaqueQuads.push(
+        {
+            _x: x,
+            _y: y,
+            _w: w * progress,
+            _h: h,
+            _color: 0xcccccc,
+        },
+        {
+            _x: x + w * progress,
+            _y: y,
+            _w: w * (1 - progress),
+            _h: h,
+            _color: 0x333333,
+        },
+    );
 
     let r = getRegionPointerX(x, w);
     r = clamp(r, 0, 1);
@@ -192,7 +209,7 @@ export function uiProgressBar(id: string, current: number, total: number, x: num
             _y: y - 1,
             _w: w * r,
             _h: 2,
-            _color: 0xFFFFFF,
+            _color: 0xffffff,
         });
         return -r - 1;
     } else {
@@ -208,7 +225,7 @@ export function ui_renderOpaque() {
 
 export function ui_renderNormal() {
     for (const t of uiState._textOps) {
-        drawTextAligned(fnt[0], t._text, t._size, t._x, t._y, 0xFFFFFF, t._alignX);
+        drawTextAligned(fnt[0], t._text, t._size, t._x, t._y, 0xffffff, t._alignX);
     }
 }
 
@@ -216,4 +233,3 @@ export function ui_renderComplete() {
     uiState._opaqueQuads.length = 0;
     uiState._textOps.length = 0;
 }
-

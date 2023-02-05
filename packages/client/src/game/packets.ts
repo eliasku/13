@@ -9,7 +9,7 @@ import {
     Packet,
     PacketDebug,
     PlayerActor,
-    StateData
+    StateData,
 } from "./types.js";
 import {ClientID} from "@iioi/shared/types.js";
 
@@ -21,9 +21,9 @@ const readActor = (p: Actor, i32: Int32Array, ptr: number): number => {
         const ux = i32[ptr++];
         const vy = i32[ptr++];
         const wz = i32[ptr++];
-        p._x = ux & 0xFFFF;
-        p._y = vy & 0xFFFF;
-        p._z = wz & 0xFFFF;
+        p._x = ux & 0xffff;
+        p._y = vy & 0xffff;
+        p._z = wz & 0xffff;
         p._u = ux >> 21;
         p._v = vy >> 21;
         p._w = wz >> 21;
@@ -33,12 +33,12 @@ const readActor = (p: Actor, i32: Int32Array, ptr: number): number => {
     }
     {
         const hdr = i32[ptr++];
-        p._lifetime = hdr & 0xFF;
-        p._anim0 = (hdr >> 8) & 0xFF;
+        p._lifetime = hdr & 0xff;
+        p._anim0 = (hdr >> 8) & 0xff;
         p._hp = (hdr >> 16) & 0b1111;
     }
     return ptr;
-}
+};
 const readPlayerActor = (list: PlayerActor[], i32: Int32Array, ptr: number): number => {
     const p = {_type: ActorType.Player} as PlayerActor;
     ptr = readActor(p, i32, ptr);
@@ -55,19 +55,19 @@ const readPlayerActor = (list: PlayerActor[], i32: Int32Array, ptr: number): num
     p._mags = (data >> 25) & 0b1111;
 
     const data2 = i32[ptr++];
-    p._clipAmmo2 = (data2) & 63;
+    p._clipAmmo2 = data2 & 63;
     p._weapon = (data2 >> 6) & 0b1111;
 
     list.push(p);
     return ptr;
-}
+};
 
 const readBarrelActor = (list: BarrelActor[], i32: Int32Array, ptr: number): number => {
     const p = {_type: ActorType.Barrel} as BarrelActor;
     ptr = readActor(p, i32, ptr);
     list.push(p);
     return ptr;
-}
+};
 
 const readBulletActor = (list: BulletActor[], i32: Int32Array, ptr: number): number => {
     const p = {_type: ActorType.Bullet} as BulletActor;
@@ -77,7 +77,7 @@ const readBulletActor = (list: BulletActor[], i32: Int32Array, ptr: number): num
     p._damage = data & 0b1111;
     list.push(p);
     return ptr;
-}
+};
 
 const readItemActor = (list: ItemActor[], i32: Int32Array, ptr: number): number => {
     const p = {_type: ActorType.Item} as ItemActor;
@@ -87,32 +87,32 @@ const readItemActor = (list: ItemActor[], i32: Int32Array, ptr: number): number 
     p._itemWeaponAmmo = (data >> 4) & 0b111111;
     list.push(p);
     return ptr;
-}
+};
 
 export const readState = (state: StateData, i32: Int32Array, ptr: number): number => {
     state._nextId = i32[ptr++];
     state._tic = i32[ptr++];
     state._seed = i32[ptr++] >>> 0;
     {
-        let count = i32[ptr++];
+        const count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
             ptr = readPlayerActor(state._actors[ActorType.Player], i32, ptr);
         }
     }
     {
-        let count = i32[ptr++];
+        const count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
             ptr = readBarrelActor(state._actors[ActorType.Barrel], i32, ptr);
         }
     }
     {
-        let count = i32[ptr++];
+        const count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
             ptr = readBulletActor(state._actors[ActorType.Bullet], i32, ptr);
         }
     }
     {
-        let count = i32[ptr++];
+        const count = i32[ptr++];
         for (let i = 0; i < count; ++i) {
             ptr = readItemActor(state._actors[ActorType.Item], i32, ptr);
         }
@@ -125,14 +125,20 @@ export const readState = (state: StateData, i32: Int32Array, ptr: number): numbe
         });
     }
     return ptr;
-}
-export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: ClientEvent[] = [], _state?: StateData, _debug?: PacketDebug): Packet => {
+};
+export const unpack = (
+    client: ClientID,
+    i32: Int32Array,
+    /* let */ _events: ClientEvent[] = [],
+    _state?: StateData,
+    _debug?: PacketDebug,
+): Packet => {
     let event_tic = i32[2];
     const ts0 = i32[3];
     const ts1 = i32[4];
     // 10
     let ptr = 5;
-    for (; event_tic;) {
+    for (; event_tic; ) {
         const v = i32[ptr++];
         const delta = v >> 21;
         _events.push({
@@ -161,7 +167,7 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
         }
     }
     return {
-        _sync: (i32[1] & 1) as any as boolean,
+        _sync: i32[1] & 1,
         _tic: i32[0],
         _receivedOnSender: i32[0] + (i32[1] >> 2),
         _events: _events,
@@ -170,20 +176,20 @@ export const unpack = (client: ClientID, i32: Int32Array,/* let */ _events: Clie
         _ts0: ts0,
         _ts1: ts1,
     };
-}
+};
 
 const validateFieldSize = (p: Actor) => {
-    console.assert(p._type >= 0 && p._type < (2 ** 3));
-    console.assert(p._lifetime >= 0 && p._lifetime < (2 ** 8));
-    console.assert(p._anim0 >= 0 && p._anim0 < (2 ** 8));
-    console.assert(p._hp >= 0 && p._hp < (2 ** 4));
+    console.assert(p._type >= 0 && p._type < 2 ** 3);
+    console.assert(p._lifetime >= 0 && p._lifetime < 2 ** 8);
+    console.assert(p._anim0 >= 0 && p._anim0 < 2 ** 8);
+    console.assert(p._hp >= 0 && p._hp < 2 ** 4);
 
     console.assert(p._u >= -1024 && p._u <= 1024);
     console.assert(p._v >= -1024 && p._v <= 1024);
     console.assert(p._w >= -1024 && p._w <= 1024);
-    console.assert(p._x >= 0 && p._x <= 0xFFFF);
-    console.assert(p._y >= 0 && p._y <= 0xFFFF);
-    console.assert(p._z >= 0 && p._z <= 0xFFFF);
+    console.assert(p._x >= 0 && p._x <= 0xffff);
+    console.assert(p._y >= 0 && p._y <= 0xffff);
+    console.assert(p._z >= 0 && p._z <= 0xffff);
 
     console.assert(p._id >= 0 && p._id < 2 ** 31);
     console.assert(p._subtype >= 0 && p._subtype < 2 ** 4);
@@ -217,11 +223,18 @@ const writePlayerActor = (p: PlayerActor, i32: Int32Array, ptr: number): number 
         console.assert(p._clipReload >= 0 && p._clipReload < 2 ** 6);
         console.assert(p._mags >= 0 && p._mags < 2 ** 4);
         console.assert(p._clipAmmo >= 0 && p._clipAmmo < 2 ** 6);
-        console.assert(p._weapon >= 0 && p._weapon < (2 ** 4));
+        console.assert(p._weapon >= 0 && p._weapon < 2 ** 4);
     }
     i32[ptr++] = p._client;
     i32[ptr++] = p._input;
-    i32[ptr++] = p._detune | (p._clipAmmo << 5) | (p._weapon2 << 11) | (p._trig << 15) | (p._clipReload << 19) | (p._mags << 25) | (0 << 29);
+    i32[ptr++] =
+        p._detune |
+        (p._clipAmmo << 5) |
+        (p._weapon2 << 11) |
+        (p._trig << 15) |
+        (p._clipReload << 19) |
+        (p._mags << 25) |
+        (0 << 29);
     i32[ptr++] = p._clipAmmo2 | (p._weapon << 6);
     return ptr;
 };
@@ -233,7 +246,7 @@ const writeBarrelActor = (p: BarrelActor, i32: Int32Array, ptr: number): number 
 const writeBulletActor = (p: BulletActor, i32: Int32Array, ptr: number): number => {
     ptr = writeActor(p, i32, ptr);
     if (process.env.NODE_ENV === "development") {
-        console.assert(p._damage >= 0 && p._damage < (2 ** 4));
+        console.assert(p._damage >= 0 && p._damage < 2 ** 4);
     }
     i32[ptr++] = p._ownerId;
     i32[ptr++] = p._damage;
@@ -292,13 +305,13 @@ export const writeState = (state: StateData | undefined, i32: Int32Array, ptr: n
         }
     }
     return ptr;
-}
+};
 
 export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     i32[0] = packet._tic;
     // 0-bit - sync
     // 1-bit - init-packet
-    i32[1] = ((packet._receivedOnSender - packet._tic) << 2) | ((!!packet._state) as any << 1) | (packet._sync as any);
+    i32[1] = ((packet._receivedOnSender - packet._tic) << 2) | ((!!packet._state as never) << 1) | packet._sync;
     const events = packet._events;
     events.sort((a, b) => a._tic - b._tic);
     const event_tic = events.length ? events[0]._tic : 0;
@@ -309,7 +322,7 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     let i = 0;
     while (i < events.length) {
         const e = events[i++];
-        const c = events[i] ? (events[i]._tic - e._tic) : 0;
+        const c = events[i] ? events[i]._tic - e._tic : 0;
         i32[ptr++] = (c << 21) | e._input;
     }
     ptr = writeState(packet._state, i32, ptr);
@@ -326,4 +339,4 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
         }
     }
     return i32.buffer.slice(0, ptr * 4);
-}
+};

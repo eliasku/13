@@ -1,88 +1,8 @@
 import {AtlasPage, Image} from "./atlas";
 import {generateMeshSprite} from "./generateSpriteMesh";
 
-const PAD_MOVE_RADIUS_0 = 16;
-const PAD_MOVE_RADIUS_1 = 48;
-const PAD_FIRE_RADIUS_0 = 16;
-const PAD_FIRE_RADIUS_1 = 40;
 const PI2 = Math.PI * 2;
 const TO_RAD = Math.PI / 180;
-
-export const enum Img {
-    box = 0,
-    box_lt,
-    box_t,
-    box_t1,
-    box_l,
-    box_r,
-    circle_4,
-    circle_4_60p,
-    circle_4_70p,
-    circle_16,
-
-    weapon0,
-    weapon1,
-    weapon2,
-    weapon3,
-    weapon4,
-    weapon5,
-    weapon6,
-    weapon7,
-    weapon8,
-    weapon9,
-
-    avatar0,
-    avatar1,
-    avatar2,
-    avatar3,
-    avatar4,
-    avatar5,
-    avatar6,
-    avatar7,
-    avatar8,
-    avatar9,
-    avatar10,
-    avatar11,
-    avatar12,
-    avatar13,
-    avatar14,
-
-    npc0,
-    npc1,
-    npc2,
-    npc3,
-    npc4,
-    npc5,
-    npc6,
-    npc7,
-
-    barrel0,
-    barrel1,
-    barrel2,
-
-    item0,
-    item1,
-    item2,
-    item3,
-    item4,
-    item5,
-
-    tree0,
-    tree1,
-    tree2,
-    tree3,
-    tree4,
-    tree5,
-
-    particle_flesh0,
-    particle_flesh1,
-    particle_shell,
-
-    logo_title,
-
-    num_avatars = 15,
-    num_npc = 8,
-}
 
 const Font = (size: number): string => `${size}px m,e`;
 // export const Font = (size: number): string => size + "px e";
@@ -90,7 +10,10 @@ export const EMOJI: Record<number, string> = [];
 
 export const img: Image[] = [];
 
-export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasRenderingContext2D): CanvasRenderingContext2D => {
+export const createCanvas = (
+    size: number,
+    _canvas?: HTMLCanvasElement | CanvasRenderingContext2D,
+): CanvasRenderingContext2D => {
     _canvas = document.createElement("canvas");
     _canvas.width = _canvas.height = size;
     _canvas = _canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -98,13 +21,13 @@ export const createCanvas = (size: number, _canvas?: HTMLCanvasElement | CanvasR
     _canvas.textAlign = "center";
     _canvas.textBaseline = "alphabetic";
     return _canvas;
-}
+};
 
 const circle = (ctx: CanvasRenderingContext2D, r: number) => {
     ctx.beginPath();
     ctx.arc(0, 0, r - 0.3, 0, PI2);
     ctx.closePath();
-}
+};
 
 export const buildAtlas = (): AtlasPage => {
     const canvaSize = 512;
@@ -116,14 +39,14 @@ export const buildAtlas = (): AtlasPage => {
     let maxHeight = 0;
     let sprWidth = 0;
     let sprHeight = 0;
-    let allIndices: number[] = [];
+    const allIndices: number[] = [];
     let allVertices: number[] = [];
     let startIndex = 0;
     let startVertex = 0;
     let indices: number[];
     let vertices: number[];
 
-    const addMesh = (soft = false, flood: boolean = true) => {
+    const addMesh = (soft = false, flood = true) => {
         const imgData = atlas.getImageData(x, y, sprWidth, sprHeight);
         const subMesh = generateMeshSprite(imgData, soft, 4, 1, 0.999);
         startIndex = allIndices.length;
@@ -149,7 +72,7 @@ export const buildAtlas = (): AtlasPage => {
             };
             for (let cy = 1; cy < imgData.height - 1; ++cy) {
                 for (let cx = 1; cx < imgData.width - 1; ++cx) {
-                    let i = cy * stride + cx * 4;
+                    const i = cy * stride + cx * 4;
                     if (imgData.data[i + 3]) {
                         copy(i, i);
                         copy(i, i - stride);
@@ -168,17 +91,17 @@ export const buildAtlas = (): AtlasPage => {
         }
     };
     // TODO:
-    const addQuadMesh = () => {
-        // const imgData = atlas.getImageData(x, y, sprWidth, sprHeight);
-        // const subMesh = generateMeshSprite(imgData, true, 1, 1, 1);
-        // startIndex = allIndices.length;
-        // indices = subMesh.indices;
-        // vertices = subMesh.vertices;
-        // for(const i of indices) {
-        //     allIndices.push(startIndex + i);
-        // }
-        // allVertices = allVertices.concat(vertices);
-    };
+    // const addQuadMesh = () => {
+    // const imgData = atlas.getImageData(x, y, sprWidth, sprHeight);
+    // const subMesh = generateMeshSprite(imgData, true, 1, 1, 1);
+    // startIndex = allIndices.length;
+    // indices = subMesh.indices;
+    // vertices = subMesh.vertices;
+    // for(const i of indices) {
+    //     allIndices.push(startIndex + i);
+    // }
+    // allVertices = allVertices.concat(vertices);
+    // };
 
     const pushSprite = (w: number, h: number) => {
         const pad = 2;
@@ -209,16 +132,29 @@ export const buildAtlas = (): AtlasPage => {
             vertexCount: vertices.length / 2,
         });
 
-    const cutAlpha = (cut: number = 0x80, imageData?: ImageData, imagePixels?: Uint8ClampedArray) => {
+    const cutAlpha = (cut = 0x80, imageData?: ImageData, imagePixels?: Uint8ClampedArray) => {
         imageData = atlas.getImageData(x, y, sprWidth, sprHeight);
         imagePixels = imageData.data;
         for (let i = 3; i < imagePixels.length; i += 4) {
-            imagePixels[i] = imagePixels[i] < cut ? 0 : 0xFF;
+            imagePixels[i] = imagePixels[i] < cut ? 0 : 0xff;
         }
         atlas.putImageData(imageData, x, y);
     };
 
-    const createEmoji2 = (emoji: string, ox: number, oy: number, w: number, h: number, size: number = 0, a: number = 0, sx: number = 1, sy: number = 1, cut?: number, ax?: number, ay?: number) => {
+    const createEmoji2 = (
+        emoji: string,
+        ox: number,
+        oy: number,
+        w: number,
+        h: number,
+        size = 0,
+        a = 0,
+        sx = 1,
+        sy = 1,
+        cut?: number,
+        ax?: number,
+        ay?: number,
+    ) => {
         // const emoji = String.fromCodePoint(...emojiCode);
         let scale = 8;
         const emojiSize = (16 + size) * scale;
@@ -241,7 +177,7 @@ export const buildAtlas = (): AtlasPage => {
         EMOJI[img.length] = emoji;
         addMesh();
         saveImage(ax, ay);
-    }
+    };
 
     const createCircle = (r: number) => {
         const s = r * 2;
@@ -253,7 +189,7 @@ export const buildAtlas = (): AtlasPage => {
         cutAlpha();
         addMesh();
         saveImage();
-    }
+    };
     // BOX
     pushSprite(1, 1);
     atlas.fillRect(x - 1, y - 1, 3, 3);
@@ -272,10 +208,23 @@ export const buildAtlas = (): AtlasPage => {
     createCircle(16);
     saveImage();
 
-    [
-        /* 🔪 */ ["🔪", 180, 234, 19, 7, -4, -50, , , , 0.3,],
-        /* 🪓 */ ["🪓", 198, 210, 20, 10, , 45, -1, , , 0.3,],
-        /* 🔫 */ ["🔫", 208, 198, 15, 12, -4, , -1, , , 0.3,],
+    const arr: [
+        string,
+        number,
+        number,
+        number,
+        number,
+        number?,
+        number?,
+        number?,
+        number?,
+        number?,
+        number?,
+        number?,
+    ][] = [
+        /* 🔪 */ ["🔪", 180, 234, 19, 7, -4, -50, , , , 0.3],
+        /* 🪓 */ ["🪓", 198, 210, 20, 10, , 45, -1, , , 0.3],
+        /* 🔫 */ ["🔫", 208, 198, 15, 12, -4, , -1, , , 0.3],
         /* 🖊️ */ ["🖊️", 157, 211, 24, 8, , -45, -1, , , ,],
         /* ✏️️ */ ["✏️️", 186, 216, 23, 8, , 44.5, -1, , , ,],
         /* 🪥 */ ["🪥", 175, 261, 20, 8, , 45, , -1, , ,],
@@ -296,7 +245,7 @@ export const buildAtlas = (): AtlasPage => {
         /* 🦊 */ ["🦊", 177, 153, 22, 20, 4, , , , , ,],
         /* 🐭 */ ["🐭", 176, 148, 23, 22, 4, , , , , ,],
         /* 🦍 */ ["🦍", 179, 145, 22, 22, 4, , , , , ,],
-        /* 🐸 */ ["🐸", 180, 158, 22, 20, 3, , , , , , ],
+        /* 🐸 */ ["🐸", 180, 158, 22, 20, 3, , , , , ,],
         /* 🍅 */ ["🍅", 195, 166, 18, 19, , , , , , ,],
         /* 😐 */ ["😐", 192, 166, 19, 19, , , , , , ,],
         /* 🐷 */ ["🐷", 192, 170, 19, 17, , , , , , ,],
@@ -325,10 +274,9 @@ export const buildAtlas = (): AtlasPage => {
         /* ⛄ */ ["⛄", 156, 99, 28, 31, 12, , , , 136, , 0.95],
         /* 🥓 */ ["🥓", 163, 219, 22, 9, , -45, , , , ,],
         /* 🦴 */ ["🦴", 163, 213, 21, 9, , -45, , , , ,],
-    ].map(a =>
-        // @ts-ignore
-        createEmoji2(...a)
-    );
+    ];
+    arr.map(a => createEmoji2(...a));
+
     pushSprite(4, 2);
     atlas.fillRect(x, y, 4, 2);
     atlas.fillStyle = "#999";
@@ -387,7 +335,7 @@ export const buildAtlas = (): AtlasPage => {
         image: atlas.canvas,
         data: buffer,
     };
-}
+};
 
 export function makeSpotLightTexture() {
     const ctx = createCanvas(64);
@@ -402,10 +350,10 @@ export function makeSpotLightTexture() {
     circle(ctx, 32);
     ctx.fill();
     ctx.resetTransform();
-    ctx.canvas.toBlob((blob: Blob|null) => {
-        if(blob) {
+    ctx.canvas.toBlob((blob: Blob | null) => {
+        if (blob) {
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const a = document.createElement("a");
             document.body.appendChild(a);
             a.href = url;
             a.download = "spot.png";

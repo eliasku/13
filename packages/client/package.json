@@ -1,24 +1,23 @@
 {
-  "name": "@iioi/client",
-  "version": "1.0.14",
-  "description": "13 Game Client",
-  "private": true,
-  "type": "module",
-  "exports": {
-    "./*": {
-      "types": "./dist/*",
-      "default": "./dist/*"
+    "name": "@iioi/client",
+    "version": "1.0.14",
+    "description": "13 Game Client",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./*": {
+            "types": "./dist/*",
+            "default": "./dist/*"
+        },
+        "./*.js": {
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.js"
+        }
     },
-    "./*.js": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
+    "scripts": {},
+    "author": "eliasku",
+    "license": "ISC",
+    "dependencies": {
+        "@iioi/shared": "1.0.14"
     }
-  },
-  "scripts": {
-  },
-  "author": "eliasku",
-  "license": "ISC",
-  "dependencies": {
-    "@iioi/shared": "1.0.14"
-  }
 }

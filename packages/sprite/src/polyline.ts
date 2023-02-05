@@ -22,7 +22,6 @@ function polylineSetFindStarts(set: PolylineSet, v: Vec2): number {
     return -1;
 }
 
-
 // Push v onto the end of line.
 function polylinePush(line: Polyline, v: Vec2): Polyline {
     line[line.length] = v;
@@ -34,7 +33,6 @@ function polylineEnqueue(line: Polyline, v: Vec2): Polyline {
     line.unshift(v);
     return line;
 }
-
 
 // Join two cpPolylines in a polyline set together.
 function polylineSetJoin(set: PolylineSet, before: number, after: number) {
@@ -96,7 +94,8 @@ const polylineIsShort = (points: Vec2[], count: number, start: number, end: numb
 //MARK: Polyline Simplification
 
 // TODO could speed this up by caching the normals instead of calculating each twice.
-const Sharpness = (a: Vec2, b: Vec2, c: Vec2): number => vec2_dot(vec2_normalize(vec2_sub(a, b)), vec2_normalize(vec2_sub(c, b)));
+const Sharpness = (a: Vec2, b: Vec2, c: Vec2): number =>
+    vec2_dot(vec2_normalize(vec2_sub(a, b)), vec2_normalize(vec2_sub(c, b)));
 
 // Join similar adjacent line segments together. Works well for hard edged shapes.
 // 'tol' is the minimum anglular difference in radians of a vertex.
@@ -126,9 +125,13 @@ export function polylineSimplifyVertexes(line: Polyline, tol: number): Polyline 
 
 // Recursive function used by cpPolylineSimplifyCurves().
 function DouglasPeucker(
-    verts: Vec2[], reduced: Polyline,
-    length: number, start: number, end: number,
-    min: number, tol: number
+    verts: Vec2[],
+    reduced: Polyline,
+    length: number,
+    start: number,
+    end: number,
+    min: number,
+    tol: number,
 ): Polyline {
     // Early exit if the points are adjacent
     if ((end - start + length) % length < 2) return reduced;

@@ -37,7 +37,7 @@ const themes: MapTheme[] = [
         rectW: [1, 12],
         rectH: [1, 2],
         treeGfx: [4, 5],
-    }
+    },
 ];
 
 export const mapTexture0 = createTexture(BOUNDS_SIZE);
@@ -47,14 +47,14 @@ initFramebuffer(mapTexture);
 export const generateMapBackground = (themeId: number): MapTheme => {
     const theme = themes[themeId];
     const size = BOUNDS_SIZE;
-    const map = createCanvas(size)
+    const map = createCanvas(size);
     map.fillStyle = theme.primaryColor;
     map.fillRect(0, 0, size, size);
     const sc = 4;
     map.scale(1, 1 / sc);
-    for (let i = 0; i++ < size;) {
+    for (let i = 0; i++ < size; ) {
         map.fillStyle = theme.splatColors[rand(theme.splatColors.length)];
-        map.beginPath()
+        map.beginPath();
         const splatR = theme.splatR[0] + rand(theme.splatR[1] - theme.splatR[0]);
         map.arc(rand(size), rand(size) * sc, splatR, 0, PI2);
         map.fill();
@@ -65,4 +65,4 @@ export const generateMapBackground = (themeId: number): MapTheme => {
     uploadTexture(mapTexture0, map.canvas);
     uploadTexture(mapTexture, map.canvas);
     return theme;
-}
+};

@@ -9,7 +9,7 @@ const sendSafeInner = (channel: RTCDataChannel, data: ArrayBuffer) => {
     } catch (e) {
         console.warn(`DataChannel send message [${data.byteLength}] error:`, e);
     }
-}
+};
 
 const sendSafe = (client: RemoteClient, data: ArrayBuffer) => {
     const dc = client._dc;
@@ -21,7 +21,7 @@ const sendSafe = (client: RemoteClient, data: ArrayBuffer) => {
         return;
     }
     sendSafeInner(dc, data);
-}
+};
 
 const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
     client._debugPacketByteLength = data.byteLength;
@@ -33,9 +33,9 @@ const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
         sendSafe(client, data);
         return;
     }
-    const loss = 0.05 * (10 ** (_debugLagK - 1));
-    const lagMin = 20 * (10 ** (_debugLagK - 1));
-    const lagMax = 200 * (10 ** (_debugLagK - 1));
+    const loss = 0.05 * 10 ** (_debugLagK - 1);
+    const lagMin = 20 * 10 ** (_debugLagK - 1);
+    const lagMax = 200 * 10 ** (_debugLagK - 1);
     if (fxRandom() > loss * loss) {
         if (document.hidden) {
             // can't simulate lag when tab in background because of setTimeout stall
@@ -49,7 +49,7 @@ const sendWithDebugLag = (client: RemoteClient, data: ArrayBuffer) => {
             }, delay);
         }
     }
-}
+};
 
 export const channels_sendObjectData = (client: RemoteClient, data: ArrayBuffer) => {
     if (process.env.NODE_ENV === "development") {
@@ -57,10 +57,7 @@ export const channels_sendObjectData = (client: RemoteClient, data: ArrayBuffer)
     } else {
         sendSafe(client, data);
     }
-}
+};
 
 export const getChannelPacketSize = (client: RemoteClient): number =>
-    (process.env.NODE_ENV === "development" ?
-        client._debugPacketByteLength :
-        client._dc?.bufferedAmount) | 0;
-
+    (process.env.NODE_ENV === "development" ? client._debugPacketByteLength : client._dc?.bufferedAmount) | 0;

@@ -1,5 +1,5 @@
 import {spawn} from "child_process";
-import {copyPublicAssets, executeAsync, prepareFolders} from "./common.js";
+import {copyPublicAssets, prepareFolders} from "./common.js";
 import {watch} from "./rollup.js";
 
 prepareFolders("public");
@@ -68,6 +68,6 @@ await Promise.all(watchTasks);
 console.info("First build OK. watching... " + process.cwd());
 
 const server = spawn("node", ["./server.js"]);
-server.stdout.on('data', data => process.stdout.write(data));
-server.stderr.on('data', data => process.stderr.write(data));
-server.on('exit', code => console.log('[SERVER] process exited with code ' + code?.toString()));
+server.stdout.on("data", data => process.stdout.write(data));
+server.stderr.on("data", data => process.stderr.write(data));
+server.on("exit", code => console.log("[SERVER] process exited with code " + code?.toString()));

@@ -17,22 +17,19 @@ const getPlayerColor = (player: PlayerActor): number => {
         return config._colors._me;
     }
     return config._colors._player;
-}
+};
 
 const drawMiniMapList = (x: number, y: number, actors: Actor[] | undefined, color: number, r: number) => {
     if (actors) {
         const config = GAME_CFG._minimap;
-        const s = config._markerScale * r / OBJECT_RADIUS;
+        const s = (config._markerScale * r) / OBJECT_RADIUS;
         const scale = config._size / WORLD_BOUNDS_SIZE;
         for (const actor of actors) {
             let c = color;
             if (actor._type === ActorType.Player) {
                 c = getPlayerColor(actor as PlayerActor);
             }
-            draw(fnt[0]._textureBox,
-                x + scale * actor._x,
-                y + scale * actor._y,
-                PI / 4, s, s, 1, c);
+            draw(fnt[0]._textureBox, x + scale * actor._x, y + scale * actor._y, PI / 4, s, s, 1, c);
         }
     }
 };

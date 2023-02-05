@@ -27,13 +27,13 @@ const StartState = {
     Connecting: 3,
     Connected: 4,
 } as const;
-type StartState = typeof StartState[keyof typeof StartState];
+type StartState = (typeof StartState)[keyof typeof StartState];
 type StateFunc = (ts?: number) => void | undefined;
 
 async function start() {
     await poki._init();
 
-    let state:StartState = StartState.Loading;
+    let state: StartState = StartState.Loading;
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
 
     const refreshRoomsInfo = async () => {
@@ -50,27 +50,25 @@ async function start() {
         gameMode._playersAI = true;
         gameMode._npcLevel = 3;
         speak("13 the game");
-    }
+    };
 
     if (!clientName) {
         setUserName();
     }
-    const itemsToLoad: Promise<any>[] = [];
+    const itemsToLoad: Promise<void>[] = [];
     let loaded = 0;
     const updateProgress = (loaded: number) => {
         const total = itemsToLoad.length;
-        setLoadingProgress(total ? (loaded / total) : 1.0);
+        setLoadingProgress(total ? loaded / total : 1.0);
     };
-    const addLoadItem = <T>(task: Promise<T>): number => itemsToLoad.push(
-        task.then(_ => updateProgress(++loaded))
-    );
+    const addLoadItem = <T>(task: Promise<T>): number => itemsToLoad.push(task.then(() => updateProgress(++loaded)));
     addLoadItem(new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("fa-brands-400", "url(fa-brands-400.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(loadMainAtlas());
     addLoadItem(loadSpotLightTexture());
     updateProgress(loaded);
-    Promise.all(itemsToLoad).then(_ => {
+    Promise.all(itemsToLoad).then(() => {
         initFonts();
         state = StartState.Loaded;
         resetGame();
@@ -82,9 +80,10 @@ async function start() {
         // test load ai
         loadPlayerCode("./autoplay.js");
     });
+
     const preStates: StateFunc[] = [
-        ,
-        ,
+        undefined,
+        undefined,
         () => {
             const result = menuScreen(publicServerInfo);
             if (result) {
@@ -117,7 +116,7 @@ async function start() {
                 } else if (result._command === MenuCommand.Replay) {
                     openReplayFile(replay => {
                         const replayRoom = replay._meta.room;
-                        if(replayRoom && _room) {
+                        if (replayRoom && _room) {
                             state = StartState.Connected;
                             resetGame();
                             connect({
@@ -136,7 +135,7 @@ async function start() {
         },
     ];
     const _states: StateFunc[] = [
-        ,
+        undefined,
         (ts: number) => {
             // game is loaded, user sees "PRESS ANY KEY" message and waits for first user click
             const scale = getScreenScale();
@@ -160,6 +159,7 @@ async function start() {
             }
         },
         () => {
+            /* do nothing */
         },
         (ts: number) => {
             const scale = getScreenScale();
@@ -194,7 +194,7 @@ async function start() {
                 poki._gameplayStop();
                 goToSplash();
             }
-        }
+        },
     ];
 
     setupRAF((ts: DOMHighResTimeStamp) => {
@@ -218,4 +218,4 @@ async function start() {
     });
 }
 
-start();
+start().then();
