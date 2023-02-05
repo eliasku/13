@@ -15,7 +15,7 @@
     "release": "changeset publish",
     "version": "changeset version && npm i && git add package-lock.json"
   },
-  "author": "eliasku",
+  "author": "Ilya Kuzmichev <eliasku.games@gmail.com> (https://eliasku-games.web.app)",
   "license": "ISC",
   "workspaces": [
     "packages/*"

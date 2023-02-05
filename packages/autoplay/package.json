@@ -7,6 +7,6 @@
     "author": "eliasku",
     "license": "ISC",
     "dependencies": {
-        "@iioi/bot-api": "1.0.15"
+        "@iioi/bot-api": "1.0.14"
     }
 }
