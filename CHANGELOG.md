@@ -1,6 +1,7 @@
 ## 1.0.15
 
-- (dev) `watch` script renamed to `start`  
+- (dev) `watch` script renamed to `start`
+- Fix sound and music
 
 ## 1.0.14
 
