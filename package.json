@@ -12,7 +12,7 @@
     "typecheck": "tsc -b --clean && tsc -b -v --diagnostics",
     "lint": "eslint packages/*/src/ --ext .ts",
     "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\"",
-    "release": "changeset publish",
+    "release": "npm run build && changeset publish",
     "version": "changeset version && npm i && git add package-lock.json"
   },
   "author": "Ilya Kuzmichev <eliasku.games@gmail.com> (https://eliasku-games.web.app)",

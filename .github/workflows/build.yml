@@ -57,8 +57,9 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install changesets
-        run: npm i @changesets/cli
+      - name: install
+        run: |
+          npm i
 
       - name: Create Release Pull Request or Publish to NPM
         id: changesets
