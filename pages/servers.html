@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <title>iioi: servers</title>
+    <style>
+        html {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        iframe {
+            display: block;
+            background: #000;
+            border: none;
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<ul>
+    <li>
+        <a href="./iioi.html">iioi (production)</a>
+        <p id="iioi_info"></p>
+    </li>
+    <li>
+        <a href="./grtc.html">grtc (staging)</a>
+        <p id="grtc_info"></p>
+    </li>
+    <li>
+        <a href="./next.html">next13 (development)</a>
+        <p id="next_info"></p>
+    </li>
+</ul>
+<script>
+    fetch(`https://iioi.herokuapp.com/i`, {method: "POST"})
+        .then((r) => r.json())
+        .then((j) => document.getElementById("iioi_info").innerText = "players: " + j.players)
+        .catch((e) => console.warn("Can't load rooms info", e));
+    fetch(`https://grtc.herokuapp.com/i`, {method: "POST"})
+        .then((r) => r.json())
+        .then((j) => document.getElementById("grtc_info").innerText = "players: " + j.players)
+        .catch((e) => console.warn("Can't load rooms info", e));
+    fetch(`https://next13.herokuapp.com/i`, {method: "POST"})
+        .then((r) => r.json())
+        .then((j) => document.getElementById("next_info").innerText = "players: " + j.players)
+        .catch((e)=>console.warn("Can't load rooms info", e));
+</script>
+</body>
+</html>

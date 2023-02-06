@@ -316,7 +316,7 @@ const HANDLERS: Record<string, Record<string, HandlerFunction>> = {
     },
 };
 
-const hostWhitelist: string[] = [];
+const hostWhitelist = ["https://eliasku.github.io"];
 if (PokiGameId) {
     hostWhitelist.push(`https://${PokiGameId}.poki-gdn.com`);
 }

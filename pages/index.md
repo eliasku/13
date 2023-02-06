@@ -6,8 +6,10 @@ layout: home
     <img src="13logo.gif">
 </p>
 
-- [Join <b>main</b> game room](./iioi.html)
-- [Join <b>reserved</b> game room](./grtc.html)
-- [Join <b>unreleased</b> game room](./next.html)
+[Check servers online](./servers.html)
+
+- [Join <b>production</b> game server](./iioi.html)
+- [Join <b>staging</b> game server](./grtc.html)
+- [Join <b>development</b> game server](./next.html)
 
 [Help](./help) | [Помощь](./help/ru)
