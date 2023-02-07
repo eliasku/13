@@ -75,7 +75,7 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                 setUserName(prompt("your name", clientName));
             }
 
-            if (button("replay", "📂 REPLAY...", centerX - 64 / 2, 50)) {
+            if (button("replay", "📂 OPEN REPLAY", centerX - 80 / 2, centerY - 80, {w: 80})) {
                 result = {_command: MenuCommand.Replay};
             }
 
@@ -170,32 +170,36 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
                 }
             }
 
+            y = centerY + 30;
             if (
-                button("join_code", "JOIN BY CODE", centerX - 50, centerY + 50, {
+                button("join_code", "JOIN BY CODE", centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
             ) {
-                const code = prompt("Enter Game Code", "0");
+                const code = prompt("Enter Game Code", "") ?? "";
                 const v = parseRadix64String(code);
                 if (v) {
                     result = {_command: MenuCommand.JoinGame, _joinByCode: code};
                 } else {
                     console.warn("bad game code");
+                    ui_finish();
+                    return;
                 }
             }
+            y += 30;
 
             if (
-                button("create", "CREATE MY GAME", centerX - 50, centerY + 70, {
+                button("create", "CREATE MY GAME", centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
             ) {
                 menu = Menu.CreateGame;
             }
-
+            y += 30;
             if (
-                button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+                button("back", "⬅ BACK", centerX - 50, y, {
                     w: 100,
                     h: 20,
                 }) ||

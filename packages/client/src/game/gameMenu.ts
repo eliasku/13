@@ -1,9 +1,10 @@
 import {button, label, ui_begin, ui_finish, uiProgressBar, uiState} from "../graphics/gui.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
-import {disconnect} from "../net/messaging.js";
+import {_room, disconnect} from "../net/messaging.js";
 import {Const, GAME_CFG} from "./config.js";
 import {guiSettingsPanel} from "../screens/settings.js";
 import {ReplayFile, saveReplay} from "./replay.js";
+import {poki} from "@iioi/client/poki.js";
 
 export const GameMenuState = {
     InGame: 0,
@@ -112,6 +113,17 @@ export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): v
                 saveReplay();
             }
             y += 30;
+            if (button("copy_link", linkCopied ? "COPIED!" : "🔗 COPY LINK", centerX - 50, y, {w: 100, h: 20})) {
+                if (!linkCopied) {
+                    poki._shareableURL({r: _room._code})
+                        .then(url => navigator.clipboard.writeText(url))
+                        .then(() => {
+                            linkCopied = true;
+                            setTimeout(() => (linkCopied = false), 3000);
+                        });
+                }
+            }
+            y += 30;
             if (button("quit_room", "🏃 QUIT", centerX - 50, y, {w: 100, h: 20})) {
                 disconnect();
             }
@@ -141,3 +153,5 @@ export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): v
     }
     ui_finish();
 }
+
+let linkCopied = false;

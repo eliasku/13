@@ -156,6 +156,16 @@ async function start() {
 
                 gameMode._playersAI = true;
                 gameMode._npcLevel = 3;
+
+                const code = poki._getURLParam("r");
+                if (code) {
+                    state = StartState.Connecting;
+                    resetGame();
+                    gameMode._title = true;
+                    gameMode._tiltCamera = 0.05;
+                    gameMode._bloodRain = true;
+                    connect(undefined, code);
+                }
             }
         },
         () => {
