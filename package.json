@@ -1,6 +1,6 @@
 {
   "name": "iioi",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "js13k game with p2p realtime multiplayer",
   "type": "module",
@@ -18,7 +18,7 @@
   "author": "Ilya Kuzmichev <eliasku.games@gmail.com> (https://eliasku-games.web.app)",
   "license": "ISC",
   "workspaces": [
-    "packages/*"
+    "./packages/*"
   ],
   "poki": {
     "game_id": "fefa3d7b-e795-49d0-90a0-d6fa8659e41c",
