@@ -13,7 +13,7 @@
     "lint": "eslint packages/*/src/ --ext .ts",
     "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\"",
     "release": "npm run build && changeset publish",
-    "version": "changeset version && npm i && git add package-lock.json"
+    "version": "changeset version"
   },
   "author": "Ilya Kuzmichev <eliasku.games@gmail.com> (https://eliasku-games.web.app)",
   "license": "ISC",
