@@ -119,6 +119,7 @@ export function readReplayFile(buffer: ArrayBuffer): ReplayFile {
     // parse metadata
     const metaDataByteLength = i32[ptr++];
     const metaString = new TextDecoder().decode(new Uint8Array(i32.buffer, ptr * 4, metaDataByteLength));
+    console.info(metaString);
     const meta = JSON.parse(metaString);
     ptr += Math.ceil(metaDataByteLength / 4);
 
@@ -181,10 +182,10 @@ export function openReplayFile(onSuccess: (replay: ReplayFile) => void) {
             const reader = new FileReader();
             reader.onload = function (e) {
                 const result = e.target.result;
-                console.info(result);
                 if (result instanceof ArrayBuffer) {
                     const replay = readReplayFile(result);
                     if (validateReplayFile(replay)) {
+                        console.info("Replay loaded - OK");
                         onSuccess(replay);
                     }
                 }

@@ -11,9 +11,11 @@ const TYPE_HEADERS: Record<string, OutgoingHttpHeaders> = {
         "cache-control": "no-cache",
     },
     ".js": {
+        "content-type": "text/javascript",
         "cache-control": "no-cache",
     },
     ".map": {
+        "content-type": "application/json",
         "cache-control": "no-cache",
     },
     ".ttf": {

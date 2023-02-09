@@ -116,7 +116,7 @@ async function start() {
                 } else if (result._command === MenuCommand.Replay) {
                     openReplayFile(replay => {
                         const replayRoom = replay._meta.room;
-                        if (replayRoom && _room) {
+                        if (replayRoom) {
                             state = StartState.Connected;
                             resetGame();
                             connect({
@@ -125,9 +125,17 @@ async function start() {
                                 _npcLevel: replayRoom.npcLevel,
                                 _theme: replayRoom.mapTheme + 1,
                             });
-                            _room._mapSeed = replayRoom.mapSeed;
-                            gameMode._npcLevel = _room._npcLevel;
-                            enableReplayMode(replay);
+                            if (_room) {
+                                _room._mapSeed = replayRoom.mapSeed;
+                                gameMode._npcLevel = _room._npcLevel;
+                                enableReplayMode(replay);
+                            }
+                            else {
+                                console.warn("internal error: room is not created");
+                            }
+                        }
+                        else {
+                            console.warn("internal error: replay room is invalid");
                         }
                     });
                 }
