@@ -2,7 +2,13 @@
   "$schema": "https://unpkg.com/@changesets/config@2.0.0/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["@iioi/client", "@iioi/bot-api"]],
+  "fixed": [
+    [
+      "@iioi/client",
+      "@iioi/bot-api",
+      "@iioi/autoplay"
+    ]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "master",

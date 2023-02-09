@@ -10,10 +10,10 @@
     "clean": "ts-node --esm --swc packages/tools/src/clean.ts",
     "upload-poki": "ts-node --esm --swc packages/tools/src/upload-poki.ts",
     "typecheck": "tsc -b --clean && tsc -b -v --diagnostics",
-    "lint": "eslint packages/*/src/ --ext .ts",
-    "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\"",
     "release": "npm run build && changeset publish",
-    "version": "changeset version && rm -r node_modules && rm package-lock.json && npm install && git add package-lock.json"
+    "version": "changeset version && rm -r node_modules && rm package-lock.json && npm install && git add package-lock.json",
+    "lint": "eslint packages/*/src/ --ext .ts",
+    "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\""
   },
   "author": "Ilya Kuzmichev <eliasku.games@gmail.com> (https://eliasku-games.web.app)",
   "license": "ISC",
