@@ -8,7 +8,7 @@ import {
     PAD_MOVE_RADIUS_1,
     WORLD_SCALE,
 } from "../assets/params.js";
-import {gameCamera, getScreenScale} from "./gameState.js";
+import {gameCamera, getScreenScale} from "./camera.js";
 import {hypot} from "../utils/math.js";
 import {weapons} from "./data/weapons.js";
 import {drawTextAligned, fnt} from "../graphics/font.js";

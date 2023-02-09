@@ -127,11 +127,9 @@ import {
 import {getDevFlag, hasSettingsFlag, SettingFlag} from "./settings.js";
 import {bullets, BulletType} from "./data/bullets.js";
 import {
-    gameCamera,
     GameMenuState,
     gameMode,
     getNameByClientId,
-    getScreenScale,
     lastFrameTs,
     resetLastFrameTs,
     updateFrameTime,
@@ -146,6 +144,16 @@ import {addReplayTicEvents, beginRecording} from "./replay.js";
 import {Img} from "../assets/img.js";
 import {autoplayInput, updateAutoplay} from "./ai/common.js";
 import {ReplayFile} from "./replayFile.js";
+import {
+    cameraFeedback,
+    cameraShake,
+    decCameraEffects,
+    gameCamera,
+    getScreenScale,
+    restoreGameCamera,
+    saveGameCamera,
+    setCameraEffects,
+} from "@iioi/client/game/camera.js";
 
 const clients = new Map<ClientID, Client>();
 
@@ -198,12 +206,6 @@ export function rewindReplayToStart() {
     lastInputCmd = 0;
     lastAudioTic = 0;
 }
-
-// 0...50
-let cameraShake = 0;
-
-// 0...5
-let cameraFeedback = 0;
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -1016,8 +1018,8 @@ const updateGameCamera = () => {
             if (myPlayer && ((!autoPlay && !gameMode._replay) || gameMode._menu !== GameMenuState.InGame)) {
                 if (gameMode._menu === GameMenuState.InGame) {
                     const viewM = (100 * wpn._cameraFeedback * cameraFeedback) / (hypot(viewX, viewY) + 0.001);
-                    cameraX += wpn._cameraLookForward * (lookAtX - px) - viewM * viewX;
-                    cameraY += wpn._cameraLookForward * (lookAtY - py) - viewM * viewY;
+                    cameraX += wpn._cameraLookForward * (lookAtX - px) + viewM * viewX;
+                    cameraY += wpn._cameraLookForward * (lookAtY - py) + viewM * viewY;
                     scale *= wpn._cameraScale;
                 } else {
                     scale = GAME_CFG._camera._inGameMenuScale;
@@ -1028,6 +1030,8 @@ const updateGameCamera = () => {
     gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
     gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
     gameCamera[2] = lerpLog(gameCamera[2], scale / getScreenScale(), 0.05);
+
+    decCameraEffects();
 };
 
 const normalizeState = () => {
@@ -1169,8 +1173,6 @@ const simulateTic = (prediction = false) => {
     }
 
     updateParticles();
-    cameraShake = dec1(cameraShake);
-    cameraFeedback = dec1(cameraFeedback);
 
     if (gameMode._npcLevel) {
         const npcConfig = GAME_CFG._npc[gameMode._npcLevel];
@@ -1529,8 +1531,7 @@ const updatePlayer = (player: PlayerActor) => {
                         }
                     }
                     if (isMyPlayer(player)) {
-                        cameraShake = max(weapon._cameraShake, cameraShake);
-                        cameraFeedback = 5;
+                        setCameraEffects(weapon._cameraShake, 5);
                     }
                     player._lifetime = weapon._reloadTime;
                     player._detune = reach(player._detune, weapon._detuneSpeed, 1);
@@ -1602,6 +1603,7 @@ const beginPrediction = (): boolean => {
 
     // save particles
     saveParticles();
+    saveGameCamera();
 
     // save state
     lastState = state;
@@ -1622,6 +1624,7 @@ const endPrediction = () => {
     gameTic = state._tic + 1;
     // restore particles
     restoreParticles();
+    restoreGameCamera();
 };
 
 /*** DRAWING ***/

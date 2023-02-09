@@ -2,7 +2,7 @@ import {drawText, drawTextAligned, fnt} from "./font.js";
 import {inputPointers, mousePointer, Pointer} from "../utils/input.js";
 import {img} from "../assets/gfx.js";
 import {draw, gl, setDrawZ} from "./draw2d.js";
-import {getScreenScale} from "../game/gameState.js";
+import {getScreenScale} from "../game/camera.js";
 import {clamp} from "../utils/math.js";
 import {Img} from "../assets/img.js";
 

@@ -11,7 +11,8 @@ import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d.js"
 import {BuildCommit, BuildHash, BuildVersion, GameModeFlag, RoomsInfoResponse} from "@iioi/shared/types.js";
 import {sin} from "./utils/math.js";
 import {setupRAF} from "./utils/raf.js";
-import {gameMode, getScreenScale} from "./game/gameState.js";
+import {gameMode} from "./game/gameState.js";
+import {getScreenScale} from "./game/camera.js";
 import {completeLoading, setLoadingProgress} from "./preloader.js";
 import {MenuCommand, menuScreen} from "./screens/main.js";
 import {poki} from "./poki.js";

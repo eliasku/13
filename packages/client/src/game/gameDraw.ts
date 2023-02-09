@@ -11,11 +11,12 @@ import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, PLAYER_HANDS_PX_Z} from "./da
 import {Const, GAME_CFG} from "./config.js";
 import {bullets, BulletType} from "./data/bullets.js";
 import {fxRandElement} from "../utils/rnd.js";
-import {gameCamera, getNameByClientId, lastFrameTs} from "./gameState.js";
+import {getNameByClientId, lastFrameTs} from "./gameState.js";
 import {drawTextAligned, fnt} from "../graphics/font.js";
 import {Img} from "../assets/img.js";
 import {clientId} from "../net/messaging.js";
 import {drawParticleShadows} from "./particles.js";
+import {gameCamera} from "@iioi/client/game/camera.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
