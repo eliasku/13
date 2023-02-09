@@ -39,24 +39,7 @@ import {
     Vel,
 } from "./types.js";
 import {pack, unpack} from "./packets.js";
-import {
-    abs,
-    atan2,
-    clamp,
-    cos,
-    dec1,
-    hypot,
-    lerp,
-    lerpLog,
-    max,
-    min,
-    PI,
-    PI2,
-    reach,
-    sin,
-    sqrt,
-    TO_RAD,
-} from "../utils/math.js";
+import {abs, clamp, cos, dec1, hypot, lerp, lerpLog, max, min, PI2, reach, sin, sqrt} from "../utils/math.js";
 import {
     couldBeReloadedManually,
     drawVirtualPad,
@@ -116,14 +99,7 @@ import {
     updateBody,
 } from "./phy.js";
 import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
-import {
-    actorsConfig,
-    ANIM_HIT_MAX,
-    BULLET_RADIUS,
-    OBJECT_RADIUS,
-    PLAYER_HANDS_PX_Z,
-    PLAYER_HANDS_Z,
-} from "./data/world.js";
+import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, OBJECT_RADIUS, PLAYER_HANDS_Z} from "./data/world.js";
 import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/gui.js";
 import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog.js";
 import {
@@ -147,6 +123,7 @@ import {
     drawCrosshair,
     drawHotUsableHint,
     drawItemOpaque,
+    drawPlayerOpaque,
     drawShadows,
     drawTreeOpaque,
     getHitColorOffset,
@@ -227,6 +204,9 @@ export function rewindReplayToStart() {
     localEvents = gameMode._replay._stream.concat();
     startTic = -1;
     _SEEDS[0] = state._seed;
+    lastInputTic = 0;
+    lastInputCmd = 0;
+    lastAudioTic = 0;
 }
 
 // 0...50
@@ -432,6 +412,9 @@ export const updateGame = (ts: number) => {
                 if (toTic > gameTic) {
                     frames = toTic - gameTic + 3;
                     prevTime = ts - frames / ticsPerSecond;
+                    lastInputTic = toTic;
+                    lastInputCmd = toTic;
+                    lastAudioTic = toTic;
                 } else {
                     //rewindReplayToStart();
                     state = cloneState(gameMode._replay._state);
@@ -440,6 +423,9 @@ export const updateGame = (ts: number) => {
                     gameTic = state._tic;
                     frames = toTic + 1;
                     prevTime = ts - frames / ticsPerSecond;
+                    lastInputTic = state._tic + toTic;
+                    lastInputCmd = state._tic + toTic;
+                    lastAudioTic = state._tic + toTic;
                 }
                 gameMode._replay._rewind = undefined;
             }
@@ -543,16 +529,22 @@ const printStatus = () => {
             return `|☠${stat?._frags ?? 0}|🪙${stat?._scores ?? 0}`;
         };
 
-        termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
-        for (const [id, rc] of remoteClients) {
-            let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc._name + getPlayerStatInfo(id);
-            if (getDevFlag()) {
-                const cl = clients.get(id);
-                if (cl && cl._lag !== undefined) {
-                    text += " " + cl._lag;
-                }
+        if (gameMode._replay) {
+            for (const [id, rc] of remoteClients) {
+                termPrint(getPlayerIcon(id) + rc._name + getPlayerStatInfo(id));
             }
-            termPrint(text);
+        } else {
+            termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
+            for (const [id, rc] of remoteClients) {
+                let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc._name + getPlayerStatInfo(id);
+                if (getDevFlag()) {
+                    const cl = clients.get(id);
+                    if (cl && cl._lag !== undefined) {
+                        text += " " + cl._lag;
+                    }
+                }
+                termPrint(text);
+            }
         }
     }
 };
@@ -1068,12 +1060,14 @@ const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
     }
 };
 
-const simulateTic = () => {
+const simulateTic = (prediction = false) => {
     const processTicCommands = (tic: number) => {
         const tickEvents: ClientEvent[] = localEvents.concat(receivedEvents).filter(v => v._tic == tic);
 
         tickEvents.sort((a, b) => a._client - b._client);
-        addReplayTicEvents(tic, tickEvents);
+        if (!prediction) {
+            addReplayTicEvents(tic, tickEvents);
+        }
         for (const cmd of tickEvents) {
             if (cmd._input !== undefined) {
                 const player = getPlayerByClient(cmd._client);
@@ -1174,7 +1168,9 @@ const simulateTic = () => {
     }
 
     if (waitToSpawn && getMyPlayer()) {
-        poki._gameplayStart();
+        if (!gameMode._replay) {
+            poki._gameplayStart();
+        }
         waitToSpawn = false;
     }
 
@@ -1301,18 +1297,20 @@ const kill = (actor: Actor) => {
         addFleshParticles(256, actor, 128, grave);
         addBoneParticles(32, actor, grave);
 
-        if (player === getMyPlayer()) {
-            poki._gameplayStop();
-            delay(1000)
-                .then(poki._commercialBreak)
-                .then(() => {
-                    allowedToRespawn = true;
-                    delay(3000).then(() => {
-                        if (allowedToRespawn) {
-                            waitToAutoSpawn = true;
-                        }
+        if (!gameMode._replay) {
+            if (player === getMyPlayer()) {
+                poki._gameplayStop();
+                delay(1000)
+                    .then(poki._commercialBreak)
+                    .then(() => {
+                        allowedToRespawn = true;
+                        delay(3000).then(() => {
+                            if (allowedToRespawn) {
+                                waitToAutoSpawn = true;
+                            }
+                        });
                     });
-                });
+            }
         }
     }
 };
@@ -1636,7 +1634,7 @@ const beginPrediction = (): boolean => {
 
     // && gameTic <= lastInputTic
     while (frames--) {
-        simulateTic();
+        simulateTic(true);
         normalizeState();
     }
     return true;
@@ -1812,7 +1810,7 @@ const drawOverlay = () => {
 
     ui_renderNormal();
 
-    if (gameMenu._state === GameMenuState.InGame) {
+    if (gameMenu._state === GameMenuState.InGame && !gameMode._replay) {
         drawCrosshair(getMyPlayer(), gameCamera, scale);
     }
 
@@ -1841,130 +1839,6 @@ const collectVisibleActors = (...lists: Actor[][]) => {
         }
     }
 };
-
-function drawPlayerOpaque(p: PlayerActor): void {
-    const co = getHitColorOffset(p._animHit);
-    const basePhase = p._anim0 + lastFrameTs;
-    const colorC = GAME_CFG._bodyColor[p._anim0 % GAME_CFG._bodyColor.length];
-    const colorArm = colorC;
-    const colorBody = colorC;
-    const x = p._x / WORLD_SCALE;
-    const y = p._y / WORLD_SCALE;
-    const z = p._z / WORLD_SCALE;
-    const speed = hypot(p._u, p._v, p._w);
-    const runK = p._input & ControlsFlag.Run ? 1 : 0.8;
-    const walk = min(1, speed / 100);
-    let base = -0.5 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
-    const idle_base = (1 - walk) * ((1 + sin(10 * basePhase) ** 2) / 4);
-    base = base + idle_base;
-    const leg1 = 5 - 4 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase));
-    const leg2 = 5 - 4 * walk * 0.5 * (1.0 + sin(40 * runK * basePhase + PI));
-
-    /////
-
-    const wpn = weapons[p._weapon];
-    const viewAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
-    const weaponBaseAngle = wpn._gfxRot * TO_RAD;
-    const weaponBaseScaleX = wpn._gfxSx;
-    const weaponBaseScaleY = 1;
-    let weaponX = x;
-    let weaponY = y;
-    const weaponZ = z + PLAYER_HANDS_PX_Z;
-    let weaponAngle = atan2(y + 1000 * sin(viewAngle) - weaponY + weaponZ, x + 1000 * cos(viewAngle) - weaponX);
-    let weaponSX = weaponBaseScaleX;
-    const weaponSY = weaponBaseScaleY;
-    let weaponBack = 0;
-    if (weaponAngle < -0.2 && weaponAngle > -PI + 0.2) {
-        weaponBack = 1;
-        //weaponY -= 16 * 4;
-    }
-    const A = sin(weaponAngle - PI);
-    let wd = 6 + 12 * (weaponBack ? A * A : 0);
-    let wx = 1;
-    if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
-        wx = -1;
-    }
-    if (wpn._handsAnim) {
-        // const t = max(0, (p.s - 0.8) * 5);
-        // anim := 1 -> 0
-        const t = min(
-            1,
-            wpn._launchTime > 0 ? p._lifetime / wpn._launchTime : max(0, (p._lifetime / wpn._reloadTime - 0.5) * 2),
-        );
-        wd += sin(t * PI) * wpn._handsAnim;
-        weaponAngle -= -wx * PI * 0.25 * sin((1 - (1 - t) ** 2) * PI2);
-    }
-    weaponX += wd * cos(weaponAngle);
-    weaponY += wd * sin(weaponAngle);
-
-    if (wx < 0) {
-        weaponSX *= wx;
-        weaponAngle -= PI + 2 * weaponBaseAngle;
-    }
-
-    weaponAngle += weaponBaseAngle;
-
-    if (p._weapon) {
-        drawMeshSpriteUp(
-            img[Img.weapon0 + p._weapon],
-            weaponX,
-            weaponY /* + (weaponBack ? -1 : 1)*/,
-            weaponZ,
-            weaponAngle,
-            weaponSX,
-            weaponSY,
-        );
-    }
-
-    drawMeshSpriteUp(img[Img.box_t], x - 3, y, z + 5, 0, 2, leg1, 1, colorArm, 0, co);
-    drawMeshSpriteUp(img[Img.box_t], x + 3, y, z + 5, 0, 2, leg2, 1, colorArm, 0, co);
-    drawMeshSpriteUp(img[Img.box], x, y, z + 7 - base, 0, 8, 6, 1, colorBody, 0, co);
-
-    // DRAW HANDS
-    const rArmX = x + 4;
-    const lArmX = x - 4;
-    const armAY = y - z - PLAYER_HANDS_PX_Z + base * 2;
-    const weaponAY = weaponY - weaponZ;
-    const rArmRot = atan2(-armAY + weaponAY, weaponX - rArmX);
-    const lArmRot = atan2(-armAY + weaponAY, weaponX - lArmX);
-    const lArmLen = hypot(weaponX - lArmX, weaponAY - armAY) - 1;
-    const rArmLen = hypot(weaponX - rArmX, weaponAY - armAY) - 1;
-
-    if (p._weapon) {
-        drawMeshSpriteUp(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, rArmRot, rArmLen, 2, 1, colorArm, 0, co);
-        drawMeshSpriteUp(img[Img.box_l], x - 4, y + 0.2, z + 10 - base, lArmRot, lArmLen, 2, 1, colorArm, 0, co);
-    } else {
-        let sw1 = walk * sin(20 * runK * basePhase);
-        let sw2 = walk * cos(20 * runK * basePhase);
-        let armLen = 5;
-        if (!p._client && p._hp < 10 && !p._sp) {
-            sw1 -= PI / 2;
-            sw2 += PI / 2;
-            armLen += 4;
-        }
-        drawMeshSpriteUp(img[Img.box_l], x + 4, y + 0.2, z + 10 - base, sw1 + PI / 4, armLen, 2, 1, colorArm, 0, co);
-        drawMeshSpriteUp(
-            img[Img.box_l],
-            x - 4,
-            y + 0.2,
-            z + 10 - base,
-            sw2 + PI - PI / 4,
-            armLen,
-            2,
-            1,
-            colorArm,
-            0,
-            co,
-        );
-    }
-
-    {
-        const imgHead = p._client ? Img.avatar0 + (p._anim0 % Img.num_avatars) : Img.npc0 + (p._anim0 % Img.num_npc);
-        const s = p._w / 500;
-        const a = p._u / 500;
-        drawMeshSpriteUp(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xffffff, 0, co);
-    }
-}
 
 const drawPlayer = (p: PlayerActor): void => {
     const x = p._x / WORLD_SCALE;
