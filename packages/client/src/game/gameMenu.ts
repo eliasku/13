@@ -104,15 +104,11 @@ export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): v
                 }
             }
         } else if (menu._state === GameMenuState.Paused) {
-            let y = centerY + 20;
-            if (button("settings", "⚙️ SETTINGS", centerX - 50, y, {w: 100, h: 20})) {
-                menu._state = GameMenuState.Settings;
-            }
-            y += 30;
+            let y = centerY - 120;
             if (button("save-replay", "💾 SAVE REPLAY", centerX - 50, y, {w: 100, h: 20})) {
                 saveReplay();
             }
-            y += 30;
+            y += 25;
             if (button("copy_link", linkCopied ? "COPIED!" : "🔗 COPY LINK", centerX - 50, y, {w: 100, h: 20})) {
                 if (!linkCopied) {
                     poki._shareableURL({r: _room._code})
@@ -123,11 +119,17 @@ export function onGameMenu(menu: GameMenu, replay?: ReplayFile, tic?: number): v
                         });
                 }
             }
-            y += 30;
+            y += 25;
+
+            y = centerY + 40;
+            if (button("settings", "⚙️ SETTINGS", centerX - 50, y, {w: 100, h: 20})) {
+                menu._state = GameMenuState.Settings;
+            }
+            y += 25;
             if (button("quit_room", "🏃 QUIT", centerX - 50, y, {w: 100, h: 20})) {
                 disconnect();
             }
-            y += 30;
+            y += 25;
             if (
                 button("back_to_game", "⬅ BACK", centerX - 50, y, {
                     w: 100,
