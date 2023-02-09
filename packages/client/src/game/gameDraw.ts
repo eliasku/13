@@ -11,9 +11,11 @@ import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, PLAYER_HANDS_PX_Z} from "./da
 import {Const, GAME_CFG} from "./config.js";
 import {bullets, BulletType} from "./data/bullets.js";
 import {fxRandElement} from "../utils/rnd.js";
-import {lastFrameTs} from "./gameState.js";
+import {gameCamera, getNameByClientId, lastFrameTs} from "./gameState.js";
 import {drawTextAligned, fnt} from "../graphics/font.js";
 import {Img} from "../assets/img.js";
+import {clientId} from "../net/messaging.js";
+import {drawParticleShadows} from "./particles.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -33,7 +35,7 @@ export const drawShadows = (drawList: Actor[]) => {
     }
 };
 
-export const drawCrosshair = (player: PlayerActor | undefined, gameCamera: number[], screenScale: number) => {
+export const drawCrosshair = (player: PlayerActor | undefined, screenScale: number) => {
     if (player && (viewX | 0 || viewY | 0)) {
         const img = fnt[0]._textureBoxT1;
         const W = gl.drawingBufferWidth;
@@ -120,10 +122,10 @@ export const drawObjectMesh2D = (p: Actor, id: number | Img, z = 0, scale = 1, o
         getHitColorOffset(p._animHit),
     );
 
-export const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.barrel0);
-export const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.tree0);
+const drawBarrelOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.barrel0);
+const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.tree0);
 
-export const drawItemOpaque = (item: ItemActor) => {
+const drawItemOpaque = (item: ItemActor) => {
     if (item._lifetime) {
         const limit = GAME_CFG._items._lifetime >>> 1;
         if (item._lifetime < limit) {
@@ -145,7 +147,7 @@ export const drawItemOpaque = (item: ItemActor) => {
     }
 };
 
-export const drawBullet = (bullet: BulletActor) => {
+const drawBullet = (bullet: BulletActor) => {
     const x = bullet._x / WORLD_SCALE;
     const y = bullet._y / WORLD_SCALE;
     const z = bullet._z / WORLD_SCALE;
@@ -180,7 +182,7 @@ export const drawHotUsableHint = (hotUsable?: ItemActor) => {
     }
 };
 
-export function drawPlayerOpaque(p: PlayerActor): void {
+const drawPlayerOpaque = (p: PlayerActor): void => {
     const co = getHitColorOffset(p._animHit);
     const basePhase = p._anim0 + lastFrameTs;
     const colorC = GAME_CFG._bodyColor[p._anim0 % GAME_CFG._bodyColor.length];
@@ -302,4 +304,47 @@ export function drawPlayerOpaque(p: PlayerActor): void {
         const a = p._u / 500;
         drawMeshSpriteUp(img[imgHead], x, y + 0.1, z + 16 - base * 2, a, 1 - s, 1 + s, 1, 0xffffff, 0, co);
     }
-}
+};
+
+const drawPlayer = (p: PlayerActor): void => {
+    const x = p._x / WORLD_SCALE;
+    const y = p._y / WORLD_SCALE;
+
+    if (p._client > 0 && p._client !== clientId) {
+        let name = getNameByClientId(p._client);
+        if (process.env.NODE_ENV === "development") {
+            name = (name ?? "") + " #" + p._client;
+        }
+        if (name) {
+            setDrawZ(32 + p._z / WORLD_SCALE);
+            drawTextAligned(fnt[0], name, 6, x, y + 2);
+        }
+    }
+};
+
+type ActorDrawFunction = (p: Actor) => void;
+const DRAW_BY_TYPE: ActorDrawFunction[] = [drawPlayer, undefined, drawBullet, undefined, undefined];
+
+const DRAW_OPAQUE_BY_TYPE: (ActorDrawFunction | undefined)[] = [
+    drawPlayerOpaque,
+    drawBarrelOpaque,
+    undefined,
+    drawItemOpaque,
+    drawTreeOpaque,
+];
+
+export const drawOpaqueObjects = (drawList: Actor[]) => {
+    for (let i = drawList.length - 1; i >= 0; --i) {
+        const actor = drawList[i];
+        DRAW_OPAQUE_BY_TYPE[actor._type]?.(actor);
+    }
+};
+
+export const drawObjects = (drawList: Actor[]) => {
+    setDrawZ(0.15);
+    drawShadows(drawList);
+    drawParticleShadows();
+    for (const actor of drawList) {
+        DRAW_BY_TYPE[actor._type]?.(actor);
+    }
+};

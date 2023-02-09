@@ -205,6 +205,17 @@ export const newStateData = (): StateData => ({
     _stats: new Map(),
 });
 
+export const cloneStateData = (stateToCopy: StateData): StateData => ({
+    ...stateToCopy,
+    _actors: [
+        stateToCopy._actors[0].map(a => ({...a})),
+        stateToCopy._actors[1].map(a => ({...a})),
+        stateToCopy._actors[2].map(a => ({...a})),
+        stateToCopy._actors[3].map(a => ({...a})),
+    ],
+    _stats: new Map(stateToCopy._stats.entries()),
+});
+
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
 export interface Packet {
     _sync: number;

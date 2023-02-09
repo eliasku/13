@@ -246,6 +246,10 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
     }
 };
 
+export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, vel?: Vel) => {
+    addFleshParticles(amount, actor, expl, vel);
+};
+
 export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
     amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {

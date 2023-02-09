@@ -11,7 +11,7 @@ import {
 } from "../game/settings.js";
 import {poki} from "../poki.js";
 
-export function guiSettingsPanel(x: number, y: number) {
+export const guiSettingsPanel = (x: number, y: number) => {
     if (
         button("sounds", "🔊 SOUNDS: " + (hasSettingsFlag(SettingFlag.Sound) ? "ON" : "OFF"), x - 50, y - 70, {
             w: 100,
@@ -82,9 +82,9 @@ export function guiSettingsPanel(x: number, y: number) {
     ) {
         setSetting(Setting.FrameRateCap, frameRateCap > 0 ? 0 : DEFAULT_FRAMERATE_LIMIT);
     }
-}
+};
 
-export function guiDevModePanel(x: number, y: number) {
+export const guiDevModePanel = (x: number, y: number) => {
     y -= 70;
     if (
         button("fps", "FPS: " + (hasSettingsFlag(SettingFlag.DevShowFrameStats) ? "ON" : "OFF"), x - 50, y, {
@@ -156,4 +156,4 @@ export function guiDevModePanel(x: number, y: number) {
         poki._rewardedBreak().catch();
     }
     return false;
-}
+};

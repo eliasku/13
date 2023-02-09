@@ -8,7 +8,7 @@ import {
     PAD_MOVE_RADIUS_1,
     WORLD_SCALE,
 } from "../assets/params.js";
-import {getScreenScale} from "./gameState.js";
+import {gameCamera, getScreenScale} from "./gameState.js";
 import {hypot} from "../utils/math.js";
 import {weapons} from "./data/weapons.js";
 import {drawTextAligned, fnt} from "../graphics/font.js";
@@ -17,8 +17,6 @@ import {drawTextAligned, fnt} from "../graphics/font.js";
 // ToDO: control zone padding should include max radius
 // TODO: return mouse control
 // TODO: combine pad + keyboard
-
-export const gameCamera: number[] = [0, 0, 1];
 export let lookAtX = 0;
 export let lookAtY = 0;
 export let viewX = 0;

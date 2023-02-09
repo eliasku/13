@@ -25,6 +25,7 @@ import {
     BulletActor,
     Client,
     ClientEvent,
+    cloneStateData,
     ControlsFlag,
     ItemActor,
     ItemType,
@@ -36,7 +37,6 @@ import {
     PlayerStat,
     StateData,
     unpackAngleByte,
-    Vel,
 } from "./types.js";
 import {pack, unpack} from "./packets.js";
 import {abs, clamp, cos, dec1, hypot, lerp, lerpLog, max, min, PI2, reach, sin, sqrt} from "../utils/math.js";
@@ -44,7 +44,6 @@ import {
     couldBeReloadedManually,
     drawVirtualPad,
     dropButton,
-    gameCamera,
     jumpButtonDown,
     lookAtX,
     lookAtY,
@@ -70,12 +69,12 @@ import {
     addStepSplat,
     addTextParticle,
     drawOpaqueParticles,
-    drawParticleShadows,
     drawSplatsOpaque,
     drawTextParticles,
     resetParticles,
     restoreParticles,
     saveParticles,
+    spawnFleshParticles,
     updateMapTexture,
     updateParticles,
 } from "./particles.js";
@@ -112,39 +111,41 @@ import {
 } from "./debug.js";
 import {addToGrid, queryGridCollisions} from "./grid.js";
 import {getOrCreate, RGB} from "../utils/utils.js";
-import {drawText, drawTextAligned, fnt} from "../graphics/font.js";
+import {drawText, fnt} from "../graphics/font.js";
 import {stats} from "../utils/fpsMeter.js";
 import {drawMiniMap} from "./minimap.js";
 import {updateAI} from "./ai/npc.js";
 import {GL} from "../graphics/gl.js";
 import {
-    drawBarrelOpaque,
-    drawBullet,
     drawCrosshair,
     drawHotUsableHint,
-    drawItemOpaque,
-    drawPlayerOpaque,
-    drawShadows,
-    drawTreeOpaque,
+    drawObjects,
+    drawOpaqueObjects,
     getHitColorOffset,
     setupWorldCameraMatrix,
 } from "./gameDraw.js";
 import {getDevFlag, hasSettingsFlag, SettingFlag} from "./settings.js";
 import {bullets, BulletType} from "./data/bullets.js";
-import {getNameByClientId, getScreenScale, lastFrameTs, resetLastFrameTs, updateFrameTime} from "./gameState.js";
+import {
+    gameCamera,
+    GameMenuState,
+    gameMode,
+    getNameByClientId,
+    getScreenScale,
+    lastFrameTs,
+    resetLastFrameTs,
+    updateFrameTime,
+} from "./gameState.js";
 import {newSeedFromTime} from "@iioi/shared/seed.js";
 import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors.js";
 import {poki} from "../poki.js";
 import {isAnyKeyDown} from "../utils/input.js";
 import {delay} from "../utils/delay.js";
-import {GameMenu, GameMenuState, onGameMenu} from "./gameMenu.js";
-import {addReplayTicEvents, beginRecording, ReplayFile} from "./replay.js";
+import {onGameMenu} from "./gameMenu.js";
+import {addReplayTicEvents, beginRecording} from "./replay.js";
 import {Img} from "../assets/img.js";
 import {autoplayInput, updateAutoplay} from "./ai/common.js";
-
-export const gameMenu: GameMenu = {
-    _state: GameMenuState.InGame,
-};
+import {ReplayFile} from "./replayFile.js";
 
 const clients = new Map<ClientID, Client>();
 
@@ -177,17 +178,6 @@ let hotUsable: ItemActor | null = null;
 let state: StateData = newStateData();
 let lastState: StateData;
 
-export const gameMode = {
-    _title: false,
-    _runAI: false,
-    _playersAI: false,
-    _hasPlayer: false,
-    _tiltCamera: 0.0,
-    _bloodRain: false,
-    _npcLevel: 0,
-    _replay: undefined as undefined | ReplayFile,
-};
-
 export function enableReplayMode(replay: ReplayFile) {
     remoteClients.clear();
     for (const sid in replay._meta.clients) {
@@ -200,7 +190,7 @@ export function enableReplayMode(replay: ReplayFile) {
 }
 
 export function rewindReplayToStart() {
-    state = cloneState(gameMode._replay._state);
+    state = cloneStateData(gameMode._replay._state);
     localEvents = gameMode._replay._stream.concat();
     startTic = -1;
     _SEEDS[0] = state._seed;
@@ -270,7 +260,7 @@ export const resetGame = () => {
     gameMode._npcLevel = 0;
     gameMode._bloodRain = false;
     gameMode._replay = undefined;
-    gameMenu._state = GameMenuState.InGame;
+    gameMode._menu = GameMenuState.InGame;
 };
 
 const recreateMap = (themeIdx: number, seed: number) => {
@@ -363,7 +353,7 @@ export const updateGame = (ts: number) => {
     }
 
     if (clientId && startTic >= 0) {
-        onGameMenu(gameMenu, gameMode._replay, gameTic);
+        onGameMenu(gameTic);
     }
 
     let predicted = false;
@@ -417,7 +407,7 @@ export const updateGame = (ts: number) => {
                     lastAudioTic = toTic;
                 } else {
                     //rewindReplayToStart();
-                    state = cloneState(gameMode._replay._state);
+                    state = cloneStateData(gameMode._replay._state);
                     localEvents = gameMode._replay._stream.concat();
                     _SEEDS[0] = state._seed;
                     gameTic = state._tic;
@@ -567,7 +557,7 @@ const getNextInputTic = (tic: number) => tic + max(Const.InputDelay, ((lastFrame
 const updatePlayerControls = () => {
     const myPlayer = getMyPlayer();
     if (myPlayer) {
-        if (gameMenu._state == GameMenuState.InGame && !hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
+        if (gameMode._menu == GameMenuState.InGame && !hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
             updateControls(myPlayer);
         } else {
             resetPlayerControls();
@@ -1023,8 +1013,8 @@ const updateGameCamera = () => {
             cameraX = px;
             cameraY = py;
             const autoPlay = hasSettingsFlag(SettingFlag.DevAutoPlay);
-            if (myPlayer && ((!autoPlay && !gameMode._replay) || gameMenu._state !== GameMenuState.InGame)) {
-                if (gameMenu._state === GameMenuState.InGame) {
+            if (myPlayer && ((!autoPlay && !gameMode._replay) || gameMode._menu !== GameMenuState.InGame)) {
+                if (gameMode._menu === GameMenuState.InGame) {
                     const viewM = (100 * wpn._cameraFeedback * cameraFeedback) / (hypot(viewX, viewY) + 0.001);
                     cameraX += wpn._cameraLookForward * (lookAtX - px) - viewM * viewX;
                     cameraY += wpn._cameraLookForward * (lookAtY - py) - viewM * viewY;
@@ -1106,7 +1096,7 @@ const simulateTic = (prediction = false) => {
     }
 
     if (process.env.NODE_ENV === "development") {
-        saveDebugState(cloneState());
+        saveDebugState(cloneStateData(state));
     }
 
     for (const a of state._actors[ActorType.Barrel]) {
@@ -1602,21 +1592,6 @@ const updatePlayer = (player: PlayerActor) => {
     }
 };
 
-export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, vel?: Vel) => {
-    addFleshParticles(amount, actor, expl, vel);
-};
-
-const cloneState = (stateToCopy: StateData = state): StateData => ({
-    ...stateToCopy,
-    _actors: [
-        stateToCopy._actors[0].map(a => ({...a})),
-        stateToCopy._actors[1].map(a => ({...a})),
-        stateToCopy._actors[2].map(a => ({...a})),
-        stateToCopy._actors[3].map(a => ({...a})),
-    ],
-    _stats: new Map(stateToCopy._stats.entries()),
-});
-
 const beginPrediction = (): boolean => {
     // if (!Const.Prediction || time < 0.001) return false;
     if (!Const.Prediction || !joined) return false;
@@ -1630,7 +1605,7 @@ const beginPrediction = (): boolean => {
 
     // save state
     lastState = state;
-    state = cloneState();
+    state = cloneStateData(state);
 
     // && gameTic <= lastInputTic
     while (frames--) {
@@ -1704,7 +1679,7 @@ const drawGame = () => {
     }
 
     drawOpaqueParticles();
-    drawOpaqueObjects();
+    drawOpaqueObjects(drawList);
     drawSplatsOpaque();
     flush();
 
@@ -1729,7 +1704,7 @@ const drawGame = () => {
     setDrawZ(0);
     draw(mapTexture, 0, 0);
 
-    drawObjects();
+    drawObjects(drawList);
 
     if (getDevFlag(SettingFlag.DevShowCollisionInfo)) {
         drawCollisions(drawList);
@@ -1778,7 +1753,7 @@ const drawOverlay = () => {
 
     if (!gameMode._title) {
         printStatus();
-        if (gameMenu._state === GameMenuState.InGame) {
+        if (gameMode._menu === GameMenuState.InGame) {
             drawVirtualPad();
         }
     }
@@ -1810,8 +1785,8 @@ const drawOverlay = () => {
 
     ui_renderNormal();
 
-    if (gameMenu._state === GameMenuState.InGame && !gameMode._replay) {
-        drawCrosshair(getMyPlayer(), gameCamera, scale);
+    if (gameMode._menu === GameMenuState.InGame && !gameMode._replay) {
+        drawCrosshair(getMyPlayer(), scale);
     }
 
     flush();
@@ -1837,49 +1812,6 @@ const collectVisibleActors = (...lists: Actor[][]) => {
                 drawList.push(a);
             }
         }
-    }
-};
-
-const drawPlayer = (p: PlayerActor): void => {
-    const x = p._x / WORLD_SCALE;
-    const y = p._y / WORLD_SCALE;
-
-    if (p._client > 0 && p._client !== clientId) {
-        let name = getNameByClientId(p._client);
-        if (process.env.NODE_ENV === "development") {
-            name = (name ?? "") + " #" + p._client;
-        }
-        if (name) {
-            setDrawZ(32 + p._z / WORLD_SCALE);
-            drawTextAligned(fnt[0], name, 6, x, y + 2);
-        }
-    }
-};
-
-type ActorDrawFunction = (p: Actor) => void;
-const DRAW_BY_TYPE: ActorDrawFunction[] = [drawPlayer, undefined, drawBullet, undefined, undefined];
-
-const DRAW_OPAQUE_BY_TYPE: (ActorDrawFunction | undefined)[] = [
-    drawPlayerOpaque,
-    drawBarrelOpaque,
-    undefined,
-    drawItemOpaque,
-    drawTreeOpaque,
-];
-
-function drawOpaqueObjects() {
-    for (let i = drawList.length - 1; i >= 0; --i) {
-        const actor = drawList[i];
-        DRAW_OPAQUE_BY_TYPE[actor._type]?.(actor);
-    }
-}
-
-const drawObjects = () => {
-    setDrawZ(0.15);
-    drawShadows(drawList);
-    drawParticleShadows();
-    for (const actor of drawList) {
-        DRAW_BY_TYPE[actor._type]?.(actor);
     }
 };
 
