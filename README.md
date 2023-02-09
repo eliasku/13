@@ -20,10 +20,11 @@ Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https
 
 ## 📖 How to play
 
-Select room, share the link and wait friends to play:
+Select game server, share the link and wait friends to play:
 
 - The latest release is available on [🚪iioi](https://iioi.herokuapp.com/) server
 - Unreleased `master` changes is always deployed to [🚪grtc](https://grtc.herokuapp.com/) or [🚪next13](https://next13.herokuapp.com/) servers
+- [Check servers for online players](https://eliasku.github.io/13/servers.html)
 
 ### 🎮 Controls
 
@@ -53,9 +54,9 @@ At spawn each Player or NPC has 10`hp` (hit points). You are able to get extra 1
 - Player kills neutral NPC to gain +1 score.
 - Player kills another Player to gain +10 scores.
 
-Kill opponents 💀 | 👹 | 🤡 | 🤖 | 🎃 | 🦝 | 🐙 | 🐰 | 🦌 | 🐺 | 🐵 | 🦊 | 🐭 | 🦍 to score `FRAG` and get 5`cr`
+Kill opponents 💀 | 👹 | 🤡 | 🤖 | 🎃 | 🦝 | 🐙 | 🐰 | 🦌 | 🐺 | 🐵 | 🦊 | 🐭 | 🦍 | 🐸 to score `FRAG` and get 5`cr`
 
-Kill NPC 🍅 | 😐 | 🐷 to score `FRAG` and get 1`cr`
+Kill NPC 🍅 | 😐 | 🐷 | 🎅🏻 to score `FRAG` and get 1`cr`
 
 ### Items
 
