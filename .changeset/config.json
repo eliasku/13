@@ -3,17 +3,7 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "linked": [
-    [
-      "@iioi/autoplay",
-      "@iioi/bot-api",
-      "@iioi/client",
-      "@iioi/server",
-      "@iioi/shared",
-      "@iioi/sprite",
-      "@iioi/tools"
-    ]
-  ],
+  "linked": [],
   "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "patch",
