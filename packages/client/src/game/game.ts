@@ -1,23 +1,11 @@
 import {ClientID} from "@iioi/shared/types.js";
-import {_room, _sseState, clientId, clientName, disconnect, isPeerConnected, remoteClients} from "../net/messaging.js";
-import {play, speak} from "../audio/context.js";
-import {
-    ambientColor,
-    beginRenderToMain,
-    draw,
-    drawMeshSpriteUp,
-    emptyTexture,
-    flush,
-    gl,
-    setDrawZ,
-    setLightMapTexture,
-} from "../graphics/draw2d.js";
-import {_SEEDS, fxRand, fxRandElement, fxRandom, fxRandomNorm, rand, random, random1i} from "../utils/rnd.js";
+import {_room, _sseState, clientId, disconnect, isPeerConnected, remoteClients} from "../net/messaging.js";
+import {speak} from "../audio/context.js";
+import {_SEEDS, fxRand, fxRandElement, rand, random, random1i} from "../utils/rnd.js";
 import {channels_sendObjectData} from "../net/channels_send.js";
 import {setPacketHandler} from "../net/channels.js";
-import {EMOJI, img} from "../assets/gfx.js";
 import {Const, GAME_CFG} from "./config.js";
-import {generateMapBackground, mapTexture} from "../assets/map.js";
+import {generateMapBackground} from "../assets/map.js";
 import {
     Actor,
     ActorType,
@@ -39,10 +27,9 @@ import {
     unpackAngleByte,
 } from "./types.js";
 import {pack, unpack} from "./packets.js";
-import {abs, clamp, cos, dec1, hypot, lerp, lerpLog, max, min, PI2, reach, sin, sqrt} from "../utils/math.js";
+import {abs, clamp, cos, dec1, lerp, lerpLog, max, min, PI2, reach, sin, sqrt} from "../utils/math.js";
 import {
     couldBeReloadedManually,
-    drawVirtualPad,
     dropButton,
     jumpButtonDown,
     lookAtX,
@@ -58,7 +45,7 @@ import {
     viewX,
     viewY,
 } from "./controls.js";
-import {Snd, snd} from "../assets/sfx.js";
+import {Snd} from "../assets/sfx.js";
 import {weapons} from "./data/weapons.js";
 import {
     addBoneParticles,
@@ -68,9 +55,6 @@ import {
     addShellParticle,
     addStepSplat,
     addTextParticle,
-    drawOpaqueParticles,
-    drawSplatsOpaque,
-    drawTextParticles,
     resetParticles,
     restoreParticles,
     saveParticles,
@@ -89,7 +73,6 @@ import {
     copyPosFromActorCenter,
     limitVelocity,
     reflectVelocity,
-    roundActors,
     setRandomPosition,
     testIntersection,
     testRayWithSphere,
@@ -99,38 +82,23 @@ import {
 } from "./phy.js";
 import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, OBJECT_RADIUS, PLAYER_HANDS_Z} from "./data/world.js";
-import {termPrint, ui_renderNormal, ui_renderOpaque} from "../graphics/gui.js";
-import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "./fog.js";
-import {
-    addDebugState,
-    assertStateInSync,
-    drawCollisions,
-    printDebugInfo,
-    saveDebugState,
-    updateDebugInput,
-} from "./debug.js";
+import {addDebugState, assertStateInSync, saveDebugState, updateDebugInput} from "./debug.js";
 import {addToGrid, queryGridCollisions} from "./grid.js";
-import {getOrCreate, RGB} from "../utils/utils.js";
-import {drawText, fnt} from "../graphics/font.js";
-import {stats} from "../utils/fpsMeter.js";
-import {drawMiniMap} from "./minimap.js";
+import {getOrCreate} from "../utils/utils.js";
 import {updateAI} from "./ai/npc.js";
-import {GL} from "../graphics/gl.js";
-import {
-    drawCrosshair,
-    drawHotUsableHint,
-    drawObjects,
-    drawOpaqueObjects,
-    getHitColorOffset,
-    setupWorldCameraMatrix,
-} from "./gameDraw.js";
+import {drawGame, drawOverlay} from "./gameDraw.js";
 import {getDevFlag, hasSettingsFlag, SettingFlag} from "./settings.js";
 import {bullets, BulletType} from "./data/bullets.js";
 import {
+    game,
     GameMenuState,
     gameMode,
+    getMinTic,
+    getMyPlayer,
     getNameByClientId,
+    getPlayerByClient,
     lastFrameTs,
+    normalizeStateData,
     resetLastFrameTs,
     updateFrameTime,
 } from "./gameState.js";
@@ -140,72 +108,20 @@ import {poki} from "../poki.js";
 import {isAnyKeyDown} from "../utils/input.js";
 import {delay} from "../utils/delay.js";
 import {onGameMenu} from "./gameMenu.js";
-import {addReplayTicEvents, beginRecording} from "./replay.js";
 import {Img} from "../assets/img.js";
 import {autoplayInput, updateAutoplay} from "./ai/common.js";
-import {ReplayFile} from "./replayFile.js";
 import {
-    cameraFeedback,
-    cameraShake,
     decCameraEffects,
+    feedbackCameraExplosion,
+    feedbackCameraShot,
     gameCamera,
     getScreenScale,
     restoreGameCamera,
     saveGameCamera,
-    setCameraEffects,
 } from "@iioi/client/game/camera.js";
-
-const clients = new Map<ClientID, Client>();
-
-// TODO: check idea of storage events in map?
-let localEvents: ClientEvent[] = [];
-let receivedEvents: ClientEvent[] = [];
-
-// tics received from all peers (min value), we could simulate to it
-let startTic = -1;
-let gameTic = 0;
-let prevTime = 0;
-let joined = false;
-
-let waitToAutoSpawn = false;
-let waitToSpawn = false;
-let allowedToRespawn = false;
-
-let lastInputTic = 0;
-let lastInputCmd = 0;
-let lastAudioTic = 0;
-
-// static state
-const trees: Actor[] = [];
-const playersGrid: PlayerActor[][] = [];
-const barrelsGrid: BarrelActor[][] = [];
-const treesGrid: Actor[][] = [];
-let hotUsable: ItemActor | null = null;
-
-// dynamic state
-let state: StateData = newStateData();
-let lastState: StateData;
-
-export function enableReplayMode(replay: ReplayFile) {
-    remoteClients.clear();
-    for (const sid in replay._meta.clients) {
-        const id = parseInt(sid);
-        const name = replay._meta.clients[id];
-        remoteClients.set(id, {_id: id, _name: name});
-    }
-    gameMode._replay = replay;
-    rewindReplayToStart();
-}
-
-export function rewindReplayToStart() {
-    state = cloneStateData(gameMode._replay._state);
-    localEvents = gameMode._replay._stream.concat();
-    startTic = -1;
-    _SEEDS[0] = state._seed;
-    lastInputTic = 0;
-    lastInputCmd = 0;
-    lastAudioTic = 0;
-}
+import {playAt} from "@iioi/client/game/gameAudio.js";
+import {addReplayTicEvents, beginRecording} from "@iioi/client/game/replay/recorder.js";
+import {runReplayTics} from "@iioi/client/game/replay/viewer.js";
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -216,7 +132,7 @@ const createItemActor = (subtype: number): ItemActor => {
 const createRandomItem = (): ItemActor => createItemActor(rand(6));
 
 const requireClient = (id: ClientID): Client =>
-    getOrCreate(clients, id, () => ({
+    getOrCreate(game._clients, id, () => ({
         _id: id,
         _tic: 0,
         _ts0: 0,
@@ -224,34 +140,34 @@ const requireClient = (id: ClientID): Client =>
         _acknowledgedTic: 0,
     }));
 
-const requireStats = (id: ClientID): PlayerStat => getOrCreate(state._stats, id, () => ({_frags: 0, _scores: 0}));
+const requireStats = (id: ClientID): PlayerStat => getOrCreate(game._state._stats, id, () => ({_frags: 0, _scores: 0}));
 
 export const resetGame = () => {
     resetParticles();
     resetPlayerControls();
 
-    clients.clear();
-    localEvents.length = 0;
-    receivedEvents.length = 0;
+    game._clients.clear();
+    game._localEvents.length = 0;
+    game._receivedEvents.length = 0;
 
-    state = newStateData();
-    normalizeState();
+    game._state = newStateData();
+    normalizeStateData(game._state);
 
-    startTic = -1;
-    gameTic = 1;
+    game._startTic = -1;
+    game._gameTic = 1;
     // prevTime = 0;
     // startTime = 0;
     // ackMin = 0;
-    joined = false;
+    game._joined = false;
 
-    waitToAutoSpawn = false;
-    waitToSpawn = false;
-    allowedToRespawn = false;
+    game._waitToAutoSpawn = false;
+    game._waitToSpawn = false;
+    game._allowedToRespawn = false;
 
     resetLastFrameTs();
-    lastInputTic = 0;
-    lastInputCmd = 0;
-    lastAudioTic = 0;
+    game._lastInputTic = 0;
+    game._lastInputCmd = 0;
+    game._lastAudioTic = 0;
     console.log("reset game");
 
     gameMode._title = false;
@@ -269,27 +185,27 @@ const recreateMap = (themeIdx: number, seed: number) => {
     // generate map
     _SEEDS[0] = seed;
     const theme = generateMapBackground(themeIdx);
-    trees.length = 0;
-    treesGrid.length = 0;
-    const nextId = state._nextId;
+    game._trees.length = 0;
+    game._treesGrid.length = 0;
+    const nextId = game._state._nextId;
     for (let i = 0; i < GAME_CFG._trees._initCount; ++i) {
         const tree = newActor(ActorType.Tree);
         tree._subtype = theme.treeGfx[rand(theme.treeGfx.length)];
         tree._hp = 0;
         setRandomPosition(tree);
-        trees.push(tree);
-        addToGrid(treesGrid, tree);
+        game._trees.push(tree);
+        addToGrid(game._treesGrid, tree);
     }
-    _SEEDS[0] = state._seed;
-    state._nextId = nextId;
+    _SEEDS[0] = game._state._seed;
+    game._state._nextId = nextId;
 };
 
 const pushActor = <T extends Actor>(a: T) => {
-    const list = state._actors[a._type as 0 | 1 | 2 | 3] as T[];
+    const list = game._state._actors[a._type as 0 | 1 | 2 | 3] as T[];
     if (process.env.NODE_ENV === "development") {
         console.assert(list && list.indexOf(a) < 0);
     }
-    a._id = state._nextId++;
+    a._id = game._state._nextId++;
     list.push(a);
 };
 
@@ -306,17 +222,17 @@ function initBarrels() {
 }
 
 export const createSeedGameState = () => {
-    startTic = 0;
-    gameTic = 1;
-    state._seed = _SEEDS[0];
+    game._startTic = 0;
+    game._gameTic = 1;
+    game._state._seed = _SEEDS[0];
     recreateMap(_room._mapTheme, _room._mapSeed);
     initBarrels();
 };
 
 export const createSplashState = () => {
-    startTic = 0;
-    gameTic = 1;
-    state._seed = _SEEDS[0];
+    game._startTic = 0;
+    game._gameTic = 1;
+    game._state._seed = _SEEDS[0];
     recreateMap(Math.floor(Math.random() * 3), newSeedFromTime());
     for (let i = 0; i < 13; ++i) {
         const k = i / 13;
@@ -343,30 +259,30 @@ export const createSplashState = () => {
 export const updateGame = (ts: number) => {
     updateFrameTime(ts);
 
-    if (startTic < 0) {
+    if (game._startTic < 0) {
         if (gameMode._replay) {
-            startTic = state._tic;
-            gameTic = state._tic;
-            _SEEDS[0] = state._seed;
+            game._startTic = game._state._tic;
+            game._gameTic = game._state._tic;
+            _SEEDS[0] = game._state._seed;
             recreateMap(_room._mapTheme, _room._mapSeed);
         } else if (clientId && !remoteClients.size) {
             createSeedGameState();
         }
     }
 
-    if (clientId && startTic >= 0) {
-        onGameMenu(gameTic);
+    if (clientId && game._startTic >= 0) {
+        onGameMenu(game._gameTic);
     }
 
     let predicted = false;
-    if (startTic < 0 && remoteClients.size) {
+    if (game._startTic < 0 && remoteClients.size) {
         const minTic = getMinTic();
         let actualStateCount = 0;
         let maxState: StateData | null = null;
         let maxStateTic = 0;
         let playingClients = 0;
         for (const [id] of remoteClients) {
-            const client = clients.get(id);
+            const client = game._clients.get(id);
             if (client) {
                 if (client._isPlaying) {
                     ++playingClients;
@@ -382,55 +298,16 @@ export const updateGame = (ts: number) => {
         }
         if (maxState && actualStateCount >= playingClients) {
             updateFrameTime(performance.now() / 1000);
-            prevTime = lastFrameTs;
-            state = maxState;
-            gameTic = startTic = state._tic + 1;
+            game._prevTime = lastFrameTs;
+            game._state = maxState;
+            game._gameTic = game._startTic = game._state._tic + 1;
             recreateMap(_room._mapTheme, _room._mapSeed);
-            normalizeState();
+            normalizeStateData(game._state);
         }
     }
-    if (startTic >= 0) {
+    if (game._startTic >= 0) {
         if (gameMode._replay) {
-            const ticsPerSecond = Const.NetFq * (gameMode._replay._playbackSpeed ?? 1);
-            let frames = ((ts - prevTime) * ticsPerSecond) | 0;
-            const end = gameMode._replay._meta.end;
-            const paused = gameMode._replay._paused;
-            if (paused) {
-                prevTime = ts;
-                frames = 0;
-            }
-            if (gameMode._replay._rewind != null) {
-                const toTic = gameMode._replay._rewind;
-                if (toTic > gameTic) {
-                    frames = toTic - gameTic + 3;
-                    prevTime = ts - frames / ticsPerSecond;
-                    lastInputTic = toTic;
-                    lastInputCmd = toTic;
-                    lastAudioTic = toTic;
-                } else {
-                    //rewindReplayToStart();
-                    state = cloneStateData(gameMode._replay._state);
-                    localEvents = gameMode._replay._stream.concat();
-                    _SEEDS[0] = state._seed;
-                    gameTic = state._tic;
-                    frames = toTic + 1;
-                    prevTime = ts - frames / ticsPerSecond;
-                    lastInputTic = state._tic + toTic;
-                    lastInputCmd = state._tic + toTic;
-                    lastAudioTic = state._tic + toTic;
-                }
-                gameMode._replay._rewind = undefined;
-            }
-            if (gameTic >= end) {
-                prevTime = ts;
-                frames = 0;
-                rewindReplayToStart();
-            }
-            while (gameTic <= end && frames--) {
-                simulateTic();
-                normalizeState();
-                prevTime += 1 / ticsPerSecond;
-            }
+            runReplayTics(ts, simulateTic);
         } else {
             cleaningUpClients();
             tryRunTicks(lastFrameTs);
@@ -444,7 +321,7 @@ export const updateGame = (ts: number) => {
     }
     updateDebugInput();
 
-    if (startTic >= 0) {
+    if (game._startTic >= 0) {
         // check input before overlay, or save camera settings
         if (!gameMode._replay) {
             updatePlayerControls();
@@ -460,101 +337,16 @@ export const updateGame = (ts: number) => {
     }
 };
 
-const getWeaponInfoHeader = (wpn: number, ammo: number, reload = 0): string => {
-    if (wpn) {
-        const weapon = weapons[wpn];
-        let txt = EMOJI[Img.weapon0 + wpn];
-        if (weapon._clipSize) {
-            if (reload) {
-                txt += (((100 * (weapon._clipReload - reload)) / weapon._clipReload) | 0) + "%";
-            } else {
-                txt += ammo;
-            }
-        } else {
-            txt += "∞";
-        }
-        return txt;
-    }
-    return "";
-};
-
-const printStatus = () => {
-    if (clientId) {
-        if (joined) {
-            const p0 = getMyPlayer();
-            if (p0) {
-                let str = "";
-                const hp = p0._hp;
-                for (let i = 0; i < 10; ) {
-                    const o2 = hp > i++;
-                    const o1 = hp > i++;
-                    str += o1 ? "❤️" : o2 ? "💔" : "🖤";
-                }
-                const sp = p0._sp;
-                for (let i = 0; i < 10; ) {
-                    const o2 = sp > i++;
-                    const o1 = sp > i++;
-                    str += o1 ? "🛡" : o2 ? "🪖️️" : "";
-                }
-                termPrint(str);
-                {
-                    let wpnInfo = getWeaponInfoHeader(p0._weapon, p0._clipAmmo, p0._clipReload);
-                    if (p0._weapon2) {
-                        wpnInfo += " | " + getWeaponInfoHeader(p0._weapon2, p0._clipAmmo2);
-                    }
-                    termPrint(wpnInfo);
-                }
-                termPrint(`🧱${p0._mags}`);
-            } else {
-                termPrint("tap to respawn");
-            }
-        } else {
-            termPrint("joining");
-        }
-
-        const getPlayerIcon = (id?: ClientID) => {
-            const player = getPlayerByClient(id);
-            return player ? EMOJI[Img.avatar0 + (player._anim0 % Img.num_avatars)] : "👁️";
-        };
-        const getPlayerStatInfo = (id?: ClientID): string => {
-            const stat = state._stats.get(id);
-            return `|☠${stat?._frags ?? 0}|🪙${stat?._scores ?? 0}`;
-        };
-
-        if (gameMode._replay) {
-            for (const [id, rc] of remoteClients) {
-                termPrint(getPlayerIcon(id) + rc._name + getPlayerStatInfo(id));
-            }
-        } else {
-            termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
-            for (const [id, rc] of remoteClients) {
-                let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc._name + getPlayerStatInfo(id);
-                if (getDevFlag()) {
-                    const cl = clients.get(id);
-                    if (cl && cl._lag !== undefined) {
-                        text += " " + cl._lag;
-                    }
-                }
-                termPrint(text);
-            }
-        }
-    }
-};
-
-const getMyPlayer = (): PlayerActor | undefined => (clientId ? getPlayerByClient(clientId) : undefined);
-
-const getPlayerByClient = (c: ClientID): PlayerActor | undefined =>
-    state._actors[ActorType.Player].find(p => p._client == c);
-
 const getLocalEvent = (tic: number, _e?: ClientEvent): ClientEvent => {
-    if (!(_e = localEvents.find(e => e._tic == tic))) {
+    if (!(_e = game._localEvents.find(e => e._tic == tic))) {
         _e = {_tic: tic, _client: clientId};
-        localEvents.push(_e);
+        game._localEvents.push(_e);
     }
     return _e;
 };
 
-const getNextInputTic = (tic: number) => tic + max(Const.InputDelay, ((lastFrameTs - prevTime) * Const.NetFq) | 0);
+const getNextInputTic = (tic: number) =>
+    tic + max(Const.InputDelay, ((lastFrameTs - game._prevTime) * Const.NetFq) | 0);
 
 const updatePlayerControls = () => {
     const myPlayer = getMyPlayer();
@@ -567,13 +359,13 @@ const updatePlayerControls = () => {
 
         // process Auto-play tic
         if (hasSettingsFlag(SettingFlag.DevAutoPlay) && !gameMode._replay) {
-            updateAutoplay(state, myPlayer._client);
+            updateAutoplay(game._state, myPlayer._client);
         }
     }
 };
 
 const checkPlayerInput = () => {
-    let inputTic = getNextInputTic(gameTic);
+    let inputTic = getNextInputTic(game._gameTic);
     const player = getMyPlayer();
     let input = 0;
     if (player) {
@@ -615,20 +407,20 @@ const checkPlayerInput = () => {
     }
 
     // RESPAWN EVENT
-    if (!gameMode._title && clientId && !waitToSpawn && !player && joined && allowedToRespawn) {
-        if (isAnyKeyDown() || waitToAutoSpawn) {
+    if (!gameMode._title && clientId && !game._waitToSpawn && !player && game._joined && game._allowedToRespawn) {
+        if (isAnyKeyDown() || game._waitToAutoSpawn) {
             input |= ControlsFlag.Spawn;
-            waitToSpawn = true;
-            waitToAutoSpawn = false;
-            allowedToRespawn = false;
+            game._waitToSpawn = true;
+            game._waitToAutoSpawn = false;
+            game._allowedToRespawn = false;
         }
     }
 
-    if (lastInputCmd !== input) {
-        if (inputTic <= lastInputTic) {
-            inputTic = lastInputTic + 1;
+    if (game._lastInputCmd !== input) {
+        if (inputTic <= game._lastInputTic) {
+            inputTic = game._lastInputTic + 1;
         }
-        lastInputTic = inputTic;
+        game._lastInputTic = inputTic;
         // copy flag in case of rewriting local event for ONE-SHOT events
         const g = getLocalEvent(inputTic);
         if (g._input & ControlsFlag.Spawn) {
@@ -636,15 +428,15 @@ const checkPlayerInput = () => {
         }
 
         getLocalEvent(inputTic)._input = input;
-        lastInputCmd = input;
+        game._lastInputCmd = input;
     }
 };
 
 const checkJoinSync = () => {
-    if (!joined && startTic >= 0) {
+    if (!game._joined && game._startTic >= 0) {
         for (const [id, rc] of remoteClients) {
             if (isPeerConnected(rc)) {
-                const cl = clients.get(id);
+                const cl = game._clients.get(id);
                 if (!cl || !cl._ready) {
                     console.log("syncing...");
                     return;
@@ -654,42 +446,20 @@ const checkJoinSync = () => {
                 return;
             }
         }
-        joined = true;
+        game._joined = true;
         console.log("All in sync");
         // respawnPlayer();
-        waitToSpawn = false;
-        waitToAutoSpawn = true;
-        allowedToRespawn = true;
+        game._waitToSpawn = false;
+        game._waitToAutoSpawn = true;
+        game._allowedToRespawn = true;
 
-        beginRecording(state);
+        beginRecording(game._state);
     }
-};
-
-const getMinTic = (_tic: number = 1 << 30) => {
-    if (gameMode._replay) {
-        return gameTic;
-    }
-    if (!clientId || !joined) {
-        _tic = gameTic + Const.InputDelay + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
-    }
-    let clientsTotal = 0;
-    for (const [, client] of clients) {
-        if (client._isPlaying) {
-            ++clientsTotal;
-            if (_tic > client._tic) {
-                _tic = client._tic;
-            }
-        }
-    }
-    if (!clientsTotal) {
-        _tic = gameTic + (((lastFrameTs - prevTime) * Const.NetFq) | 0);
-    }
-    return _tic;
 };
 
 // get minimum tic that already received by
 const getMinAckAndInput = (lastTic: number) => {
-    for (const [, client] of clients) {
+    for (const [, client] of game._clients) {
         if (lastTic > client._acknowledgedTic && client._isPlaying) {
             lastTic = client._acknowledgedTic;
         }
@@ -698,41 +468,40 @@ const getMinAckAndInput = (lastTic: number) => {
 };
 
 const correctPrevTime = (netTic: number, ts: number) => {
-    const lastTic = gameTic - 1;
+    const lastTic = game._gameTic - 1;
     if (netTic === lastTic) {
         // limit predicted tics
-        if (ts - prevTime > Const.InputDelay / Const.NetFq) {
-            prevTime = lerp(prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
+        if (ts - game._prevTime > Const.InputDelay / Const.NetFq) {
+            game._prevTime = lerp(game._prevTime, ts - Const.InputDelay / Const.NetFq, 0.01);
         }
     }
     if (lastTic + Const.InputDelay < netTic) {
-        prevTime -= 1 / Const.NetFq;
+        game._prevTime -= 1 / Const.NetFq;
     }
 };
 
 const tryRunTicks = (ts: number): number => {
-    if (startTic < 0) {
+    if (game._startTic < 0) {
         return 0;
     }
     const netTic = getMinTic();
-    let frames = ((ts - prevTime) * Const.NetFq) | 0;
+    let frames = ((ts - game._prevTime) * Const.NetFq) | 0;
     let framesSimulated = 0;
-    while (gameTic <= netTic && frames--) {
+    while (game._gameTic <= netTic && frames--) {
         simulateTic();
-        normalizeState();
         ++framesSimulated;
 
         // compensate
         // we must try to keep netTic >= gameTic + Const.InputDelay
-        prevTime += 1 / Const.NetFq;
+        game._prevTime += 1 / Const.NetFq;
     }
 
     correctPrevTime(netTic, ts);
 
-    const lastTic = gameTic - 1;
-    receivedEvents = receivedEvents.filter(v => v._tic > lastTic);
+    const lastTic = game._gameTic - 1;
+    game._receivedEvents = game._receivedEvents.filter(v => v._tic > lastTic);
     const ackTic = getMinAckAndInput(lastTic);
-    localEvents = localEvents.filter(v => v._tic > ackTic);
+    game._localEvents = game._localEvents.filter(v => v._tic > ackTic);
 
     return framesSimulated;
 };
@@ -740,7 +509,7 @@ const tryRunTicks = (ts: number): number => {
 const _packetBuffer = new Int32Array(1024 * 256);
 
 const sendInput = () => {
-    const lastTic = gameTic - 1;
+    const lastTic = game._gameTic - 1;
     for (const [id, rc] of remoteClients) {
         if (isPeerConnected(rc)) {
             const cl = requireClient(id);
@@ -755,21 +524,21 @@ const sendInput = () => {
                     _tic: inputTic,
                     _ts0: cl._ts0,
                     _ts1: cl._ts1,
-                    _events: localEvents.filter(e => e._tic > cl._acknowledgedTic && e._tic <= inputTic),
+                    _events: game._localEvents.filter(e => e._tic > cl._acknowledgedTic && e._tic <= inputTic),
                 };
                 //console.log(JSON.stringify(packet.events_));
-                if (!cl._ready && joined) {
-                    packet._state = state;
-                    cl._tic = state._tic;
-                    cl._acknowledgedTic = state._tic;
+                if (!cl._ready && game._joined) {
+                    packet._state = game._state;
+                    cl._tic = game._state._tic;
+                    cl._acknowledgedTic = game._state._tic;
                 }
                 if (process.env.NODE_ENV === "development") {
                     packet._debug = {
-                        _nextId: state._nextId,
-                        _tic: state._tic,
-                        _seed: state._seed,
+                        _nextId: game._state._nextId,
+                        _tic: game._state._tic,
+                        _seed: game._state._seed,
                     };
-                    addDebugState(cl, packet, state);
+                    addDebugState(cl, packet, game._state);
                 }
                 // if(packet.events_.length) {
                 //     console.info("SEND: " + JSON.stringify(packet.events_));
@@ -783,15 +552,15 @@ const sendInput = () => {
 const processPacket = (sender: Client, data: Packet) => {
     sender._ts1 = data._ts0;
     sender._lag = (performance.now() & 0x7fffffff) - data._ts1;
-    if (startTic < 0 && data._state) {
+    if (game._startTic < 0 && data._state) {
         if (!sender._startState || data._state._tic > sender._startState._tic) {
             sender._startState = data._state;
         }
     }
 
     if (process.env.NODE_ENV === "development") {
-        if (startTic >= 0) {
-            assertStateInSync(sender._id, data, state, gameTic);
+        if (game._startTic >= 0) {
+            assertStateInSync(sender._id, data, game._state, game._gameTic);
         }
     }
 
@@ -802,7 +571,7 @@ const processPacket = (sender: Client, data: Packet) => {
         // const debug = [];
         for (const e of data._events) {
             if (e._tic > sender._tic /*alreadyReceivedTic*/) {
-                receivedEvents.push(e);
+                game._receivedEvents.push(e);
                 // debug.push(e);
             }
         }
@@ -838,16 +607,16 @@ setPacketHandler((from: ClientID, buffer: ArrayBuffer) => {
 let disconnectTimes = 0;
 
 const cleaningUpClients = () => {
-    for (const [id] of clients) {
+    for (const [id] of game._clients) {
         //if (!isChannelOpen(remoteClients.get(id))) {
         if (!remoteClients.has(id)) {
-            clients.delete(id);
+            game._clients.delete(id);
         }
     }
 
-    if (clientId && startTic >= 0) {
+    if (clientId && game._startTic >= 0) {
         for (const [id, rc] of remoteClients) {
-            if (clients.get(id)?._ready && !isPeerConnected(rc)) {
+            if (game._clients.get(id)?._ready && !isPeerConnected(rc)) {
                 if (++disconnectTimes > 60 * 5) {
                     disconnect();
                     alert("connection lost");
@@ -931,8 +700,8 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
     if (testIntersection(item, player)) {
         const withMyPlayer = isMyPlayer(player);
         if (item._subtype & ItemType.Weapon) {
-            if (withMyPlayer && !hotUsable) {
-                hotUsable = item;
+            if (withMyPlayer && !game._hotUsable) {
+                game._hotUsable = item;
             }
             // suck in mags
             if (itemContainsAmmo(item) && player._mags < 10) {
@@ -999,7 +768,7 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
 
 const updateGameCamera = () => {
     const getRandomPlayer = () => {
-        const l = state._actors[ActorType.Player].filter(p => p._client && clients.has(p._client));
+        const l = game._state._actors[ActorType.Player].filter(p => p._client && game._clients.has(p._client));
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
     };
     let scale = GAME_CFG._camera._baseScale;
@@ -1017,9 +786,8 @@ const updateGameCamera = () => {
             const autoPlay = hasSettingsFlag(SettingFlag.DevAutoPlay);
             if (myPlayer && ((!autoPlay && !gameMode._replay) || gameMode._menu !== GameMenuState.InGame)) {
                 if (gameMode._menu === GameMenuState.InGame) {
-                    const viewM = (100 * wpn._cameraFeedback * cameraFeedback) / (hypot(viewX, viewY) + 0.001);
-                    cameraX += wpn._cameraLookForward * (lookAtX - px) + viewM * viewX;
-                    cameraY += wpn._cameraLookForward * (lookAtY - py) + viewM * viewY;
+                    cameraX += wpn._cameraLookForward * (lookAtX - px);
+                    cameraY += wpn._cameraLookForward * (lookAtY - py);
                     scale *= wpn._cameraScale;
                 } else {
                     scale = GAME_CFG._camera._inGameMenuScale;
@@ -1032,15 +800,6 @@ const updateGameCamera = () => {
     gameCamera[2] = lerpLog(gameCamera[2], scale / getScreenScale(), 0.05);
 
     decCameraEffects();
-};
-
-const normalizeState = () => {
-    for (const list of state._actors) {
-        // sort by id
-        list.sort((a: Actor, b: Actor): number => a._id - b._id);
-        // normalize properties
-        roundActors(list);
-    }
 };
 
 const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
@@ -1056,7 +815,7 @@ const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
 
 const simulateTic = (prediction = false) => {
     const processTicCommands = (tic: number) => {
-        const tickEvents: ClientEvent[] = localEvents.concat(receivedEvents).filter(v => v._tic == tic);
+        const tickEvents: ClientEvent[] = game._localEvents.concat(game._receivedEvents).filter(v => v._tic == tic);
 
         tickEvents.sort((a, b) => a._client - b._client);
         if (!prediction) {
@@ -1086,37 +845,37 @@ const simulateTic = (prediction = false) => {
             }
         }
     };
-    processTicCommands(gameTic);
+    processTicCommands(game._gameTic);
 
     updateGameCamera();
 
-    playersGrid.length = 0;
-    barrelsGrid.length = 0;
+    game._playersGrid.length = 0;
+    game._barrelsGrid.length = 0;
 
-    for (const a of state._actors[ActorType.Player]) {
+    for (const a of game._state._actors[ActorType.Player]) {
         updatePlayer(a);
-        addToGrid(playersGrid, a);
+        addToGrid(game._playersGrid, a);
         a._localStateFlags = 1;
     }
 
     if (process.env.NODE_ENV === "development") {
-        saveDebugState(cloneStateData(state));
+        saveDebugState(cloneStateData(game._state));
     }
 
-    for (const a of state._actors[ActorType.Barrel]) {
+    for (const a of game._state._actors[ActorType.Barrel]) {
         updateActorPhysics(a);
-        addToGrid(barrelsGrid, a);
+        addToGrid(game._barrelsGrid, a);
         a._localStateFlags = 1;
     }
 
-    hotUsable = null;
-    for (const item of state._actors[ActorType.Item]) {
+    game._hotUsable = undefined;
+    for (const item of game._state._actors[ActorType.Item]) {
         updateActorPhysics(item);
         if (!item._animHit) {
-            queryGridCollisions(item, playersGrid, pickItem);
+            queryGridCollisions(item, game._playersGrid, pickItem);
         }
         if (item._hp && item._lifetime) {
-            if (gameTic % 3 === 0) {
+            if (game._gameTic % 3 === 0) {
                 --item._lifetime;
                 if (!item._lifetime) {
                     item._hp = 0;
@@ -1125,50 +884,50 @@ const simulateTic = (prediction = false) => {
         }
     }
 
-    for (const player of state._actors[ActorType.Player]) {
+    for (const player of game._state._actors[ActorType.Player]) {
         lateUpdateDropButton(player);
     }
 
-    for (const bullet of state._actors[ActorType.Bullet]) {
+    for (const bullet of game._state._actors[ActorType.Bullet]) {
         if (bullet._subtype != BulletType.Ray) {
             updateBody(bullet, 0, 0);
             if (bullet._hp && collideWithBoundsA(bullet)) {
                 --bullet._hp;
                 addImpactParticles(8, bullet, bullet, bullets[bullet._subtype as BulletType]._color);
             }
-            queryGridCollisions(bullet, playersGrid, checkBulletCollision);
-            queryGridCollisions(bullet, barrelsGrid, checkBulletCollision);
-            queryGridCollisions(bullet, treesGrid, checkBulletCollision);
+            queryGridCollisions(bullet, game._playersGrid, checkBulletCollision);
+            queryGridCollisions(bullet, game._barrelsGrid, checkBulletCollision);
+            queryGridCollisions(bullet, game._treesGrid, checkBulletCollision);
         }
         if (bullet._lifetime && !--bullet._lifetime) {
             bullet._hp = 0;
         }
     }
-    state._actors[0] = state._actors[0].filter(x => x._hp > 0);
-    state._actors[1] = state._actors[1].filter(x => x._hp > 0);
-    state._actors[2] = state._actors[2].filter(x => x._hp > 0);
-    state._actors[3] = state._actors[3].filter(x => x._hp > 0);
+    game._state._actors[0] = game._state._actors[0].filter(x => x._hp > 0);
+    game._state._actors[1] = game._state._actors[1].filter(x => x._hp > 0);
+    game._state._actors[2] = game._state._actors[2].filter(x => x._hp > 0);
+    game._state._actors[3] = game._state._actors[3].filter(x => x._hp > 0);
 
-    for (const a of state._actors[ActorType.Player]) {
+    for (const a of game._state._actors[ActorType.Player]) {
         a._localStateFlags = 0;
-        queryGridCollisions(a, treesGrid, checkBodyCollision);
-        queryGridCollisions(a, barrelsGrid, checkBodyCollision);
-        queryGridCollisions(a, playersGrid, checkBodyCollision, 0);
+        queryGridCollisions(a, game._treesGrid, checkBodyCollision);
+        queryGridCollisions(a, game._barrelsGrid, checkBodyCollision);
+        queryGridCollisions(a, game._playersGrid, checkBodyCollision, 0);
     }
-    for (const a of state._actors[ActorType.Barrel]) {
+    for (const a of game._state._actors[ActorType.Barrel]) {
         a._localStateFlags = 0;
-        queryGridCollisions(a, treesGrid, checkBodyCollision);
-        queryGridCollisions(a, barrelsGrid, checkBodyCollision, 0);
+        queryGridCollisions(a, game._treesGrid, checkBodyCollision);
+        queryGridCollisions(a, game._barrelsGrid, checkBodyCollision, 0);
     }
 
-    if (waitToSpawn && getMyPlayer()) {
+    if (game._waitToSpawn && getMyPlayer()) {
         if (!gameMode._replay) {
             poki._gameplayStart();
         }
-        waitToSpawn = false;
+        game._waitToSpawn = false;
     }
 
-    for (const tree of trees) {
+    for (const tree of game._trees) {
         updateAnim(tree);
     }
 
@@ -1177,9 +936,9 @@ const simulateTic = (prediction = false) => {
     if (gameMode._npcLevel) {
         const npcConfig = GAME_CFG._npc[gameMode._npcLevel];
         const NPC_PERIOD_MASK = (1 << npcConfig._period) - 1;
-        if ((gameTic & NPC_PERIOD_MASK) === 0) {
+        if ((game._gameTic & NPC_PERIOD_MASK) === 0) {
             let count = 0;
-            for (const player of state._actors[ActorType.Player]) {
+            for (const player of game._state._actors[ActorType.Player]) {
                 if (!player._client) {
                     ++count;
                 }
@@ -1206,26 +965,27 @@ const simulateTic = (prediction = false) => {
         spawnFleshParticles(source, 128, 1);
     }
 
-    if (lastAudioTic < gameTic) {
-        lastAudioTic = gameTic;
+    if (game._lastAudioTic < game._gameTic) {
+        game._lastAudioTic = game._gameTic;
     }
 
-    state._seed = _SEEDS[0];
-    state._tic = gameTic++;
+    game._state._seed = _SEEDS[0];
+    game._state._tic = game._gameTic++;
+    normalizeStateData(game._state);
 };
 
 const castRayBullet = (bullet: BulletActor, dx: number, dy: number) => {
-    for (const a of state._actors[ActorType.Player]) {
+    for (const a of game._state._actors[ActorType.Player]) {
         if (a._client - bullet._ownerId && testRayWithSphere(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
     }
-    for (const a of state._actors[ActorType.Barrel]) {
+    for (const a of game._state._actors[ActorType.Barrel]) {
         if (testRayWithSphere(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
     }
-    for (const a of trees) {
+    for (const a of game._trees) {
         if (testRayWithSphere(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
@@ -1295,16 +1055,18 @@ const kill = (actor: Actor) => {
                 delay(1000)
                     .then(poki._commercialBreak)
                     .then(() => {
-                        allowedToRespawn = true;
+                        game._allowedToRespawn = true;
                         delay(3000).then(() => {
-                            if (allowedToRespawn) {
-                                waitToAutoSpawn = true;
+                            if (game._allowedToRespawn) {
+                                game._waitToAutoSpawn = true;
                             }
                         });
                     });
             }
         }
     }
+
+    feedbackCameraExplosion(25, actor._x, actor._y);
 };
 
 const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
@@ -1349,18 +1111,18 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
             if (actor._type === ActorType.Player) {
                 const player = actor as PlayerActor;
                 // reset frags on death
-                const killed = state._stats.get(player._client);
+                const killed = game._state._stats.get(player._client);
                 if (killed) {
                     killed._frags = 0;
                 }
 
                 const killerID = bullet._ownerId;
                 if (killerID > 0) {
-                    const stat: PlayerStat = state._stats.get(killerID) ?? {_scores: 0, _frags: 0};
+                    const stat: PlayerStat = game._state._stats.get(killerID) ?? {_scores: 0, _frags: 0};
                     stat._scores += player._client > 0 ? 5 : 1;
                     ++stat._frags;
-                    state._stats.set(killerID, stat);
-                    if (hasSettingsFlag(SettingFlag.Speech) && gameTic > lastAudioTic) {
+                    game._state._stats.set(killerID, stat);
+                    if (hasSettingsFlag(SettingFlag.Speech) && game._gameTic > game._lastAudioTic) {
                         const a = getNameByClientId(killerID);
                         const b = getNameByClientId(player._client);
                         if (a) {
@@ -1435,7 +1197,7 @@ function calcVelocityWithWeapon(player: PlayerActor, velocity: number): number {
 
 const updatePlayer = (player: PlayerActor) => {
     if (gameMode._runAI && (!player._client || gameMode._playersAI)) {
-        updateAI(state, player);
+        updateAI(game._state, player);
     }
     let landed = player._z == 0 && player._w == 0;
     if (player._input & ControlsFlag.Jump) {
@@ -1464,15 +1226,15 @@ const updatePlayer = (player: PlayerActor) => {
         if (landed) {
             const L = 256;
             const S = (L / vel) | 0;
-            const moment = (gameTic + player._anim0) % S;
+            const moment = (game._gameTic + player._anim0) % S;
             if (!moment) {
                 if (!random1i(4)) {
                     addLandParticles(player, 240, 1);
                 }
-                const moment2 = (gameTic + player._anim0) % (2 * S);
+                const moment2 = (game._gameTic + player._anim0) % (2 * S);
                 addStepSplat(player, moment2 ? 120 : -120);
 
-                const moment4 = (gameTic + player._anim0) % (4 * S);
+                const moment4 = (game._gameTic + player._anim0) % (4 * S);
                 if (!moment4) {
                     playAt(player, Snd.step);
                 }
@@ -1531,7 +1293,7 @@ const updatePlayer = (player: PlayerActor) => {
                         }
                     }
                     if (isMyPlayer(player)) {
-                        setCameraEffects(weapon._cameraShake, 5);
+                        feedbackCameraShot(weapon, lookDirX, lookDirY);
                     }
                     player._lifetime = weapon._reloadTime;
                     player._detune = reach(player._detune, weapon._detuneSpeed, 1);
@@ -1595,10 +1357,10 @@ const updatePlayer = (player: PlayerActor) => {
 
 const beginPrediction = (): boolean => {
     // if (!Const.Prediction || time < 0.001) return false;
-    if (!Const.Prediction || !joined) return false;
+    if (!Const.Prediction || !game._joined) return false;
 
     // global state
-    let frames = min(Const.PredictionMax, ((lastFrameTs - prevTime) * Const.NetFq) | 0);
+    let frames = min(Const.PredictionMax, ((lastFrameTs - game._prevTime) * Const.NetFq) | 0);
     if (!frames) return false;
 
     // save particles
@@ -1606,226 +1368,22 @@ const beginPrediction = (): boolean => {
     saveGameCamera();
 
     // save state
-    lastState = state;
-    state = cloneStateData(state);
+    game._lastState = game._state;
+    game._state = cloneStateData(game._state);
 
     // && gameTic <= lastInputTic
     while (frames--) {
         simulateTic(true);
-        normalizeState();
     }
     return true;
 };
 
 const endPrediction = () => {
     // global state
-    state = lastState;
-    _SEEDS[0] = state._seed;
-    gameTic = state._tic + 1;
+    game._state = game._lastState;
+    _SEEDS[0] = game._state._seed;
+    game._gameTic = game._state._tic + 1;
     // restore particles
     restoreParticles();
     restoreGameCamera();
-};
-
-/*** DRAWING ***/
-
-const drawGame = () => {
-    // prepare objects draw list first
-    collectVisibleActors(trees, ...state._actors);
-    drawList.sort((a, b) => WORLD_BOUNDS_SIZE * (a._y - b._y) + a._x - b._x);
-
-    beginFogRender();
-    drawFogObjects(state._actors[ActorType.Player], state._actors[ActorType.Bullet], state._actors[ActorType.Item]);
-    if (gameMode._title) {
-        drawFogPoint(gameCamera[0], gameCamera[1], 3 + fxRandom(1), 1);
-    }
-    flush();
-
-    gl.clear(GL.DEPTH_BUFFER_BIT);
-    gl.clearDepth(1);
-    gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LESS);
-    gl.depthMask(true);
-    gl.depthRange(0, 1);
-
-    beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
-    ui_renderOpaque();
-    flush();
-
-    beginRenderToMain(
-        gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0),
-        gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0),
-        0.5,
-        0.5,
-        fxRandomNorm(cameraShake / (8 * 50)),
-        1 / gameCamera[2],
-    );
-
-    {
-        const cameraCenterX = gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0);
-        const cameraCenterY = gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0);
-        const viewScale = 1 / gameCamera[2];
-        let fx = fxRandomNorm(cameraShake / (8 * 50));
-        let fz = fxRandomNorm(cameraShake / (8 * 50));
-        fx += gameMode._tiltCamera * Math.sin(lastFrameTs);
-        fz += gameMode._tiltCamera * Math.cos(lastFrameTs);
-        setupWorldCameraMatrix(cameraCenterX, cameraCenterY, viewScale, fx, fz);
-    }
-
-    {
-        const add = ((getHitColorOffset(getMyPlayer()?._animHit) & 0x990000) >>> 16) / 0xff;
-        ambientColor[0] = clamp(0x40 / 0xff + (0x20 / 0xff) * sin(lastFrameTs) + add, 0, 1);
-        ambientColor[1] = 0x11 / 0xff;
-        ambientColor[2] = 0x33 / 0xff;
-        ambientColor[3] = 0.8;
-        setLightMapTexture(fogTexture._texture);
-    }
-
-    drawOpaqueParticles();
-    drawOpaqueObjects(drawList);
-    drawSplatsOpaque();
-    flush();
-
-    // gl.enable(GL.DEPTH_TEST);
-    gl.depthFunc(GL.LEQUAL);
-    gl.depthMask(false);
-
-    setLightMapTexture(emptyTexture._texture);
-    // skybox
-    {
-        const tex = fnt[0]._textureBoxLT;
-        const fullAmbientColor = RGB(ambientColor[0] * 0xff, ambientColor[1] * 0xff, ambientColor[2] * 0xff);
-        draw(tex, -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
-        draw(tex, -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
-        draw(tex, -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
-        draw(tex, BOUNDS_SIZE - 1, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
-    }
-    flush();
-
-    setLightMapTexture(fogTexture._texture);
-
-    setDrawZ(0);
-    draw(mapTexture, 0, 0);
-
-    drawObjects(drawList);
-
-    if (getDevFlag(SettingFlag.DevShowCollisionInfo)) {
-        drawCollisions(drawList);
-    }
-
-    if (gameMode._title) {
-        setDrawZ(1);
-        for (let i = 10; i > 0; --i) {
-            const a = 0.5 * sin(i / 4 + lastFrameTs * 16);
-            const color = RGB((0x20 * (11 - i) + 0x20 * a) & 0xff, 0, 0);
-            const scale = 1 + i / 100;
-            const angle = (a * i) / 100;
-            const i4 = i / 4;
-            const y1 = gameCamera[1] + i4;
-            drawMeshSpriteUp(
-                img[Img.logo_title],
-                gameCamera[0] + fxRandomNorm(i4),
-                y1 + 40 + fxRandomNorm(i4),
-                40,
-                angle,
-                scale,
-                scale,
-                1,
-                color,
-            );
-        }
-    }
-    flush();
-
-    setLightMapTexture(emptyTexture._texture);
-    gl.disable(GL.DEPTH_TEST);
-    setDrawZ(0);
-    drawTextParticles();
-    drawHotUsableHint(hotUsable);
-    flush();
-};
-
-const drawOverlay = () => {
-    setDrawZ(1000);
-    const scale = getScreenScale();
-    beginRenderToMain(0, 0, 0, 0, 0, scale);
-
-    if (clientId) {
-        drawMiniMap(state, trees, gl.drawingBufferWidth / scale, 0);
-    }
-
-    if (!gameMode._title) {
-        printStatus();
-        if (gameMode._menu === GameMenuState.InGame) {
-            drawVirtualPad();
-        }
-    }
-
-    if (getDevFlag(SettingFlag.DevShowFrameStats)) {
-        drawText(
-            fnt[0],
-            `FPS: ${stats._fps} | DC: ${stats._drawCalls} |  ⃤ ${stats._triangles} | ∷${stats._vertices}`,
-            4,
-            2,
-            5,
-            0,
-            0,
-        );
-    }
-
-    if (getDevFlag(SettingFlag.DevShowDebugInfo)) {
-        printDebugInfo(
-            (lastState ?? state)._tic + 1,
-            getMinTic(),
-            lastFrameTs,
-            prevTime,
-            drawList,
-            state,
-            trees,
-            clients,
-        );
-    }
-
-    ui_renderNormal();
-
-    if (gameMode._menu === GameMenuState.InGame && !gameMode._replay) {
-        drawCrosshair(getMyPlayer(), scale);
-    }
-
-    flush();
-};
-
-const drawList: Actor[] = [];
-
-const collectVisibleActors = (...lists: Actor[][]) => {
-    drawList.length = 0;
-    const pad = (2 * OBJECT_RADIUS) / WORLD_SCALE;
-    const W = gl.drawingBufferWidth;
-    const H = gl.drawingBufferHeight;
-    const invScale = gameCamera[2] / 2;
-    const l = -invScale * W + gameCamera[0] - pad;
-    const t = -invScale * H + gameCamera[1] - pad - 128;
-    const r = invScale * W + gameCamera[0] + pad;
-    const b = invScale * H + gameCamera[1] + pad + 128;
-    for (const list of lists) {
-        for (const a of list) {
-            const x = a._x / WORLD_SCALE;
-            const y = a._y / WORLD_SCALE;
-            if ((x > l && x < r && y > t && y < b) || (a._type == ActorType.Bullet && a._subtype == BulletType.Ray)) {
-                drawList.push(a);
-            }
-        }
-    }
-};
-
-const playAt = (actor: Actor, id: Snd) => {
-    if (gameTic > lastAudioTic) {
-        const r = GAME_CFG._camera._listenerRadius;
-        const dx = (actor._x / WORLD_SCALE - gameCamera[0]) / r;
-        const dy = (actor._y / WORLD_SCALE - gameCamera[1]) / r;
-        const v = 1 - hypot(dx, dy);
-        if (v > 0) {
-            play(snd[id], v, clamp(dx, -1, 1));
-        }
-    }
 };

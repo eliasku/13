@@ -1,5 +1,5 @@
-import {ClientEvent, newStateData, StateData} from "./types.js";
-import {readState} from "./packets.js";
+import {ClientEvent, newStateData, StateData} from "../types.js";
+import {readState} from "../packets.js";
 import {BuildCommit, BuildHash, BuildVersion, ClientID} from "@iioi/shared/types.js";
 
 export interface ReplayMetaData {

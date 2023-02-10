@@ -1,8 +1,8 @@
-import {ClientEvent, StateData} from "./types.js";
-import {writeState} from "./packets.js";
-import {_room} from "../net/messaging.js";
+import {ClientEvent, StateData} from "../types.js";
+import {writeState} from "../packets.js";
+import {_room} from "../../net/messaging.js";
 import {BuildCommit, BuildHash, BuildVersion} from "@iioi/shared/types.js";
-import {getNameByClientId} from "./gameState.js";
+import {getNameByClientId} from "../gameState.js";
 import {ReplayMetaData} from "./replayFile.js";
 
 // [tic1, client#, client#-input, ..., 0,

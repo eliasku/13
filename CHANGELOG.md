@@ -1,5 +1,17 @@
-## 1.0.15
+## 1.0.17
 
+- Add screen shake on object death
+- Improve weapon camera feedback
+- Fix missing Frog avatar emoji
+
+## 1.0.16
+
+- Fix replays
+- Add copy game link URL
+- Fix join by game-code
+- Add support for checking online on different servers
+
+## 1.0.15
 
 - (dev) `watch` script renamed to `start`
 - Fix sound and music

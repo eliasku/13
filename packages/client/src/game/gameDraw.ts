@@ -1,22 +1,69 @@
-import {Actor, BulletActor, ControlsFlag, ItemActor, ItemType, PlayerActor, unpackAngleByte} from "./types.js";
-import {WORLD_SCALE} from "../assets/params.js";
+import {
+    Actor,
+    ActorType,
+    BulletActor,
+    ControlsFlag,
+    ItemActor,
+    ItemType,
+    PlayerActor,
+    unpackAngleByte,
+} from "./types.js";
+import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {EMOJI, img} from "../assets/gfx.js";
-import {draw, drawMeshSprite, drawMeshSpriteUp, drawZ, gl, setDrawZ, setMVP} from "../graphics/draw2d.js";
-import {lookAtX, lookAtY, viewX, viewY} from "./controls.js";
+import {
+    ambientColor,
+    beginRenderToMain,
+    draw,
+    drawMeshSprite,
+    drawMeshSpriteUp,
+    drawZ,
+    emptyTexture,
+    flush,
+    gl,
+    setDrawZ,
+    setLightMapTexture,
+    setMVP,
+} from "../graphics/draw2d.js";
+import {drawVirtualPad, lookAtX, lookAtY, viewX, viewY} from "./controls.js";
 import {atan2, clamp, cos, hypot, max, min, PI, PI2, sin, TO_RAD} from "../utils/math.js";
 import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4.js";
 import {weapons} from "./data/weapons.js";
-import {getLumaColor32} from "../utils/utils.js";
-import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, PLAYER_HANDS_PX_Z} from "./data/world.js";
+import {getLumaColor32, RGB} from "../utils/utils.js";
+import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, OBJECT_RADIUS, PLAYER_HANDS_PX_Z} from "./data/world.js";
 import {Const, GAME_CFG} from "./config.js";
 import {bullets, BulletType} from "./data/bullets.js";
-import {fxRandElement} from "../utils/rnd.js";
-import {getNameByClientId, lastFrameTs} from "./gameState.js";
-import {drawTextAligned, fnt} from "../graphics/font.js";
+import {fxRandElement, fxRandom, fxRandomNorm} from "../utils/rnd.js";
+import {
+    game,
+    GameMenuState,
+    gameMode,
+    getMinTic,
+    getMyPlayer,
+    getNameByClientId,
+    getPlayerByClient,
+    lastFrameTs,
+} from "./gameState.js";
+import {drawText, drawTextAligned, fnt} from "../graphics/font.js";
 import {Img} from "../assets/img.js";
-import {clientId} from "../net/messaging.js";
-import {drawParticleShadows} from "./particles.js";
-import {gameCamera} from "@iioi/client/game/camera.js";
+import {clientId, clientName, isPeerConnected, remoteClients} from "../net/messaging.js";
+import {drawOpaqueParticles, drawParticleShadows, drawSplatsOpaque, drawTextParticles} from "./particles.js";
+import {
+    cameraFeedback,
+    cameraFeedbackX,
+    cameraFeedbackY,
+    cameraShake,
+    gameCamera,
+    getScreenScale,
+} from "@iioi/client/game/camera.js";
+import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "@iioi/client/game/fog.js";
+import {GL} from "@iioi/client/graphics/gl.js";
+import {termPrint, ui_renderNormal, ui_renderOpaque} from "@iioi/client/graphics/gui.js";
+import {mapTexture} from "@iioi/client/assets/map.js";
+import {getDevFlag, SettingFlag} from "@iioi/client/game/settings.js";
+import {drawCollisions, printDebugInfo} from "@iioi/client/game/debug.js";
+import {drawMiniMap} from "@iioi/client/game/minimap.js";
+import {stats} from "@iioi/client/utils/fpsMeter.js";
+import {ClientID} from "@iioi/shared/types.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -347,5 +394,272 @@ export const drawObjects = (drawList: Actor[]) => {
     drawParticleShadows();
     for (const actor of drawList) {
         DRAW_BY_TYPE[actor._type]?.(actor);
+    }
+};
+
+const drawList: Actor[] = [];
+
+const collectVisibleActors = (...lists: Actor[][]) => {
+    drawList.length = 0;
+    const pad = (2 * OBJECT_RADIUS) / WORLD_SCALE;
+    const W = gl.drawingBufferWidth;
+    const H = gl.drawingBufferHeight;
+    const invScale = gameCamera[2] / 2;
+    const l = -invScale * W + gameCamera[0] - pad;
+    const t = -invScale * H + gameCamera[1] - pad - 128;
+    const r = invScale * W + gameCamera[0] + pad;
+    const b = invScale * H + gameCamera[1] + pad + 128;
+    for (const list of lists) {
+        for (const a of list) {
+            const x = a._x / WORLD_SCALE;
+            const y = a._y / WORLD_SCALE;
+            if ((x > l && x < r && y > t && y < b) || (a._type == ActorType.Bullet && a._subtype == BulletType.Ray)) {
+                drawList.push(a);
+            }
+        }
+    }
+};
+
+export const drawGame = () => {
+    // prepare objects draw list first
+    collectVisibleActors(game._trees, ...game._state._actors);
+    drawList.sort((a, b) => WORLD_BOUNDS_SIZE * (a._y - b._y) + a._x - b._x);
+
+    beginFogRender();
+    drawFogObjects(
+        game._state._actors[ActorType.Player],
+        game._state._actors[ActorType.Bullet],
+        game._state._actors[ActorType.Item],
+    );
+    if (gameMode._title) {
+        drawFogPoint(gameCamera[0], gameCamera[1], 3 + fxRandom(1), 1);
+    }
+    flush();
+
+    gl.clear(GL.DEPTH_BUFFER_BIT);
+    gl.clearDepth(1);
+    gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LESS);
+    gl.depthMask(true);
+    gl.depthRange(0, 1);
+
+    beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
+    ui_renderOpaque();
+    flush();
+
+    beginRenderToMain(gameCamera[0], gameCamera[1], 0.5, 0.5, 0.0, 1 / gameCamera[2]);
+
+    {
+        const cameraCenterX = gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0) + cameraFeedbackX * cameraFeedback;
+        const cameraCenterY = gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0) + cameraFeedbackY * cameraFeedback;
+        const viewScale = 1 / gameCamera[2];
+        let fx = fxRandomNorm(cameraShake / (8 * 50));
+        let fz = fxRandomNorm(cameraShake / (8 * 50));
+        fx += gameMode._tiltCamera * Math.sin(lastFrameTs);
+        fz += gameMode._tiltCamera * Math.cos(lastFrameTs);
+        setupWorldCameraMatrix(cameraCenterX, cameraCenterY, viewScale, fx, fz);
+    }
+
+    {
+        const add = ((getHitColorOffset(getMyPlayer()?._animHit) & 0x990000) >>> 16) / 0xff;
+        ambientColor[0] = clamp(0x40 / 0xff + (0x20 / 0xff) * sin(lastFrameTs) + add, 0, 1);
+        ambientColor[1] = 0x11 / 0xff;
+        ambientColor[2] = 0x33 / 0xff;
+        ambientColor[3] = 0.8;
+        setLightMapTexture(fogTexture._texture);
+    }
+
+    drawOpaqueParticles();
+    drawOpaqueObjects(drawList);
+    drawSplatsOpaque();
+    flush();
+
+    // gl.enable(GL.DEPTH_TEST);
+    gl.depthFunc(GL.LEQUAL);
+    gl.depthMask(false);
+
+    setLightMapTexture(emptyTexture._texture);
+    // skybox
+    {
+        const tex = fnt[0]._textureBoxLT;
+        const fullAmbientColor = RGB(ambientColor[0] * 0xff, ambientColor[1] * 0xff, ambientColor[2] * 0xff);
+        draw(tex, -1000, -1000, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(tex, -1000, BOUNDS_SIZE - 1, 0, BOUNDS_SIZE + 2000, 1001, 1, fullAmbientColor);
+        draw(tex, -1000, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
+        draw(tex, BOUNDS_SIZE - 1, 0, 0, 1001, BOUNDS_SIZE, 1, fullAmbientColor);
+    }
+    flush();
+
+    setLightMapTexture(fogTexture._texture);
+
+    setDrawZ(0);
+    draw(mapTexture, 0, 0);
+
+    drawObjects(drawList);
+
+    if (getDevFlag(SettingFlag.DevShowCollisionInfo)) {
+        drawCollisions(drawList);
+    }
+
+    if (gameMode._title) {
+        setDrawZ(1);
+        for (let i = 10; i > 0; --i) {
+            const a = 0.5 * sin(i / 4 + lastFrameTs * 16);
+            const color = RGB((0x20 * (11 - i) + 0x20 * a) & 0xff, 0, 0);
+            const scale = 1 + i / 100;
+            const angle = (a * i) / 100;
+            const i4 = i / 4;
+            const y1 = gameCamera[1] + i4;
+            drawMeshSpriteUp(
+                img[Img.logo_title],
+                gameCamera[0] + fxRandomNorm(i4),
+                y1 + 40 + fxRandomNorm(i4),
+                40,
+                angle,
+                scale,
+                scale,
+                1,
+                color,
+            );
+        }
+    }
+    flush();
+
+    setLightMapTexture(emptyTexture._texture);
+    gl.disable(GL.DEPTH_TEST);
+    setDrawZ(0);
+    drawTextParticles();
+    drawHotUsableHint(game._hotUsable);
+    flush();
+};
+
+export const drawOverlay = () => {
+    setDrawZ(1000);
+    const scale = getScreenScale();
+    beginRenderToMain(0, 0, 0, 0, 0, scale);
+
+    if (clientId) {
+        drawMiniMap(game._state, game._trees, gl.drawingBufferWidth / scale, 0);
+    }
+
+    if (!gameMode._title) {
+        printStatus();
+        if (gameMode._menu === GameMenuState.InGame) {
+            drawVirtualPad();
+        }
+    }
+
+    if (getDevFlag(SettingFlag.DevShowFrameStats)) {
+        drawText(
+            fnt[0],
+            `FPS: ${stats._fps} | DC: ${stats._drawCalls} |  ⃤ ${stats._triangles} | ∷${stats._vertices}`,
+            4,
+            2,
+            5,
+            0,
+            0,
+        );
+    }
+
+    if (getDevFlag(SettingFlag.DevShowDebugInfo)) {
+        printDebugInfo(
+            (game._lastState ?? game._state)._tic + 1,
+            getMinTic(),
+            lastFrameTs,
+            game._prevTime,
+            drawList,
+            game._state,
+            game._trees,
+            game._clients,
+        );
+    }
+
+    ui_renderNormal();
+
+    if (gameMode._menu === GameMenuState.InGame && !gameMode._replay) {
+        drawCrosshair(getMyPlayer(), scale);
+    }
+
+    flush();
+};
+
+const getWeaponInfoHeader = (wpn: number, ammo: number, reload = 0): string => {
+    if (wpn) {
+        const weapon = weapons[wpn];
+        let txt = EMOJI[Img.weapon0 + wpn];
+        if (weapon._clipSize) {
+            if (reload) {
+                txt += (((100 * (weapon._clipReload - reload)) / weapon._clipReload) | 0) + "%";
+            } else {
+                txt += ammo;
+            }
+        } else {
+            txt += "∞";
+        }
+        return txt;
+    }
+    return "";
+};
+
+const printStatus = () => {
+    if (clientId) {
+        if (game._joined) {
+            const p0 = getMyPlayer();
+            if (p0) {
+                let str = "";
+                const hp = p0._hp;
+                for (let i = 0; i < 10; ) {
+                    const o2 = hp > i++;
+                    const o1 = hp > i++;
+                    str += o1 ? "❤️" : o2 ? "💔" : "🖤";
+                }
+                const sp = p0._sp;
+                for (let i = 0; i < 10; ) {
+                    const o2 = sp > i++;
+                    const o1 = sp > i++;
+                    str += o1 ? "🛡" : o2 ? "🪖️️" : "";
+                }
+                termPrint(str);
+                {
+                    let wpnInfo = getWeaponInfoHeader(p0._weapon, p0._clipAmmo, p0._clipReload);
+                    if (p0._weapon2) {
+                        wpnInfo += " | " + getWeaponInfoHeader(p0._weapon2, p0._clipAmmo2);
+                    }
+                    termPrint(wpnInfo);
+                }
+                termPrint(`🧱${p0._mags}`);
+            } else {
+                termPrint("tap to respawn");
+            }
+        } else {
+            termPrint("joining");
+        }
+
+        const getPlayerIcon = (id?: ClientID) => {
+            const player = getPlayerByClient(id);
+            return player ? EMOJI[Img.avatar0 + (player._anim0 % Img.num_avatars)] : "👁️";
+        };
+        const getPlayerStatInfo = (id?: ClientID): string => {
+            const stat = game._state._stats.get(id);
+            return `|☠${stat?._frags ?? 0}|🪙${stat?._scores ?? 0}`;
+        };
+
+        if (gameMode._replay) {
+            for (const [id, rc] of remoteClients) {
+                termPrint(getPlayerIcon(id) + rc._name + getPlayerStatInfo(id));
+            }
+        } else {
+            termPrint(getPlayerIcon(clientId) + clientName + getPlayerStatInfo(clientId));
+            for (const [id, rc] of remoteClients) {
+                let text = (isPeerConnected(rc) ? getPlayerIcon(id) : "🔴") + rc._name + getPlayerStatInfo(id);
+                if (getDevFlag()) {
+                    const cl = game._clients.get(id);
+                    if (cl && cl._lag !== undefined) {
+                        text += " " + cl._lag;
+                    }
+                }
+                termPrint(text);
+            }
+        }
     }
 };

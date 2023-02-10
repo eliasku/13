@@ -1,7 +1,7 @@
 import {_room, _sseState, clientName, connect, loadRoomsInfo, processMessages, setUserName} from "./net/messaging.js";
 import {isAnyKeyDown, updateInput} from "./utils/input.js";
 import {resetPrinter, ui_renderComplete} from "./graphics/gui.js";
-import {createSplashState, enableReplayMode, resetGame, updateGame} from "./game/game.js";
+import {createSplashState, resetGame, updateGame} from "./game/game.js";
 import {loadMainAtlas, loadSpotLightTexture} from "./assets/gfx.js";
 import {speak} from "./audio/context.js";
 import {updateStats} from "./utils/fpsMeter.js";
@@ -16,8 +16,9 @@ import {getScreenScale} from "./game/camera.js";
 import {completeLoading, setLoadingProgress} from "./preloader.js";
 import {MenuCommand, menuScreen} from "./screens/main.js";
 import {poki} from "./poki.js";
-import {openReplayFile} from "./game/replayFile.js";
+import {openReplayFile} from "./game/replay/replayFile.js";
 import {loadPlayerCode} from "./game/ai/common.js";
+import {enableReplayMode} from "@iioi/client/game/replay/viewer.js";
 
 console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
 

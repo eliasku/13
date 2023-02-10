@@ -3,8 +3,8 @@ import {keyboardDown, KeyCode} from "../utils/input.js";
 import {_room, disconnect} from "../net/messaging.js";
 import {Const, GAME_CFG} from "./config.js";
 import {guiSettingsPanel} from "../screens/settings.js";
-import {saveReplay} from "./replay.js";
-import {ReplayFile} from "./replayFile.js";
+import {saveReplay} from "./replay/recorder.js";
+import {ReplayFile} from "./replay/replayFile.js";
 import {poki} from "../poki.js";
 import {GameMenuState, gameMode} from "@iioi/client/game/gameState.js";
 
