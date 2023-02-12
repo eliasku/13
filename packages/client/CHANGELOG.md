@@ -1,5 +1,13 @@
 # @iioi/client
 
+## 1.0.17
+
+### Patch Changes
+
+-   90c7727: Add screen shake on object death
+-   90c7727: Improve weapon camera feedback
+-   c451f25: Fix missing Frog avatar emoji
+
 ## 1.0.16
 
 ### Patch Changes
