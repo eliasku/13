@@ -3,8 +3,9 @@ import {clientName, setUserName} from "../net/messaging.js";
 import {enableSettingsFlag, SettingFlag} from "../game/settings.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
 import {BuildVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@iioi/shared/types.js";
+import {guiSettingsPanel} from "./settingsPanel.js";
+import {guiDevModePanel} from "./devModePanel.js";
 import {parseRadix64String} from "@iioi/shared/radix64.js";
-import {guiDevModePanel, guiSettingsPanel} from "./settings.js";
 
 const Menu = {
     Main: 0,

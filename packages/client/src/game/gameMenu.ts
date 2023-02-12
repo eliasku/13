@@ -1,12 +1,12 @@
-import {button, label, ui_begin, ui_finish, uiProgressBar, uiState} from "../graphics/gui.js";
+import {button, ui_begin, ui_finish, uiState} from "../graphics/gui.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
 import {_room, disconnect} from "../net/messaging.js";
-import {Const, GAME_CFG} from "./config.js";
-import {guiSettingsPanel} from "../screens/settings.js";
+import {GAME_CFG} from "./config.js";
+import {guiSettingsPanel} from "../screens/settingsPanel.js";
 import {saveReplay} from "./replay/recorder.js";
-import {ReplayFile} from "./replay/replayFile.js";
 import {poki} from "../poki.js";
 import {GameMenuState, gameMode} from "@iioi/client/game/gameState.js";
+import {guiReplayViewer} from "./replay/viewer.js";
 
 export function onGameMenu(gameTic?: number): void {
     ui_begin();
@@ -18,7 +18,7 @@ export function onGameMenu(gameTic?: number): void {
 
         if (gameMode._menu === GameMenuState.InGame) {
             if (gameMode._replay && gameTic != null) {
-                onReplayViewer(gameMode._replay, gameTic);
+                guiReplayViewer(gameMode._replay, gameTic);
             } else {
                 if (
                     button("menu", "⏸️", W - 16 - GAME_CFG._minimap._size - 4, 2, {
@@ -84,66 +84,3 @@ export function onGameMenu(gameTic?: number): void {
 }
 
 let linkCopied = false;
-
-// replay viewer
-function MM_SS(seconds: number) {
-    seconds = Math.ceil(seconds);
-    const min = (seconds / 60) | 0;
-    const sec = seconds % 60;
-    return (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec);
-}
-
-const onReplayViewer = (replay: ReplayFile, tic: number) => {
-    const W = uiState._width;
-    const H = uiState._height;
-
-    const t0 = replay._meta.start;
-    const t1 = replay._meta.end;
-    const len = t1 - t0;
-    const rewindTo = uiProgressBar("replay_timeline", tic - t0, len, 10 + 40, H - 20, W - 50 - 10, 8);
-    const totalTime = Math.ceil(len / Const.NetFq);
-    const currentTime = Math.ceil((tic - t0) / Const.NetFq);
-    label(MM_SS(currentTime) + "/" + MM_SS(totalTime), 9, 10, H - 28, 0);
-
-    const paused = replay._paused ?? false;
-    if (button("replay_play", paused ? "►" : "▮▮", 10, H - 24, {w: 16, h: 16}) || keyboardDown[KeyCode.Space]) {
-        replay._paused = !paused;
-    }
-
-    const curPlaybackSpeed = replay._playbackSpeed ?? 1;
-    let nextPlaybackSpeed = curPlaybackSpeed;
-    if (
-        button("replay_playback_speed", (nextPlaybackSpeed < 1 ? ".5" : nextPlaybackSpeed) + "⨯", 30, H - 24, {
-            w: 16,
-            h: 16,
-        })
-    ) {
-        nextPlaybackSpeed *= 2;
-        if (nextPlaybackSpeed > 4) {
-            nextPlaybackSpeed = 0.5;
-        }
-        if (curPlaybackSpeed !== nextPlaybackSpeed) {
-            replay._playbackSpeed = nextPlaybackSpeed;
-        }
-    }
-
-    if (rewindTo != null) {
-        if (rewindTo >= 0) {
-            replay._rewind = Math.round(rewindTo * len);
-        } else {
-            const r = -(rewindTo + 1);
-            const t = (r * len) | 0;
-            label(MM_SS(Math.ceil(t / Const.NetFq)), 8, 10 + 40 + r * (W - 50 - 10), H - 20 - 4);
-        }
-    }
-
-    if (
-        button("close_replay", "❌", W - 16 - GAME_CFG._minimap._size - 4, 2, {
-            w: 16,
-            h: 16,
-        }) ||
-        keyboardDown[KeyCode.Escape]
-    ) {
-        disconnect();
-    }
-};
