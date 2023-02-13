@@ -39,7 +39,7 @@
     "html-minifier": "^4.0.0",
     "prettier": "2.8.4",
     "rollup": "^3.15.0",
-    "rollup-plugin-dts": "^5.1.1",
+    "rollup-plugin-dts": "^5.2.0",
     "rollup-plugin-esbuild": "^5.0.0",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-typescript-paths": "^1.4.0",
