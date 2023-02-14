@@ -157,7 +157,7 @@ export const button = (
     return 0;
 };
 
-export function uiProgressBar(
+export const uiProgressBar = (
     id: string,
     current: number,
     total: number,
@@ -165,7 +165,7 @@ export function uiProgressBar(
     y: number,
     w: number,
     h: number,
-): undefined | number {
+): undefined | number => {
     if (isRegionHit(x, y, w, h)) {
         hotItem = id;
         if (!activeItem && pointer._active) {
@@ -215,21 +215,21 @@ export function uiProgressBar(
     } else {
         // button is not hot, but it may be active
     }
-}
+};
 
-export function ui_renderOpaque() {
+export const ui_renderOpaque = () => {
     for (const q of uiState._opaqueQuads) {
         draw(img[Img.box_lt], q._x, q._y, 0, q._w, q._h, 1, q._color);
     }
-}
+};
 
-export function ui_renderNormal() {
+export const ui_renderNormal = () => {
     for (const t of uiState._textOps) {
         drawTextAligned(fnt[0], t._text, t._size, t._x, t._y, 0xffffff, t._alignX);
     }
-}
+};
 
-export function ui_renderComplete() {
+export const ui_renderComplete = () => {
     uiState._opaqueQuads.length = 0;
     uiState._textOps.length = 0;
-}
+};

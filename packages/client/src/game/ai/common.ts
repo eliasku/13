@@ -10,7 +10,7 @@ export let autoplayInput = 0;
 let waitAutoplayResult = false;
 let autoplayBuffer = new Int32Array(1024 * 256);
 
-export function loadPlayerCode(url: string) {
+export const loadPlayerCode = (url: string) => {
     waitAutoplayResult = false;
     autoplayWorker = new Worker(url);
     autoplayWorker.onmessage = message => {
@@ -19,16 +19,16 @@ export function loadPlayerCode(url: string) {
         autoplayBuffer = message.data[1] as Int32Array;
         waitAutoplayResult = false;
     };
-}
+};
 
-export function updateAutoplay(state: StateData, clientId: ClientID) {
+export const updateAutoplay = (state: StateData, clientId: ClientID) => {
     if (autoplayWorker && !waitAutoplayResult) {
         waitAutoplayResult = true;
         //console.log("send state: ");
         writeState(state, autoplayBuffer, 0);
         autoplayWorker.postMessage([autoplayBuffer, clientId], {transfer: [autoplayBuffer.buffer]});
     }
-}
+};
 
 export const hasAmmo = (player: PlayerActor) => {
     if (player._weapon) {

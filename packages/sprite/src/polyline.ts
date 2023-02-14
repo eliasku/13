@@ -5,37 +5,37 @@ export type PolylineSet = Polyline[];
 
 // Find the polyline that ends with v.
 
-function polylineSetFindEnds(set: PolylineSet, v: Vec2): number {
+const polylineSetFindEnds = (set: PolylineSet, v: Vec2): number => {
     for (let i = 0; i < set.length; ++i) {
         const line = set[i];
         if (vec2_eq(line[line.length - 1], v)) return i;
     }
     return -1;
-}
+};
 
 // Find the polyline that starts with v.
-function polylineSetFindStarts(set: PolylineSet, v: Vec2): number {
+const polylineSetFindStarts = (set: PolylineSet, v: Vec2): number => {
     for (let i = 0; i < set.length; ++i) {
         const line = set[i];
         if (vec2_eq(line[0], v)) return i;
     }
     return -1;
-}
+};
 
 // Push v onto the end of line.
-function polylinePush(line: Polyline, v: Vec2): Polyline {
+const polylinePush = (line: Polyline, v: Vec2): Polyline => {
     line[line.length] = v;
     return line;
-}
+};
 
 // Push v onto the beginning of line.
-function polylineEnqueue(line: Polyline, v: Vec2): Polyline {
+const polylineEnqueue = (line: Polyline, v: Vec2): Polyline => {
     line.unshift(v);
     return line;
-}
+};
 
 // Join two cpPolylines in a polyline set together.
-function polylineSetJoin(set: PolylineSet, before: number, after: number) {
+const polylineSetJoin = (set: PolylineSet, before: number, after: number) => {
     const lbefore = set[before];
     const lafter = set[after];
 
@@ -44,11 +44,11 @@ function polylineSetJoin(set: PolylineSet, before: number, after: number) {
 
     // delete lafter
     set.splice(after, 1);
-}
+};
 
 // Add a segment to a polyline set.
 // A segment will either start a new polyline, join two others, or add to or loop an existing polyline.
-export function polylineSetCollectSegment(v0: Vec2, v1: Vec2, set: PolylineSet) {
+export const polylineSetCollectSegment = (v0: Vec2, v1: Vec2, set: PolylineSet) => {
     const before = polylineSetFindEnds(set, v0);
     const after = polylineSetFindStarts(set, v1);
 
@@ -70,7 +70,7 @@ export function polylineSetCollectSegment(v0: Vec2, v1: Vec2, set: PolylineSet) 
         // create new line from v0 and v1
         set.push([v0, v1]);
     }
-}
+};
 
 //// Path Simplification
 
@@ -99,7 +99,7 @@ const Sharpness = (a: Vec2, b: Vec2, c: Vec2): number =>
 
 // Join similar adjacent line segments together. Works well for hard edged shapes.
 // 'tol' is the minimum anglular difference in radians of a vertex.
-export function polylineSimplifyVertexes(line: Polyline, tol: number): Polyline {
+export const polylineSimplifyVertexes = (line: Polyline, tol: number): Polyline => {
     let reduced = [{...line[0]}, {...line[1]}];
 
     const minSharp = -Math.cos(tol);
@@ -121,10 +121,10 @@ export function polylineSimplifyVertexes(line: Polyline, tol: number): Polyline 
     }
 
     return reduced;
-}
+};
 
 // Recursive function used by cpPolylineSimplifyCurves().
-function DouglasPeucker(
+const DouglasPeucker = (
     verts: Vec2[],
     reduced: Polyline,
     length: number,
@@ -132,7 +132,7 @@ function DouglasPeucker(
     end: number,
     min: number,
     tol: number,
-): Polyline {
+): Polyline => {
     // Early exit if the points are adjacent
     if ((end - start + length) % length < 2) return reduced;
 
@@ -165,12 +165,12 @@ function DouglasPeucker(
     }
 
     return reduced;
-}
+};
 
 // Recursively reduce the vertex count on a polyline. Works best for smooth shapes.
 // 'tol' is the maximum error for the reduction.
 // The reduced polyline will never be farther than this distance from the original polyline.
-export function polylineSimplifyCurves(line: Polyline, tol: number): Polyline {
+export const polylineSimplifyCurves = (line: Polyline, tol: number): Polyline => {
     let reduced: Polyline = [];
     const min = tol / 2.0;
     if (polylineIsClosed(line)) {
@@ -186,11 +186,11 @@ export function polylineSimplifyCurves(line: Polyline, tol: number): Polyline {
         reduced = polylinePush(reduced, line[line.length - 1]);
     }
     return reduced;
-}
+};
 
 //MARK: Quick Hull
 
-function loopIndexes(verts: Vec2[], count: number): [number, number] {
+const loopIndexes = (verts: Vec2[], count: number): [number, number] => {
     let start = 0;
     let end = 0;
     let min = verts[0];
@@ -208,4 +208,4 @@ function loopIndexes(verts: Vec2[], count: number): [number, number] {
         }
     }
     return [start, end];
-}
+};

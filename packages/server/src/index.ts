@@ -114,19 +114,19 @@ const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: Server
     res.end();
 };
 
-function validateRequestBuildVersion(query: URLSearchParams, req: IncomingMessage, res: ServerResponse) {
+const validateRequestBuildVersion = (query: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
     if (query.get("v") !== BuildHash) {
         error(req, res, "Build version mismatch");
         return false;
     }
     return true;
-}
+};
 
 interface CreateRoomOptions extends NewGameParams {
     _id?: number;
 }
 
-function createRoom(options?: CreateRoomOptions): RoomState {
+const createRoom = (options?: CreateRoomOptions): RoomState => {
     const id = options?._id ?? nextRoomId++;
     const flags = options?._flags ?? GameModeFlag.Public;
     const npcLevel = options?._npcLevel ?? 2;
@@ -147,16 +147,16 @@ function createRoom(options?: CreateRoomOptions): RoomState {
     console.info(`[room ${room._id}] created`);
     rooms.set(room._id, room);
     return room;
-}
+};
 
-function findRoomByCode(code: string): RoomState | undefined {
+const findRoomByCode = (code: string): RoomState | undefined => {
     for (const [, r] of rooms) {
         if (r._code === code) {
             return r;
         }
     }
     return undefined;
-}
+};
 
 const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
     if (!validateRequestBuildVersion(params, req, res)) {

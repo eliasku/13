@@ -8,7 +8,7 @@ import {poki} from "../poki.js";
 import {GameMenuState, gameMode} from "@iioi/client/game/gameState.js";
 import {guiReplayViewer} from "./replay/viewer.js";
 
-export function onGameMenu(gameTic?: number): void {
+export const onGameMenu = (gameTic?: number): void => {
     ui_begin();
     {
         const W = uiState._width;
@@ -81,6 +81,6 @@ export function onGameMenu(gameTic?: number): void {
         }
     }
     ui_finish();
-}
+};
 
 let linkCopied = false;

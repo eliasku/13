@@ -209,7 +209,7 @@ const pushActor = <T extends Actor>(a: T) => {
     list.push(a);
 };
 
-function initBarrels() {
+const initBarrels = () => {
     const count = GAME_CFG._barrels._initCount;
     const hp = GAME_CFG._barrels._hp;
     for (let i = 0; i < count; ++i) {
@@ -219,7 +219,7 @@ function initBarrels() {
         setRandomPosition(barrel);
         pushActor(barrel);
     }
-}
+};
 
 export const createSeedGameState = () => {
     game._startTic = 0;
@@ -1190,10 +1190,10 @@ const needReloadWeaponIfOutOfAmmo = (player: PlayerActor) => {
     }
 };
 
-function calcVelocityWithWeapon(player: PlayerActor, velocity: number): number {
+const calcVelocityWithWeapon = (player: PlayerActor, velocity: number): number => {
     const k = player._weapon ? weapons[player._weapon]._moveWeightK : 1.0;
     return (velocity * k) | 0;
-}
+};
 
 const updatePlayer = (player: PlayerActor) => {
     if (gameMode._runAI && (!player._client || gameMode._playersAI)) {

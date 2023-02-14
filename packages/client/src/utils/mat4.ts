@@ -113,7 +113,7 @@ export const mat4_mul = (out: Mat4, a: Mat4, b: Mat4) => {
     out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
 };
 
-export function mat4_invert(out: Mat4, a: Mat4): boolean {
+export const mat4_invert = (out: Mat4, a: Mat4): boolean => {
     const a00 = a[0],
         a01 = a[1],
         a02 = a[2],
@@ -168,4 +168,4 @@ export function mat4_invert(out: Mat4, a: Mat4): boolean {
     out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
 
     return true;
-}
+};

@@ -68,7 +68,7 @@ export const EMOJI: Record<number, string> = [
 export const img: Texture[] = [];
 export let imgSpotLight: Texture | undefined;
 
-export async function loadMainAtlas(): Promise<void> {
+export const loadMainAtlas = async (): Promise<void> => {
     const [image, buffer] = await Promise.all([loadImage("main.png"), loadArrayBuffer("main.dat")]);
     const texture = createTexture(image.width, image.height);
     uploadTexture(texture, image);
@@ -98,12 +98,12 @@ export async function loadMainAtlas(): Promise<void> {
         subImage._indices = indexData;
         img[i] = subImage;
     }
-}
+};
 
-export async function loadSpotLightTexture(): Promise<void> {
+export const loadSpotLightTexture = async (): Promise<void> => {
     const image = await loadImage("spot.png");
     imgSpotLight = createTexture(image.width, image.height);
     imgSpotLight._x = 0.5;
     imgSpotLight._y = 0.5;
     uploadTexture(imgSpotLight, image, GL.LINEAR);
-}
+};

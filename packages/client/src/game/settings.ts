@@ -1,5 +1,6 @@
 const prefix = "iioi";
 
+/* @__PURE__ */
 export const BloodMode = {
     Off: 0,
     Normal: 1,
@@ -8,6 +9,8 @@ export const BloodMode = {
 export type BloodMode = (typeof BloodMode)[keyof typeof BloodMode];
 
 export const DEFAULT_FRAMERATE_LIMIT = 60;
+
+/* @__PURE__ */
 
 export const Setting = {
     Name: 0,
@@ -18,6 +21,7 @@ export const Setting = {
 } as const;
 export type Setting = (typeof Setting)[keyof typeof Setting];
 
+/* @__PURE__ */
 export const SettingFlag = {
     Sound: 1 << 0,
     Music: 1 << 1,
@@ -52,7 +56,7 @@ export const settings: SettingsMap = {
     [Setting.Blood]: BloodMode.Normal,
     [Setting.Particles]: 1,
     [Setting.FrameRateCap]: DEFAULT_FRAMERATE_LIMIT,
-};
+} as const;
 
 const getItem = (key: Setting | string): string | undefined => {
     try {
@@ -85,24 +89,19 @@ for (const key in settings) {
     }
 }
 
-export function setSetting<K extends keyof SettingsMap>(key: K, value: SettingsMap[K]): SettingsMap[K] {
+export const setSetting = <K extends keyof SettingsMap>(key: K, value: SettingsMap[K]): SettingsMap[K] => {
     settings[key] = value;
     setItem(key, "" + value);
     return value;
-}
+};
 
-export function getDevFlag(key: SettingFlag = 0) {
-    return (settings[Setting.Flags] & (SettingFlag.DevMode | key)) === (SettingFlag.DevMode | key);
-}
+/* @__PURE__ */
+export const getDevFlag = (key: SettingFlag = 0) =>
+    (settings[Setting.Flags] & (SettingFlag.DevMode | key)) === (SettingFlag.DevMode | key);
 
-export function enableSettingsFlag(flag: SettingFlag) {
-    setSetting(Setting.Flags, settings[Setting.Flags] | flag);
-}
+export const enableSettingsFlag = (flag: SettingFlag) => setSetting(Setting.Flags, settings[Setting.Flags] | flag);
 
-export function hasSettingsFlag(flag: SettingFlag) {
-    return settings[Setting.Flags] & flag;
-}
+/* @__PURE__ */
+export const hasSettingsFlag = (flag: SettingFlag) => settings[Setting.Flags] & flag;
 
-export function toggleSettingsFlag(mask: SettingFlag) {
-    setSetting(Setting.Flags, settings[Setting.Flags] ^ mask);
-}
+export const toggleSettingsFlag = (mask: SettingFlag) => setSetting(Setting.Flags, settings[Setting.Flags] ^ mask);

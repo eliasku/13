@@ -14,7 +14,7 @@ if (!ctx) {
 }
 
 /// BEGIN
-function drawDetails(atlas: AtlasPage) {
+const drawDetails = (atlas: AtlasPage) => {
     const SCALE = 8;
     ctx.clearRect(0, 0, c.width, c.height);
     ctx.fillStyle = "#abc";
@@ -67,9 +67,9 @@ function drawDetails(atlas: AtlasPage) {
     ctx.font = "48px m";
     ctx.fillStyle = "black";
     ctx.fillText("verts: " + totalVerts + " | tris: " + totalTris, 80, 120);
-}
+};
 
-async function start() {
+const start = async () => {
     {
         const font = new FontFace("e", `url(./e.ttf)`);
         await font.load().then(f => document.fonts.add(f));
@@ -108,7 +108,7 @@ async function start() {
     }, 0);
 
     // makeSpotLightTexture();
-}
+};
 
 console.info(preview2("🐸", {size: 19}));
 

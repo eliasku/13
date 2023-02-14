@@ -119,10 +119,10 @@ const updateParticleList = (list: Particle[], i = 0) => {
     }
 };
 
-export function updateParticles() {
+export const updateParticles = () => {
     updateParticleList(opaqueParticles);
     updateTextParticleList(textParticles);
-}
+};
 
 let seed0: number;
 let opaqueParticles0: Particle[];
@@ -286,7 +286,7 @@ export const addShellParticle = (player: Actor, offsetZ: number, color: number) 
     opaqueParticles.push(particle);
 };
 
-export function addStepSplat(player: Actor, dx: number) {
+export const addStepSplat = (player: Actor, dx: number) => {
     splats.push(
         Img.box,
         (player._x + dx) / WORLD_SCALE + random1n(1),
@@ -296,9 +296,9 @@ export function addStepSplat(player: Actor, dx: number) {
         1,
         getLumaColor32(0x44 + random1(0x10)),
     );
-}
+};
 
-export function addLandParticles(player: Actor, r: number, n: number) {
+export const addLandParticles = (player: Actor, r: number, n: number) => {
     while (n--) {
         const particle = newParticle();
         const R = r * sqrt(random1());
@@ -318,7 +318,7 @@ export function addLandParticles(player: Actor, r: number, n: number) {
         // particles.push(particle);
         opaqueParticles.push(particle);
     }
-}
+};
 
 let mapFadeTime0 = 0;
 // draw particles splats and fade map

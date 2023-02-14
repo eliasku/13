@@ -7,7 +7,7 @@ import {Const, GAME_CFG} from "@iioi/client/game/config.js";
 import {button, label, uiProgressBar, uiState} from "../../graphics/gui.js";
 import {keyboardDown, KeyCode} from "../../utils/input.js";
 
-export function enableReplayMode(replay: ReplayFile) {
+export const enableReplayMode = (replay: ReplayFile) => {
     remoteClients.clear();
     for (const sid in replay._meta.clients) {
         const id = parseInt(sid);
@@ -16,9 +16,9 @@ export function enableReplayMode(replay: ReplayFile) {
     }
     gameMode._replay = replay;
     rewindReplayToStart();
-}
+};
 
-export function rewindReplayToStart() {
+export const rewindReplayToStart = () => {
     game._state = cloneStateData(gameMode._replay._state);
     game._localEvents = gameMode._replay._stream.concat();
     game._startTic = -1;
@@ -26,7 +26,7 @@ export function rewindReplayToStart() {
     game._lastInputTic = 0;
     game._lastInputCmd = 0;
     game._lastAudioTic = 0;
-}
+};
 
 export const runReplayTics = (ts: number, onSimulateTic: () => void) => {
     const ticsPerSecond = Const.NetFq * (gameMode._replay._playbackSpeed ?? 1);
@@ -71,12 +71,12 @@ export const runReplayTics = (ts: number, onSimulateTic: () => void) => {
 };
 
 // replay viewer
-function MM_SS(seconds: number) {
+const MM_SS = (seconds: number) => {
     seconds = Math.ceil(seconds);
     const min = (seconds / 60) | 0;
     const sec = seconds % 60;
     return (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec);
-}
+};
 
 export const guiReplayViewer = (replay: ReplayFile, tic: number) => {
     const W = uiState._width;

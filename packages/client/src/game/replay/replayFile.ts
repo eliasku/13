@@ -30,7 +30,7 @@ export interface ReplayFile {
     _rewind?: number;
 }
 
-export function readReplayFile(buffer: ArrayBuffer): ReplayFile {
+export const readReplayFile = (buffer: ArrayBuffer): ReplayFile => {
     let ptr = 0;
     const i32 = new Int32Array(buffer);
 
@@ -67,9 +67,9 @@ export function readReplayFile(buffer: ArrayBuffer): ReplayFile {
         _state: startState,
         _stream: stream,
     };
-}
+};
 
-export function validateReplayFile(replay: ReplayFile): boolean {
+export const validateReplayFile = (replay: ReplayFile): boolean => {
     const meta = replay._meta;
     if (meta) {
         const build = meta.build;
@@ -90,15 +90,15 @@ export function validateReplayFile(replay: ReplayFile): boolean {
     }
 
     return true;
-}
+};
 
-export function openReplayFile(onSuccess: (replay: ReplayFile) => void) {
+export const openReplayFile = (onSuccess: (replay: ReplayFile) => void) => {
     const input = document.createElement("input");
     input.type = "file";
     input.onchange = () => {
         if (input.files.length > 0) {
             const reader = new FileReader();
-            reader.onload = function (e) {
+            reader.onload = e => {
                 const result = e.target.result;
                 if (result instanceof ArrayBuffer) {
                     const replay = readReplayFile(result);
@@ -112,4 +112,4 @@ export function openReplayFile(onSuccess: (replay: ReplayFile) => void) {
         }
     };
     input.click();
-}
+};

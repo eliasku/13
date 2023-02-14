@@ -20,7 +20,7 @@ const replayMetaData: ReplayMetaData = {
     end: 0,
 };
 
-export function beginRecording(state: StateData) {
+export const beginRecording = (state: StateData) => {
     if (_room == null) {
         return;
     }
@@ -37,9 +37,9 @@ export function beginRecording(state: StateData) {
     replayMetaData.clients = {};
     replayMetaData.start = 0x7fffffff;
     replayMetaData.end = 0;
-}
+};
 
-export function addReplayTicEvents(tic: number, events: ClientEvent[]) {
+export const addReplayTicEvents = (tic: number, events: ClientEvent[]) => {
     if (tic < replayMetaData.start) replayMetaData.start = tic;
     if (tic > replayMetaData.end) replayMetaData.end = tic;
     if (events.length > 0) {
@@ -56,9 +56,9 @@ export function addReplayTicEvents(tic: number, events: ClientEvent[]) {
         }
         replayStream.push(0);
     }
-}
+};
 
-export function saveReplay() {
+export const saveReplay = () => {
     if (replayMetaData.end - replayMetaData.start <= 0) {
         console.error("Bad replay state data");
         return;
@@ -83,4 +83,4 @@ export function saveReplay() {
     a.href = URL.createObjectURL(file);
     a.download = "iioi-replay.bin";
     a.click();
-}
+};

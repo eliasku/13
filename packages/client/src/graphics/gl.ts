@@ -1,3 +1,4 @@
+/* @__PURE__ */
 export const GL = {
     NONE: 0,
     BLEND: 0x0be2,

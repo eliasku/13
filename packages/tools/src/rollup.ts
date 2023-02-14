@@ -14,6 +14,8 @@ import {
     watch as rollupWatch,
 } from "rollup";
 import {getCompileDefines} from "./common.js";
+import replace from "@rollup/plugin-replace";
+import {getConstMap} from "./ts.js";
 
 interface BuildOptions {
     input: string;
@@ -54,12 +56,19 @@ const esbuild_ = (options: BuildOptions) => {
     return esbuild(config);
 };
 
-function getRollupInput(options: BuildOptions): RollupOptions {
+const constMap = getConstMap();
+
+const getRollupInput = (options: BuildOptions): RollupOptions => {
+    const replaceValues = (options.debug || options.keepProps) ? {} : constMap;
     return {
         input: options.input,
         plugins: [
             sourcemaps(),
             nodeResolve(),
+            replace({
+                values: {...replaceValues, "const": "let"},
+                preventAssignment: true,
+            }),
             typescriptPaths({
                 tsConfigPath: "tsconfig.base.json",
                 preserveExtensions: true,
@@ -68,50 +77,48 @@ function getRollupInput(options: BuildOptions): RollupOptions {
             options.debug || options.skipTerser
                 ? undefined
                 : terser({
-                      toplevel: true,
-                      module: true,
-                      ecma: 2020,
-                      compress: {
-                          booleans_as_integers: true,
-                          unsafe_arrows: true,
-                          passes: 10000,
-                          keep_fargs: false,
-                          hoist_funs: true,
-                          // hoist_vars: true,
-                          pure_getters: true,
-                          dead_code: true,
-                          //pure_funcs: pureFunc,
-                          unsafe_methods: true,
-                          inline: 3,
-                          expression: true,
-                          unsafe_math: true,
-                          unsafe: true,
-                      },
-                      format: {
-                          wrap_func_args: false,
-                          inline_script: false,
-                      },
-                      mangle: options.keepProps
-                          ? undefined
-                          : {
-                                properties: {
-                                    regex: /^_[a-z]/,
-                                },
+                    toplevel: true,
+                    module: true,
+                    ecma: 2020,
+                    compress: {
+                        booleans_as_integers: true,
+                        unsafe_arrows: true,
+                        passes: 10000,
+                        keep_fargs: false,
+                        hoist_funs: true,
+                        // hoist_vars: true,
+                        pure_getters: true,
+                        dead_code: true,
+                        // pure_funcs: pureFunc,
+                        unsafe_methods: true,
+                        inline: 3,
+                        expression: true,
+                        unsafe_math: true,
+                        unsafe: true,
+                    },
+                    format: {
+                        wrap_func_args: false,
+                        inline_script: false,
+                    },
+                    mangle: options.keepProps
+                        ? undefined
+                        : {
+                            properties: {
+                                regex: /^_[a-z]/,
                             },
-                  }),
+                        },
+                }),
         ],
     };
-}
+};
 
-function getRollupOutput(options: BuildOptions): OutputOptions {
-    return {
-        file: options.output,
-        format: "es",
-        sourcemap: true,
-    };
-}
+const getRollupOutput = (options: BuildOptions): OutputOptions => ({
+    file: options.output,
+    format: "es",
+    sourcemap: true,
+});
 
-export async function build(options: BuildOptions) {
+export const build = async (options: BuildOptions) => {
     const inputOptions = getRollupInput(options);
     const outputOptions = getRollupOutput(options);
     const bundle = await rollup(inputOptions);
@@ -142,9 +149,9 @@ export async function build(options: BuildOptions) {
             await bundle.close();
         }
     }
-}
+};
 
-export function watch(options: BuildOptions): Promise<void> {
+export const watch = (options: BuildOptions): Promise<void> => {
     const inputOptions = getRollupInput(options);
     const outputOptions = getRollupOutput(options);
     const watchOptions: RollupWatchOptions = {
@@ -189,9 +196,9 @@ export function watch(options: BuildOptions): Promise<void> {
             resolve();
         });
     });
-}
+};
 
-async function generateOutputs(bundle: RollupBuild, outputOptions: OutputOptions) {
+const generateOutputs = async (bundle: RollupBuild, outputOptions: OutputOptions) => {
     // generate output specific code in-memory
     // you can call this function multiple times on the same bundle object
     // replace bundle.generate with bundle.write to directly write to disk
@@ -238,4 +245,4 @@ async function generateOutputs(bundle: RollupBuild, outputOptions: OutputOptions
             console.log("Chunk", chunkOrAsset.fileName);
         }
     }
-}
+};

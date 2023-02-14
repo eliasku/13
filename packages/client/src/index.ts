@@ -32,7 +32,7 @@ const StartState = {
 type StartState = (typeof StartState)[keyof typeof StartState];
 type StateFunc = (ts?: number) => void | undefined;
 
-async function start() {
+const start = async () => {
     await poki._init();
 
     let state: StartState = StartState.Loading;
@@ -131,12 +131,10 @@ async function start() {
                                 _room._mapSeed = replayRoom.mapSeed;
                                 gameMode._npcLevel = _room._npcLevel;
                                 enableReplayMode(replay);
-                            }
-                            else {
+                            } else {
                                 console.warn("internal error: room is not created");
                             }
-                        }
-                        else {
+                        } else {
                             console.warn("internal error: replay room is invalid");
                         }
                     });
@@ -236,6 +234,6 @@ async function start() {
 
         completeFrame();
     });
-}
+};
 
 start().then();

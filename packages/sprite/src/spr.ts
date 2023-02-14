@@ -1,7 +1,7 @@
 // SCAN BOUNDS
 
 // finds the first y coord in imgData that is not white
-function scanY(fromTop: boolean, imgWidth: number, imgHeight: number, imgData: ImageData) {
+const scanY = (fromTop: boolean, imgWidth: number, imgHeight: number, imgData: ImageData) => {
     const offset = fromTop ? 1 : -1;
     const firstCol = fromTop ? 0 : imgHeight - 1;
 
@@ -18,10 +18,10 @@ function scanY(fromTop: boolean, imgWidth: number, imgHeight: number, imgData: I
 
     // the whole image is white already
     return 0;
-}
+};
 
 // finds the first x coord in imgData that is not white
-function scanX(fromLeft: boolean, imgWidth: number, imgHeight: number, imgData: ImageData) {
+const scanX = (fromLeft: boolean, imgWidth: number, imgHeight: number, imgData: ImageData) => {
     const offset = fromLeft ? 1 : -1;
     const firstRow = fromLeft ? 0 : imgWidth - 1;
 
@@ -38,14 +38,13 @@ function scanX(fromLeft: boolean, imgWidth: number, imgHeight: number, imgData: 
 
     // the whole image is white already
     return 0;
-}
+};
 
-function getAlpha(x: number, y: number, imgWidth: number, imgData: ImageData) {
-    return imgData.data[(y * imgWidth + x) * 4 + 3];
-}
+const getAlpha = (x: number, y: number, imgWidth: number, imgData: ImageData) =>
+    imgData.data[(y * imgWidth + x) * 4 + 3];
 
 // https://github.com/agilgur5/trim-canvas
-function scanBounds(bmp: ImageData) {
+const scanBounds = (bmp: ImageData) => {
     // get the corners of the relevant content (everything that's not white)
     const cropTop = scanY(true, bmp.width, bmp.height, bmp);
     const cropBottom = scanY(false, bmp.width, bmp.height, bmp);
@@ -57,12 +56,12 @@ function scanBounds(bmp: ImageData) {
         w: cropRight - cropLeft + 1,
         h: cropBottom - cropTop + 1,
     };
-}
+};
 
-export function preview2(
+export const preview2 = (
     emoji: string,
     opts: {size?: number; sx?: number; sy?: number; a?: number; cut?: number; x?: number; y?: number} = {},
-) {
+) => {
     const x = 0;
     const y = 0;
     const scaleUp = 8;
@@ -132,4 +131,4 @@ export function preview2(
         //return [emoji, bounds.x, bounds.y, lc.width, lc.height, opts.size, opts.a, opts.sx, opts.sy, opts.cut, opts.x ?? 0.5, opts.y ?? 0.5];
         // return lc;
     }
-}
+};

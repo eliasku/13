@@ -337,7 +337,7 @@ export const buildAtlas = (): AtlasPage => {
     };
 };
 
-export function makeSpotLightTexture() {
+export const makeSpotLightTexture = () => {
     const ctx = createCanvas(64);
     ctx.translate(32, 32);
     const grd = ctx.createRadialGradient(0, 0, 32 / 2, 0, 0, 32);
@@ -364,4 +364,4 @@ export function makeSpotLightTexture() {
             }, 0);
         }
     }, "png");
-}
+};

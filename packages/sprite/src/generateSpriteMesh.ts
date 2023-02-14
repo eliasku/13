@@ -47,13 +47,13 @@ export interface MeshSprite {
 }
 
 /// BEGIN
-export function generateMeshSprite(
+export const generateMeshSprite = (
     img: ImageData,
     soft: boolean,
     subsample: number,
     tol: number,
     threshold: number,
-): MeshSprite {
+): MeshSprite => {
     let polylineSet: PolylineSet = [];
     const marchFn = soft ? marchSoft : marchHard;
     const sample = soft ? sampleAlpha : sampleAlphaHard;
@@ -67,7 +67,7 @@ export function generateMeshSprite(
         subsample * (img.width + 1),
         subsample * (img.height + 1),
         threshold,
-        (v0: Vec2, v1: Vec2, _: any) => {
+        (v0: Vec2, v1: Vec2/*, data: object*/) => {
             //console.info(v0, v1);
             if (!isFinite(v0.x)) console.error("bad v0.x", v0.x);
             if (!isFinite(v0.y)) console.error("bad v0.y", v0.y);
@@ -146,4 +146,4 @@ export function generateMeshSprite(
         indices,
         vertices,
     };
-}
+};

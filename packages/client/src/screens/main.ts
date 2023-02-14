@@ -56,7 +56,7 @@ const newPracticeSettings: MenuResult = {
     },
 };
 
-export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefined {
+export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefined => {
     let result: MenuResult | undefined;
     ui_begin();
     {
@@ -342,4 +342,4 @@ export function menuScreen(serverInfo: RoomsInfoResponse): MenuResult | undefine
     }
     ui_finish();
     return result;
-}
+};

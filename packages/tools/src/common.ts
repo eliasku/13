@@ -2,30 +2,30 @@ import {copyFileSync, mkdirSync, readFileSync, rmSync} from "fs";
 import {exec, execSync} from "child_process";
 import * as crypto from "crypto";
 
-function ensureDir(dir: string) {
+const ensureDir = (dir: string) => {
     try {
         mkdirSync(dir, {recursive: true});
     } catch {
         // ignore
     }
-}
+};
 
-function tryRemove(file: string) {
+const tryRemove = (file: string) => {
     try {
         rmSync(file, {recursive: true});
         console.warn(`${file} is removed`);
     } catch (e) {
         console.warn(`${file} is not removed`);
     }
-}
+};
 
-export function prepareFolders(...folders: string[]) {
+export const prepareFolders = (...folders: string[]) => {
     for (const folder of folders) {
         ensureDir(folder);
     }
-}
+};
 
-export async function clean() {
+export const clean = async () => {
     await executeAsync("tsc -b --clean");
     tryRemove("./server.js");
     tryRemove("./server.js.map");
@@ -33,9 +33,9 @@ export async function clean() {
     tryRemove("./public");
     // maybe tsc output
     tryRemove("./dist");
-}
+};
 
-export function copyPublicAssets(publicDir = "public", debugAssets = true, indexTemplate = "index.html") {
+export const copyPublicAssets = (publicDir = "public", debugAssets = true, indexTemplate = "index.html") => {
     // copy html
     console.info("copy assets");
     execSync(
@@ -65,7 +65,7 @@ export function copyPublicAssets(publicDir = "public", debugAssets = true, index
         copyFileSync("packages/client/assets/index4.html", `${publicDir}/index4.html`);
         copyFileSync("packages/client/assets/debug4.html", `${publicDir}/debug4.html`);
     }
-}
+};
 
 let version = "1.0.0";
 try {
@@ -112,7 +112,7 @@ export const getCompileDefines = (debug?: boolean, serverUrl = "") => ({
     "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
 });
 
-export function executeAsync(cmd: string): Promise<string> {
+export const executeAsync = (cmd: string): Promise<string> => {
     return new Promise(resolve => {
         exec(cmd, (error, stdout, stderr) => {
             if (error) {
@@ -121,4 +121,4 @@ export function executeAsync(cmd: string): Promise<string> {
             resolve(stdout ? stdout : stderr);
         });
     });
-}
+};

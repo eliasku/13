@@ -124,9 +124,9 @@ let quadTexture: WebGLTexture;
 let lightMapTexture: WebGLTexture;
 export const ambientColor = new Float32Array([0, 0, 0, 0]);
 
-export function setLightMapTexture(texture: WebGLTexture) {
+export const setLightMapTexture = (texture: WebGLTexture) => {
     lightMapTexture = texture;
-}
+};
 
 const gl_program = createProgram(SHADER_VERTEX, SHADER_FRAGMENT);
 const program: Program = {
@@ -147,12 +147,14 @@ interface DynamicBuffers {
     ib: WebGLBuffer;
 }
 
-function createIndexedBuffer(vertexData: ArrayBufferLike, indexData: ArrayBufferLike, usage: GLint = GL.STREAM_DRAW) {
-    return {
-        vb: createBuffer(GL.ARRAY_BUFFER, vertexData, usage),
-        ib: createBuffer(GL.ELEMENT_ARRAY_BUFFER, indexData, usage),
-    };
-}
+const createIndexedBuffer = (
+    vertexData: ArrayBufferLike,
+    indexData: ArrayBufferLike,
+    usage: GLint = GL.STREAM_DRAW,
+) => ({
+    vb: createBuffer(GL.ARRAY_BUFFER, vertexData, usage),
+    ib: createBuffer(GL.ELEMENT_ARRAY_BUFFER, indexData, usage),
+});
 
 // dynamic buffer
 const dynamicBuffers: DynamicBuffers[][] = [
@@ -170,14 +172,14 @@ export const completeFrame = () => {
     dynamicBufferFrame = (dynamicBufferFrame + 1) & 3;
 };
 
-function bindProgramBuffers(program: Program, buffers: DynamicBuffers) {
+const bindProgramBuffers = (program: Program, buffers: DynamicBuffers) => {
     gl.bindBuffer(GL.ARRAY_BUFFER, buffers.vb);
     gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffers.ib);
     bindAttrib(program.a_position, 3, byteSize, 0, GL.FLOAT, false);
     bindAttrib(program.a_texCoord, 2, byteSize, 12, GL.FLOAT, false);
     bindAttrib(program.a_colorMul, 4, byteSize, 20, GL.UNSIGNED_BYTE, true);
     bindAttrib(program.a_colorAdd, 4, byteSize, 24, GL.UNSIGNED_BYTE, true);
-}
+};
 
 export interface Texture {
     _texture?: WebGLTexture;
@@ -346,9 +348,7 @@ export const beginRenderToTexture = (texture: Texture, scale: number) => {
     gl.scissor(0, 0, w, h);
 };
 
-export function setMVP(m: Mat4) {
-    gl.uniformMatrix4fv(program.u_mvp, false, m);
-}
+export const setMVP = (m: Mat4) => gl.uniformMatrix4fv(program.u_mvp, false, m);
 
 export const beginRenderToMain = (
     x: number,
@@ -368,7 +368,7 @@ export const beginRenderToMain = (
     gl.scissor(0, 0, w, h);
 };
 
-function nextDynamicBuffer(): DynamicBuffers {
+const nextDynamicBuffer = (): DynamicBuffers => {
     const streamBuffers = dynamicBuffers[dynamicBufferFrame];
     let dynamicBuffer = streamBuffers[dynamicBufferIndex++];
     if (!dynamicBuffer) {
@@ -376,7 +376,7 @@ function nextDynamicBuffer(): DynamicBuffers {
         streamBuffers.push(dynamicBuffer);
     }
     return dynamicBuffer;
-}
+};
 
 export const flush = (_indicesCount = currentIndex) => {
     if (_indicesCount) {
@@ -492,7 +492,7 @@ export const draw = (
     baseVertex += 4;
 };
 
-export function drawBillboard(
+export const drawBillboard = (
     texture: Texture,
     x: number,
     y: number,
@@ -504,7 +504,7 @@ export function drawBillboard(
     color = 0xffffff,
     additive = 0,
     offset = 0,
-) {
+) => {
     if (quadTexture != texture._texture || baseVertex + 4 >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
@@ -574,9 +574,9 @@ export function drawBillboard(
     indexData[currentIndex++] = baseVertex;
 
     baseVertex += 4;
-}
+};
 
-export function drawMeshSpriteUp(
+export const drawMeshSpriteUp = (
     texture: Texture,
     x: number,
     y: number,
@@ -588,7 +588,7 @@ export function drawMeshSpriteUp(
     color = 0xffffff,
     additive = 0,
     offset = 0,
-) {
+) => {
     if (quadTexture != texture._texture || baseVertex + texture._vertexCount >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
@@ -630,9 +630,9 @@ export function drawMeshSpriteUp(
     }
 
     baseVertex += texture._vertexCount;
-}
+};
 
-export function drawMeshSprite(
+export const drawMeshSprite = (
     texture: Texture,
     x: number,
     y: number,
@@ -643,7 +643,7 @@ export function drawMeshSprite(
     color = 0xffffff,
     additive = 0,
     offset = 0,
-) {
+) => {
     if (quadTexture != texture._texture || baseVertex + texture._vertexCount >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
@@ -685,9 +685,9 @@ export function drawMeshSprite(
     }
 
     baseVertex += texture._vertexCount;
-}
+};
 
-export function drawRing(
+export const drawRing = (
     texture: Texture,
     x: number,
     y: number,
@@ -698,7 +698,7 @@ export function drawRing(
     sy: number,
     alpha = 1,
     color = 0xffffff,
-) {
+) => {
     if (quadTexture !== texture._texture || baseVertex + segments * 2 >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
@@ -752,9 +752,9 @@ export function drawRing(
     indexData[currentIndex++] = index;
 
     baseVertex += segments * 2;
-}
+};
 
-export function drawCircle(
+export const drawCircle = (
     texture: Texture,
     x: number,
     y: number,
@@ -764,7 +764,7 @@ export function drawCircle(
     sy: number,
     alpha = 1,
     color = 0xffffff,
-) {
+) => {
     if (quadTexture !== texture._texture || baseVertex + segments >= batchVertexMax) {
         flush();
         quadTexture = texture._texture;
@@ -797,4 +797,4 @@ export function drawCircle(
         indexData[currentIndex++] = index;
     }
     baseVertex += segments;
-}
+};

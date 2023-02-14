@@ -1,7 +1,7 @@
-const enum Tempering {
-    MaskB = 0x9d2c5680,
-    MaskC = 0xefc60000,
-}
+const Tempering = {
+    MaskB: 0x9d2c5680,
+    MaskC: 0xefc60000,
+} as const;
 
 /* @__PURE__ */
 export const temper = (x: number /* u32 */): number /* u32 */ => {

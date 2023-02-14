@@ -18,7 +18,7 @@ transform: translate(-50%, -50%); text-align: center">
 
 document.body.appendChild(preloader);
 
-export function setLoadingProgress(v: number) {
+export const setLoadingProgress = (v: number) => {
     const el = document.getElementById("preloader-progress");
     const segments = 16;
     if (el) {
@@ -28,7 +28,7 @@ export function setLoadingProgress(v: number) {
     }
 }
 
-export function completeLoading() {
+export const completeLoading = () => {
     preloader.style.opacity = "0";
     preloader.style.transition = "all 0.2s 0.1s ease-out";
     setTimeout(() => {

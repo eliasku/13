@@ -25,7 +25,7 @@ const playNote = (sndId: Snd, note: number, when: number, len = 1, dest = audioM
 let currentBar = 0;
 let musicEndTime = 0;
 
-function generateNextBar(mainMenu: boolean, time: number, k: number) {
+const generateNextBar = (mainMenu: boolean, time: number, k: number) => {
     let t = 0;
     let noteStep = 0;
     const snares = fxRand(2) && !mainMenu;
@@ -74,7 +74,7 @@ function generateNextBar(mainMenu: boolean, time: number, k: number) {
         }
         ++t;
     }
-}
+};
 
 export const updateSong = (mainMenu: boolean) => {
     const time = audioContext.currentTime;

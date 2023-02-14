@@ -7,9 +7,9 @@ let onRTCPacket: (from: ClientID, buffer: ArrayBuffer) => void = () => {
     /* do nothing */
 };
 
-export function setPacketHandler(callback: (from: ClientID, buffer: ArrayBuffer) => void): void {
+export const setPacketHandler = (callback: (from: ClientID, buffer: ArrayBuffer) => void): void => {
     onRTCPacket = callback;
-}
+};
 
 const channels_processMessageDebug = (from: ClientID, data: ArrayBuffer) => {
     if (!_debugLagK) {

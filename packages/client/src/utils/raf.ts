@@ -1,6 +1,6 @@
 import {Setting, settings} from "../game/settings.js";
 
-export function setupRAF(callback: (now: DOMHighResTimeStamp) => void) {
+export const setupRAF = (callback: (now: DOMHighResTimeStamp) => void) => {
     let then = performance.now();
     const animateLoop = (now: DOMHighResTimeStamp) => {
         requestAnimationFrame(animateLoop);
@@ -20,4 +20,4 @@ export function setupRAF(callback: (now: DOMHighResTimeStamp) => void) {
         }
     };
     requestAnimationFrame(animateLoop);
-}
+};

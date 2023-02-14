@@ -27,9 +27,8 @@ export const updateFrameTime = (ts: number) => {
     }
 };
 
-export function getNameByClientId(client: ClientID) {
-    return client === clientId ? clientName : remoteClients.get(client)?._name;
-}
+export const getNameByClientId = (client: ClientID) =>
+    client === clientId ? clientName : remoteClients.get(client)?._name;
 
 export const GameMenuState = {
     InGame: 0,
