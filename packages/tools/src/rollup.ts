@@ -14,8 +14,6 @@ import {
     watch as rollupWatch,
 } from "rollup";
 import {getCompileDefines} from "./common.js";
-import replace from "@rollup/plugin-replace";
-import {getConstMap} from "./ts.js";
 
 interface BuildOptions {
     input: string;
@@ -56,19 +54,12 @@ const esbuild_ = (options: BuildOptions) => {
     return esbuild(config);
 };
 
-const constMap = getConstMap();
-
 const getRollupInput = (options: BuildOptions): RollupOptions => {
-    const replaceValues = (options.debug || options.keepProps) ? {} : constMap;
     return {
         input: options.input,
         plugins: [
             sourcemaps(),
             nodeResolve(),
-            replace({
-                values: {...replaceValues, "const": "let"},
-                preventAssignment: true,
-            }),
             typescriptPaths({
                 tsConfigPath: "tsconfig.base.json",
                 preserveExtensions: true,
@@ -78,7 +69,7 @@ const getRollupInput = (options: BuildOptions): RollupOptions => {
                 ? undefined
                 : terser({
                     toplevel: true,
-                    module: true,
+                    module: false,
                     ecma: 2020,
                     compress: {
                         booleans_as_integers: true,
