@@ -1,3 +1,7 @@
+## 1.0.18
+
+- Add draft walls
+
 ## 1.0.17
 
 - Add screen shake on object death

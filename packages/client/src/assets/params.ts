@@ -7,4 +7,5 @@ export const PAD_FIRE_RADIUS_1 = 40;
 export const BOUNDS_SIZE = 0x400;
 
 export const WORLD_SCALE = 60;
-export const WORLD_BOUNDS_SIZE = 0x400 * WORLD_SCALE;
+export const WORLD_BOUNDS_SIZE_PX = 0x400;
+export const WORLD_BOUNDS_SIZE = WORLD_BOUNDS_SIZE_PX * WORLD_SCALE;

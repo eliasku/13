@@ -1,5 +1,6 @@
 import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {Actor} from "./types.js";
+import {max} from "../utils/math.js";
 
 export const GRID_R = 16 * WORLD_SCALE;
 export const GRID_D = GRID_R * 2;
@@ -22,11 +23,9 @@ export const queryGridCollisions = (
     callback: (a: Actor, b: Actor) => void,
     disableMask = 1,
 ) => {
-    let cx = (actor._x - GRID_R) >> GRID_D_BITS;
-    let cy = (actor._y - GRID_R) >> GRID_D_BITS;
-    if (cx < 0) cx = 0;
-    if (cy < 0) cy = 0;
-    const h = (cy << GRID_STRIDE_BITS) + cx;
+    const cx = max(0, actor._x - GRID_R) >> GRID_D_BITS;
+    const cy = max(0, actor._y - GRID_R) >> GRID_D_BITS;
+    const h = cx + (cy << GRID_STRIDE_BITS);
     for (let i = 0; i < 4; ++i) {
         const cell = grid[h + NEIGHBOURS[i]];
         if (cell) {

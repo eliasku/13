@@ -80,7 +80,7 @@ import {
     updateAnim,
     updateBody,
 } from "./phy.js";
-import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_BOUNDS_SIZE_PX, WORLD_SCALE} from "../assets/params.js";
 import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, OBJECT_RADIUS, PLAYER_HANDS_Z} from "./data/world.js";
 import {addDebugState, assertStateInSync, saveDebugState, updateDebugInput} from "./debug.js";
 import {addToGrid, queryGridCollisions} from "./grid.js";
@@ -122,6 +122,7 @@ import {
 import {playAt} from "@iioi/client/game/gameAudio.js";
 import {addReplayTicEvents, beginRecording} from "@iioi/client/game/replay/recorder.js";
 import {runReplayTics} from "@iioi/client/game/replay/viewer.js";
+import {TILE_MAP_STRIDE, TILE_SIZE_BITS} from "./tilemap.js";
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -185,6 +186,15 @@ const recreateMap = (themeIdx: number, seed: number) => {
     // generate map
     _SEEDS[0] = seed;
     const theme = generateMapBackground(themeIdx);
+
+    game._blocks.length = 0;
+    // for (let i = 0; i < 100; ++i) {
+    //     const x = rand(WORLD_BOUNDS_SIZE_PX);
+    //     const y = rand(WORLD_BOUNDS_SIZE_PX);
+    //     const ci = (x >> TILE_SIZE_BITS) + (y >> TILE_SIZE_BITS) * TILE_MAP_STRIDE;
+    //     game._blocks[ci] = 1;
+    // }
+
     game._trees.length = 0;
     game._treesGrid.length = 0;
     const nextId = game._state._nextId;

@@ -82,6 +82,8 @@ export interface Game {
     _hotUsable?: ItemActor;
     _state: StateData;
     _lastState?: StateData;
+
+    _blocks: number[];
 }
 
 export const game: Game = {
@@ -105,6 +107,8 @@ export const game: Game = {
     //hotUsable:
     _state: newStateData(),
     //lastState,
+
+    _blocks: [],
 };
 
 export const getMyPlayer = (): PlayerActor | undefined => (clientId ? getPlayerByClient(clientId) : undefined);

@@ -64,6 +64,7 @@ import {drawCollisions, printDebugInfo} from "@iioi/client/game/debug.js";
 import {drawMiniMap} from "@iioi/client/game/minimap.js";
 import {stats} from "@iioi/client/utils/fpsMeter.js";
 import {ClientID} from "@iioi/shared/types.js";
+import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -389,6 +390,7 @@ export const drawOpaqueObjects = (drawList: Actor[]) => {
 };
 
 export const drawObjects = (drawList: Actor[]) => {
+    drawTilesShadows(game._blocks);
     setDrawZ(0.15);
     drawShadows(drawList);
     drawParticleShadows();
@@ -469,6 +471,7 @@ export const drawGame = () => {
         setLightMapTexture(fogTexture._texture);
     }
 
+    drawTiles(game._blocks);
     drawOpaqueParticles();
     drawOpaqueObjects(drawList);
     drawSplatsOpaque();
@@ -659,6 +662,58 @@ const printStatus = () => {
                     }
                 }
                 termPrint(text);
+            }
+        }
+    }
+};
+
+const drawTiles = (blocks: number[]) => {
+    const W = gl.drawingBufferWidth;
+    const H = gl.drawingBufferHeight;
+    const cameraX = gameCamera[0];
+    const cameraY = gameCamera[1];
+    const invScale = gameCamera[2] / 2;
+    // const invScale = gameCamera[2] / 4;
+    const sz = TILE_SIZE;
+    const height = 14;
+    const l = max(0, (-invScale * W + cameraX) >> TILE_SIZE_BITS);
+    const t = max(0, (-invScale * H + cameraY) >> TILE_SIZE_BITS);
+    const r = min(TILE_MAP_STRIDE - 1, (invScale * W + cameraX + sz) >> TILE_SIZE_BITS);
+    const b = min(TILE_MAP_STRIDE - 1, (invScale * H + cameraY + sz) >> TILE_SIZE_BITS);
+    for (let cy = b; cy >= t; --cy) {
+        for (let cx = l; cx <= r; ++cx) {
+            const b = blocks[cy * TILE_MAP_STRIDE + cx];
+            if (b) {
+                const x = cx << TILE_SIZE_BITS;
+                const y = cy << TILE_SIZE_BITS;
+                setDrawZ(height);
+                drawMeshSprite(img[Img.box_lt], x, y, 0, sz, sz, 1, 0x444444, 0, 0);
+                drawMeshSpriteUp(img[Img.box_lt], x, y + sz, height, 0, sz, height, 1, 0x888888, 0, 0);
+            }
+        }
+    }
+};
+
+const drawTilesShadows = (blocks: number[]) => {
+    const W = gl.drawingBufferWidth;
+    const H = gl.drawingBufferHeight;
+    const cameraX = gameCamera[0];
+    const cameraY = gameCamera[1];
+    const invScale = gameCamera[2] / 2;
+    // const invScale = gameCamera[2] / 4;
+    const sz = TILE_SIZE;
+    const l = max(0, (-invScale * W + cameraX) >> TILE_SIZE_BITS);
+    const t = max(0, (-invScale * H + cameraY) >> TILE_SIZE_BITS);
+    const r = min(TILE_MAP_STRIDE - 1, (invScale * W + cameraX + sz) >> TILE_SIZE_BITS);
+    const b = min(TILE_MAP_STRIDE - 1, (invScale * H + cameraY + sz) >> TILE_SIZE_BITS);
+    setDrawZ(0.01);
+    for (let cy = b; cy >= t; --cy) {
+        for (let cx = l; cx <= r; ++cx) {
+            const b = blocks[cy * TILE_MAP_STRIDE + cx];
+            if (b) {
+                const x = cx << TILE_SIZE_BITS;
+                const y = cy << TILE_SIZE_BITS;
+                drawMeshSprite(img[Img.box_lt], x, y + sz, 0, sz, 2, 0.4, 0, 0, 0);
             }
         }
     }
