@@ -1,6 +1,5 @@
 const prefix = "iioi";
 
-/* @__PURE__ */
 export const BloodMode = {
     Off: 0,
     Normal: 1,
@@ -9,8 +8,6 @@ export const BloodMode = {
 export type BloodMode = (typeof BloodMode)[keyof typeof BloodMode];
 
 export const DEFAULT_FRAMERATE_LIMIT = 60;
-
-/* @__PURE__ */
 
 export const Setting = {
     Name: 0,
@@ -50,6 +47,7 @@ export const settings: SettingsMap = {
         SettingFlag.Sound |
         SettingFlag.Music |
         SettingFlag.Speech |
+        SettingFlag.HighDPI |
         SettingFlag.DevShowFrameStats |
         SettingFlag.DevShowDebugInfo |
         SettingFlag.DevLogging,

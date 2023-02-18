@@ -12,8 +12,15 @@ import {
     StateData,
 } from "./types.js";
 import {ClientID} from "@iioi/shared/types.js";
+import {JoinState} from "./gameState.js";
 
-const DEBUG_SIGN = 0xdeb51a1e;
+const DEBUG_SIGN = 0xdeb51a1e | 0;
+
+const newActorData = <T extends Actor>(type: ActorType): T =>
+    ({
+        _type: type,
+        _localStateFlags: 0,
+    } as T);
 
 const readActor = (p: Actor, i32: Int32Array, ptr: number): number => {
     p._id = i32[ptr++];
@@ -40,7 +47,7 @@ const readActor = (p: Actor, i32: Int32Array, ptr: number): number => {
     return ptr;
 };
 const readPlayerActor = (list: PlayerActor[], i32: Int32Array, ptr: number): number => {
-    const p = {_type: ActorType.Player} as PlayerActor;
+    const p = newActorData<PlayerActor>(ActorType.Player);
     ptr = readActor(p, i32, ptr);
 
     p._client = i32[ptr++];
@@ -63,14 +70,14 @@ const readPlayerActor = (list: PlayerActor[], i32: Int32Array, ptr: number): num
 };
 
 const readBarrelActor = (list: BarrelActor[], i32: Int32Array, ptr: number): number => {
-    const p = {_type: ActorType.Barrel} as BarrelActor;
+    const p = newActorData<BarrelActor>(ActorType.Barrel);
     ptr = readActor(p, i32, ptr);
     list.push(p);
     return ptr;
 };
 
 const readBulletActor = (list: BulletActor[], i32: Int32Array, ptr: number): number => {
-    const p = {_type: ActorType.Bullet} as BulletActor;
+    const p = newActorData<BulletActor>(ActorType.Bullet);
     ptr = readActor(p, i32, ptr);
     p._ownerId = i32[ptr++];
     const data = i32[ptr++];
@@ -80,7 +87,7 @@ const readBulletActor = (list: BulletActor[], i32: Int32Array, ptr: number): num
 };
 
 const readItemActor = (list: ItemActor[], i32: Int32Array, ptr: number): number => {
-    const p = {_type: ActorType.Item} as ItemActor;
+    const p = newActorData<ItemActor>(ActorType.Item);
     ptr = readActor(p, i32, ptr);
     const data = i32[ptr++];
     p._itemWeapon = data & 0b1111;
@@ -130,7 +137,6 @@ export const unpack = (
     client: ClientID,
     i32: Int32Array,
     /* let */ _events: ClientEvent[] = [],
-    _state?: StateData,
     _debug?: PacketDebug,
 ): Packet => {
     let event_tic = i32[2];
@@ -149,29 +155,22 @@ export const unpack = (
         event_tic += delta;
         if (!delta) break;
     }
-    if (i32[1] & 2) {
-        _state = newStateData();
-        ptr = readState(_state, i32, ptr);
-    }
-    if (process.env.NODE_ENV === "development") {
+    if (i32[ptr++] === DEBUG_SIGN) {
+        _debug = {
+            _tic: i32[ptr++],
+            _nextId: i32[ptr++],
+            _seed: i32[ptr++] >>> 0,
+        };
         if (i32[ptr++] === DEBUG_SIGN) {
-            _debug = {
-                _tic: i32[ptr++],
-                _nextId: i32[ptr++],
-                _seed: i32[ptr++] >>> 0,
-            };
-            if (i32[ptr++] === DEBUG_SIGN) {
-                _debug._state = newStateData();
-                ptr = readState(_debug._state, i32, ptr);
-            }
+            _debug._state = newStateData();
+            ptr = readState(_debug._state, i32, ptr);
         }
     }
     return {
-        _sync: i32[1] & 1,
+        _joinState: (i32[1] & 0b11) as JoinState,
         _tic: i32[0],
         _receivedOnSender: i32[0] + (i32[1] >> 2),
         _events: _events,
-        _state: _state,
         _debug: _debug,
         _ts0: ts0,
         _ts1: ts1,
@@ -309,9 +308,8 @@ export const writeState = (state: StateData | undefined, i32: Int32Array, ptr: n
 
 export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
     i32[0] = packet._tic;
-    // 0-bit - sync
-    // 1-bit - init-packet
-    i32[1] = ((packet._receivedOnSender - packet._tic) << 2) | ((!!packet._state as never) << 1) | packet._sync;
+    // 2-bits - join state
+    i32[1] = ((packet._receivedOnSender - packet._tic) << 2) | packet._joinState;
     const events = packet._events;
     events.sort((a, b) => a._tic - b._tic);
     const event_tic = events.length ? events[0]._tic : 0;
@@ -325,17 +323,14 @@ export const pack = (packet: Packet, i32: Int32Array): ArrayBuffer => {
         const c = events[i] ? events[i]._tic - e._tic : 0;
         i32[ptr++] = (c << 21) | e._input;
     }
-    ptr = writeState(packet._state, i32, ptr);
-    if (process.env.NODE_ENV === "development") {
-        if (packet._debug) {
+    if (packet._debug) {
+        i32[ptr++] = DEBUG_SIGN;
+        i32[ptr++] = packet._debug._tic;
+        i32[ptr++] = packet._debug._nextId;
+        i32[ptr++] = packet._debug._seed;
+        if (packet._debug._state) {
             i32[ptr++] = DEBUG_SIGN;
-            i32[ptr++] = packet._debug._tic;
-            i32[ptr++] = packet._debug._nextId;
-            i32[ptr++] = packet._debug._seed;
-            if (packet._debug._state) {
-                i32[ptr++] = DEBUG_SIGN;
-                ptr = writeState(packet._debug._state, i32, ptr);
-            }
+            ptr = writeState(packet._debug._state, i32, ptr);
         }
     }
     return i32.buffer.slice(0, ptr * 4);

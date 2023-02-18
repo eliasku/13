@@ -1,14 +1,12 @@
-import {Actor, ActorType, Client, Packet, StateData} from "./types.js";
+import {Actor, ActorType, Client, cloneStateData, Packet, PacketDebug, StateData} from "./types.js";
 import {_debugLagK, Const, setDebugLagK} from "./config.js";
-import {_room, clientId, clientName, remoteClients} from "../net/messaging.js";
+import {_room, clientId, clientName, disconnect, remoteClients} from "../net/messaging.js";
 import {getChannelPacketSize} from "../net/channels_send.js";
 import {termPrint} from "../graphics/gui.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
 import {draw, setDrawZ} from "../graphics/draw2d.js";
 import {img} from "../assets/gfx.js";
 import {ClientID} from "@iioi/shared/types.js";
-import {_SEEDS} from "../utils/rnd.js";
-import {roundActors} from "./phy.js";
 import {min} from "../utils/math.js";
 import {getDevFlag, SettingFlag, toggleSettingsFlag} from "./settings.js";
 import {WORLD_SCALE} from "../assets/params.js";
@@ -18,8 +16,8 @@ import {Img} from "../assets/img.js";
 
 //// DEBUG UTILITIES ////
 
-let debugState: StateData;
-let debugStateEnabled = process.env.NODE_ENV === "development";
+const debugStateCache: Map<number, PacketDebug> = new Map();
+let debugStateSnapshotEnabled = process.env.NODE_ENV === "development";
 let prevSimulatedTic = 0;
 
 const icons_iceState = {
@@ -144,7 +142,7 @@ export const updateDebugInput = () => {
             setDebugLagK((_debugLagK + 1) % 3);
         }
         if (keyboardDown[KeyCode.Digit5]) {
-            debugStateEnabled = !debugStateEnabled;
+            debugStateSnapshotEnabled = !debugStateSnapshotEnabled;
         }
     }
 };
@@ -167,49 +165,71 @@ export const drawCollisions = (list: Actor[]) => {
     }
 };
 
+export const resetDebugStateCache = () => debugStateCache.clear();
+
 export const saveDebugState = (stateData: StateData) => {
-    if (debugStateEnabled) {
-        debugState = stateData;
-        debugState._seed = _SEEDS[0];
-        ++debugState._tic;
-        debugState._actors.map(roundActors);
+    const debug: PacketDebug = {
+        _seed: stateData._seed,
+        _tic: stateData._tic,
+        _nextId: stateData._nextId,
+    };
+    if (debugStateSnapshotEnabled) {
+        debug._state = cloneStateData(stateData);
+    }
+    // console.log("save debug state #", stateData._tic);
+    debugStateCache.set(debug._tic, debug);
+};
+
+export const addPacketDebugState = (client: Client, packet: Packet, state: StateData) => {
+    if (client._ready && client._isPlaying) {
+        //console.log("add debug state #", state._tic, "to packet");
+        packet._debug = {
+            _nextId: state._nextId,
+            _tic: state._tic,
+            _seed: state._seed,
+        };
+        if (debugStateSnapshotEnabled) {
+            packet._debug._state = cloneStateData(state);
+        }
     }
 };
 
-export const addDebugState = (client: Client, packet: Packet, state: StateData) => {
-    if (debugStateEnabled && client._ready && client._isPlaying) {
-        packet._state = state;
-        packet._debug._state = debugState;
-    }
-};
-
-export const assertStateInSync = (from: ClientID, data: Packet, state: StateData, gameTic: number) => {
-    if (data._debug && data._debug._tic === gameTic - 1) {
-        if (data._debug._seed !== _SEEDS[0]) {
-            console.warn("seed mismatch from client " + from + " at tic " + data._debug._tic);
-            console.warn(data._debug._seed + " != " + _SEEDS[0]);
-        }
-        if (data._debug._nextId !== state._nextId) {
-            console.warn("gen id mismatch from client " + from + " at tic " + data._debug._tic);
-            console.warn(data._debug._nextId + " != " + state._nextId);
-        }
-        if (debugStateEnabled) {
-            if (data._debug._state && debugState) {
-                assertStateEquality("[DEBUG] ", debugState, data._debug._state);
+export const assertPacketDebugState = (from: ClientID, data: Packet) => {
+    if (data._debug) {
+        const tic = data._debug._tic;
+        const localDebugState = debugStateCache.get(tic);
+        if (localDebugState) {
+            let failed = false;
+            if (data._debug._seed !== localDebugState._seed) {
+                console.warn("seed mismatch from client " + from + " at tic " + tic);
+                console.warn(data._debug._seed + " != " + localDebugState._seed);
+                failed = true;
             }
-            if (data._state) {
-                assertStateEquality("[FINAL] ", state, data._state);
+            if (data._debug._nextId !== localDebugState._nextId) {
+                console.warn("gen id mismatch from client " + from + " at tic " + tic);
+                console.warn(data._debug._nextId + " != " + localDebugState._nextId);
+                failed = true;
+            }
+            if (data._debug._state && localDebugState._state && debugStateSnapshotEnabled) {
+                failed ||= assertStateEquality("[DEBUG] ", localDebugState._state, data._debug._state);
+            }
+            if (failed) {
+                console.error("Failed state assertion", from, tic);
+                disconnect("State is out of sync!");
             }
         }
     }
 };
 
-const assertStateEquality = (label: string, a: StateData, b: StateData) => {
-    if (a._nextId != b._nextId) {
+const assertStateEquality = (label: string, a: StateData, b: StateData): boolean => {
+    let failed = false;
+    if (a._nextId !== b._nextId) {
         console.warn(label + "NEXT ID MISMATCH", a._nextId, b._nextId);
+        failed = true;
     }
-    if (a._seed != b._seed) {
+    if (a._seed !== b._seed) {
         console.warn(label + "SEED MISMATCH", a._seed, b._seed);
+        failed = true;
     }
     for (let i = 0; i < a._actors.length; ++i) {
         const listA = a._actors[i];
@@ -225,11 +245,14 @@ const assertStateEquality = (label: string, a: StateData, b: StateData) => {
                         console.warn(`${label} ACTOR DATA mismatch, key: ${key}`);
                         console.warn(` local.${key} = ${valueA}`);
                         console.warn(`remote.${key} = ${valueB}`);
+                        failed = true;
                     }
                 }
             }
         } else {
             console.warn(label + "ACTOR LIST " + i + " SIZE MISMATCH", listA.length, listB.length);
+            failed = true;
         }
     }
+    return failed;
 };

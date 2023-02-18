@@ -1,16 +1,17 @@
 import {Actor, ActorType, ControlsFlag, PlayerActor, Pos, Vel} from "./types.js";
 import {rand} from "../utils/rnd.js";
-import {clamp, cos, reach, sin, sqrt} from "../utils/math.js";
+import {clamp, cos, hypot, max, min, reach, sin, sqrt} from "../utils/math.js";
 import {actorsConfig, OBJECT_RADIUS} from "./data/world.js";
-import {WORLD_BOUNDS_SIZE} from "../assets/params.js";
+import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {GAME_CFG} from "./config.js";
+import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
 
 export const setRandomPosition = (actor: Actor) => {
     actor._x = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);
     actor._y = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);
 };
 
-export const copyPosFromActorCenter = (to: Pos, from: Actor) => {
+export const copyPosFromActorCenter = (to: Pos, from: Pos & {_type: ActorType}) => {
     to._x = from._x;
     to._y = from._y;
     to._z = from._z + actorsConfig[from._type]._height;
@@ -34,11 +35,13 @@ export const updateAnim = (actor: Actor) => {
     actor._animHit = reach(actor._animHit, 0, 2);
 };
 
-export const updateActorPhysics = (a: Actor) => {
+export const updateActorPhysics = (a: Actor, tileMap: number[]) => {
     const prop = actorsConfig[a._type];
     const world = GAME_CFG._world;
     const isWeakGravity = a._type === ActorType.Player ? (a as PlayerActor)._input & ControlsFlag.Jump : 0;
     updateBody(a, isWeakGravity ? world._gravityWeak : world._gravity, prop._groundLoss);
+    // TODO: ?
+    checkTileCollisions(a, tileMap);
     collideWithBoundsA(a);
     if (a._z <= 0) {
         applyGroundFriction(a, prop._groundFriction);
@@ -165,4 +168,70 @@ export const roundActors = (list: Actor[]) => {
         a._v = clamp(a._v | 0, -1024, 1024);
         a._w = clamp(a._w | 0, -1024, 1024);
     }
+};
+
+const testRectCircle = (cx: number, cy: number, l: number, t: number, r: number, b: number, out: [number, number]) => {
+    // temporary variables to set edges for testing
+    let testX = cx;
+    let testY = cy;
+
+    // which edge is closest?
+    if (cx < l) testX = l; // test left edge
+    else if (cx > r) testX = r; // right edge
+    if (cy < t) testY = t; // top edge
+    else if (cy > b) testY = b; // bottom edge
+
+    // get distance from the closest edges
+    const distX = cx - testX;
+    const distY = cy - testY;
+    const distance = sqrt(distX * distX + distY * distY);
+
+    out[0] = testX;
+    out[1] = testY;
+    // if the distance is less than the radius, collision!
+    return distance;
+};
+
+export const checkTileCollisions = (actor: Actor, tilemap: number[]): number => {
+    const conf = actorsConfig[actor._type];
+    const x0 = max(0, ((actor._x - conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    const y0 = max(0, ((actor._y - conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    const x1 = min(TILE_MAP_STRIDE - 1, ((actor._x + conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    const y1 = min(TILE_MAP_STRIDE - 1, ((actor._y + conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    let mindist = 100000.0;
+    const point: [number, number] = [0, 0];
+    let nx = 0;
+    let ny = 0;
+    for (let cy = y0; cy <= y1; ++cy) {
+        for (let cx = x0; cx <= x1; ++cx) {
+            // console.log("check tile", cx, cy);
+            const cell = tilemap[cy * TILE_MAP_STRIDE + cx];
+            if (cell) {
+                const dist = testRectCircle(
+                    actor._x,
+                    actor._y,
+                    cx * WORLD_SCALE * TILE_SIZE,
+                    cy * WORLD_SCALE * TILE_SIZE,
+                    (cx + 1) * WORLD_SCALE * TILE_SIZE,
+                    (cy + 1) * WORLD_SCALE * TILE_SIZE,
+                    point,
+                );
+                if (dist < conf._radius && dist < mindist) {
+                    // console.log(dist);
+                    mindist = dist;
+                    nx = point[0] - actor._x;
+                    ny = point[1] - actor._y;
+                }
+            }
+        }
+    }
+    if (mindist < conf._radius) {
+        const normalLen = hypot(nx, ny);
+        nx /= normalLen;
+        ny /= normalLen;
+        addPos(actor, nx, ny, 0, -(conf._radius - mindist));
+        reflectVelocity(actor, 0, 1, conf._boundsLoss);
+        return 1;
+    }
+    return 0;
 };

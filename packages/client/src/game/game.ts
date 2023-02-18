@@ -1,5 +1,14 @@
-import {ClientID} from "@iioi/shared/types.js";
-import {_room, _sseState, clientId, disconnect, isPeerConnected, remoteClients} from "../net/messaging.js";
+import {ClientID, MessageField, MessageType} from "@iioi/shared/types.js";
+import {
+    _room,
+    _sseState,
+    clientId,
+    disconnect,
+    isPeerConnected,
+    onGetGameState,
+    remoteCall,
+    remoteClients,
+} from "../net/messaging.js";
 import {speak} from "../audio/context.js";
 import {_SEEDS, fxRand, fxRandElement, rand, random, random1i} from "../utils/rnd.js";
 import {channels_sendObjectData} from "../net/channels_send.js";
@@ -26,7 +35,7 @@ import {
     StateData,
     unpackAngleByte,
 } from "./types.js";
-import {pack, unpack} from "./packets.js";
+import {pack, readState, unpack, writeState} from "./packets.js";
 import {abs, clamp, cos, dec1, lerp, lerpLog, max, min, PI2, reach, sin, sqrt} from "../utils/math.js";
 import {
     couldBeReloadedManually,
@@ -69,6 +78,7 @@ import {
     addVelocityDir,
     applyGroundFriction,
     checkBodyCollision,
+    checkTileCollisions,
     collideWithBoundsA,
     copyPosFromActorCenter,
     limitVelocity,
@@ -82,7 +92,13 @@ import {
 } from "./phy.js";
 import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_BOUNDS_SIZE_PX, WORLD_SCALE} from "../assets/params.js";
 import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, OBJECT_RADIUS, PLAYER_HANDS_Z} from "./data/world.js";
-import {addDebugState, assertStateInSync, saveDebugState, updateDebugInput} from "./debug.js";
+import {
+    addPacketDebugState,
+    assertPacketDebugState,
+    resetDebugStateCache,
+    saveDebugState,
+    updateDebugInput,
+} from "./debug.js";
 import {addToGrid, queryGridCollisions} from "./grid.js";
 import {getOrCreate} from "../utils/utils.js";
 import {updateAI} from "./ai/npc.js";
@@ -97,6 +113,7 @@ import {
     getMyPlayer,
     getNameByClientId,
     getPlayerByClient,
+    JoinState,
     lastFrameTs,
     normalizeStateData,
     resetLastFrameTs,
@@ -123,6 +140,7 @@ import {playAt} from "@iioi/client/game/gameAudio.js";
 import {addReplayTicEvents, beginRecording} from "@iioi/client/game/replay/recorder.js";
 import {runReplayTics} from "@iioi/client/game/replay/viewer.js";
 import {TILE_MAP_STRIDE, TILE_SIZE_BITS} from "./tilemap.js";
+import {fromByteArray, toByteArray} from "@iioi/shared/base64.js";
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -144,6 +162,7 @@ const requireClient = (id: ClientID): Client =>
 const requireStats = (id: ClientID): PlayerStat => getOrCreate(game._state._stats, id, () => ({_frags: 0, _scores: 0}));
 
 export const resetGame = () => {
+    resetDebugStateCache();
     resetParticles();
     resetPlayerControls();
 
@@ -154,13 +173,8 @@ export const resetGame = () => {
     game._state = newStateData();
     normalizeStateData(game._state);
 
-    game._startTic = -1;
+    game._joinState = JoinState.Wait;
     game._gameTic = 1;
-    // prevTime = 0;
-    // startTime = 0;
-    // ackMin = 0;
-    game._joined = false;
-
     game._waitToAutoSpawn = false;
     game._waitToSpawn = false;
     game._allowedToRespawn = false;
@@ -188,12 +202,12 @@ const recreateMap = (themeIdx: number, seed: number) => {
     const theme = generateMapBackground(themeIdx);
 
     game._blocks.length = 0;
-    // for (let i = 0; i < 100; ++i) {
-    //     const x = rand(WORLD_BOUNDS_SIZE_PX);
-    //     const y = rand(WORLD_BOUNDS_SIZE_PX);
-    //     const ci = (x >> TILE_SIZE_BITS) + (y >> TILE_SIZE_BITS) * TILE_MAP_STRIDE;
-    //     game._blocks[ci] = 1;
-    // }
+    for (let i = 0; i < GAME_CFG._walls._initCount; ++i) {
+        const x = rand(WORLD_BOUNDS_SIZE_PX);
+        const y = rand(WORLD_BOUNDS_SIZE_PX);
+        const ci = (x >> TILE_SIZE_BITS) + (y >> TILE_SIZE_BITS) * TILE_MAP_STRIDE;
+        game._blocks[ci] = 1;
+    }
 
     game._trees.length = 0;
     game._treesGrid.length = 0;
@@ -232,7 +246,8 @@ const initBarrels = () => {
 };
 
 export const createSeedGameState = () => {
-    game._startTic = 0;
+    console.log("create initial game state (first player)");
+    game._joinState = JoinState.Sync;
     game._gameTic = 1;
     game._state._seed = _SEEDS[0];
     recreateMap(_room._mapTheme, _room._mapSeed);
@@ -240,7 +255,7 @@ export const createSeedGameState = () => {
 };
 
 export const createSplashState = () => {
-    game._startTic = 0;
+    game._joinState = JoinState.Joined;
     game._gameTic = 1;
     game._state._seed = _SEEDS[0];
     recreateMap(Math.floor(Math.random() * 3), newSeedFromTime());
@@ -259,7 +274,7 @@ export const createSplashState = () => {
         player._y = (BOUNDS_SIZE / 2 + D * sin(k * PI2) + 10) * WORLD_SCALE;
         pushActor(player);
     }
-    gameCamera[0] = gameCamera[1] = BOUNDS_SIZE / 2;
+    gameCamera._x = gameCamera._y = BOUNDS_SIZE / 2;
     gameMode._hasPlayer = false;
     gameMode._tiltCamera = 0.05;
     gameMode._bloodRain = true;
@@ -269,53 +284,89 @@ export const createSplashState = () => {
 export const updateGame = (ts: number) => {
     updateFrameTime(ts);
 
-    if (game._startTic < 0) {
+    if (game._joinState === JoinState.Wait) {
         if (gameMode._replay) {
-            game._startTic = game._state._tic;
             game._gameTic = game._state._tic;
             _SEEDS[0] = game._state._seed;
             recreateMap(_room._mapTheme, _room._mapSeed);
+            game._joinState = JoinState.Joined;
         } else if (clientId && !remoteClients.size) {
             createSeedGameState();
         }
     }
 
-    if (clientId && game._startTic >= 0) {
+    if (clientId && game._joinState > JoinState.LoadingState) {
         onGameMenu(game._gameTic);
     }
 
-    let predicted = false;
-    if (game._startTic < 0 && remoteClients.size) {
-        const minTic = getMinTic();
-        let actualStateCount = 0;
+    if (game._joinState === JoinState.Wait && remoteClients.size) {
         let maxState: StateData | null = null;
         let maxStateTic = 0;
-        let playingClients = 0;
-        for (const [id] of remoteClients) {
-            const client = game._clients.get(id);
-            if (client) {
-                if (client._isPlaying) {
-                    ++playingClients;
-                }
-                if (client._startState && client._startState._tic > minTic) {
-                    ++actualStateCount;
-                    if (client._startState._tic > maxStateTic) {
-                        maxStateTic = client._startState._tic;
+        let maxStateOwner = 0;
+        for (const [id, rc] of remoteClients) {
+            if (isPeerConnected(rc)) {
+                const client = game._clients.get(id);
+                // if (client && client._ready) {
+                if (client) {
+                    if (!client._loadingState && !client._startState) {
+                        console.info("loading state from " + id);
+                        client._loadingState = true;
+                        remoteCall(id, MessageType.State, "", response => {
+                            const body = response[MessageField.Data] as string;
+                            if (body) {
+                                const state = newStateData();
+                                const bytes = toByteArray(body);
+                                const i32 = new Int32Array(bytes.buffer);
+                                readState(state, i32, 0);
+                                client._startState = state;
+                            } else {
+                                console.info("state from " + id + " is empty");
+                            }
+                            client._loadingState = false;
+                        });
+                    }
+                    if (client._startState && client._startState._tic > maxStateTic) {
                         maxState = client._startState;
+                        maxStateTic = client._startState._tic;
+                        maxStateOwner = client._id;
                     }
                 }
             }
         }
-        if (maxState && actualStateCount >= playingClients) {
+        if (maxState) {
             updateFrameTime(performance.now() / 1000);
-            game._prevTime = lastFrameTs;
+            const tic = maxState._tic;
+            console.info("setup state #", tic, "from client", maxStateOwner);
+
+            game._joinState = JoinState.Sync;
+            const prevGameTic = game._gameTic;
+            game._gameTic = tic + 1;
+            const ticDelta = max(0, prevGameTic - game._gameTic);
+            console.info("tic-delta:", ticDelta, "new-game-tick:", game._gameTic, "prev-game-tic:", prevGameTic);
+            game._prevTime = lastFrameTs - ticDelta / Const.NetFq;
             game._state = maxState;
-            game._gameTic = game._startTic = game._state._tic + 1;
+            _SEEDS[0] = game._state._seed;
             recreateMap(_room._mapTheme, _room._mapSeed);
             normalizeStateData(game._state);
+            resetDebugStateCache();
+            saveDebugState(cloneStateData(game._state));
+
+            game._lastInputTic = tic + 1 + Const.InputDelay;
+            game._lastAudioTic = tic + 1;
+            game._lastInputCmd = 0;
+            game._localEvents.length = 0;
+            game._receivedEvents = game._receivedEvents.filter(e => e._tic > tic);
+            for (const [, client] of game._clients) {
+                console.log("client ", client._id, "_acknowledgedTic:", client._acknowledgedTic, "_tic:", client._tic);
+                // client._acknowledgedTic = tic;
+                // client._tic = max(client._tic, tic);
+            }
+            const processedFrames = tryRunTicks(lastFrameTs, false);
+            console.info("preprocessed ticks:", processedFrames);
         }
     }
-    if (game._startTic >= 0) {
+    let predicted = false;
+    if (game._joinState >= JoinState.Sync) {
         if (gameMode._replay) {
             runReplayTics(ts, simulateTic);
         } else {
@@ -331,7 +382,7 @@ export const updateGame = (ts: number) => {
     }
     updateDebugInput();
 
-    if (game._startTic >= 0) {
+    if (game._joinState >= JoinState.Sync) {
         // check input before overlay, or save camera settings
         if (!gameMode._replay) {
             updatePlayerControls();
@@ -342,8 +393,11 @@ export const updateGame = (ts: number) => {
         if (!gameMode._replay) {
             checkJoinSync();
             checkPlayerInput();
-            sendInput();
+            // sendInput();
         }
+    }
+    if (!gameMode._replay) {
+        sendInput();
     }
 };
 
@@ -378,7 +432,7 @@ const checkPlayerInput = () => {
     let inputTic = getNextInputTic(game._gameTic);
     const player = getMyPlayer();
     let input = 0;
-    if (player) {
+    if (player && game._joinState === JoinState.Joined) {
         if (getDevFlag(SettingFlag.DevAutoPlay)) {
             input = autoplayInput;
         } else {
@@ -417,7 +471,14 @@ const checkPlayerInput = () => {
     }
 
     // RESPAWN EVENT
-    if (!gameMode._title && clientId && !game._waitToSpawn && !player && game._joined && game._allowedToRespawn) {
+    if (
+        !gameMode._title &&
+        clientId &&
+        !game._waitToSpawn &&
+        !player &&
+        game._joinState === JoinState.Joined &&
+        game._allowedToRespawn
+    ) {
         if (isAnyKeyDown() || game._waitToAutoSpawn) {
             input |= ControlsFlag.Spawn;
             game._waitToSpawn = true;
@@ -443,11 +504,13 @@ const checkPlayerInput = () => {
 };
 
 const checkJoinSync = () => {
-    if (!game._joined && game._startTic >= 0) {
+    if (game._joinState === JoinState.Sync) {
         for (const [id, rc] of remoteClients) {
             if (isPeerConnected(rc)) {
                 const cl = game._clients.get(id);
-                if (!cl || !cl._ready) {
+                // if (!cl || cl._joinState < JoinState.Sync) {
+                //     if (!cl || !cl._ready || cl._tic < game._gameTic) {
+                if (!cl || !cl._isPlaying) {
                     console.log("syncing...");
                     return;
                 }
@@ -456,7 +519,7 @@ const checkJoinSync = () => {
                 return;
             }
         }
-        game._joined = true;
+        game._joinState = JoinState.Joined;
         console.log("All in sync");
         // respawnPlayer();
         game._waitToSpawn = false;
@@ -490,10 +553,7 @@ const correctPrevTime = (netTic: number, ts: number) => {
     }
 };
 
-const tryRunTicks = (ts: number): number => {
-    if (game._startTic < 0) {
-        return 0;
-    }
+const tryRunTicks = (ts: number, correct = true): number => {
     const netTic = getMinTic();
     let frames = ((ts - game._prevTime) * Const.NetFq) | 0;
     let framesSimulated = 0;
@@ -505,13 +565,16 @@ const tryRunTicks = (ts: number): number => {
         // we must try to keep netTic >= gameTic + Const.InputDelay
         game._prevTime += 1 / Const.NetFq;
     }
+    if (correct) {
+        correctPrevTime(netTic, ts);
+    }
 
-    correctPrevTime(netTic, ts);
-
-    const lastTic = game._gameTic - 1;
-    game._receivedEvents = game._receivedEvents.filter(v => v._tic > lastTic);
-    const ackTic = getMinAckAndInput(lastTic);
-    game._localEvents = game._localEvents.filter(v => v._tic > ackTic);
+    if (game._joinState >= JoinState.Joined) {
+        const lastTic = game._gameTic - 1;
+        game._receivedEvents = game._receivedEvents.filter(v => v._tic > lastTic);
+        const ackTic = getMinAckAndInput(lastTic);
+        game._localEvents = game._localEvents.filter(v => v._tic > ackTic);
+    }
 
     return framesSimulated;
 };
@@ -519,7 +582,7 @@ const tryRunTicks = (ts: number): number => {
 const _packetBuffer = new Int32Array(1024 * 256);
 
 const sendInput = () => {
-    const lastTic = game._gameTic - 1;
+    const lastTic = game._joinState >= JoinState.Sync ? game._gameTic - 1 : 0;
     for (const [id, rc] of remoteClients) {
         if (isPeerConnected(rc)) {
             const cl = requireClient(id);
@@ -527,7 +590,8 @@ const sendInput = () => {
             if (inputTic > cl._acknowledgedTic) {
                 cl._ts0 = performance.now() & 0x7fffffff;
                 const packet: Packet = {
-                    _sync: (cl._isPlaying as never) | 0,
+                    // _sync: (cl._isPlaying as never) | 0,
+                    _joinState: game._joinState,
                     // send to Client info that we know already
                     _receivedOnSender: cl._tic,
                     // t: lastTic + simTic + Const.InputDelay,
@@ -537,18 +601,14 @@ const sendInput = () => {
                     _events: game._localEvents.filter(e => e._tic > cl._acknowledgedTic && e._tic <= inputTic),
                 };
                 //console.log(JSON.stringify(packet.events_));
-                if (!cl._ready && game._joined) {
-                    packet._state = game._state;
-                    cl._tic = game._state._tic;
-                    cl._acknowledgedTic = game._state._tic;
+                if (!cl._ready && game._joinState === JoinState.Joined) {
+                    // FIXME:
+                    //packet._state = game._state;
+                    // cl._tic = game._state._tic;
+                    // cl._acknowledgedTic = game._state._tic;
                 }
-                if (process.env.NODE_ENV === "development") {
-                    packet._debug = {
-                        _nextId: game._state._nextId,
-                        _tic: game._state._tic,
-                        _seed: game._state._seed,
-                    };
-                    addDebugState(cl, packet, game._state);
+                if (process.env.NODE_ENV === "development" && game._joinState === JoinState.Joined && clientId) {
+                    addPacketDebugState(cl, packet, game._state);
                 }
                 // if(packet.events_.length) {
                 //     console.info("SEND: " + JSON.stringify(packet.events_));
@@ -562,32 +622,24 @@ const sendInput = () => {
 const processPacket = (sender: Client, data: Packet) => {
     sender._ts1 = data._ts0;
     sender._lag = (performance.now() & 0x7fffffff) - data._ts1;
-    if (game._startTic < 0 && data._state) {
-        if (!sender._startState || data._state._tic > sender._startState._tic) {
-            sender._startState = data._state;
-        }
+    if (game._joinState === JoinState.Joined) {
+        assertPacketDebugState(sender._id, data);
     }
-
-    if (process.env.NODE_ENV === "development") {
-        if (game._startTic >= 0) {
-            assertStateInSync(sender._id, data, game._state, game._gameTic);
-        }
+    sender._joinState = data._joinState;
+    //console.info("received packets from " + sender._id);
+    if (!sender._ready && data._joinState >= JoinState.Sync) {
+        sender._ready = true;
+        sender._tic = 0;
+        sender._acknowledgedTic = 0;
     }
-
-    sender._ready = !!data._sync;
     // ignore old packets
-    if (data._tic > sender._tic) {
+    if (data._tic > sender._tic && sender._ready) {
         sender._isPlaying = true;
-        // const debug = [];
         for (const e of data._events) {
             if (e._tic > sender._tic /*alreadyReceivedTic*/) {
                 game._receivedEvents.push(e);
-                // debug.push(e);
             }
         }
-        // if(debug.length) {
-        //     console.info("R: " + JSON.stringify(debug));
-        // }
         sender._tic = data._tic;
     }
     // IMPORTANT TO NOT UPDATE ACK IF WE GOT OLD PACKET!! WE COULD TURN REMOTE TO THE PAST
@@ -595,10 +647,24 @@ const processPacket = (sender: Client, data: Packet) => {
     // then we will send only events from [acknowledgedTic + 1] index
     if (sender._acknowledgedTic < data._receivedOnSender) {
         // update ack
+        //console.log("update _acknowledgedTic: " + data._receivedOnSender);
         sender._acknowledgedTic = data._receivedOnSender;
     }
-    // }
 };
+
+onGetGameState(() => {
+    try {
+        if (game._joinState < JoinState.Sync) {
+            return "";
+        }
+        const len = writeState(game._state, _packetBuffer, 0) << 2;
+        const res = fromByteArray(new Uint8Array(_packetBuffer.buffer, 0, len));
+        console.info("serializing game state #", game._state._tic, "byteLength:", len);
+        return res;
+    } catch (e) {
+        console.warn("error serializing game state", e);
+    }
+});
 
 setPacketHandler((from: ClientID, buffer: ArrayBuffer) => {
     if (_sseState < 3) {
@@ -618,18 +684,16 @@ let disconnectTimes = 0;
 
 const cleaningUpClients = () => {
     for (const [id] of game._clients) {
-        //if (!isChannelOpen(remoteClients.get(id))) {
         if (!remoteClients.has(id)) {
             game._clients.delete(id);
         }
     }
 
-    if (clientId && game._startTic >= 0) {
+    if (clientId && game._joinState >= JoinState.Sync) {
         for (const [id, rc] of remoteClients) {
             if (game._clients.get(id)?._ready && !isPeerConnected(rc)) {
                 if (++disconnectTimes > 60 * 5) {
-                    disconnect();
-                    alert("connection lost");
+                    disconnect("Timeout error: peer can't be connected for given time");
                 }
                 return;
             }
@@ -782,8 +846,8 @@ const updateGameCamera = () => {
         return l.length ? l[((lastFrameTs / 5) | 0) % l.length] : undefined;
     };
     let scale = GAME_CFG._camera._baseScale;
-    let cameraX = gameCamera[0];
-    let cameraY = gameCamera[1];
+    let cameraX = gameCamera._x;
+    let cameraY = gameCamera._y;
     if ((clientId && !gameMode._title) || gameMode._replay) {
         const myPlayer = getMyPlayer();
         const p0 = myPlayer ?? getRandomPlayer();
@@ -805,9 +869,9 @@ const updateGameCamera = () => {
             }
         }
     }
-    gameCamera[0] = lerp(gameCamera[0], cameraX, 0.1);
-    gameCamera[1] = lerp(gameCamera[1], cameraY, 0.1);
-    gameCamera[2] = lerpLog(gameCamera[2], scale / getScreenScale(), 0.05);
+    gameCamera._x = lerp(gameCamera._x, cameraX, 0.1);
+    gameCamera._y = lerp(gameCamera._y, cameraY, 0.1);
+    gameCamera._scale = lerpLog(gameCamera._scale, scale / getScreenScale(), 0.05);
 
     decCameraEffects();
 };
@@ -826,11 +890,14 @@ const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
 const simulateTic = (prediction = false) => {
     const processTicCommands = (tic: number) => {
         const tickEvents: ClientEvent[] = game._localEvents.concat(game._receivedEvents).filter(v => v._tic == tic);
-
         tickEvents.sort((a, b) => a._client - b._client);
         if (!prediction) {
             addReplayTicEvents(tic, tickEvents);
+            if (clientId) {
+                //  console.log("play #", tic, "events:", tickEvents);
+            }
         }
+
         for (const cmd of tickEvents) {
             if (cmd._input !== undefined) {
                 const player = getPlayerByClient(cmd._client);
@@ -842,8 +909,8 @@ const simulateTic = (prediction = false) => {
                     setRandomPosition(p);
 
                     if (clientId == cmd._client) {
-                        gameCamera[0] = p._x / WORLD_SCALE;
-                        gameCamera[1] = p._y / WORLD_SCALE;
+                        gameCamera._x = p._x / WORLD_SCALE;
+                        gameCamera._y = p._y / WORLD_SCALE;
                     }
                     p._hp = GAME_CFG._player._hp;
                     p._sp = GAME_CFG._player._sp;
@@ -868,19 +935,15 @@ const simulateTic = (prediction = false) => {
         a._localStateFlags = 1;
     }
 
-    if (process.env.NODE_ENV === "development") {
-        saveDebugState(cloneStateData(game._state));
-    }
-
     for (const a of game._state._actors[ActorType.Barrel]) {
-        updateActorPhysics(a);
+        updateActorPhysics(a, game._blocks);
         addToGrid(game._barrelsGrid, a);
         a._localStateFlags = 1;
     }
 
     game._hotUsable = undefined;
     for (const item of game._state._actors[ActorType.Item]) {
-        updateActorPhysics(item);
+        updateActorPhysics(item, game._blocks);
         if (!item._animHit) {
             queryGridCollisions(item, game._playersGrid, pickItem);
         }
@@ -901,7 +964,7 @@ const simulateTic = (prediction = false) => {
     for (const bullet of game._state._actors[ActorType.Bullet]) {
         if (bullet._subtype != BulletType.Ray) {
             updateBody(bullet, 0, 0);
-            if (bullet._hp && collideWithBoundsA(bullet)) {
+            if (bullet._hp && (collideWithBoundsA(bullet) || checkTileCollisions(bullet, game._blocks))) {
                 --bullet._hp;
                 addImpactParticles(8, bullet, bullet, bullets[bullet._subtype as BulletType]._color);
             }
@@ -966,15 +1029,6 @@ const simulateTic = (prediction = false) => {
         }
     }
 
-    if (gameMode._bloodRain) {
-        const source = newActor(0);
-        source._x = fxRand(WORLD_BOUNDS_SIZE);
-        source._y = fxRand(WORLD_BOUNDS_SIZE);
-        source._z = fxRand(128) * WORLD_SCALE;
-        source._type = 0;
-        spawnFleshParticles(source, 128, 1);
-    }
-
     if (game._lastAudioTic < game._gameTic) {
         game._lastAudioTic = game._gameTic;
     }
@@ -982,6 +1036,25 @@ const simulateTic = (prediction = false) => {
     game._state._seed = _SEEDS[0];
     game._state._tic = game._gameTic++;
     normalizeStateData(game._state);
+
+    if (process.env.NODE_ENV === "development" && !prediction && clientId) {
+        saveDebugState(cloneStateData(game._state));
+    }
+
+    // local updates
+    if (gameMode._bloodRain) {
+        spawnFleshParticles(
+            {
+                _type: ActorType.Player,
+                _id: 0,
+                _x: fxRand(WORLD_BOUNDS_SIZE),
+                _y: fxRand(WORLD_BOUNDS_SIZE),
+                _z: fxRand(128) * WORLD_SCALE,
+            },
+            128,
+            1,
+        );
+    }
 };
 
 const castRayBullet = (bullet: BulletActor, dx: number, dy: number) => {
@@ -1351,7 +1424,7 @@ const updatePlayer = (player: PlayerActor) => {
     }
 
     const prevVelZ = player._w;
-    updateActorPhysics(player);
+    updateActorPhysics(player, game._blocks);
 
     if (!landed) {
         const isLanded = player._z <= 0 && prevVelZ <= 0;
@@ -1367,7 +1440,7 @@ const updatePlayer = (player: PlayerActor) => {
 
 const beginPrediction = (): boolean => {
     // if (!Const.Prediction || time < 0.001) return false;
-    if (!Const.Prediction || !game._joined) return false;
+    if (!Const.Prediction || game._joinState !== JoinState.Joined) return false;
 
     // global state
     let frames = min(Const.PredictionMax, ((lastFrameTs - game._prevTime) * Const.NetFq) | 0);

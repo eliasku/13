@@ -51,6 +51,9 @@ export const GAME_CFG = {
             _min: 4,
         },
     },
+    _walls: {
+        _initCount: 64,
+    },
     _trees: {
         _initCount: 64,
     },

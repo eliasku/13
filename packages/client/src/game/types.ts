@@ -1,5 +1,7 @@
 import {ClientID} from "@iioi/shared/types.js";
 import {atan2, PI, PI2} from "../utils/math.js";
+import {JoinState} from "./gameState.js";
+import {uint3, uint32, uint4, uint5, uint6, uint8} from "@iioi/shared/int.js";
 
 export const ActorType = {
     Player: 0,
@@ -9,7 +11,7 @@ export const ActorType = {
     // static game objects
     Tree: 4,
 } as const;
-export type ActorType = (typeof ActorType)[keyof typeof ActorType];
+export type ActorType = uint3 | (typeof ActorType)[keyof typeof ActorType];
 
 export const ItemType = {
     Hp: 0,
@@ -44,54 +46,44 @@ export interface Vel {
 }
 
 export interface Actor extends Pos, Vel {
-    /** uint:4 **/
     _type: ActorType;
-    /** uint32 **/
-    _id: number;
+    _id: uint32;
 
     // Item: ItemType subtype
     // Tree: GFX variation
     // Bullet: BulletType subtype
-    // 4-bit
-    /** uint:4 **/
-    _subtype: number;
+    _subtype: uint4;
 
     // Player: reload time
     // Bullet: life-time
     // Item: life-time / 3
-    /** uint8 **/
-    _lifetime: number;
+    _lifetime: uint8;
 
     /**
      * health points [0; 15]
-     * @type uint4
      **/
-    _hp: number;
+    _hp: uint4;
 
     /**
      * shield points [0; 15]
-     * @type uint4
      **/
-    _sp: number;
+    _sp: uint4;
 
     /**
      * generated static variation seed value for animation
-     * @type uint8
      **/
-    _anim0: number;
+    _anim0: uint8;
 
     /**
      * Hit effect. For Items could not be picked up until it reach 0
-     * @type uint5
      **/
-    _animHit: number;
+    _animHit: uint5;
 
     /**
      * local frame-scope state
-     * @type uint32
      * @transient
      **/
-    _localStateFlags: number;
+    _localStateFlags: uint32;
 }
 
 export interface PlayerActor extends Actor {
@@ -100,59 +92,46 @@ export interface PlayerActor extends Actor {
     _client: ClientID;
 
     // Magazines (0..15)
-    // 4 bits
-    _mags: number;
+    _mags: uint4;
 
     // detune counter: 0...32 (max of weapon detune-speed parameter)
-    _detune: number;
+    _detune: uint5;
 
     // 0...63 (max_weapon_clip_reload)
-    // 6 bits
-    _clipReload: number;
+    _clipReload: uint6;
 
     // holding Weapon ID
     // range: 0...15 currently
-    // 4 bits
-    _weapon: number;
-
-    // 4 bits
-    _weapon2: number;
+    _weapon: uint4;
+    _weapon2: uint4;
 
     // 0...63 (max_weapon_clip_size)
-    // 6 bits
-    _clipAmmo: number;
+    _clipAmmo: uint6;
+    _clipAmmo2: uint6;
 
-    // 6 bits
-    _clipAmmo2: number;
-
-    // oh... check down trigger 4 bits
-    _trig: number;
+    // oh... check down trigger
+    _trig: uint4;
 
     // Input buttons
-    // 32-bit
-    _input: number;
+    _input: uint32;
 }
 
 export type BarrelActor = Actor;
 
 export interface BulletActor extends Actor {
     // Bullet: owner ID
-    // 32-bit identifier
     _ownerId: ClientID;
 
     // damage amount
     // range: 0...15 currently
-    // 4 bits
-    _damage: number;
+    _damage: uint4;
 }
 
 export interface ItemActor extends Actor {
     // range: 0...15 currently
-    // 4 bits
-    _itemWeapon: number;
+    _itemWeapon: uint4;
     // 0...63 (max_weapon_clip_size)
-    // 6 bits
-    _itemWeaponAmmo: number;
+    _itemWeaponAmmo: uint6;
 }
 
 export interface Client {
@@ -167,6 +146,8 @@ export interface Client {
     _ts1: number;
     _lag?: number;
 
+    _joinState?: JoinState;
+
     // client starts play my events
     _ready?: boolean;
 
@@ -174,6 +155,7 @@ export interface Client {
     _isPlaying?: boolean;
 
     _startState?: StateData;
+    _loadingState?: boolean;
 }
 
 export interface ClientEvent {
@@ -213,12 +195,12 @@ export const cloneStateData = (stateToCopy: StateData): StateData => ({
         stateToCopy._actors[2].map(a => ({...a})),
         stateToCopy._actors[3].map(a => ({...a})),
     ],
-    _stats: new Map(stateToCopy._stats.entries()),
+    _stats: new Map([...stateToCopy._stats.entries()].map(([k, v]) => [k, {...v}])),
 });
 
 // packet = remote_events[cl.ack + 1] ... remote_events[cl.tic]
 export interface Packet {
-    _sync: number;
+    _joinState: JoinState;
     // confirm the last tic we received from Sender
     _receivedOnSender: number;
     // packet contains info tic and before, 22 bits, for 19 hr of game session
@@ -230,9 +212,6 @@ export interface Packet {
 
     // events are not confirmed
     _events: ClientEvent[];
-    // init state
-    _state?: StateData;
-
     // DEBUG: check current tic seed
     _debug?: PacketDebug;
 }

@@ -60,15 +60,22 @@ export const gameMode: GameMode = {
     _menu: GameMenuState.InGame,
 };
 
+export const JoinState = {
+    Wait: 0,
+    LoadingState: 1,
+    Sync: 2,
+    Joined: 3,
+} as const;
+export type JoinState = (typeof JoinState)[keyof typeof JoinState];
+
 export interface Game {
     _clients: Map<ClientID, Client>;
     _localEvents: ClientEvent[];
     _receivedEvents: ClientEvent[];
 
-    _startTic: number;
+    _joinState: JoinState;
     _gameTic: number;
     _prevTime: number;
-    _joined: boolean;
     _waitToAutoSpawn: boolean;
     _waitToSpawn: boolean;
     _allowedToRespawn: boolean;
@@ -90,10 +97,9 @@ export const game: Game = {
     _clients: new Map<ClientID, Client>(),
     _localEvents: [],
     _receivedEvents: [],
-    _startTic: -1,
+    _joinState: JoinState.Wait,
     _gameTic: 0,
     _prevTime: 0,
-    _joined: false,
     _waitToAutoSpawn: false,
     _waitToSpawn: false,
     _allowedToRespawn: false,
@@ -104,10 +110,7 @@ export const game: Game = {
     _playersGrid: [],
     _barrelsGrid: [],
     _treesGrid: [],
-    //hotUsable:
     _state: newStateData(),
-    //lastState,
-
     _blocks: [],
 };
 
@@ -120,17 +123,18 @@ export const getMinTic = (_tic: number = 1 << 30) => {
     if (gameMode._replay) {
         return game._gameTic;
     }
-    if (!clientId || !game._joined) {
+    if (!clientId) {
+        // || !game._joined) {
         _tic = game._gameTic + Const.InputDelay + (((lastFrameTs - game._prevTime) * Const.NetFq) | 0);
     }
     let clientsTotal = 0;
     for (const [, client] of game._clients) {
-        if (client._isPlaying) {
-            ++clientsTotal;
-            if (_tic > client._tic) {
-                _tic = client._tic;
-            }
+        // if (client._ready) {
+        ++clientsTotal;
+        if (_tic > client._tic) {
+            _tic = client._tic;
         }
+        // }
     }
     if (!clientsTotal) {
         _tic = game._gameTic + (((lastFrameTs - game._prevTime) * Const.NetFq) | 0);

@@ -53,6 +53,9 @@ interface RoomInstance {
     _mapTheme: number;
 }
 
+let _onGetGameState: (from: ClientID) => string | undefined;
+export const onGetGameState = (cb: (from: ClientID) => string | undefined) => (_onGetGameState = cb);
+
 export let _room: RoomInstance | undefined;
 
 export let _sseState = 0;
@@ -81,10 +84,13 @@ export const setUserName = (name?: string) => {
     clientName = setSetting(Setting.Name, name.trim().substring(0, 32).trim());
 };
 
-const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number =>
+const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number => {
     messagesToPost.push([clientId, to, type, call, data]);
+    processMessages();
+    return messagesToPost.length;
+};
 
-const remoteCall = (
+export const remoteCall = (
     to: ClientID,
     type: MessageType,
     data: MessageData,
@@ -96,7 +102,7 @@ const remoteCall = (
 
 type Handler = ((req: Message) => Promise<MessageData>) | ((req: Message) => void);
 
-export const disconnect = () => {
+export const disconnect = (reason?: string) => {
     if (eventSource) {
         console.log("terminate SSE");
         // eventSource.onerror = null;
@@ -108,6 +114,10 @@ export const disconnect = () => {
     clientId = 0;
     _sseState = 0;
     _room = undefined;
+
+    if (reason) {
+        console.error(reason);
+    }
 };
 
 const handleOffer = (rc: RemoteClient, offer: RTCSessionDescriptionInit) =>
@@ -137,19 +147,23 @@ const handlers: Handler[] = [
     (req): void => {
         requireRemoteClient(req[MessageField.Source] as ClientID)._name = req[MessageField.Data] as string;
     },
+    // MessageType.State
+    (req): Promise<string> => Promise.resolve(_onGetGameState?.(req[MessageField.Source]) ?? ""),
 ];
 
 const requestHandler = (req: Message) =>
     (handlers[req[MessageField.Type]](req) as undefined | Promise<MessageData>)?.then(
         // respond to remote client if we have result in call handler
-        data =>
+        data => {
             messagesToPost.push([
                 clientId,
                 req[MessageField.Source],
                 req[MessageField.Type],
                 req[MessageField.Call],
                 data,
-            ]),
+            ]);
+            processMessages();
+        },
     );
 
 export const processMessages = () => {
@@ -159,6 +173,7 @@ export const processMessages = () => {
             .then(response => {
                 messagesToPost = messagesToPost.slice(response);
                 messageUploading = false;
+                processMessages();
             })
             .catch(disconnect);
     }

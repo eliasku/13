@@ -1,5 +1,5 @@
 import {disconnect, remoteClients} from "../../net/messaging.js";
-import {game, gameMode} from "../gameState.js";
+import {game, gameMode, JoinState} from "../gameState.js";
 import {cloneStateData} from "../types.js";
 import {_SEEDS} from "../../utils/rnd.js";
 import {ReplayFile} from "./replayFile.js";
@@ -21,8 +21,7 @@ export const enableReplayMode = (replay: ReplayFile) => {
 export const rewindReplayToStart = () => {
     game._state = cloneStateData(gameMode._replay._state);
     game._localEvents = gameMode._replay._stream.concat();
-    game._startTic = -1;
-    _SEEDS[0] = game._state._seed;
+    game._joinState = JoinState.Wait;
     game._lastInputTic = 0;
     game._lastInputCmd = 0;
     game._lastAudioTic = 0;

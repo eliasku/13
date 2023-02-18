@@ -1,6 +1,6 @@
 import {img} from "../assets/gfx.js";
 import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d.js";
-import {Actor, Pos, Vel} from "./types.js";
+import {Actor, ActorType, Pos, Vel} from "./types.js";
 import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy.js";
 import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math.js";
 import {_SEEDS, random1, random1i, random1n} from "../utils/rnd.js";
@@ -216,7 +216,12 @@ const KID_MODE_COLORS = [
 
 const MATURE_BLOOD_COLORS = [parseRGB("#FF0000")];
 
-export const addFleshParticles = (amount: number, actor: Actor, explVel: number, vel?: Vel) => {
+export const addFleshParticles = (
+    amount: number,
+    actor: Pos & {_id: number; _type: ActorType},
+    explVel: number,
+    vel?: Vel,
+) => {
     const bloodMode = settings[Setting.Blood];
     if (!bloodMode) return;
     const colors = bloodMode === BloodMode.Paint ? KID_MODE_COLORS : MATURE_BLOOD_COLORS;
@@ -246,7 +251,12 @@ export const addFleshParticles = (amount: number, actor: Actor, explVel: number,
     }
 };
 
-export const spawnFleshParticles = (actor: Actor, expl: number, amount: number, vel?: Vel) => {
+export const spawnFleshParticles = (
+    actor: Pos & {_id: number; _type: ActorType},
+    expl: number,
+    amount: number,
+    vel?: Vel,
+) => {
     addFleshParticles(amount, actor, expl, vel);
 };
 

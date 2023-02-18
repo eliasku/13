@@ -196,7 +196,7 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
     const invScale = 1 / fa._scale;
     const metrics = ctx.measureText(character);
     const bb = readMetrics(fa, metrics);
-    const padding = fa._border + fa._strokeWidth * fa._scale;
+    const padding = (fa._border + 2 * fa._strokeWidth * fa._scale) | 0;
     const w = bb._right + bb._left + 2 * padding;
     const h = bb._descent + bb._ascent + 2 * padding;
     let x = fa._nextSheetX;

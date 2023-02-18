@@ -1,6 +1,11 @@
 ## 1.0.18
 
 - Add draft walls
+- Enable High-DPI by default
+- More padding for dynamic font
+- Autoplay continue attacks if low-hp and no hp items
+- Rework room join flow
+- Add top-state out of sync disconnect for Production mode
 
 ## 1.0.17
 

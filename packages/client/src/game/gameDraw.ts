@@ -41,20 +41,14 @@ import {
     getMyPlayer,
     getNameByClientId,
     getPlayerByClient,
+    JoinState,
     lastFrameTs,
 } from "./gameState.js";
 import {drawText, drawTextAligned, fnt} from "../graphics/font.js";
 import {Img} from "../assets/img.js";
 import {clientId, clientName, isPeerConnected, remoteClients} from "../net/messaging.js";
 import {drawOpaqueParticles, drawParticleShadows, drawSplatsOpaque, drawTextParticles} from "./particles.js";
-import {
-    cameraFeedback,
-    cameraFeedbackX,
-    cameraFeedbackY,
-    cameraShake,
-    gameCamera,
-    getScreenScale,
-} from "@iioi/client/game/camera.js";
+import {gameCamera, getScreenScale} from "@iioi/client/game/camera.js";
 import {beginFogRender, drawFogObjects, drawFogPoint, fogTexture} from "@iioi/client/game/fog.js";
 import {GL} from "@iioi/client/graphics/gl.js";
 import {termPrint, ui_renderNormal, ui_renderOpaque} from "@iioi/client/graphics/gui.js";
@@ -89,8 +83,8 @@ export const drawCrosshair = (player: PlayerActor | undefined, screenScale: numb
         const img = fnt[0]._textureBoxT1;
         const W = gl.drawingBufferWidth;
         const H = gl.drawingBufferHeight;
-        const x = ((lookAtX - gameCamera[0]) / gameCamera[2] + W / 2) / screenScale;
-        const y = ((lookAtY - gameCamera[1]) / gameCamera[2] + H / 2) / screenScale;
+        const x = ((lookAtX - gameCamera._x) / gameCamera._scale + W / 2) / screenScale;
+        const y = ((lookAtY - gameCamera._y) / gameCamera._scale + H / 2) / screenScale;
         const t = lastFrameTs;
         // const x = lookAtX;
         // const y = lookAtY;
@@ -406,11 +400,11 @@ const collectVisibleActors = (...lists: Actor[][]) => {
     const pad = (2 * OBJECT_RADIUS) / WORLD_SCALE;
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
-    const invScale = gameCamera[2] / 2;
-    const l = -invScale * W + gameCamera[0] - pad;
-    const t = -invScale * H + gameCamera[1] - pad - 128;
-    const r = invScale * W + gameCamera[0] + pad;
-    const b = invScale * H + gameCamera[1] + pad + 128;
+    const invScale = gameCamera._scale / 2;
+    const l = -invScale * W + gameCamera._x - pad;
+    const t = -invScale * H + gameCamera._y - pad - 128;
+    const r = invScale * W + gameCamera._x + pad;
+    const b = invScale * H + gameCamera._y + pad + 128;
     for (const list of lists) {
         for (const a of list) {
             const x = a._x / WORLD_SCALE;
@@ -434,7 +428,7 @@ export const drawGame = () => {
         game._state._actors[ActorType.Item],
     );
     if (gameMode._title) {
-        drawFogPoint(gameCamera[0], gameCamera[1], 3 + fxRandom(1), 1);
+        drawFogPoint(gameCamera._x, gameCamera._y, 3 + fxRandom(1), 1);
     }
     flush();
 
@@ -449,14 +443,17 @@ export const drawGame = () => {
     ui_renderOpaque();
     flush();
 
-    beginRenderToMain(gameCamera[0], gameCamera[1], 0.5, 0.5, 0.0, 1 / gameCamera[2]);
+    beginRenderToMain(gameCamera._x, gameCamera._y, 0.5, 0.5, 0.0, 1 / gameCamera._scale);
 
     {
-        const cameraCenterX = gameCamera[0] + (fxRandomNorm(cameraShake / 5) | 0) + cameraFeedbackX * cameraFeedback;
-        const cameraCenterY = gameCamera[1] + (fxRandomNorm(cameraShake / 5) | 0) + cameraFeedbackY * cameraFeedback;
-        const viewScale = 1 / gameCamera[2];
-        let fx = fxRandomNorm(cameraShake / (8 * 50));
-        let fz = fxRandomNorm(cameraShake / (8 * 50));
+        const shake = gameCamera._shake;
+        const offsetX = gameCamera._feedback * gameCamera._feedbackX + (fxRandomNorm(shake / 5) | 0);
+        const offsetY = gameCamera._feedback * gameCamera._feedbackX + (fxRandomNorm(shake / 5) | 0);
+        const cameraCenterX = gameCamera._x + offsetX;
+        const cameraCenterY = gameCamera._y + offsetY;
+        const viewScale = 1 / gameCamera._scale;
+        let fx = fxRandomNorm(shake / (8 * 50));
+        let fz = fxRandomNorm(shake / (8 * 50));
         fx += gameMode._tiltCamera * Math.sin(lastFrameTs);
         fz += gameMode._tiltCamera * Math.cos(lastFrameTs);
         setupWorldCameraMatrix(cameraCenterX, cameraCenterY, viewScale, fx, fz);
@@ -512,10 +509,10 @@ export const drawGame = () => {
             const scale = 1 + i / 100;
             const angle = (a * i) / 100;
             const i4 = i / 4;
-            const y1 = gameCamera[1] + i4;
+            const y1 = gameCamera._y + i4;
             drawMeshSpriteUp(
                 img[Img.logo_title],
-                gameCamera[0] + fxRandomNorm(i4),
+                gameCamera._x + fxRandomNorm(i4),
                 y1 + 40 + fxRandomNorm(i4),
                 40,
                 angle,
@@ -606,7 +603,7 @@ const getWeaponInfoHeader = (wpn: number, ammo: number, reload = 0): string => {
 
 const printStatus = () => {
     if (clientId) {
-        if (game._joined) {
+        if (game._joinState === JoinState.Joined) {
             const p0 = getMyPlayer();
             if (p0) {
                 let str = "";
@@ -670,10 +667,10 @@ const printStatus = () => {
 const drawTiles = (blocks: number[]) => {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
-    const cameraX = gameCamera[0];
-    const cameraY = gameCamera[1];
-    const invScale = gameCamera[2] / 2;
-    // const invScale = gameCamera[2] / 4;
+    const cameraX = gameCamera._x;
+    const cameraY = gameCamera._y;
+    const invScale = gameCamera._scale / 2;
+    // const invScale = gameCamera._scale / 4;
     const sz = TILE_SIZE;
     const height = 14;
     const l = max(0, (-invScale * W + cameraX) >> TILE_SIZE_BITS);
@@ -697,10 +694,10 @@ const drawTiles = (blocks: number[]) => {
 const drawTilesShadows = (blocks: number[]) => {
     const W = gl.drawingBufferWidth;
     const H = gl.drawingBufferHeight;
-    const cameraX = gameCamera[0];
-    const cameraY = gameCamera[1];
-    const invScale = gameCamera[2] / 2;
-    // const invScale = gameCamera[2] / 4;
+    const cameraX = gameCamera._x;
+    const cameraY = gameCamera._y;
+    const invScale = gameCamera._scale / 2;
+    // const invScale = gameCamera._scale / 4;
     const sz = TILE_SIZE;
     const l = max(0, (-invScale * W + cameraX) >> TILE_SIZE_BITS);
     const t = max(0, (-invScale * H + cameraY) >> TILE_SIZE_BITS);

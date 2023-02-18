@@ -60,8 +60,8 @@ export const updateControls = (player: PlayerActor) => {
     const py = (player._y - player._z) / WORLD_SCALE - 10;
 
     if (mouse._x >= 0 && mouse._x < W && mouse._y >= 0 && mouse._y < H) {
-        lookAtX = (mouse._x - W / 2) * gameCamera[2] + gameCamera[0];
-        lookAtY = (mouse._y - H / 2) * gameCamera[2] + gameCamera[1];
+        lookAtX = (mouse._x - W / 2) * gameCamera._scale + gameCamera._x;
+        lookAtY = (mouse._y - H / 2) * gameCamera._scale + gameCamera._y;
         viewX = lookAtX - px;
         viewY = lookAtY - py;
     } else {
@@ -90,7 +90,7 @@ export const updateControls = (player: PlayerActor) => {
     vpad[3]._hidden = !couldBeReloadedManually(player);
     vpad[4]._hidden = !couldSwapWeaponSlot(player);
     if (updateVirtualPad()) {
-        const k = gameCamera[2];
+        const k = gameCamera._scale;
         let control = vpad[0];
         let pp = control._pointer;
         moveX = pp ? (pp._x - pp._startX) * k : 0;

@@ -4,55 +4,61 @@ import {GAME_CFG} from "@iioi/client/game/config.js";
 import {WeaponConfig} from "@iioi/client/game/data/weapons.js";
 import {WORLD_SCALE} from "@iioi/client/assets/params.js";
 
-const camera0 = [0, 0, 1, 0, 0, 0, 0];
+export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG._camera._size;
 
-export const gameCamera: number[] = [0, 0, 1];
+export interface GameCamera {
+    _x: number;
+    _y: number;
+    _scale: number;
+    // 0...50
+    _shake: number;
+    // 0...5
+    _feedback: number;
+    _feedbackX: number;
+    _feedbackY: number;
+}
 
-// 0...50
-export let cameraShake = 0;
+const newGameCamera = () => ({
+    _x: 0,
+    _y: 0,
+    _scale: 1,
+    _shake: 0,
+    _feedback: 0,
+    _feedbackX: 0,
+    _feedbackY: 0,
+});
 
-// 0...5
-export let cameraFeedback = 0;
-export let cameraFeedbackX = 0;
-export let cameraFeedbackY = 0;
-
-export const saveGameCamera = () => {
-    camera0[0] = gameCamera[0];
-    camera0[1] = gameCamera[1];
-    camera0[2] = gameCamera[2];
-    camera0[3] = cameraShake;
-    camera0[4] = cameraFeedback;
-    camera0[5] = cameraFeedbackX;
-    camera0[6] = cameraFeedbackY;
+const copyGameCamera = (dest: GameCamera, src: GameCamera) => {
+    dest._x = src._x;
+    dest._y = src._y;
+    dest._scale = src._scale;
+    dest._shake = src._shake;
+    dest._feedback = src._feedback;
+    dest._feedbackX = src._feedbackX;
+    dest._feedbackY = src._feedbackY;
 };
 
-export const restoreGameCamera = () => {
-    gameCamera[0] = camera0[0];
-    gameCamera[1] = camera0[1];
-    gameCamera[2] = camera0[2];
-    cameraShake = camera0[3];
-    cameraFeedback = camera0[4];
-    cameraFeedbackX = camera0[5];
-    cameraFeedbackY = camera0[6];
-};
+export const gameCamera = newGameCamera();
+const camera0 = newGameCamera();
+
+export const saveGameCamera = () => copyGameCamera(camera0, gameCamera);
+
+export const restoreGameCamera = () => copyGameCamera(gameCamera, camera0);
 
 export const decCameraEffects = () => {
-    cameraShake = dec1(cameraShake);
-    cameraFeedback = dec1(cameraFeedback);
+    gameCamera._shake = dec1(gameCamera._shake);
+    gameCamera._feedback = dec1(gameCamera._feedback);
 };
 
 export const feedbackCameraShot = (weapon: WeaponConfig, dx: number, dy: number) => {
-    cameraShake = max(cameraShake, weapon._cameraShake);
+    gameCamera._shake = max(gameCamera._shake, weapon._cameraShake);
     const feedback = 20 * weapon._cameraFeedback;
-    cameraFeedbackX = feedback * dx;
-    cameraFeedbackY = feedback * dy;
-    cameraFeedback += 3;
+    gameCamera._feedbackX = feedback * dx;
+    gameCamera._feedbackY = feedback * dy;
+    gameCamera._feedback += 3;
 };
 
 export const feedbackCameraExplosion = (shake: number, x: number, y: number) => {
-    shake *= 1 - hypot(gameCamera[0] - x / WORLD_SCALE, gameCamera[1] - y / WORLD_SCALE) / 256;
-    console.log(shake);
-    cameraShake = max(cameraShake, shake | 0);
+    shake *= 1 - hypot(gameCamera._x - x / WORLD_SCALE, gameCamera._y - y / WORLD_SCALE) / 256;
+    gameCamera._shake = max(gameCamera._shake, shake | 0);
 };
-
-export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG._camera._size;

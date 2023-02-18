@@ -16,7 +16,7 @@ declare const PokiSDK:
       }
     | undefined;
 
-const sdk: typeof PokiSDK | undefined = typeof PokiSDK !== "undefined" ? PokiSDK : undefined;
+const sdk: typeof PokiSDK | undefined = (typeof PokiSDK !== "undefined" && process.env.NODE_ENV === "production") ? PokiSDK : undefined;
 let adblock = false;
 export const poki = {
     _init: async () => {

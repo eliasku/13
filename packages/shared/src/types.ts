@@ -1,6 +1,8 @@
+import {uint32} from "./int.js";
+
 // client ID is positive for all real users.
 // NPC are using entity identifier, negative (-entity.id)
-export type ClientID = number;
+export type ClientID = uint32;
 export type CallID = number;
 export type MessageData = unknown;
 export type MessageTypeID = number;
@@ -31,6 +33,7 @@ export const MessageType = {
     RtcOffer: 1,
     RtcCandidate: 2,
     Name: 3,
+    State: 4,
 } as const;
 export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 

@@ -67,7 +67,12 @@ playerBot.update = (state: StateData, player: PlayerActor): number => {
         } else {
             nothingToDo = true;
         }
-    } else {
+    }
+    else {
+        nothingToDo = true;
+    }
+    if (nothingToDo) {
+        nothingToDo = false;
         if (player._weapon) {
             if (hasAmmo(player)) {
                 const players = state._actors[ActorType.Player];
@@ -127,7 +132,7 @@ playerBot.update = (state: StateData, player: PlayerActor): number => {
                 let drop = 0;
                 if (
                     dist < actorsConfig[ActorType.Item]._radius + actorsConfig[ActorType.Player]._radius &&
-                    !(player._trig & ControlsFlag.DownEvent_Drop)
+                    (player._trig & ControlsFlag.DownEvent_Drop) === 0
                 ) {
                     drop = ControlsFlag.Drop;
                 }
