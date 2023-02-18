@@ -96,10 +96,10 @@ export const openReplayFile = (onSuccess: (replay: ReplayFile) => void) => {
     const input = document.createElement("input");
     input.type = "file";
     input.onchange = () => {
-        if (input.files.length > 0) {
+        if (input.files && input.files.length > 0) {
             const reader = new FileReader();
             reader.onload = e => {
-                const result = e.target.result;
+                const result = e.target?.result;
                 if (result instanceof ArrayBuffer) {
                     const replay = readReplayFile(result);
                     if (validateReplayFile(replay)) {
