@@ -1,5 +1,18 @@
 # @iioi/client
 
+## 1.0.18
+
+### Patch Changes
+
+-   e37efd7: Add draft walls
+-   04a4252: arrow functions and const inline
+-   eee2d1a: More padding for dynamic font
+-   eee2d1a: Enable High-DPI by default
+-   eee2d1a: rework joining room flow, enable sync top-state disconnects
+-   Updated dependencies [04a4252]
+-   Updated dependencies [eee2d1a]
+    -   @iioi/shared@1.0.15
+
 ## 1.0.17
 
 ### Patch Changes
