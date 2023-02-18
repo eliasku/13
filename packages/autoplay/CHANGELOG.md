@@ -1,5 +1,12 @@
 # @iioi/autoplay
 
+## 1.0.18
+
+### Patch Changes
+
+-   eee2d1a: Autoplay continue attacks if low-hp and no hp items
+    -   @iioi/bot-api@1.0.18
+
 ## 1.0.17
 
 ### Patch Changes

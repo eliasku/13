@@ -1,6 +1,6 @@
 {
     "name": "@iioi/sprite",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "description": "Helpers to make sprite assets for iioi game",
     "private": true,
     "scripts": {
