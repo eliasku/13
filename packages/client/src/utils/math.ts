@@ -31,3 +31,5 @@ export const reach = (t0: number, t1: number, v: number): number => {
     }
     return t0;
 };
+
+export const sqrLength3 = (x: number, y: number, z: number) => x * x + y * y + z * z;

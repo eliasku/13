@@ -1,10 +1,12 @@
-import {Actor, ActorType, ControlsFlag, PlayerActor, Pos, Vel} from "./types.js";
+import {Actor, ActorType, BulletActor, ControlsFlag, PlayerActor, Pos, Vel} from "./types.js";
 import {rand} from "../utils/rnd.js";
-import {clamp, cos, hypot, max, min, reach, sin, sqrt} from "../utils/math.js";
+import {clamp, cos, hypot, max, min, reach, sin, sqrLength3, sqrt} from "../utils/math.js";
 import {actorsConfig, OBJECT_RADIUS} from "./data/world.js";
 import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {GAME_CFG} from "./config.js";
 import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
+import {testRayWithSphere} from "../utils/collision/collision.js";
+import {BulletType} from "./data/bullets.js";
 
 export const setRandomPosition = (actor: Actor) => {
     actor._x = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);
@@ -121,7 +123,6 @@ export const addPos = (to: Pos, x: number, y: number, z: number, scale = 1) => {
     to._z += scale * z;
 };
 
-export const sqrLength3 = (x: number, y: number, z: number) => x * x + y * y + z * z;
 export const sqrDistXY = (a: Actor, b: Actor) => {
     const dx = a._x - b._x;
     const dy = a._y - b._y;
@@ -150,13 +151,27 @@ export const checkBodyCollision = (a: Actor, b: Actor) => {
     }
 };
 
-export const testRayWithSphere = (from: Actor, target: Actor, dx: number, dy: number): boolean => {
-    const Lx = target._x - from._x;
-    const Ly = target._y - from._y;
-    const len = Lx * dx + Ly * dy;
-    const props = actorsConfig[target._type];
-    const R = props._radius;
-    return len >= 0 && sqrLength3(Lx - dx * len, Ly - dy * len, target._z + props._height - from._z) <= R * R;
+export const testRayActorWithSphereActor = (from: Actor, target: Actor, dx: number, dy: number): boolean => {
+    return raycastSphereActor(from._x, from._y, from._z, dx, dy, 0.0, target) >= 0.0;
+    // const Lx = target._x - from._x;
+    // const Ly = target._y - from._y;
+    // const len = Lx * dx + Ly * dy;
+    // const props = actorsConfig[target._type];
+    // const R = props._radius;
+    // return len >= 0 && sqrLength3(Lx - dx * len, Ly - dy * len, target._z + props._height - from._z) <= R * R;
+};
+
+export const raycastSphereActor = (
+    x: number,
+    y: number,
+    z: number,
+    dx: number,
+    dy: number,
+    dz: number,
+    actor: Actor,
+): number => {
+    const props = actorsConfig[actor._type];
+    return testRayWithSphere(x, y, z, dx, dy, dz, actor._x, actor._y, actor._z + props._height, props._radius);
 };
 
 export const roundActors = (list: Actor[]) => {

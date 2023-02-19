@@ -29,7 +29,14 @@ import {atan2, clamp, cos, hypot, max, min, PI, PI2, sin, TO_RAD} from "../utils
 import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4.js";
 import {weapons} from "./data/weapons.js";
 import {getLumaColor32, RGB} from "../utils/utils.js";
-import {actorsConfig, ANIM_HIT_MAX, BULLET_RADIUS, OBJECT_RADIUS, PLAYER_HANDS_PX_Z} from "./data/world.js";
+import {
+    actorsConfig,
+    ANIM_HIT_MAX,
+    BULLET_RADIUS,
+    OBJECT_RADIUS,
+    PLAYER_HANDS_PX_Z,
+    PLAYER_HANDS_Z,
+} from "./data/world.js";
 import {Const, GAME_CFG} from "./config.js";
 import {bullets, BulletType} from "./data/bullets.js";
 import {fxRandElement, fxRandom, fxRandomNorm} from "../utils/rnd.js";
@@ -59,6 +66,7 @@ import {drawMiniMap} from "@iioi/client/game/minimap.js";
 import {stats} from "@iioi/client/utils/fpsMeter.js";
 import {ClientID} from "@iioi/shared/types.js";
 import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
+import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -198,13 +206,20 @@ const drawBullet = (bullet: BulletActor) => {
     const type = bullet._subtype as BulletType;
     const bulletData = bullets[type];
     const color = fxRandElement(bulletData._color);
-    const longing = bulletData._length;
-    const longing2 = bulletData._lightLength;
+    let longing = bulletData._length;
+    let longingH = bulletData._length / 2;
+    let longing2 = bulletData._lightLength;
     const sz = bulletData._size + (bulletData._pulse * sin(32 * lastFrameTs + bullet._anim0)) / 2;
+    if (bullet._subtype === BulletType.Ray) {
+        const dist = hypot(bullet._x1 - bullet._x, bullet._y1 - bullet._y) / WORLD_SCALE;
+        longing = dist / sz;
+        longingH = dist / sz;
+        longing2 = dist / 2;
+    }
     setDrawZ(z - 0.1);
     drawMeshSprite(img[bulletData._images[0]], x, y, a, sz * longing, sz, 0.1, 0xffffff, 1);
     setDrawZ(z);
-    drawMeshSprite(img[bulletData._images[1]], x, y, a, (sz * longing) / 2, sz / 2, 1, color);
+    drawMeshSprite(img[bulletData._images[1]], x, y, a, sz * longingH, sz / 2, 1, color);
     setDrawZ(z + 0.1);
     drawMeshSprite(img[bulletData._images[2]], x, y, a, 2 * longing2, 2);
 };
@@ -353,14 +368,61 @@ const drawPlayer = (p: PlayerActor): void => {
     const x = p._x / WORLD_SCALE;
     const y = p._y / WORLD_SCALE;
 
-    if (p._client > 0 && p._client !== clientId) {
-        let name = getNameByClientId(p._client);
-        if (process.env.NODE_ENV === "development") {
-            name = (name ?? "") + " #" + p._client;
-        }
-        if (name) {
-            setDrawZ(32 + p._z / WORLD_SCALE);
-            drawTextAligned(fnt[0], name, 6, x, y + 2);
+    if (p._client > 0) {
+        if (p._client !== clientId) {
+            let name = getNameByClientId(p._client);
+            if (process.env.NODE_ENV === "development") {
+                name = (name ?? "") + " #" + p._client;
+            }
+            if (name) {
+                setDrawZ(32 + p._z / WORLD_SCALE);
+                drawTextAligned(fnt[0], name, 6, x, y + 2);
+            }
+        } else {
+            if (p._weapon) {
+                const weapon = weapons[p._weapon];
+                if (weapon._laserSightColor) {
+                    const color = weapon._laserSightColor;
+                    const lookAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
+                    const dx = cos(lookAngle);
+                    const dy = sin(lookAngle);
+                    const x = p._x + dx * WORLD_SCALE * weapon._offset;
+                    const y = p._y + dy * WORLD_SCALE * weapon._offset;
+                    const z = p._z + actorsConfig[p._type]._height + PLAYER_HANDS_Z - 12 * WORLD_SCALE;
+
+                    const hits = RAYCAST_HITS;
+                    raycastWorld(x, y, z, dx, dy, 0, hits, p._client);
+                    if (hits._hasHits) {
+                        const hit0 = hits._hits[0];
+                        setDrawZ(z / WORLD_SCALE);
+                        drawMeshSprite(
+                            img[Img.box_l],
+                            x / WORLD_SCALE,
+                            y / WORLD_SCALE,
+                            lookAngle,
+                            hit0._t / WORLD_SCALE,
+                            1 + fxRandom(),
+                            0.2,
+                            color,
+                            1,
+                            color,
+                        );
+                        setDrawZ((hits._z + hit0._t * hits._dz) / WORLD_SCALE);
+                        drawMeshSprite(
+                            img[Img.circle_4],
+                            (hits._x + hit0._t * hits._dx) / WORLD_SCALE,
+                            (hits._y + hit0._t * hits._dy) / WORLD_SCALE,
+                            lookAngle,
+                            fxRandom(),
+                            fxRandom(),
+                            0.5,
+                            color,
+                            1,
+                            color,
+                        );
+                    }
+                }
+            }
         }
     }
 };

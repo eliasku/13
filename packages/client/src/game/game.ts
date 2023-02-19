@@ -85,7 +85,7 @@ import {
     reflectVelocity,
     setRandomPosition,
     testIntersection,
-    testRayWithSphere,
+    testRayActorWithSphereActor,
     updateActorPhysics,
     updateAnim,
     updateBody,
@@ -141,6 +141,7 @@ import {addReplayTicEvents, beginRecording} from "@iioi/client/game/replay/recor
 import {runReplayTics} from "@iioi/client/game/replay/viewer.js";
 import {TILE_MAP_STRIDE, TILE_SIZE_BITS} from "./tilemap.js";
 import {fromByteArray, toByteArray} from "@iioi/shared/base64.js";
+import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -1059,17 +1060,17 @@ const simulateTic = (prediction = false) => {
 
 const castRayBullet = (bullet: BulletActor, dx: number, dy: number) => {
     for (const a of game._state._actors[ActorType.Player]) {
-        if (a._client - bullet._ownerId && testRayWithSphere(bullet, a, dx, dy)) {
+        if (a._client - bullet._ownerId && testRayActorWithSphereActor(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
     }
     for (const a of game._state._actors[ActorType.Barrel]) {
-        if (testRayWithSphere(bullet, a, dx, dy)) {
+        if (testRayActorWithSphereActor(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
     }
     for (const a of game._trees) {
-        if (testRayWithSphere(bullet, a, dx, dy)) {
+        if (testRayActorWithSphereActor(bullet, a, dx, dy)) {
             hitWithBullet(a, bullet);
         }
     }
@@ -1405,7 +1406,38 @@ const updatePlayer = (player: PlayerActor) => {
                         addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
                         pushActor(bullet);
                         if (weapon._bulletType == BulletType.Ray) {
-                            castRayBullet(bullet, dx, dy);
+                            // castRayBullet(bullet, dx, dy);
+                            const hits = RAYCAST_HITS;
+                            raycastWorld(
+                                bullet._x,
+                                bullet._y,
+                                bullet._z,
+                                bullet._u,
+                                bullet._v,
+                                bullet._w,
+                                hits,
+                                bullet._ownerId,
+                            );
+                            for (const hit of hits._hits) {
+                                bullet._x1 = hits._x + hit._t * hits._dx;
+                                bullet._y1 = hits._y + hit._t * hits._dy;
+                                addImpactParticles(
+                                    8,
+                                    {
+                                        _x: bullet._x1,
+                                        _y: bullet._y1,
+                                        _z: bullet._z,
+                                        _type: bullet._type,
+                                    },
+                                    bullet,
+                                    bullets[bullet._subtype as BulletType]._color,
+                                );
+                                if (hit._type === 2 && hit._actor) {
+                                    hitWithBullet(hit._actor, bullet);
+                                } else {
+                                    break;
+                                }
+                            }
                             bullet._damage = 0;
                         }
                     }

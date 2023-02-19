@@ -125,6 +125,10 @@ export interface BulletActor extends Actor {
     // damage amount
     // range: 0...15 currently
     _damage: uint4;
+
+    // end of ray projectile (just visuals)
+    _x1?: number;
+    _y1?: number;
 }
 
 export interface ItemActor extends Actor {

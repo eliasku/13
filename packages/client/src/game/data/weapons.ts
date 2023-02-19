@@ -38,6 +38,7 @@ export interface WeaponConfig {
 
     // value affects movement speed, jump velocity
     _moveWeightK: number;
+    _laserSightColor: number;
 }
 
 const newWeapon = (): WeaponConfig => ({
@@ -69,6 +70,7 @@ const newWeapon = (): WeaponConfig => ({
     _ai_shootDistanceMin: 0,
     _ai_shootDistanceMax: 0xffffffff,
     _moveWeightK: 1.0,
+    _laserSightColor: 0,
 });
 
 const createArmWeapon = (): WeaponConfig => {
@@ -105,6 +107,7 @@ const createGunWeapon = (): WeaponConfig => {
     w._ai_shootDistanceMin = 24 * WORLD_SCALE;
     w._ai_shootDistanceMax = 256 * WORLD_SCALE;
     w._moveWeightK = 0.8;
+    w._laserSightColor = 0xff0000;
     return w;
 };
 
@@ -162,7 +165,7 @@ weapons[i]._name = "Automatic Gun";
 weapons[i]._reloadTime = 5;
 weapons[i]._angleSpread = 0.25;
 weapons[i]._kickBack = 20;
-weapons[i]._offset = 20;
+//weapons[i]._offset = 16;
 weapons[i]._detuneSpeed = 16;
 weapons[i]._cameraFeedback = 0.02;
 

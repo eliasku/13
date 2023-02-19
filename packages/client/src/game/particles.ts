@@ -357,7 +357,7 @@ export const updateMapTexture = (time: number) => {
     }
 };
 
-export const addImpactParticles = (amount: number, actor: Actor, vel: Vel, colors: number[]) => {
+export const addImpactParticles = (amount: number, actor: Pos & {_type: ActorType}, vel: Vel, colors: number[]) => {
     amount = (amount * settings[Setting.Particles]) | 0;
     while (amount--) {
         const particle = newParticle();

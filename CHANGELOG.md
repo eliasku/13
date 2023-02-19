@@ -1,3 +1,7 @@
+## 1.0.19
+
+- Laser sight for guns, walls and bounds stop rail-gun ray
+
 ## 1.0.18
 
 - Add draft walls
