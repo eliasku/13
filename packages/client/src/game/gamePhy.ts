@@ -5,6 +5,7 @@ import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {testRayWithAABB} from "../utils/collision/collision.js";
 import {sqrLength3, sqrt} from "../utils/math.js";
 import {TILE_MAP_STRIDE, TILE_SIZE} from "./tilemap.js";
+import {TRACE_HIT, traceRay} from "../utils/collision/fastVoxelRaycast.js";
 
 export interface RaycastHit {
     _t: number;
@@ -111,35 +112,23 @@ export const raycastWorld = (
         }
     }
     {
-        for (let cy = 0; cy < TILE_MAP_STRIDE; ++cy) {
-            for (let cx = 0; cx < TILE_MAP_STRIDE; ++cx) {
-                const b = game._blocks[cy * TILE_MAP_STRIDE + cx];
-                if (b) {
-                    const l = cx * TILE_SIZE * WORLD_SCALE;
-                    const t = cy * TILE_SIZE * WORLD_SCALE;
-                    const d = testRayWithAABB(
-                        x,
-                        y,
-                        z,
-                        dx,
-                        dy,
-                        dz,
-                        l,
-                        t,
-                        l + TILE_SIZE * WORLD_SCALE,
-                        t + TILE_SIZE * WORLD_SCALE,
-                        0,
-                        TILE_SIZE * WORLD_SCALE,
-                    );
-                    if (d >= 0) {
-                        has |= 4;
-                        hits._hits.push({
-                            _type: 4,
-                            _t: d,
-                        });
-                    }
-                }
-            }
+        const maxDistance = boundsDist >= 0 ? boundsDist : WORLD_BOUNDS_SIZE * 2.5;
+        const d = traceRay(
+            game._blocks,
+            TILE_MAP_STRIDE,
+            x / (TILE_SIZE * WORLD_SCALE),
+            y / (TILE_SIZE * WORLD_SCALE),
+            dx,
+            dy,
+            maxDistance / (TILE_SIZE * WORLD_SCALE),
+            TRACE_HIT,
+        );
+        if (d >= 0) {
+            has |= 4;
+            hits._hits.push({
+                _type: 4,
+                _t: d * TILE_SIZE * WORLD_SCALE,
+            });
         }
     }
     hits._hasHits = has;

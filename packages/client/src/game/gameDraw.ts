@@ -67,6 +67,7 @@ import {stats} from "@iioi/client/utils/fpsMeter.js";
 import {ClientID} from "@iioi/shared/types.js";
 import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
 import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
+import {TRACE_HIT, TraceHit, traceRay} from "../utils/collision/fastVoxelRaycast.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -389,6 +390,55 @@ const drawPlayer = (p: PlayerActor): void => {
                     const x = p._x + dx * WORLD_SCALE * weapon._offset;
                     const y = p._y + dy * WORLD_SCALE * weapon._offset;
                     const z = p._z + actorsConfig[p._type]._height + PLAYER_HANDS_Z - 12 * WORLD_SCALE;
+
+                    if (getDevFlag(SettingFlag.DevShowCollisionInfo)) {
+                        traceRay(
+                            game._blocks,
+                            TILE_MAP_STRIDE,
+                            x / (TILE_SIZE * WORLD_SCALE),
+                            y / (TILE_SIZE * WORLD_SCALE),
+                            dx,
+                            dy,
+                            (WORLD_BOUNDS_SIZE * 2.5) / (TILE_SIZE * WORLD_SCALE),
+                            TRACE_HIT,
+                        );
+
+                        setDrawZ(0.1);
+                        for (let i = 0; i < TRACE_HIT._traversed.length; i += 2) {
+                            const tx = TRACE_HIT._traversed[i];
+                            const ty = TRACE_HIT._traversed[i + 1];
+                            drawMeshSprite(
+                                img[Img.box_lt],
+                                tx * TILE_SIZE,
+                                ty * TILE_SIZE,
+                                0,
+                                TILE_SIZE,
+                                TILE_SIZE,
+                                0.5,
+                                0x0000ff,
+                            );
+                        }
+                        drawMeshSprite(
+                            img[Img.circle_4],
+                            TRACE_HIT._x * TILE_SIZE,
+                            TRACE_HIT._y * TILE_SIZE,
+                            0,
+                            0.5,
+                            0.5,
+                            0.5,
+                            0xffff00,
+                        );
+                        drawMeshSprite(
+                            img[Img.box],
+                            TRACE_HIT._x * TILE_SIZE + TRACE_HIT._nx * 4,
+                            TRACE_HIT._y * TILE_SIZE + TRACE_HIT._ny * 4,
+                            0,
+                            2,
+                            2,
+                            0.5,
+                            0xffff00,
+                        );
+                    }
 
                     const hits = RAYCAST_HITS;
                     raycastWorld(x, y, z, dx, dy, 0, hits, p._client);

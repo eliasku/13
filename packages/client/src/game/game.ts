@@ -85,7 +85,6 @@ import {
     reflectVelocity,
     setRandomPosition,
     testIntersection,
-    testRayActorWithSphereActor,
     updateActorPhysics,
     updateAnim,
     updateBody,
@@ -1055,24 +1054,6 @@ const simulateTic = (prediction = false) => {
             128,
             1,
         );
-    }
-};
-
-const castRayBullet = (bullet: BulletActor, dx: number, dy: number) => {
-    for (const a of game._state._actors[ActorType.Player]) {
-        if (a._client - bullet._ownerId && testRayActorWithSphereActor(bullet, a, dx, dy)) {
-            hitWithBullet(a, bullet);
-        }
-    }
-    for (const a of game._state._actors[ActorType.Barrel]) {
-        if (testRayActorWithSphereActor(bullet, a, dx, dy)) {
-            hitWithBullet(a, bullet);
-        }
-    }
-    for (const a of game._trees) {
-        if (testRayActorWithSphereActor(bullet, a, dx, dy)) {
-            hitWithBullet(a, bullet);
-        }
     }
 };
 
