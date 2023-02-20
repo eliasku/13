@@ -23,6 +23,7 @@ export const EMOJI: Record<number, string> = [
     "⛏",
     "🔌",
     "🧵",
+    "🧣",
     "💀",
     "👹",
     "🤡",

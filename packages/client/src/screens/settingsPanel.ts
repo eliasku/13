@@ -12,7 +12,7 @@ import {
 
 export const guiSettingsPanel = (x: number, y: number) => {
     if (
-        button("sounds", "🔊 SOUNDS: " + (hasSettingsFlag(SettingFlag.Sound) ? "ON" : "OFF"), x - 50, y - 70, {
+        button("sounds", hasSettingsFlag(SettingFlag.Sound) ? "🔊 SOUNDS: ON" : "🔇 SOUNDS: OFF", x - 50, y - 70, {
             w: 100,
             h: 20,
         })

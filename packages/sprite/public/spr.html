@@ -10,6 +10,7 @@
     <script>
       let output = "";
 
+      const pivotColor = "rgba(255,255,255,0.5)";
       function start() {
         const config = {
           // WEAPONS
@@ -22,6 +23,7 @@
           "⛏": { size: 16, a: 90 + 45 },
           "🔌": { size: 16, sx: -1, a: 45 },
           "🧵": { size: 16, a: 90, x: 0.3, y: 0.4 },
+          "🧣": { size: 16, sx: -1, a: -90, x: 0.3, y: 0.4 },
           // avatars
           "💀": {},
           "👹": {},
@@ -105,7 +107,7 @@
         ctx.fillText(emoji, 0, 0);
 
         ctx.resetTransform();
-        ctx.fillStyle = "rgba(255,0,0,0.5)";
+        ctx.fillStyle = pivotColor;
         ctx.fillRect(x + w_ * (opts.x ?? 0.5), y + h_ * (opts.y ?? 0.5), 1, 1);
 
         const bmp = ctx.getImageData(x, y, w_, h_);
@@ -182,7 +184,7 @@
             }
           }
           ctx2.putImageData(bmp, x, y);
-          ctx2.fillStyle = "rgba(255,0,0,0.5)";
+          ctx2.fillStyle = pivotColor;
           ctx2.fillRect(
             (lc.width * (opts.x ?? 0.5)) | 0,
             (lc.height * (opts.y ?? 0.5)) | 0,

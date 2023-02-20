@@ -152,7 +152,7 @@ export const setupWorldCameraMatrix = (x: number, y: number, scale: number, rx: 
 
 export const getHitColorOffset = (anim: number) => getLumaColor32(0xff * min(1, (2 * anim) / ANIM_HIT_MAX));
 
-export const drawObjectMesh2D = (p: Actor, id: number | Img, z = 0, scale = 1, oy = 0.0) =>
+export const drawObjectMesh2D = (p: Actor, id: number | Img, z = 0, scale = 1, oy = 0.0, color = 0xffffff) =>
     drawMeshSpriteUp(
         img[id],
         p._x / WORLD_SCALE,
@@ -162,7 +162,7 @@ export const drawObjectMesh2D = (p: Actor, id: number | Img, z = 0, scale = 1, o
         scale,
         scale,
         1,
-        0xffffff,
+        color,
         0,
         getHitColorOffset(p._animHit),
     );
@@ -182,7 +182,8 @@ const drawItemOpaque = (item: ItemActor) => {
         }
     }
     if (item._subtype & ItemType.Weapon) {
-        drawObjectMesh2D(item, Img.weapon0 + item._itemWeapon, 4, 0.8);
+        const weapon = GAME_CFG.weapons[item._itemWeapon];
+        drawObjectMesh2D(item, Img.weapon0 + item._itemWeapon, 4, 0.8, 0, weapon.gfxColor);
         if (item._subtype & ItemType.Ammo) {
             drawObjectMesh2D(item, Img.item0 + ItemType.Ammo, 8, 0.8, -0.1);
         }
@@ -203,8 +204,9 @@ const drawBullet = (bullet: BulletActor) => {
     let longing = bulletData.length;
     let longingH = bulletData.length / 2;
     let longing2 = bulletData.lightLength;
+    const fade = type === BulletType.Tracing ? bullet._lifetime / 16 : 1.0;
     const sz = bulletData.size + (bulletData.pulse * sin(32 * lastFrameTs + bullet._anim0)) / 2;
-    if (bullet._subtype === BulletType.Ray) {
+    if (bullet._subtype === BulletType.Ray || bullet._subtype === BulletType.Tracing) {
         const dist = hypot(bullet._x1 - bullet._x, bullet._y1 - bullet._y) / WORLD_SCALE;
         longing = dist / sz;
         longingH = dist / sz;
@@ -213,9 +215,9 @@ const drawBullet = (bullet: BulletActor) => {
     setDrawZ(z - 0.1);
     drawMeshSprite(img[bulletData.images[0]], x, y, a, sz * longing, sz, 0.1, 0xffffff, 1);
     setDrawZ(z);
-    drawMeshSprite(img[bulletData.images[1]], x, y, a, sz * longingH, sz / 2, 1, color);
+    drawMeshSprite(img[bulletData.images[1]], x, y, a, sz * longingH, sz / 2, fade, color);
     setDrawZ(z + 0.1);
-    drawMeshSprite(img[bulletData.images[2]], x, y, a, 2 * longing2, 2);
+    drawMeshSprite(img[bulletData.images[2]], x, y, a, 2 * longing2, 2, fade);
 };
 
 export const drawHotUsableHint = (hotUsable?: ItemActor) => {
@@ -307,6 +309,8 @@ const drawPlayerOpaque = (p: PlayerActor): void => {
             weaponAngle,
             weaponSX,
             weaponSY,
+            1,
+            wpn.gfxColor,
         );
     }
 
@@ -378,7 +382,7 @@ const drawPlayer = (p: PlayerActor): void => {
             if (p._weapon) {
                 const weapons = GAME_CFG.weapons;
                 const weapon = weapons[p._weapon];
-                if (weapon.laserSightColor) {
+                if (weapon.laserSightSize) {
                     const color = weapon.laserSightColor;
                     const lookAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
                     const dx = cos(lookAngle);
@@ -447,7 +451,7 @@ const drawPlayer = (p: PlayerActor): void => {
                             y / WORLD_SCALE,
                             lookAngle,
                             hit0._t / WORLD_SCALE,
-                            1 + fxRandom(),
+                            weapon.laserSightSize * (0.5 + fxRandom(0.5)),
                             0.2,
                             color,
                             1,
@@ -517,7 +521,11 @@ const collectVisibleActors = (...lists: Actor[][]) => {
         for (const a of list) {
             const x = a._x / WORLD_SCALE;
             const y = a._y / WORLD_SCALE;
-            if ((x > l && x < r && y > t && y < b) || (a._type == ActorType.Bullet && a._subtype == BulletType.Ray)) {
+            if (
+                (x > l && x < r && y > t && y < b) ||
+                // TODO: optimize with end line [x1, y1]
+                (a._type == ActorType.Bullet && (a._subtype == BulletType.Ray || a._subtype === BulletType.Tracing))
+            ) {
                 drawList.push(a);
             }
         }
@@ -556,7 +564,7 @@ export const drawGame = () => {
     {
         const shake = gameCamera._shake;
         const offsetX = gameCamera._feedback * gameCamera._feedbackX + (fxRandomNorm(shake / 5) | 0);
-        const offsetY = gameCamera._feedback * gameCamera._feedbackX + (fxRandomNorm(shake / 5) | 0);
+        const offsetY = gameCamera._feedback * gameCamera._feedbackY + (fxRandomNorm(shake / 5) | 0);
         const cameraCenterX = gameCamera._x + offsetX;
         const cameraCenterY = gameCamera._y + offsetY;
         const viewScale = 1 / gameCamera._scale;

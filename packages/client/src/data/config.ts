@@ -49,6 +49,8 @@ export interface PlayerConfig {
     jumpVel: number;
     runVel: number;
     walkVel: number;
+    // [weapon0, weapon1, weapon2, ...]
+    startWeapon: number[];
 }
 
 export interface WorldConfig {
@@ -98,6 +100,7 @@ export const BulletType = {
     Plasma: 2,
     Arrow: 3,
     Ray: 4,
+    Tracing: 5,
 } as const;
 export type BulletType = (typeof BulletType)[keyof typeof BulletType];
 
@@ -108,6 +111,7 @@ export interface BulletData {
     readonly pulse: number;
     readonly color: number[];
     readonly images: [Img, Img, Img];
+    readonly rayPenetrations: number;
 }
 
 export interface WeaponConfig {
@@ -132,6 +136,7 @@ export interface WeaponConfig {
     cameraScale: number;
     gfxRot: number;
     gfxSx: number;
+    gfxColor: number;
     handsAnim: number;
     bulletType: BulletType;
     bulletDamage: number;
@@ -148,6 +153,7 @@ export interface WeaponConfig {
     // value affects movement speed, jump velocity
     moveWeightK: number;
     laserSightColor: number;
+    laserSightSize: number;
 }
 
 export interface GameConfig {

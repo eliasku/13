@@ -61,6 +61,8 @@ const gameConfig: GameConfig = {
         jumpVel: 80,
         runVel: 120,
         walkVel: 60,
+        startWeapon: [1, 2, 3],
+        // startWeapon: [10],
     },
     world: {
         gravity: 5,
@@ -167,6 +169,7 @@ const gameConfig: GameConfig = {
             pulse: 0,
             color: [parseRGB("#fff")],
             images: [Img.circle_4_60p, Img.circle_4_70p, Img.box],
+            rayPenetrations: 0,
         },
         {
             length: 2,
@@ -175,6 +178,7 @@ const gameConfig: GameConfig = {
             pulse: 0,
             color: [parseRGB("#ff4")],
             images: [Img.circle_4_60p, Img.circle_4_70p, Img.box],
+            rayPenetrations: 0,
         },
         {
             length: 1,
@@ -183,6 +187,7 @@ const gameConfig: GameConfig = {
             pulse: 1,
             color: [parseRGB("#4ff")],
             images: [Img.circle_4_60p, Img.circle_4_70p, Img.box],
+            rayPenetrations: 0,
         },
         {
             length: 8,
@@ -191,6 +196,7 @@ const gameConfig: GameConfig = {
             pulse: 0,
             color: [parseRGB("#333")],
             images: [Img.box_r, Img.box_r, Img.box_r],
+            rayPenetrations: 0,
         },
         {
             length: 512,
@@ -205,6 +211,16 @@ const gameConfig: GameConfig = {
                 parseRGB("#f0f"),
             ],
             images: [Img.box_l, Img.box_l, Img.box_l],
+            rayPenetrations: 16,
+        },
+        {
+            length: 512,
+            lightLength: 512,
+            size: 2,
+            pulse: 0,
+            color: [parseRGB("#FF0")],
+            images: [Img.box_l, Img.box_l, Img.box_l],
+            rayPenetrations: 1,
         },
     ],
     weapons: [],
@@ -231,6 +247,7 @@ const gameConfig: GameConfig = {
         cameraScale: 1,
         gfxRot: 0,
         gfxSx: 1,
+        gfxColor: parseRGB("#fff"),
         handsAnim: 0,
         bulletType: BulletType.Melee,
         bulletDamage: 1,
@@ -242,6 +259,7 @@ const gameConfig: GameConfig = {
         ai_shootDistanceMax: 0xffffffff,
         moveWeightK: 1.0,
         laserSightColor: 0,
+        laserSightSize: 0,
     });
 
     const createArmWeapon = (): WeaponConfig => {
@@ -279,6 +297,7 @@ const gameConfig: GameConfig = {
         w.ai_shootDistanceMax = 256 * WORLD_SCALE;
         w.moveWeightK = 0.8;
         w.laserSightColor = 0xff0000;
+        w.laserSightSize = 2;
         return w;
     };
 
@@ -296,8 +315,10 @@ const gameConfig: GameConfig = {
         createGunWeapon(),
         createGunWeapon(),
         createGunWeapon(),
+        // 10: uzi
+        createGunWeapon(),
 
-        // 10, 11, 12, 13
+        //11, 12, 13
     ];
 
     let i = 1;
@@ -403,7 +424,8 @@ const gameConfig: GameConfig = {
     weapons[i].name = "Railgun";
     weapons[i].reloadTime = 120;
     weapons[i].cameraShake = 25;
-    weapons[i].velocity = 1000;
+    // weapons[i].velocity = 1000;
+    weapons[i].velocity = 600;
     weapons[i].cameraFeedback = 0.1;
     weapons[i].cameraLookForward = 0.4;
     weapons[i].cameraScale = 1.4;
@@ -414,7 +436,25 @@ const gameConfig: GameConfig = {
     weapons[i].bulletShellColor = parseRGB("#909");
     weapons[i].clipSize = 5;
 
+    ++i;
+    weapons[i].name = "Uzi";
+    weapons[i].reloadTime = 4;
+    weapons[i].angleSpread = 0.1;
+    weapons[i].kickBack = 20;
+    weapons[i].detuneSpeed = 4;
+    weapons[i].velocity = 300;
+    weapons[i].cameraFeedback = 0.04;
+    weapons[i].clipSize = 20;
+    weapons[i].gfxColor = parseRGB("#399");
+    weapons[i].bulletType = BulletType.Tracing;
+    weapons[i].bulletLifetime = 8;
+    weapons[i].bulletShellColor = parseRGB("#f60");
+    weapons[i].laserSightColor = parseRGB("#080");
+    weapons[i].laserSightSize = 1;
+
     gameConfig.weapons = weapons;
 }
 
-writeFileSync("packages/client/assets/config.json", JSON.stringify(gameConfig), "utf-8");
+const configJson = JSON.stringify(gameConfig);
+writeFileSync("packages/client/assets/config.json", configJson, "utf-8");
+writeFileSync("public/config.json", configJson, "utf-8");

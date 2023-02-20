@@ -2,6 +2,8 @@
 
 - Laser sight for guns, walls and bounds stop rail-gun ray
 - Load game configuration from JSON file #21
+- Add draft UZI weapon (tracing projectiles)
+- Fix camera feedback on Y-axis
 
 ## 1.0.18
 

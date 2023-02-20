@@ -89,14 +89,14 @@ import {
     updateBody,
 } from "./phy.js";
 import {
-    BOUNDS_SIZE,
-    WORLD_BOUNDS_SIZE,
-    WORLD_BOUNDS_SIZE_PX,
-    WORLD_SCALE,
     ANIM_HIT_MAX,
+    BOUNDS_SIZE,
     BULLET_RADIUS,
     OBJECT_RADIUS,
     PLAYER_HANDS_Z,
+    WORLD_BOUNDS_SIZE,
+    WORLD_BOUNDS_SIZE_PX,
+    WORLD_SCALE,
 } from "../assets/params.js";
 import {
     addPacketDebugState,
@@ -911,6 +911,7 @@ const simulateTic = (prediction = false) => {
                 if (player) {
                     player._input = cmd._input;
                 } else if (cmd._input & ControlsFlag.Spawn) {
+                    const playerConfig = GAME_CFG.player;
                     const p = newPlayerActor();
                     p._client = cmd._client;
                     setRandomPosition(p);
@@ -919,11 +920,11 @@ const simulateTic = (prediction = false) => {
                         gameCamera._x = p._x / WORLD_SCALE;
                         gameCamera._y = p._y / WORLD_SCALE;
                     }
-                    p._hp = GAME_CFG.player.hp;
-                    p._sp = GAME_CFG.player.sp;
-                    p._mags = GAME_CFG.player.mags;
+                    p._hp = playerConfig.hp;
+                    p._sp = playerConfig.sp;
+                    p._mags = playerConfig.mags;
                     // p._input = cmd._input;
-                    setCurrentWeapon(p, 1 + rand(3));
+                    setCurrentWeapon(p, playerConfig.startWeapon[rand(playerConfig.startWeapon.length)]);
                     pushActor(p);
                 }
             }
@@ -971,13 +972,15 @@ const simulateTic = (prediction = false) => {
     for (const bullet of game._state._actors[ActorType.Bullet]) {
         if (bullet._subtype != BulletType.Ray) {
             updateBody(bullet, 0, 0);
-            if (bullet._hp && (collideWithBoundsA(bullet) || checkTileCollisions(bullet, game._blocks))) {
-                --bullet._hp;
-                addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[bullet._subtype as BulletType].color);
+            if (bullet._subtype != BulletType.Tracing) {
+                if (bullet._hp && (collideWithBoundsA(bullet) || checkTileCollisions(bullet, game._blocks))) {
+                    --bullet._hp;
+                    addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[bullet._subtype as BulletType].color);
+                }
+                queryGridCollisions(bullet, game._playersGrid, checkBulletCollision);
+                queryGridCollisions(bullet, game._barrelsGrid, checkBulletCollision);
+                queryGridCollisions(bullet, game._treesGrid, checkBulletCollision);
             }
-            queryGridCollisions(bullet, game._playersGrid, checkBulletCollision);
-            queryGridCollisions(bullet, game._barrelsGrid, checkBulletCollision);
-            queryGridCollisions(bullet, game._treesGrid, checkBulletCollision);
         }
         if (bullet._lifetime && !--bullet._lifetime) {
             bullet._hp = 0;
@@ -1141,11 +1144,13 @@ const kill = (actor: Actor) => {
     feedbackCameraExplosion(25, actor._x, actor._y);
 };
 
-const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
+const hitWithBullet = (actor: Actor, bullet: BulletActor, bulletImpactParticles = true) => {
     let absorbed = false;
     addVelFrom(actor, bullet, 0.1);
     actor._animHit = ANIM_HIT_MAX;
-    addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[bullet._subtype as BulletType].color);
+    if (bulletImpactParticles) {
+        addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[bullet._subtype as BulletType].color);
+    }
     playAt(actor, Snd.hit);
     if (actor._hp) {
         let damage = bullet._damage;
@@ -1208,7 +1213,7 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor) => {
             }
         }
     }
-    if (bullet._hp && bullet._subtype != BulletType.Ray) {
+    if (bullet._hp && bullet._subtype != BulletType.Ray && bullet._subtype != BulletType.Tracing) {
         // bullet hit or bounced?
         if (absorbed) {
             bullet._hp = 0;
@@ -1394,8 +1399,9 @@ const updatePlayer = (player: PlayerActor) => {
                         bullet._z += PLAYER_HANDS_Z - 12 * WORLD_SCALE;
                         addVelocityDir(bullet, dx, dy, 0, bulletVelocity);
                         pushActor(bullet);
-                        if (weapon.bulletType == BulletType.Ray) {
-                            // castRayBullet(bullet, dx, dy);
+                        if (weapon.bulletType == BulletType.Ray || weapon.bulletType == BulletType.Tracing) {
+                            const bulletConfig = GAME_CFG.bullets[weapon.bulletType];
+                            let penetrationsLeft = bulletConfig.rayPenetrations;
                             const hits = RAYCAST_HITS;
                             raycastWorld(
                                 bullet._x,
@@ -1408,6 +1414,7 @@ const updatePlayer = (player: PlayerActor) => {
                                 bullet._ownerId,
                             );
                             for (const hit of hits._hits) {
+                                --penetrationsLeft;
                                 bullet._x1 = hits._x + hit._t * hits._dx;
                                 bullet._y1 = hits._y + hit._t * hits._dy;
                                 addImpactParticles(
@@ -1422,8 +1429,11 @@ const updatePlayer = (player: PlayerActor) => {
                                     GAME_CFG.bullets[bullet._subtype as BulletType].color,
                                 );
                                 if (hit._type === 2 && hit._actor) {
-                                    hitWithBullet(hit._actor, bullet);
+                                    hitWithBullet(hit._actor, bullet, weapon.bulletType === BulletType.Ray);
                                 } else {
+                                    break;
+                                }
+                                if (!penetrationsLeft) {
                                     break;
                                 }
                             }
