@@ -81,12 +81,12 @@ const gameConfig: GameConfig = {
         },
     },
     bodyColor: [
-        parseRGB("#FF99DD"),
-        parseRGB("#FFCC99"),
-        parseRGB("#CCFF99"),
-        parseRGB("#222222"),
-        parseRGB("#8855FF"),
-        parseRGB("#CCCCCC"),
+        parseRGB("#F9D"),
+        parseRGB("#FC9"),
+        parseRGB("#CF9"),
+        parseRGB("#222"),
+        parseRGB("#85F"),
+        parseRGB("#CCC"),
     ],
     voice: {
         killAB: ["{0} CRUSHED {1}", "{0} destroyed {1}", "{0} killed {1}", "{0} took {1} life"],
@@ -336,7 +336,6 @@ const gameConfig: GameConfig = {
     weapons[i].reloadTime = 5;
     weapons[i].angleSpread = 0.25;
     weapons[i].kickBack = 20;
-//weapons[i]._offset = 16;
     weapons[i].detuneSpeed = 16;
     weapons[i].cameraFeedback = 0.02;
 
@@ -365,7 +364,7 @@ const gameConfig: GameConfig = {
     weapons[i].angleVar = 0.5;
     weapons[i].bulletHp = 2;
     weapons[i].bulletDamage = 2;
-    weapons[i].bulletShellColor = 0xaa0000;
+    weapons[i].bulletShellColor = parseRGB("#a00");
     weapons[i].clipSize = 7;
     weapons[i].moveWeightK = 0.9;
 
@@ -380,7 +379,7 @@ const gameConfig: GameConfig = {
     weapons[i].handsAnim = 1;
     weapons[i].bulletDamage = 5;
     weapons[i].bulletType = BulletType.Arrow;
-    weapons[i].bulletShellColor = 0x00ff00;
+    weapons[i].bulletShellColor = parseRGB("#0f0");
     weapons[i].clipSize = 7;
     weapons[i].moveWeightK = 0.9;
 
@@ -396,7 +395,7 @@ const gameConfig: GameConfig = {
     weapons[i].bulletDamage = 1;
     weapons[i].bulletHp = 2;
     weapons[i].bulletType = BulletType.Plasma;
-    weapons[i].bulletShellColor = 0x00ffff;
+    weapons[i].bulletShellColor = parseRGB("#0ff");
     weapons[i].clipSize = 35;
 
 // 🧵 RAIL GUN
@@ -412,7 +411,7 @@ const gameConfig: GameConfig = {
     weapons[i].bulletHp = 15;
     weapons[i].bulletType = BulletType.Ray;
     weapons[i].bulletLifetime = 10;
-    weapons[i].bulletShellColor = 0x990099;
+    weapons[i].bulletShellColor = parseRGB("#909");
     weapons[i].clipSize = 5;
 
     gameConfig.weapons = weapons;
