@@ -1,6 +1,5 @@
 import {
     Actor,
-    actorsConfig,
     ActorType,
     ControlsFlag,
     itemContainsAmmo,
@@ -10,16 +9,16 @@ import {
     playerBot,
     sqrDistXY,
     StateData,
-    weapons,
     WORLD_BOUNDS_SIZE,
 } from "@iioi/bot-api";
 
 const rand = (n: number) => (Math.random() * n) | 0;
 
 const hasAmmo = (player: PlayerActor) => {
-    if (player._weapon) {
+    const weapons = playerBot.config?.weapons;
+    if (weapons && player._weapon) {
         const weapon = weapons[player._weapon];
-        return !weapon._clipSize || player._clipAmmo || player._mags;
+        return !weapon.clipSize || player._clipAmmo || player._mags;
     }
     return false;
 };
@@ -45,6 +44,11 @@ const findClosestActor = <T extends Actor>(
 
 playerBot.update = (state: StateData, player: PlayerActor): number => {
     let input = 0;
+    const cfg = playerBot.config;
+    if (!cfg) {
+        return input;
+    }
+    const actorsConfig = cfg.actors;
     const lowHP = !player._sp && player._hp < 5;
     let nothingToDo = false;
     if (lowHP) {
@@ -67,8 +71,7 @@ playerBot.update = (state: StateData, player: PlayerActor): number => {
         } else {
             nothingToDo = true;
         }
-    }
-    else {
+    } else {
         nothingToDo = true;
     }
     if (nothingToDo) {
@@ -84,13 +87,14 @@ playerBot.update = (state: StateData, player: PlayerActor): number => {
                     let shoot = 0;
                     let mx = 0;
                     let my = 0;
+                    const weapons = cfg.weapons;
                     const weapon = weapons[player._weapon];
                     const dist = Math.hypot(dx, dy);
-                    if (dist < weapon._ai_shootDistanceMin) {
+                    if (dist < weapon.ai_shootDistanceMin) {
                         mx = -dx;
                         my = -dy;
                         move = ControlsFlag.Move | ControlsFlag.Run;
-                    } else if (dist > weapon._ai_shootDistanceMax) {
+                    } else if (dist > weapon.ai_shootDistanceMax) {
                         mx = dx;
                         my = dy;
                         move = ControlsFlag.Move | ControlsFlag.Run;
@@ -131,7 +135,7 @@ playerBot.update = (state: StateData, player: PlayerActor): number => {
                 const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
                 let drop = 0;
                 if (
-                    dist < actorsConfig[ActorType.Item]._radius + actorsConfig[ActorType.Player]._radius &&
+                    dist < actorsConfig[ActorType.Item].radius + actorsConfig[ActorType.Player].radius &&
                     (player._trig & ControlsFlag.DownEvent_Drop) === 0
                 ) {
                     drop = ControlsFlag.Drop;

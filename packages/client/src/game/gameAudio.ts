@@ -9,7 +9,7 @@ import {game} from "@iioi/client/game/gameState.js";
 
 export const playAt = (actor: Actor, id: Snd) => {
     if (game._gameTic > game._lastAudioTic) {
-        const r = GAME_CFG._camera._listenerRadius;
+        const r = GAME_CFG.camera.listenerRadius;
         const dx = (actor._x / WORLD_SCALE - gameCamera._x) / r;
         const dy = (actor._y / WORLD_SCALE - gameCamera._y) / r;
         const v = 1 - hypot(dx, dy);

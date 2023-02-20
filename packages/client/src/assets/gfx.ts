@@ -1,6 +1,6 @@
 import {createTexture, getSubTexture, Texture, uploadTexture} from "../graphics/draw2d.js";
 import {GL} from "../graphics/gl.js";
-import {loadArrayBuffer, loadImage} from "../graphics/utils.js";
+import {loadArrayBuffer, loadImage} from "../utils/loaders.js";
 
 export const EMOJI: Record<number, string> = [
     null,

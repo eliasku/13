@@ -127,10 +127,18 @@ npm start
 To deploy the game run the `build` script and then start the server
 ```shell
 # build only
-npm build
+npm run build
 # run server
 node server.js
 ```
+
+### Modify game config
+
+1. Recommended way to change global game configuration is via `packages/tools/src/config.ts` file. It provides types and some good utilities to compose the final configuration.
+2. Generate `packages/client/assets/config.json` by running `npm run config`.
+3. Run `npm start` or `npm run build` - scripts will copy `packages/client/assets/config.json` to `public/config.json`, it will be loaded by the game and will be used for all global configuration.
+
+If you need some new option from the code to be exposed in `config.json`, please create the issue.
 
 ### Build Pages (not a Game)
 

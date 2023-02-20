@@ -122,7 +122,7 @@ export const guiReplayViewer = (replay: ReplayFile, tic: number) => {
     }
 
     if (
-        button("close_replay", "❌", W - 16 - GAME_CFG._minimap._size - 4, 2, {
+        button("close_replay", "❌", W - 16 - GAME_CFG.minimap.size - 4, 2, {
             w: 16,
             h: 16,
         }) ||

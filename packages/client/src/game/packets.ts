@@ -13,7 +13,7 @@ import {
 } from "./types.js";
 import {ClientID} from "@iioi/shared/types.js";
 import {JoinState} from "./gameState.js";
-import {BulletType} from "./data/bullets.js";
+import {BulletType} from "../data/config.js";
 
 const DEBUG_SIGN = 0xdeb51a1e | 0;
 

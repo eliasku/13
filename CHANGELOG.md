@@ -1,6 +1,7 @@
 ## 1.0.19
 
 - Laser sight for guns, walls and bounds stop rail-gun ray
+- Load game configuration from JSON file #21
 
 ## 1.0.18
 

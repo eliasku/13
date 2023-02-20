@@ -10,8 +10,8 @@ import {
 } from "../assets/params.js";
 import {gameCamera, getScreenScale} from "./camera.js";
 import {hypot} from "../utils/math.js";
-import {weapons} from "./data/weapons.js";
 import {drawTextAligned, fnt} from "../graphics/font.js";
+import {GAME_CFG} from "./config.js";
 
 // TODO: positioning of controls
 // ToDO: control zone padding should include max radius
@@ -42,8 +42,9 @@ export const resetPlayerControls = () => {
 };
 
 export const couldBeReloadedManually = (player: PlayerActor): boolean => {
+    const weapons = GAME_CFG.weapons;
     const weapon = weapons[player._weapon];
-    return weapon && !player._clipReload && weapon._clipSize && player._clipAmmo < weapon._clipSize;
+    return weapon && !player._clipReload && weapon.clipSize && player._clipAmmo < weapon.clipSize;
 };
 
 export const couldSwapWeaponSlot = (player: PlayerActor): boolean => {

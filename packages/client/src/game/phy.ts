@@ -1,12 +1,10 @@
-import {Actor, ActorType, BulletActor, ControlsFlag, PlayerActor, Pos, Vel} from "./types.js";
+import {Actor, ActorType, ControlsFlag, PlayerActor, Pos, Vel} from "./types.js";
 import {rand} from "../utils/rnd.js";
 import {clamp, cos, hypot, max, min, reach, sin, sqrLength3, sqrt} from "../utils/math.js";
-import {actorsConfig, OBJECT_RADIUS} from "./data/world.js";
-import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {WORLD_BOUNDS_SIZE, WORLD_SCALE, OBJECT_RADIUS} from "../assets/params.js";
 import {GAME_CFG} from "./config.js";
 import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
 import {testRayWithSphere} from "../utils/collision/collision.js";
-import {BulletType} from "./data/bullets.js";
 
 export const setRandomPosition = (actor: Actor) => {
     actor._x = OBJECT_RADIUS + rand(WORLD_BOUNDS_SIZE - OBJECT_RADIUS * 2);
@@ -16,7 +14,7 @@ export const setRandomPosition = (actor: Actor) => {
 export const copyPosFromActorCenter = (to: Pos, from: Pos & {_type: ActorType}) => {
     to._x = from._x;
     to._y = from._y;
-    to._z = from._z + actorsConfig[from._type]._height;
+    to._z = from._z + GAME_CFG.actors[from._type].height;
 };
 
 export const updateBody = (body: Pos & Vel, gravity: number, loss: number) => {
@@ -38,22 +36,23 @@ export const updateAnim = (actor: Actor) => {
 };
 
 export const updateActorPhysics = (a: Actor, tileMap: number[]) => {
-    const prop = actorsConfig[a._type];
-    const world = GAME_CFG._world;
+    const prop = GAME_CFG.actors[a._type];
     const isWeakGravity = a._type === ActorType.Player ? (a as PlayerActor)._input & ControlsFlag.Jump : 0;
-    updateBody(a, isWeakGravity ? world._gravityWeak : world._gravity, prop._groundLoss);
+    const worldConfig = GAME_CFG.world;
+    const gravity = isWeakGravity ? worldConfig.gravityWeak : worldConfig.gravity;
+    updateBody(a, gravity, prop.groundLoss);
     // TODO: ?
     checkTileCollisions(a, tileMap);
     collideWithBoundsA(a);
     if (a._z <= 0) {
-        applyGroundFriction(a, prop._groundFriction);
+        applyGroundFriction(a, prop.groundFriction);
     }
     updateAnim(a);
 };
 
 export const collideWithBoundsA = (body: Actor): number => {
-    const props = actorsConfig[body._type];
-    return collideWithBounds(body, props._radius, props._boundsLoss);
+    const props = GAME_CFG.actors[body._type];
+    return collideWithBounds(body, props.radius, props.boundsLoss);
 };
 
 export const collideWithBounds = (body: Vel & Pos, radius: number, loss: number): number => {
@@ -130,35 +129,25 @@ export const sqrDistXY = (a: Actor, b: Actor) => {
 };
 
 export const testIntersection = (a: Actor, b: Actor): boolean => {
-    const ca = actorsConfig[a._type];
-    const cb = actorsConfig[b._type];
-    const D = ca._radius + cb._radius;
-    return sqrLength3(a._x - b._x, a._y - b._y, a._z + ca._height - b._z - cb._height) < D * D;
+    const ca = GAME_CFG.actors[a._type];
+    const cb = GAME_CFG.actors[b._type];
+    const D = ca.radius + cb.radius;
+    return sqrLength3(a._x - b._x, a._y - b._y, a._z + ca.height - b._z - cb.height) < D * D;
 };
 
 export const checkBodyCollision = (a: Actor, b: Actor) => {
-    const ca = actorsConfig[a._type];
-    const cb = actorsConfig[b._type];
+    const ca = GAME_CFG.actors[a._type];
+    const cb = GAME_CFG.actors[b._type];
     const nx = a._x - b._x;
     const ny = (a._y - b._y) * 2;
-    const nz = a._z + ca._height - (b._z + cb._height);
+    const nz = a._z + ca.height - (b._z + cb.height);
     const sqrDist = sqrLength3(nx, ny, nz);
-    const D = ca._radius + cb._radius;
+    const D = ca.radius + cb.radius;
     if (sqrDist > 0 && sqrDist < D * D) {
         const pen = (D / sqrt(sqrDist) - 1) / 2;
-        addPos(a, nx, ny, nz, ca._invMass * pen);
-        addPos(b, nx, ny, nz, -cb._invMass * pen);
+        addPos(a, nx, ny, nz, ca.invMass * pen);
+        addPos(b, nx, ny, nz, -cb.invMass * pen);
     }
-};
-
-export const testRayActorWithSphereActor = (from: Actor, target: Actor, dx: number, dy: number): boolean => {
-    return raycastSphereActor(from._x, from._y, from._z, dx, dy, 0.0, target) >= 0.0;
-    // const Lx = target._x - from._x;
-    // const Ly = target._y - from._y;
-    // const len = Lx * dx + Ly * dy;
-    // const props = actorsConfig[target._type];
-    // const R = props._radius;
-    // return len >= 0 && sqrLength3(Lx - dx * len, Ly - dy * len, target._z + props._height - from._z) <= R * R;
 };
 
 export const raycastSphereActor = (
@@ -170,8 +159,8 @@ export const raycastSphereActor = (
     dz: number,
     actor: Actor,
 ): number => {
-    const props = actorsConfig[actor._type];
-    return testRayWithSphere(x, y, z, dx, dy, dz, actor._x, actor._y, actor._z + props._height, props._radius);
+    const props = GAME_CFG.actors[actor._type];
+    return testRayWithSphere(x, y, z, dx, dy, dz, actor._x, actor._y, actor._z + props.height, props.radius);
 };
 
 export const roundActors = (list: Actor[]) => {
@@ -208,11 +197,11 @@ const testRectCircle = (cx: number, cy: number, l: number, t: number, r: number,
 };
 
 export const checkTileCollisions = (actor: Actor, tilemap: number[]): number => {
-    const conf = actorsConfig[actor._type];
-    const x0 = max(0, ((actor._x - conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
-    const y0 = max(0, ((actor._y - conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
-    const x1 = min(TILE_MAP_STRIDE - 1, ((actor._x + conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
-    const y1 = min(TILE_MAP_STRIDE - 1, ((actor._y + conf._radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    const conf = GAME_CFG.actors[actor._type];
+    const x0 = max(0, ((actor._x - conf.radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    const y0 = max(0, ((actor._y - conf.radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    const x1 = min(TILE_MAP_STRIDE - 1, ((actor._x + conf.radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
+    const y1 = min(TILE_MAP_STRIDE - 1, ((actor._y + conf.radius) / WORLD_SCALE) >> TILE_SIZE_BITS);
     let mindist = 100000.0;
     const point: [number, number] = [0, 0];
     let nx = 0;
@@ -231,7 +220,7 @@ export const checkTileCollisions = (actor: Actor, tilemap: number[]): number => 
                     (cy + 1) * WORLD_SCALE * TILE_SIZE,
                     point,
                 );
-                if (dist < conf._radius && dist < mindist) {
+                if (dist < conf.radius && dist < mindist) {
                     // console.log(dist);
                     mindist = dist;
                     nx = point[0] - actor._x;
@@ -240,12 +229,12 @@ export const checkTileCollisions = (actor: Actor, tilemap: number[]): number => 
             }
         }
     }
-    if (mindist < conf._radius) {
+    if (mindist < conf.radius) {
         const normalLen = hypot(nx, ny);
         nx /= normalLen;
         ny /= normalLen;
-        addPos(actor, nx, ny, 0, -(conf._radius - mindist));
-        reflectVelocity(actor, 0, 1, conf._boundsLoss);
+        addPos(actor, nx, ny, 0, -(conf.radius - mindist));
+        reflectVelocity(actor, 0, 1, conf.boundsLoss);
         return 1;
     }
     return 0;

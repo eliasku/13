@@ -7,5 +7,10 @@
         "esModuleInterop": true,
         "moduleResolution": "Node"
     },
+    "references": [
+        {
+            "path": "../client/tsconfig.json"
+        }
+    ],
     "include": ["src/**/*.ts"]
 }

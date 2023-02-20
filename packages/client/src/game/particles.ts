@@ -78,7 +78,7 @@ const updateParticle = (p: Particle): boolean => {
     p._a += p._r;
     ++p._lifeTime;
 
-    if (updateBody(p, p._gravity * GAME_CFG._world._gravity, 2)) {
+    if (updateBody(p, p._gravity * GAME_CFG.world.gravity, 2)) {
         if (p._splashImg) {
             const v = hypot(p._u, p._v, p._w);
             if (v < 4 || p._splashEachJump) {

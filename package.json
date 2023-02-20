@@ -8,6 +8,7 @@
     "start": "ts-node --esm --swc packages/tools/src/watch.ts",
     "build": "ts-node --esm --swc packages/tools/src/build.ts",
     "clean": "ts-node --esm --swc packages/tools/src/clean.ts",
+    "config": "ts-node --esm --swc packages/tools/src/config.ts",
     "upload-poki": "ts-node --esm --swc packages/tools/src/upload-poki.ts",
     "typecheck": "tsc -b --clean && tsc -b -v --diagnostics",
     "release": "npm run build && changeset publish",

@@ -27,18 +27,10 @@ import {
 import {drawVirtualPad, lookAtX, lookAtY, viewX, viewY} from "./controls.js";
 import {atan2, clamp, cos, hypot, max, min, PI, PI2, sin, TO_RAD} from "../utils/math.js";
 import {mat4_create, mat4_makeXRotation, mat4_makeZRotation, mat4_mul, mat4_orthoProjectionLH} from "../utils/mat4.js";
-import {weapons} from "./data/weapons.js";
 import {getLumaColor32, RGB} from "../utils/utils.js";
-import {
-    actorsConfig,
-    ANIM_HIT_MAX,
-    BULLET_RADIUS,
-    OBJECT_RADIUS,
-    PLAYER_HANDS_PX_Z,
-    PLAYER_HANDS_Z,
-} from "./data/world.js";
+import {ANIM_HIT_MAX, BULLET_RADIUS, OBJECT_RADIUS, PLAYER_HANDS_PX_Z, PLAYER_HANDS_Z} from "../assets/params.js";
 import {Const, GAME_CFG} from "./config.js";
-import {bullets, BulletType} from "./data/bullets.js";
+import {BulletType} from "../data/config.js";
 import {fxRandElement, fxRandom, fxRandomNorm} from "../utils/rnd.js";
 import {
     game,
@@ -67,12 +59,12 @@ import {stats} from "@iioi/client/utils/fpsMeter.js";
 import {ClientID} from "@iioi/shared/types.js";
 import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
 import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
-import {TRACE_HIT, TraceHit, traceRay} from "../utils/collision/fastVoxelRaycast.js";
+import {TRACE_HIT, traceRay} from "../utils/collision/fastVoxelRaycast.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
-        const prop = actorsConfig[actor._type];
-        const shadowScale = (2 - actor._z / (WORLD_SCALE * 64)) * prop._shadowScale;
+        const prop = GAME_CFG.actors[actor._type];
+        const shadowScale = (2 - actor._z / (WORLD_SCALE * 64)) * prop.shadowScale;
         drawMeshSprite(
             img[Img.circle_4],
             actor._x / WORLD_SCALE,
@@ -81,14 +73,15 @@ export const drawShadows = (drawList: Actor[]) => {
             shadowScale,
             shadowScale / 4,
             0.4,
-            prop._shadowColor,
-            prop._shadowAdd,
+            prop.shadowColor,
+            prop.shadowAdd,
         );
     }
 };
 
 export const drawCrosshair = (player: PlayerActor | undefined, screenScale: number) => {
     if (player && (viewX | 0 || viewY | 0)) {
+        const weapons = GAME_CFG.weapons;
         const img = fnt[0]._textureBoxT1;
         const W = gl.drawingBufferWidth;
         const H = gl.drawingBufferHeight;
@@ -99,10 +92,10 @@ export const drawCrosshair = (player: PlayerActor | undefined, screenScale: numb
         // const y = lookAtY;
         if (player._weapon) {
             const weapon = weapons[player._weapon];
-            if (weapon._clipSize) {
+            if (weapon.clipSize) {
                 if (player._clipReload && player._mags) {
                     // reloading
-                    const t = 1.0 - player._clipReload / weapon._clipReload;
+                    const t = 1.0 - player._clipReload / weapon.clipReload;
                     const N = 8;
                     for (let i = 0; i < N; ++i) {
                         const sc = clamp(t * N - i, 0, 1);
@@ -179,7 +172,7 @@ const drawTreeOpaque = (p: Actor): void => drawObjectMesh2D(p, p._subtype + Img.
 
 const drawItemOpaque = (item: ItemActor) => {
     if (item._lifetime) {
-        const limit = GAME_CFG._items._lifetime >>> 1;
+        const limit = GAME_CFG.items.lifetime >>> 1;
         if (item._lifetime < limit) {
             const f = 1 - item._lifetime / limit;
             const fr = 8 + 16 * f;
@@ -205,12 +198,12 @@ const drawBullet = (bullet: BulletActor) => {
     const z = bullet._z / WORLD_SCALE;
     const a = atan2(bullet._v, bullet._u);
     const type = bullet._subtype as BulletType;
-    const bulletData = bullets[type];
-    const color = fxRandElement(bulletData._color);
-    let longing = bulletData._length;
-    let longingH = bulletData._length / 2;
-    let longing2 = bulletData._lightLength;
-    const sz = bulletData._size + (bulletData._pulse * sin(32 * lastFrameTs + bullet._anim0)) / 2;
+    const bulletData = GAME_CFG.bullets[type];
+    const color = fxRandElement(bulletData.color);
+    let longing = bulletData.length;
+    let longingH = bulletData.length / 2;
+    let longing2 = bulletData.lightLength;
+    const sz = bulletData.size + (bulletData.pulse * sin(32 * lastFrameTs + bullet._anim0)) / 2;
     if (bullet._subtype === BulletType.Ray) {
         const dist = hypot(bullet._x1 - bullet._x, bullet._y1 - bullet._y) / WORLD_SCALE;
         longing = dist / sz;
@@ -218,19 +211,20 @@ const drawBullet = (bullet: BulletActor) => {
         longing2 = dist / 2;
     }
     setDrawZ(z - 0.1);
-    drawMeshSprite(img[bulletData._images[0]], x, y, a, sz * longing, sz, 0.1, 0xffffff, 1);
+    drawMeshSprite(img[bulletData.images[0]], x, y, a, sz * longing, sz, 0.1, 0xffffff, 1);
     setDrawZ(z);
-    drawMeshSprite(img[bulletData._images[1]], x, y, a, sz * longingH, sz / 2, 1, color);
+    drawMeshSprite(img[bulletData.images[1]], x, y, a, sz * longingH, sz / 2, 1, color);
     setDrawZ(z + 0.1);
-    drawMeshSprite(img[bulletData._images[2]], x, y, a, 2 * longing2, 2);
+    drawMeshSprite(img[bulletData.images[2]], x, y, a, 2 * longing2, 2);
 };
 
 export const drawHotUsableHint = (hotUsable?: ItemActor) => {
     if (hotUsable) {
         if (hotUsable._subtype & ItemType.Weapon) {
+            const weapons = GAME_CFG.weapons;
             const weapon = weapons[hotUsable._itemWeapon];
-            let text = weapon._name + " " + EMOJI[Img.weapon0 + hotUsable._itemWeapon];
-            if (weapon._clipSize) {
+            let text = weapon.name + " " + EMOJI[Img.weapon0 + hotUsable._itemWeapon];
+            if (weapon.clipSize) {
                 text += hotUsable._itemWeaponAmmo;
             }
             const x = hotUsable._x / WORLD_SCALE;
@@ -244,7 +238,7 @@ export const drawHotUsableHint = (hotUsable?: ItemActor) => {
 const drawPlayerOpaque = (p: PlayerActor): void => {
     const co = getHitColorOffset(p._animHit);
     const basePhase = p._anim0 + lastFrameTs;
-    const colorC = GAME_CFG._bodyColor[p._anim0 % GAME_CFG._bodyColor.length];
+    const colorC = GAME_CFG.bodyColor[p._anim0 % GAME_CFG.bodyColor.length];
     const colorArm = colorC;
     const colorBody = colorC;
     const x = p._x / WORLD_SCALE;
@@ -261,10 +255,11 @@ const drawPlayerOpaque = (p: PlayerActor): void => {
 
     /////
 
+    const weapons = GAME_CFG.weapons;
     const wpn = weapons[p._weapon];
     const viewAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
-    const weaponBaseAngle = wpn._gfxRot * TO_RAD;
-    const weaponBaseScaleX = wpn._gfxSx;
+    const weaponBaseAngle = wpn.gfxRot * TO_RAD;
+    const weaponBaseScaleX = wpn.gfxSx;
     const weaponBaseScaleY = 1;
     let weaponX = x;
     let weaponY = y;
@@ -283,14 +278,14 @@ const drawPlayerOpaque = (p: PlayerActor): void => {
     if (weaponAngle < -PI * 0.5 || weaponAngle > PI * 0.5) {
         wx = -1;
     }
-    if (wpn._handsAnim) {
+    if (wpn.handsAnim) {
         // const t = max(0, (p.s - 0.8) * 5);
         // anim := 1 -> 0
         const t = min(
             1,
-            wpn._launchTime > 0 ? p._lifetime / wpn._launchTime : max(0, (p._lifetime / wpn._reloadTime - 0.5) * 2),
+            wpn.launchTime > 0 ? p._lifetime / wpn.launchTime : max(0, (p._lifetime / wpn.reloadTime - 0.5) * 2),
         );
-        wd += sin(t * PI) * wpn._handsAnim;
+        wd += sin(t * PI) * wpn.handsAnim;
         weaponAngle -= -wx * PI * 0.25 * sin((1 - (1 - t) ** 2) * PI2);
     }
     weaponX += wd * cos(weaponAngle);
@@ -381,15 +376,16 @@ const drawPlayer = (p: PlayerActor): void => {
             }
         } else {
             if (p._weapon) {
+                const weapons = GAME_CFG.weapons;
                 const weapon = weapons[p._weapon];
-                if (weapon._laserSightColor) {
-                    const color = weapon._laserSightColor;
+                if (weapon.laserSightColor) {
+                    const color = weapon.laserSightColor;
                     const lookAngle = unpackAngleByte(p._input >> ControlsFlag.LookAngleBit, ControlsFlag.LookAngleMax);
                     const dx = cos(lookAngle);
                     const dy = sin(lookAngle);
-                    const x = p._x + dx * WORLD_SCALE * weapon._offset;
-                    const y = p._y + dy * WORLD_SCALE * weapon._offset;
-                    const z = p._z + actorsConfig[p._type]._height + PLAYER_HANDS_Z - 12 * WORLD_SCALE;
+                    const x = p._x + dx * WORLD_SCALE * weapon.offset;
+                    const y = p._y + dy * WORLD_SCALE * weapon.offset;
+                    const z = p._z + GAME_CFG.actors[p._type].height + PLAYER_HANDS_Z - 12 * WORLD_SCALE;
 
                     if (getDevFlag(SettingFlag.DevShowCollisionInfo)) {
                         traceRay(
@@ -697,11 +693,12 @@ export const drawOverlay = () => {
 
 const getWeaponInfoHeader = (wpn: number, ammo: number, reload = 0): string => {
     if (wpn) {
+        const weapons = GAME_CFG.weapons;
         const weapon = weapons[wpn];
         let txt = EMOJI[Img.weapon0 + wpn];
-        if (weapon._clipSize) {
+        if (weapon.clipSize) {
             if (reload) {
-                txt += (((100 * (weapon._clipReload - reload)) / weapon._clipReload) | 0) + "%";
+                txt += (((100 * (weapon.clipReload - reload)) / weapon.clipReload) | 0) + "%";
             } else {
                 txt += ammo;
             }

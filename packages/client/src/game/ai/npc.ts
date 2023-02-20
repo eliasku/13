@@ -1,12 +1,12 @@
 import {ActorType, ControlsFlag, ItemType, packDirByte, PlayerActor, StateData} from "../types.js";
 import {hypot} from "../../utils/math.js";
 import {rand} from "../../utils/rnd.js";
-import {weapons} from "../data/weapons.js";
-import {actorsConfig} from "../data/world.js";
 import {itemContainsAmmo} from "../actors.js";
 import {findClosestActor, hasAmmo} from "./common.js";
+import {GAME_CFG} from "../config.js";
 
 export const updateAI = (state: StateData, player: PlayerActor) => {
+    const weapons = GAME_CFG.weapons;
     const lowHP = !player._sp && player._hp < 5;
     let walking = false;
     if (lowHP) {
@@ -43,11 +43,11 @@ export const updateAI = (state: StateData, player: PlayerActor) => {
                     let my = 0;
                     const weapon = weapons[player._weapon];
                     const dist = hypot(dx, dy);
-                    if (dist < weapon._ai_shootDistanceMin) {
+                    if (dist < weapon.ai_shootDistanceMin) {
                         mx = -dx;
                         my = -dy;
                         move = ControlsFlag.Move | ControlsFlag.Run;
-                    } else if (dist > weapon._ai_shootDistanceMax) {
+                    } else if (dist > weapon.ai_shootDistanceMax) {
                         mx = dx;
                         my = dy;
                         move = ControlsFlag.Move | ControlsFlag.Run;
@@ -89,7 +89,7 @@ export const updateAI = (state: StateData, player: PlayerActor) => {
                 const ld = packDirByte(dx, dy, ControlsFlag.LookAngleMax);
                 let drop = 0;
                 if (
-                    dist < actorsConfig[ActorType.Item]._radius + actorsConfig[ActorType.Player]._radius &&
+                    dist < GAME_CFG.actors[ActorType.Item].radius + GAME_CFG.actors[ActorType.Player].radius &&
                     !(player._trig & ControlsFlag.DownEvent_Drop)
                 ) {
                     drop = ControlsFlag.Drop;

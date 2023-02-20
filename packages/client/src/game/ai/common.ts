@@ -1,9 +1,9 @@
 import {Actor, PlayerActor, StateData} from "../types.js";
 import {WORLD_BOUNDS_SIZE} from "../../assets/params.js";
 import {sqrDistXY} from "../phy.js";
-import {weapons} from "../data/weapons.js";
 import {ClientID} from "@iioi/shared/types.js";
 import {writeState} from "../packets.js";
+import {GAME_CFG} from "../config.js";
 
 let autoplayWorker: Worker | undefined;
 export let autoplayInput = 0;
@@ -11,14 +11,18 @@ let waitAutoplayResult = false;
 let autoplayBuffer = new Int32Array(1024 * 256);
 
 export const loadPlayerCode = (url: string) => {
-    waitAutoplayResult = false;
     autoplayWorker = new Worker(url);
     autoplayWorker.onmessage = message => {
-        autoplayInput = message.data[0] as number;
-        //console.log("receive input:", autoplayInput);
-        autoplayBuffer = message.data[1] as Int32Array;
+        if (message.data instanceof Array) {
+            autoplayInput = message.data[0] as number;
+            //console.log("receive input:", autoplayInput);
+            autoplayBuffer = message.data[1] as Int32Array;
+        }
         waitAutoplayResult = false;
     };
+    // send init message
+    waitAutoplayResult = true;
+    autoplayWorker.postMessage(GAME_CFG);
 };
 
 export const updateAutoplay = (state: StateData, clientId: ClientID) => {
@@ -32,8 +36,9 @@ export const updateAutoplay = (state: StateData, clientId: ClientID) => {
 
 export const hasAmmo = (player: PlayerActor) => {
     if (player._weapon) {
+        const weapons = GAME_CFG.weapons;
         const weapon = weapons[player._weapon];
-        return !weapon._clipSize || player._clipAmmo || player._mags;
+        return !weapon.clipSize || player._clipAmmo || player._mags;
     }
     return false;
 };

@@ -13,7 +13,7 @@ import {
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {GL} from "../graphics/gl.js";
 import {clientId} from "../net/messaging.js";
-import {actorsConfig} from "./data/world.js";
+import {GAME_CFG} from "./config.js";
 
 const FOG_DOWNSCALE = 4;
 const FOG_SIZE = BOUNDS_SIZE / FOG_DOWNSCALE;
@@ -42,9 +42,9 @@ export const drawFogPoint = (x: number, y: number, r: number, alpha: number) => 
 export const drawFogObjects = (...lists: Actor[][]) => {
     for (const list of lists) {
         for (const a of list) {
-            const type = actorsConfig[a._type];
-            let r = type._lightRadiusK;
-            const alpha = type._light;
+            const type = GAME_CFG.actors[a._type];
+            let r = type.lightRadiusK;
+            const alpha = type.light;
             if (r > 0 && alpha > 0) {
                 // isMyPlayer
                 if (a._type === ActorType.Player) {

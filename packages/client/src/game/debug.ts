@@ -1,5 +1,5 @@
 import {Actor, ActorType, Client, cloneStateData, Packet, PacketDebug, StateData} from "./types.js";
-import {_debugLagK, Const, setDebugLagK} from "./config.js";
+import {_debugLagK, Const, GAME_CFG, setDebugLagK} from "./config.js";
 import {_room, clientId, clientName, disconnect, remoteClients} from "../net/messaging.js";
 import {getChannelPacketSize} from "../net/channels_send.js";
 import {termPrint} from "../graphics/gui.js";
@@ -10,7 +10,6 @@ import {ClientID} from "@iioi/shared/types.js";
 import {min} from "../utils/math.js";
 import {getDevFlag, SettingFlag, toggleSettingsFlag} from "./settings.js";
 import {WORLD_SCALE} from "../assets/params.js";
-import {actorsConfig} from "./data/world.js";
 import {opaqueParticles, splats, textParticles} from "./particles.js";
 import {Img} from "../assets/img.js";
 
@@ -148,9 +147,9 @@ export const updateDebugInput = () => {
 };
 
 const drawActorBoundingSphere = (p: Actor) => {
-    const prop = actorsConfig[p._type];
-    const r = prop._radius;
-    const h = prop._height;
+    const prop = GAME_CFG.actors[p._type];
+    const r = prop.radius;
+    const h = prop.height;
     const x = p._x / WORLD_SCALE;
     const y = (p._y - p._z - h) / WORLD_SCALE;
     const s = r / WORLD_SCALE / 16;

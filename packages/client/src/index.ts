@@ -19,6 +19,9 @@ import {poki} from "./poki.js";
 import {openReplayFile} from "./game/replay/replayFile.js";
 import {loadPlayerCode} from "./game/ai/common.js";
 import {enableReplayMode} from "@iioi/client/game/replay/viewer.js";
+import {setGameConfig} from "./game/config.js";
+import {GameConfig} from "./data/config.js";
+import {loadJSON} from "./utils/loaders.js";
 
 console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
 
@@ -64,6 +67,7 @@ const start = async () => {
         setLoadingProgress(total ? loaded / total : 1.0);
     };
     const addLoadItem = <T>(task: Promise<T>): number => itemsToLoad.push(task.then(() => updateProgress(++loaded)));
+    addLoadItem(loadJSON<GameConfig>("config.json").then(gameConfig => setGameConfig(gameConfig)));
     addLoadItem(new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("fa-brands-400", "url(fa-brands-400.ttf)").load().then(font => document.fonts.add(font)));

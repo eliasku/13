@@ -1,10 +1,10 @@
 import {dec1, hypot, max, min} from "@iioi/client/utils/math.js";
 import {gl} from "@iioi/client/graphics/draw2d.js";
 import {GAME_CFG} from "@iioi/client/game/config.js";
-import {WeaponConfig} from "@iioi/client/game/data/weapons.js";
 import {WORLD_SCALE} from "@iioi/client/assets/params.js";
+import {WeaponConfig} from "../data/config.js";
 
-export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG._camera._size;
+export const getScreenScale = () => min(gl.drawingBufferWidth, gl.drawingBufferHeight) / GAME_CFG.camera.size;
 
 export interface GameCamera {
     _x: number;
@@ -51,8 +51,8 @@ export const decCameraEffects = () => {
 };
 
 export const feedbackCameraShot = (weapon: WeaponConfig, dx: number, dy: number) => {
-    gameCamera._shake = max(gameCamera._shake, weapon._cameraShake);
-    const feedback = 20 * weapon._cameraFeedback;
+    gameCamera._shake = max(gameCamera._shake, weapon.cameraShake);
+    const feedback = 20 * weapon.cameraFeedback;
     gameCamera._feedbackX = feedback * dx;
     gameCamera._feedbackY = feedback * dy;
     gameCamera._feedback += 3;

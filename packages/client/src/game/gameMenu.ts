@@ -21,7 +21,7 @@ export const onGameMenu = (gameTic?: number): void => {
                 guiReplayViewer(gameMode._replay, gameTic);
             } else {
                 if (
-                    button("menu", "⏸️", W - 16 - GAME_CFG._minimap._size - 4, 2, {
+                    button("menu", "⏸️", W - 16 - GAME_CFG.minimap.size - 4, 2, {
                         w: 16,
                         h: 16,
                     }) ||

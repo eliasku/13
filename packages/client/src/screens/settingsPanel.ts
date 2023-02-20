@@ -1,4 +1,4 @@
-import {button, uiState} from "../graphics/gui.js";
+import {button} from "../graphics/gui.js";
 import {
     BloodMode,
     DEFAULT_FRAMERATE_LIMIT,
@@ -9,7 +9,6 @@ import {
     settings,
     toggleSettingsFlag,
 } from "../game/settings.js";
-import {poki} from "../poki.js";
 
 export const guiSettingsPanel = (x: number, y: number) => {
     if (

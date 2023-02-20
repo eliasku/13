@@ -5,5 +5,8 @@
     "description": "Helpers to build iioi game",
     "type": "module",
     "author": "eliasku",
-    "license": "ISC"
+    "license": "ISC",
+    "devDependencies": {
+        "@iioi/client": "1.0.18"
+    }
 }
