@@ -18,9 +18,6 @@
     },
     {
       "path": "./packages/sprite/tsconfig.json"
-    },
-    {
-      "path": "./packages/tools/tsconfig.json"
     }
   ],
   "files": []
