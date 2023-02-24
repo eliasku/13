@@ -29,16 +29,13 @@ jobs:
           node-version: 18
 
       - name: install
-        run: |
-          npm ci
+        run: npm ci
 
       - name: typecheck
-        run: |
-          npm run typecheck
+        run: npm run typecheck
 
       - name: build
-        run: |
-          npm run build
+        run: npm run build
 
   release:
     if: ${{ github.ref == 'refs/heads/master' }}
@@ -58,9 +55,7 @@ jobs:
           node-version: 18
 
       - name: install
-        run: |
-          npm -v
-          npm ci
+        run: npm ci
 
       - name: Create Release Pull Request or Publish to NPM
         id: changesets

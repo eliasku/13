@@ -1,7 +1,7 @@
-import {parseRGB} from "../../client/src/utils/utils.js";
-import {BulletType, GameConfig, WeaponConfig} from "../../client/src/data/config.js";
-import {WORLD_SCALE, BULLET_RADIUS, OBJECT_RADIUS} from "../../client/src/assets/params.js";
-import {Img} from "../../client/src/assets/img.js";
+import {parseRGB} from "@iioi/client/utils/utils.js";
+import {BulletType, GameConfig, WeaponConfig} from "@iioi/client/data/config.js";
+import {WORLD_SCALE, BULLET_RADIUS, OBJECT_RADIUS} from "@iioi/client/assets/params.js";
+import {Img} from "@iioi/client/assets/img.js";
 import {writeFileSync} from "fs";
 
 const gameConfig: GameConfig = {

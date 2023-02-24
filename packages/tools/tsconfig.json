@@ -5,12 +5,20 @@
         "outDir": "dist",
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
-        "moduleResolution": "Node"
+        "moduleResolution": "NodeNext"
     },
     "references": [
         {
             "path": "../client/tsconfig.json"
         }
     ],
-    "include": ["src/**/*.ts"]
+    "include": ["src/**/*.ts"],
+    "ts-node": {
+        "transpileOnly": true,
+        "esm": true,
+        "swc": true,
+        "compilerOptions": {
+            "moduleResolution": "NodeNext"
+        }
+    }
 }
