@@ -1,5 +1,14 @@
 # @iioi/client
 
+## 1.0.19
+
+### Patch Changes
+
+-   c37fc3d: Add draft UZI weapon (tracing projectiles)
+-   74cb6df: Laser sight for guns, walls and bounds stop railgun ray
+-   c37fc3d: Fix camera feedback on Y-axis
+-   a2eda74: load game configuration from JSON file
+
 ## 1.0.18
 
 ### Patch Changes
