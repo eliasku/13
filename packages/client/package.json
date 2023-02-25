@@ -1,6 +1,6 @@
 {
     "name": "@iioi/client",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "description": "13 Game Client",
     "private": true,
     "type": "module",
