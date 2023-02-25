@@ -80,6 +80,7 @@ Destroy objects 🛢 | 📦 | 🪦 to get items
 - ⛏ Crossbow (high velocity)
 - 🔌 Plasma-gun (bouncing, auto)
 - 🧵 Rail-gun (piercing)
+- 🧣 Uzi (tracer bullets, rapid fire)
 
 ### Dev-menu
 

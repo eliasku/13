@@ -436,6 +436,7 @@ const gameConfig: GameConfig = {
     weapons[i].bulletShellColor = parseRGB("#909");
     weapons[i].clipSize = 5;
 
+    // uzi: 🧣
     ++i;
     weapons[i].name = "Uzi";
     weapons[i].reloadTime = 4;

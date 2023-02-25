@@ -1,8 +1,9 @@
 ## 1.0.19
 
-- Laser sight for guns, walls and bounds stop rail-gun ray
+- Add new Uzi weapon 🧣 (tracer bullets)
+- Add Laser sight and enable for all guns!
+- Walls and map boundaries stops Rail-gun ray projectile
 - Load game configuration from JSON file #21
-- Add draft UZI weapon (tracing projectiles)
 - Fix camera feedback on Y-axis
 
 ## 1.0.18
