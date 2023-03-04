@@ -1,5 +1,11 @@
 # @iioi/client
 
+## 1.0.21
+
+### Patch Changes
+
+-   7d34e17: move github pages to games site
+
 ## 1.0.20
 
 ### Patch Changes
