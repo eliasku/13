@@ -23,7 +23,7 @@ Select game server, share the link and wait friends to play:
 
 - The latest release is available on [🚪iioi](https://iioi.herokuapp.com/) server
 - Unreleased `master` changes is always deployed to [🚪grtc](https://grtc.herokuapp.com/) or [🚪next13](https://next13.herokuapp.com/) servers
-- [Check servers for online players](https://eliasku.github.io/13/servers.html)
+- [Check servers for online players](https://eliasku-games.web.app/13/servers.html)
 
 ### 🎮 Controls
 
