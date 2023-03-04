@@ -1,3 +1,7 @@
+## 1.0.20
+
+- Add firebase analytics  
+
 ## 1.0.19
 
 - Add new Uzi weapon 🧣 (tracer bullets)

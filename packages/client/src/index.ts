@@ -22,13 +22,15 @@ import {enableReplayMode} from "@iioi/client/game/replay/viewer.js";
 import {setGameConfig} from "./game/config.js";
 import {GameConfig} from "./data/config.js";
 import {loadJSON} from "./utils/loaders.js";
+import {logScreenView, logUserEvent} from "./analytics.js";
 
 console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
+logScreenView("loading");
 
 const StartState = {
     Loading: 0,
     Loaded: 1,
-    TapToStart: 2,
+    Home: 2,
     Connecting: 3,
     Connected: 4,
 } as const;
@@ -47,14 +49,15 @@ const start = async () => {
         }
         setTimeout(refreshRoomsInfo, 2000);
     };
-    const goToSplash = () => {
-        state = StartState.TapToStart;
+    const gotoHome = () => {
+        state = StartState.Home;
         resetGame();
         createSplashState();
         gameMode._title = true;
         gameMode._playersAI = true;
         gameMode._npcLevel = 3;
         speak("13 the game");
+        logScreenView("home_screen");
     };
 
     if (!clientName) {
@@ -85,6 +88,8 @@ const start = async () => {
 
         // test load ai
         loadPlayerCode("./autoplay.js");
+
+        logScreenView("splash_screen");
     });
 
     const preStates: StateFunc[] = [
@@ -94,11 +99,13 @@ const start = async () => {
             const result = menuScreen(publicServerInfo);
             if (result) {
                 if (result._command === MenuCommand.StartPractice) {
+                    logUserEvent("start_practice");
                     state = StartState.Connected;
                     resetGame();
                     connect(result._newGame);
                     gameMode._npcLevel = _room._npcLevel;
                 } else if (result._command === MenuCommand.QuickStart) {
+                    logUserEvent("quick_start");
                     state = StartState.Connecting;
                     resetGame();
                     gameMode._title = true;
@@ -106,6 +113,7 @@ const start = async () => {
                     gameMode._bloodRain = true;
                     connect();
                 } else if (result._command === MenuCommand.JoinGame) {
+                    logUserEvent("join_game_by_code");
                     state = StartState.Connecting;
                     resetGame();
                     gameMode._title = true;
@@ -113,6 +121,7 @@ const start = async () => {
                     gameMode._bloodRain = true;
                     connect(undefined, result._joinByCode);
                 } else if (result._command === MenuCommand.CreateGame) {
+                    logUserEvent("create_new_game");
                     state = StartState.Connecting;
                     resetGame();
                     gameMode._title = true;
@@ -120,9 +129,11 @@ const start = async () => {
                     gameMode._bloodRain = true;
                     connect(result._newGame);
                 } else if (result._command === MenuCommand.Replay) {
+                    logUserEvent("open_replay_file");
                     openReplayFile(replay => {
                         const replayRoom = replay._meta.room;
                         if (replayRoom) {
+                            logUserEvent("view_replay_file");
                             state = StartState.Connected;
                             resetGame();
                             connect({
@@ -162,7 +173,7 @@ const start = async () => {
             }
             flush();
             if (isAnyKeyDown()) {
-                state = StartState.TapToStart;
+                state = StartState.Home;
                 // begin fetch rooms info
                 refreshRoomsInfo();
 
@@ -201,9 +212,10 @@ const start = async () => {
                 gameMode._npcLevel = _room._npcLevel;
                 state = StartState.Connected;
                 speak("fight");
+                logUserEvent("room_connected");
             } else if (!_sseState) {
                 // failed to connect and start the room
-                goToSplash();
+                gotoHome();
             }
         },
         () => {
@@ -214,7 +226,7 @@ const start = async () => {
             if (!_sseState) {
                 // user disconnected or quit the game room
                 poki._gameplayStop();
-                goToSplash();
+                gotoHome();
             }
         },
     ];

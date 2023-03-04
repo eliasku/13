@@ -16,6 +16,7 @@ import {getOrCreate} from "../utils/utils.js";
 import {iceServers} from "./iceServers.js";
 import {setSetting, Setting, settings} from "../game/settings.js";
 import {newSeedFromTime} from "@iioi/shared/seed.js";
+import {setPlayerName} from "../analytics.js";
 
 export interface RemoteClient {
     _id: ClientID;
@@ -82,6 +83,7 @@ export const loadRoomsInfo = async (): Promise<RoomsInfoResponse> => {
 export const setUserName = (name?: string) => {
     name ||= "Guest " + ((Math.random() * 1000) | 0);
     clientName = setSetting(Setting.Name, name.trim().substring(0, 32).trim());
+    setPlayerName(clientName);
 };
 
 const remoteSend = (to: ClientID, type: MessageType, data: MessageData, call = 0): number => {

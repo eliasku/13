@@ -19,5 +19,8 @@
     "license": "ISC",
     "dependencies": {
         "@iioi/shared": "1.0.15"
+    },
+    "devDependencies": {
+        "firebase": "^9.17.2"
     }
 }
