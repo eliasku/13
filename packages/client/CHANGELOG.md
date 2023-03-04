@@ -1,5 +1,11 @@
 # @iioi/client
 
+## 1.0.20
+
+### Patch Changes
+
+-   7a36d1c: add temporary analytics
+
 ## 1.0.19
 
 ### Patch Changes
