@@ -1,5 +1,11 @@
 # @iioi/server
 
+## 1.0.17
+
+### Patch Changes
+
+-   7d34e17: move github pages to games site
+
 ## 1.0.16
 
 ### Patch Changes
