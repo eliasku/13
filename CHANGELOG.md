@@ -1,5 +1,6 @@
-## 1.0.20
+## 1.0.21
 
+- Move pages to site
 - Add firebase analytics  
 
 ## 1.0.19

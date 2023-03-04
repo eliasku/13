@@ -6,8 +6,3 @@ dist/
 public/
 server.js
 server.js.map
-
-# pages
-pages/vendor/
-pages/_site/
-pages/Gemfile.lock

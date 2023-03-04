@@ -9,7 +9,7 @@
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
 
 <p align="center">
-<img src="./pages/13logo.gif">
+<img src="13.gif">
 </p>
 
 - 🎖️ **7-th place** winner!
@@ -140,11 +140,3 @@ node server.js
 3. Run `npm start` or `npm run build` - scripts will copy `packages/client/assets/config.json` to `public/config.json`, it will be loaded by the game and will be used for all global configuration.
 
 If you need some new option from the code to be exposed in `config.json`, please create the issue.
-
-### Build Pages (not a Game)
-
-```shell
-cd pages
-bundle install --path vendor/bundle
-bundle exec jekyll serve
-```

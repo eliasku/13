@@ -19,6 +19,14 @@
   },
   "author": "Ilya Kuzmichev <eliasku.games@gmail.com> (https://eliasku-games.web.app)",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eliasku/13.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eliasku/13/issues",
+    "email": "eliasku.games@gmail.com"
+  },
   "workspaces": [
     "./packages/*"
   ],
