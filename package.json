@@ -41,7 +41,7 @@
     "@rollup/plugin-terser": "^0.4.0",
     "@swc/core": "^1.3.39",
     "@types/node": "^18.15.0",
-    "@typescript-eslint/eslint-plugin": "^5.54.1",
+    "@typescript-eslint/eslint-plugin": "^5.55.0",
     "@typescript-eslint/parser": "^5.54.1",
     "esbuild": "^0.17.11",
     "eslint": "^8.35.0",
