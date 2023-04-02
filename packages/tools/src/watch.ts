@@ -1,6 +1,7 @@
 import {spawn} from "child_process";
 import {copyPublicAssets, prepareFolders} from "./common.js";
 import {watch} from "./rollup.js";
+import {exit} from "process";
 
 prepareFolders("public");
 copyPublicAssets();
@@ -23,7 +24,7 @@ const watchTasks = [
         skipTerser: true,
     }).catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
     watch({
         input: "packages/client/src/index.ts",
@@ -33,7 +34,7 @@ const watchTasks = [
         skipTerser: true,
     }).catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
     watch({
         input: "packages/client/src/index.ts",
@@ -42,7 +43,7 @@ const watchTasks = [
         debug: true,
     }).catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
     (async () => {
         await watch({
@@ -59,7 +60,7 @@ const watchTasks = [
         });
     })().catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
 ];
 

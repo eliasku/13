@@ -3,6 +3,7 @@ import {BulletType, GameConfig, WeaponConfig} from "@iioi/client/data/config.js"
 import {WORLD_SCALE, BULLET_RADIUS, OBJECT_RADIUS} from "@iioi/client/assets/params.js";
 import {Img} from "@iioi/client/assets/img.js";
 import {writeFileSync} from "fs";
+import {prepareFolders} from "./common.js";
 
 const gameConfig: GameConfig = {
     npc: [
@@ -458,4 +459,5 @@ const gameConfig: GameConfig = {
 
 const configJson = JSON.stringify(gameConfig);
 writeFileSync("packages/client/assets/config.json", configJson, "utf-8");
+prepareFolders("public");
 writeFileSync("public/config.json", configJson, "utf-8");

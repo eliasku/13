@@ -1,7 +1,8 @@
 import {nodeResolve} from "@rollup/plugin-node-resolve";
 import sourcemaps from "rollup-plugin-sourcemaps";
 import terser from "@rollup/plugin-terser";
-import esbuild, {Options} from "rollup-plugin-esbuild";
+import {Options} from "rollup-plugin-esbuild";
+import esbuild from "rollup-plugin-esbuild";
 import dts from "rollup-plugin-dts";
 import {typescriptPaths} from "rollup-plugin-typescript-paths";
 import {

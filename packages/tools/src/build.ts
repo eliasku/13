@@ -1,5 +1,6 @@
 import {copyPublicAssets, prepareFolders} from "./common.js";
 import {build} from "./rollup.js";
+import {exit} from "process";
 
 prepareFolders("public");
 copyPublicAssets();
@@ -19,7 +20,7 @@ const buildTasks = [
         keepConsole: true,
     }).catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
     build({
         input: "packages/client/src/index.ts",
@@ -27,7 +28,7 @@ const buildTasks = [
         output: "public/client.js",
     }).catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
     build({
         input: "packages/client/src/index.ts",
@@ -36,7 +37,7 @@ const buildTasks = [
         debug: true,
     }).catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
     (async () => {
         await build({
@@ -53,7 +54,7 @@ const buildTasks = [
         });
     })().catch(e => {
         console.warn(e);
-        process.exit(1);
+        exit(1);
     }),
 ];
 
