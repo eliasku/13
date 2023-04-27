@@ -21,6 +21,6 @@
         "@iioi/shared": "1.0.15"
     },
     "devDependencies": {
-        "firebase": "^9.20.0"
+        "firebase": "^9.21.0"
     }
 }
