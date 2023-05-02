@@ -3,6 +3,7 @@ import sourcemaps from "rollup-plugin-sourcemaps";
 import terser from "@rollup/plugin-terser";
 import {Options} from "rollup-plugin-esbuild";
 import esbuild from "rollup-plugin-esbuild";
+import alias from "@rollup/plugin-alias";
 import dts from "rollup-plugin-dts";
 import {typescriptPaths} from "rollup-plugin-typescript-paths";
 import {
@@ -29,6 +30,7 @@ interface BuildOptions {
     keepConsole?: boolean; // false
     keepProps?: boolean; // false (!debug also)
     skipTerser?: boolean;
+    disableAnalytics?: boolean;
 
     serverUrl?: string;
 
@@ -65,6 +67,9 @@ const getRollupInput = (options: BuildOptions): RollupOptions => {
                 tsConfigPath: "tsconfig.base.json",
                 preserveExtensions: true,
             }),
+            options.disableAnalytics ? alias({
+                entries: [{find: /^(.*)analytics\.js$/, replacement: '$1analytics-poki.js'}]
+            }) : undefined,
             esbuild_(options),
             options.debug || options.skipTerser
                 ? undefined
@@ -91,6 +96,7 @@ const getRollupInput = (options: BuildOptions): RollupOptions => {
                     format: {
                         wrap_func_args: false,
                         inline_script: false,
+                        comments: false,
                     },
                     mangle: options.keepProps
                         ? undefined

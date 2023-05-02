@@ -1,3 +1,7 @@
+## 1.0.22
+
+- Remove analytics from Poki build
+
 ## 1.0.21
 
 - Move pages to site
