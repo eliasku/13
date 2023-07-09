@@ -1,5 +1,12 @@
 # @iioi/tools
 
+## 1.0.17
+
+### Patch Changes
+
+-   1f48327: fix write config without public folder
+-   ce98dee: build option to disable analytics
+
 ## 1.0.16
 
 ### Patch Changes
