@@ -13,7 +13,7 @@ import {
 } from "@iioi/shared/types.js";
 import {channels_processMessage} from "./channels.js";
 import {getOrCreate} from "../utils/utils.js";
-import {iceServers} from "./iceServers.js";
+import {getIceServers} from "./iceServers.js";
 import {setSetting, Setting, settings} from "../game/settings.js";
 import {newSeedFromTime} from "@iioi/shared/seed.js";
 import {setPlayerName} from "../analytics.js";
@@ -327,7 +327,7 @@ const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
         _id: id,
-        _pc: (_pc = new RTCPeerConnection({iceServers})),
+        _pc: (_pc = new RTCPeerConnection({iceServers: getIceServers()})),
         _iceCandidates: [],
     };
 

@@ -23,6 +23,7 @@ import {setGameConfig} from "./game/config.js";
 import {GameConfig} from "./data/config.js";
 import {loadJSON} from "./utils/loaders.js";
 import {logScreenView, logUserEvent} from "./analytics.js";
+import {loadIceServers} from "./net/iceServers.js";
 
 console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
 logScreenView("loading");
@@ -39,6 +40,8 @@ type StateFunc = (ts?: number) => void | undefined;
 
 const start = async () => {
     await poki._init();
+
+    await loadIceServers();
 
     let state: StartState = StartState.Loading;
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
