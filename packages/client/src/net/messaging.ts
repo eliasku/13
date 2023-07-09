@@ -142,15 +142,31 @@ const handleOffer = (rc: RemoteClient, offer: RTCSessionDescriptionInit) =>
             return await rc._pc.createAnswer();
         })
         .then(answer => rc._pc.setLocalDescription(answer))
-        .then(() => rc._pc.localDescription.toJSON())
+        .then(() => remoteSend(rc._id, MessageType.RtcAnswer, rc._pc.localDescription.toJSON()))
         .catch(() => console.warn("setRemoteDescription error"));
+
+const handleAnswer = async (rc: RemoteClient, answer: RTCSessionDescriptionInit) => {
+    rc._pc
+        .setRemoteDescription(new RTCSessionDescription(answer))
+        .then(() => {
+            rc._remoteDescSet = true;
+        })
+        .catch(() => console.warn("setRemoteDescription error"));
+};
 
 const handlers: Handler[] = [
     undefined,
     // 0
     // MessageType.RtcOffer
-    (req): Promise<RTCSessionDescriptionInit> =>
-        handleOffer(requireRemoteClient(req[MessageField.Source]), req[MessageField.Data] as RTCSessionDescriptionInit),
+    (req): void => {
+        handleOffer(requireRemoteClient(req[MessageField.Source]), req[MessageField.Data] as RTCSessionDescriptionInit);
+    },
+    (req): void => {
+        handleAnswer(
+            requireRemoteClient(req[MessageField.Source]),
+            req[MessageField.Data] as RTCSessionDescriptionInit,
+        );
+    },
     // MessageType.RtcCandidate
     (req): void => {
         const init = req[MessageField.Data] as RTCIceCandidateInit;
@@ -192,7 +208,7 @@ const requestHandler = (req: Message) =>
 export const processMessages = () => {
     if (_sseState > 1 && !messageUploading && messagesToPost.length) {
         messageUploading = true;
-        _post([messagesToPost[0]])
+        _post(messagesToPost)
             .then(response => {
                 messagesToPost = messagesToPost.slice(response);
                 messageUploading = false;
@@ -291,40 +307,6 @@ export const connect = (newGameParams?: NewGameParams, gameCode?: string) => {
     }
 };
 
-const waitForAllICECandidates = (rc: RemoteClient): Promise<void> =>
-    new Promise<void>((complete, reject) => {
-        console.info(rc._pc.iceGatheringState);
-        const stateChangedHandler = (e: Event): void => {
-            console.info("stateChangedHandler", rc._pc.iceGatheringState);
-            // if (iceEvent.candidate) {
-            //     remoteSend(rc._id, MessageType.RtcCandidate, iceEvent.candidate.toJSON());
-            // }
-            if (rc._pc.iceGatheringState === "complete") {
-                rc._pc.removeEventListener("icecandidate", handler);
-                rc._pc.removeEventListener("iceconnectionstatechange", stateChangedHandler);
-                complete();
-            }
-        };
-        const handler = (iceEvent: RTCPeerConnectionIceEvent): void => {
-            console.info("waitForAllICECandidates", iceEvent.candidate);
-            // if (iceEvent.candidate) {
-            //     remoteSend(rc._id, MessageType.RtcCandidate, iceEvent.candidate.toJSON());
-            // }
-            if (iceEvent.candidate === null || rc._pc.iceGatheringState === "complete") {
-                rc._pc.removeEventListener("icecandidate", handler);
-                rc._pc.removeEventListener("iceconnectionstatechange", stateChangedHandler);
-                complete();
-            }
-        };
-        rc._pc.addEventListener("icecandidate", handler);
-        rc._pc.addEventListener("iceconnectionstatechange", stateChangedHandler);
-        setTimeout(() => {
-            rc._pc.removeEventListener("icecandidate", handler);
-            rc._pc.removeEventListener("iceconnectionstatechange", stateChangedHandler);
-            reject("Waited a long time for ice candidates...");
-        }, 10000);
-    });
-
 // RTC
 const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
     rc._pc
@@ -338,14 +320,9 @@ const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
         //         }
         //     };
         // })
-        .then(() =>
-            remoteCall(rc._id, MessageType.RtcOffer, rc._pc.localDescription.toJSON(), async message => {
-                await rc._pc.setRemoteDescription(
-                    new RTCSessionDescription(message[MessageField.Data] as RTCSessionDescriptionInit),
-                );
-                rc._remoteDescSet = true;
-            }),
-        );
+        .then(() => {
+            remoteSend(rc._id, MessageType.RtcOffer, rc._pc.localDescription.toJSON());
+        });
 
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {

@@ -31,9 +31,10 @@ export type ServerEventName = (typeof ServerEventName)[keyof typeof ServerEventN
 export const MessageType = {
     Nop: 0,
     RtcOffer: 1,
-    RtcCandidate: 2,
-    Name: 3,
-    State: 4,
+    RtcAnswer: 2,
+    RtcCandidate: 3,
+    Name: 4,
+    State: 5,
 } as const;
 export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
