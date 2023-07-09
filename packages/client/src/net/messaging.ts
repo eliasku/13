@@ -192,7 +192,7 @@ const requestHandler = (req: Message) =>
 export const processMessages = () => {
     if (_sseState > 1 && !messageUploading && messagesToPost.length) {
         messageUploading = true;
-        _post(messagesToPost)
+        _post([messagesToPost[0]])
             .then(response => {
                 messagesToPost = messagesToPost.slice(response);
                 messageUploading = false;
