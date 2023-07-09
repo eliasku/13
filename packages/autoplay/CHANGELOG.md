@@ -1,5 +1,11 @@
 # @iioi/autoplay
 
+## 1.0.22
+
+### Patch Changes
+
+-   @iioi/bot-api@1.0.22
+
 ## 1.0.21
 
 ### Patch Changes
