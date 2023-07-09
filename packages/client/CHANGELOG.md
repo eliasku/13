@@ -1,5 +1,12 @@
 # @iioi/client
 
+## 1.0.22
+
+### Patch Changes
+
+-   1f48327: up firebase module
+-   ce98dee: build option to disable analytics
+
 ## 1.0.21
 
 ### Patch Changes
