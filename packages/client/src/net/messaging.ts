@@ -24,6 +24,8 @@ export interface RemoteClient {
     _dc?: RTCDataChannel;
     _name?: string;
     _debugPacketByteLength?: number;
+    _remoteDescSet?: boolean;
+    _iceCandidates?: RTCIceCandidate[];
 }
 
 const getUrl = (url: string) => ServerUrl + url;
@@ -125,7 +127,20 @@ export const disconnect = (reason?: string) => {
 const handleOffer = (rc: RemoteClient, offer: RTCSessionDescriptionInit) =>
     rc._pc
         .setRemoteDescription(offer)
-        .then(() => rc._pc.createAnswer())
+        .then(async () => {
+            rc._remoteDescSet = true;
+            if (rc._iceCandidates) {
+                await Promise.all(
+                    rc._iceCandidates.map(ice =>
+                        rc._pc
+                            .addIceCandidate(ice)
+                            .catch(error => console.warn("ice candidate set failed: " + error.message)),
+                    ),
+                );
+                rc._iceCandidates = [];
+            }
+            return await rc._pc.createAnswer();
+        })
         .then(answer => rc._pc.setLocalDescription(answer))
         .then(() => rc._pc.localDescription.toJSON())
         .catch(() => console.warn("setRemoteDescription error"));
@@ -140,9 +155,15 @@ const handlers: Handler[] = [
     (req): void => {
         const init = req[MessageField.Data] as RTCIceCandidateInit;
         if (init.candidate) {
-            requireRemoteClient(req[MessageField.Source])
-                ._pc.addIceCandidate(new RTCIceCandidate(init))
-                .catch(error => console.warn("ice candidate set failed: " + error.message));
+            const rc = requireRemoteClient(req[MessageField.Source]);
+            if (rc._remoteDescSet) {
+                rc._pc
+                    .addIceCandidate(new RTCIceCandidate(init))
+                    .catch(error => console.warn("ice candidate set failed: " + error.message));
+            } else {
+                if (!rc._iceCandidates) rc._iceCandidates = [];
+                rc._iceCandidates.push(new RTCIceCandidate(init));
+            }
         }
     },
     // MessageType.Name
@@ -270,33 +291,91 @@ export const connect = (newGameParams?: NewGameParams, gameCode?: string) => {
     }
 };
 
+const waitForAllICECandidates = (rc: RemoteClient): Promise<void> =>
+    new Promise<void>((complete, reject) => {
+        console.info(rc._pc.iceGatheringState);
+        const stateChangedHandler = (e: Event): void => {
+            console.info("stateChangedHandler", rc._pc.iceGatheringState);
+            // if (iceEvent.candidate) {
+            //     remoteSend(rc._id, MessageType.RtcCandidate, iceEvent.candidate.toJSON());
+            // }
+            if (rc._pc.iceGatheringState === "complete") {
+                rc._pc.removeEventListener("icecandidate", handler);
+                rc._pc.removeEventListener("iceconnectionstatechange", stateChangedHandler);
+                complete();
+            }
+        };
+        const handler = (iceEvent: RTCPeerConnectionIceEvent): void => {
+            console.info("waitForAllICECandidates", iceEvent.candidate);
+            // if (iceEvent.candidate) {
+            //     remoteSend(rc._id, MessageType.RtcCandidate, iceEvent.candidate.toJSON());
+            // }
+            if (iceEvent.candidate === null || rc._pc.iceGatheringState === "complete") {
+                rc._pc.removeEventListener("icecandidate", handler);
+                rc._pc.removeEventListener("iceconnectionstatechange", stateChangedHandler);
+                complete();
+            }
+        };
+        rc._pc.addEventListener("icecandidate", handler);
+        rc._pc.addEventListener("iceconnectionstatechange", stateChangedHandler);
+        setTimeout(() => {
+            rc._pc.removeEventListener("icecandidate", handler);
+            rc._pc.removeEventListener("iceconnectionstatechange", stateChangedHandler);
+            reject("Waited a long time for ice candidates...");
+        }, 10000);
+    });
+
 // RTC
 const sendOffer = (rc: RemoteClient, iceRestart?: boolean) =>
     rc._pc
         .createOffer({iceRestart})
         .then(offer => rc._pc.setLocalDescription(offer))
+        // .then(() => waitForAllICECandidates(rc))
+        // .then(() => {
+        //     rc._pc.onicecandidate = e => {
+        //         if (e.candidate) {
+        //             remoteSend(rc._id, MessageType.RtcCandidate, e.candidate.toJSON());
+        //         }
+        //     };
+        // })
         .then(() =>
-            remoteCall(rc._id, MessageType.RtcOffer, rc._pc.localDescription.toJSON(), message =>
-                rc._pc.setRemoteDescription(
+            remoteCall(rc._id, MessageType.RtcOffer, rc._pc.localDescription.toJSON(), async message => {
+                await rc._pc.setRemoteDescription(
                     new RTCSessionDescription(message[MessageField.Data] as RTCSessionDescriptionInit),
-                ),
-            ),
+                );
+                rc._remoteDescSet = true;
+            }),
         );
 
 const newRemoteClient = (id: ClientID, _pc?: RTCPeerConnection): RemoteClient => {
     const rc: RemoteClient = {
         _id: id,
         _pc: (_pc = new RTCPeerConnection({iceServers})),
+        _iceCandidates: [],
     };
 
     _pc.onicecandidate = e => {
+        console.info(e.candidate);
         if (e.candidate) {
-            remoteSend(id, MessageType.RtcCandidate, e.candidate.toJSON());
+            const data = {
+                candidate: e.candidate.candidate,
+                sdpMid: e.candidate.sdpMid,
+                sdpMLineIndex: e.candidate.sdpMLineIndex,
+            };
+            // remoteSend(id, MessageType.RtcCandidate, e.candidate.toJSON());
+            remoteSend(id, MessageType.RtcCandidate, data);
         }
     };
 
+    // _pc.addEventListener("icecandidate", e => {
+    //     console.info(e);
+    //     if (e.candidate) {
+    //         remoteSend(id, MessageType.RtcCandidate, e.candidate.toJSON());
+    //     }
+    // });
+
     _pc.onnegotiationneeded = () => {
-        console.log("negotiation needed");
+        console.info("negotiation needed");
         sendOffer(rc, false);
     };
 
@@ -328,9 +407,9 @@ const connectToRemote = async (rc: RemoteClient): Promise<void> => {
         }
     };
     console.log("connecting to " + rc._id);
-    await sendOffer(rc);
     rc._dc = rc._pc.createDataChannel(0 as unknown as string, {ordered: false, maxRetransmits: 0});
     setupDataChannel(rc);
+    //await sendOffer(rc);
     await new Promise<void>((resolve, reject) => {
         let num = 50;
         const timer = setInterval(() => {
