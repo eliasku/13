@@ -23,7 +23,7 @@ import {setGameConfig} from "./game/config.js";
 import {GameConfig} from "./data/config.js";
 import {loadJSON} from "./utils/loaders.js";
 import {logScreenView, logUserEvent} from "./analytics.js";
-import {loadIceServers} from "./net/iceServers.js";
+import {setRtcConfiguration} from "./net/iceServers.js";
 
 console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
 logScreenView("loading");
@@ -40,8 +40,6 @@ type StateFunc = (ts?: number) => void | undefined;
 
 const start = async () => {
     await poki._init();
-
-    await loadIceServers();
 
     let state: StartState = StartState.Loading;
     let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
@@ -74,6 +72,7 @@ const start = async () => {
     };
     const addLoadItem = <T>(task: Promise<T>): number => itemsToLoad.push(task.then(() => updateProgress(++loaded)));
     addLoadItem(loadJSON<GameConfig>("config.json").then(gameConfig => setGameConfig(gameConfig)));
+    addLoadItem(loadJSON<GameConfig>("ice.json").then(config => setRtcConfiguration(config as RTCConfiguration)));
     addLoadItem(new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("fa-brands-400", "url(fa-brands-400.ttf)").load().then(font => document.fonts.add(font)));

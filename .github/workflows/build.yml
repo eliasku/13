@@ -36,6 +36,8 @@ jobs:
 
       - name: build
         run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     if: ${{ github.ref == 'refs/heads/master' }}

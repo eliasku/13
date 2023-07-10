@@ -1,0 +1,7 @@
+{
+  "iceServers": [
+    {
+      "urls": "stun:stun.relay.metered.ca:80"
+    }
+  ]
+}

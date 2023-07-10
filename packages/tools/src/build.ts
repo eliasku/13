@@ -1,6 +1,9 @@
 import {copyPublicAssets, prepareFolders} from "./common.js";
 import {build} from "./rollup.js";
 import {exit} from "process";
+import {prepareKeysFolder} from "./keys.js";
+
+await prepareKeysFolder();
 
 prepareFolders("public");
 copyPublicAssets();
