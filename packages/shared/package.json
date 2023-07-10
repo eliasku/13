@@ -1,6 +1,6 @@
 {
     "name": "@iioi/shared",
-    "version": "1.0.15",
+    "version": "1.0.16",
     "description": "13 Game shared library",
     "private": true,
     "type": "module",
