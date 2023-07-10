@@ -30,6 +30,7 @@ export const SettingFlag = {
     DevShowDebugInfo: 1 << 7,
     DevLogging: 1 << 8,
     DevAutoPlay: 1 << 9,
+    Antialiasing: 1 << 10,
 } as const;
 export type SettingFlag = (typeof SettingFlag)[keyof typeof SettingFlag];
 
@@ -94,12 +95,12 @@ export const setSetting = <K extends keyof SettingsMap>(key: K, value: SettingsM
 };
 
 /* @__PURE__ */
-export const getDevFlag = (key: SettingFlag = 0) =>
+export const getDevFlag = (key: SettingFlag = 0): boolean =>
     (settings[Setting.Flags] & (SettingFlag.DevMode | key)) === (SettingFlag.DevMode | key);
 
 export const enableSettingsFlag = (flag: SettingFlag) => setSetting(Setting.Flags, settings[Setting.Flags] | flag);
 
 /* @__PURE__ */
-export const hasSettingsFlag = (flag: SettingFlag) => settings[Setting.Flags] & flag;
+export const hasSettingsFlag = (flag: SettingFlag): boolean => (settings[Setting.Flags] & flag) === flag;
 
 export const toggleSettingsFlag = (mask: SettingFlag) => setSetting(Setting.Flags, settings[Setting.Flags] ^ mask);

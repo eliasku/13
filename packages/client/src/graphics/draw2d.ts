@@ -18,7 +18,7 @@ import {hasSettingsFlag, SettingFlag} from "../game/settings.js";
 import {createCanvas} from "./utils.js";
 
 export const gl = c.getContext("webgl", {
-    antialias: false,
+    antialias: hasSettingsFlag(SettingFlag.Antialiasing),
     // defaults:
     // alpha: true, - don't emulate RGB24
     // depth: true,

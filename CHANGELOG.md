@@ -1,4 +1,8 @@
-## 1.0.23
+## 1.0.25
+
+- Add antialiasing option
+
+## 1.0.24
 
 - Turn off git info hash from server version verify
 

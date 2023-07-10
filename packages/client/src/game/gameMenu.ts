@@ -67,7 +67,7 @@ export const onGameMenu = (gameTic?: number): void => {
                 gameMode._menu = GameMenuState.InGame;
             }
         } else if (gameMode._menu === GameMenuState.Settings) {
-            guiSettingsPanel(centerX, centerY);
+            guiSettingsPanel(centerX, centerY - 20);
 
             if (
                 button("back", "⬅ BACK", centerX - 50, centerY + 90, {

@@ -81,4 +81,16 @@ export const guiSettingsPanel = (x: number, y: number) => {
     ) {
         setSetting(Setting.FrameRateCap, frameRateCap > 0 ? 0 : DEFAULT_FRAMERATE_LIMIT);
     }
+
+    const antialiasing = hasSettingsFlag(SettingFlag.Antialiasing);
+    if (
+        button("antialiasing", "ANTIALIASING: " + (antialiasing ? "ON" : "OFF"), x - 40, y + 80, {
+            w: 80,
+            h: 20,
+        })
+    ) {
+        toggleSettingsFlag(SettingFlag.Antialiasing);
+        alert("iioi game will be reloaded to apply antialiasing settings");
+        location.reload();
+    }
 };

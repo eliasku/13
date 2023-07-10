@@ -117,8 +117,8 @@ export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefine
                 menu = Menu.Settings;
             }
         } else if (menu === Menu.Settings) {
-            label("⚙️ SETTINGS", 20, centerX, 30);
-            guiSettingsPanel(centerX, centerY);
+            label("⚙️ SETTINGS", 16, centerX, 30);
+            guiSettingsPanel(centerX, centerY - 20);
             if (
                 button("back", "⬅ BACK", centerX - 50, centerY + 90, {
                     w: 100,
