@@ -1,5 +1,13 @@
 # @iioi/client
 
+## 1.0.24
+
+### Patch Changes
+
+-   577d9b8: up version
+-   Updated dependencies [577d9b8]
+    -   @iioi/shared@1.0.16
+
 ## 1.0.23
 
 ### Patch Changes

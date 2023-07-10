@@ -1,5 +1,11 @@
 # @iioi/shared
 
+## 1.0.16
+
+### Patch Changes
+
+-   577d9b8: up version
+
 ## 1.0.15
 
 ### Patch Changes

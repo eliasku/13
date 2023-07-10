@@ -1,5 +1,13 @@
 # @iioi/server
 
+## 1.0.19
+
+### Patch Changes
+
+-   577d9b8: up version
+-   Updated dependencies [577d9b8]
+    -   @iioi/shared@1.0.16
+
 ## 1.0.18
 
 ### Patch Changes

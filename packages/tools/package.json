@@ -7,6 +7,6 @@
     "author": "eliasku",
     "license": "ISC",
     "devDependencies": {
-        "@iioi/client": "1.0.23"
+        "@iioi/client": "1.0.24"
     }
 }
