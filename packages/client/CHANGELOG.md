@@ -1,5 +1,11 @@
 # @iioi/client
 
+## 1.0.23
+
+### Patch Changes
+
+-   1160b12: new ice servers config
+
 ## 1.0.22
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @iioi/tools
 
+## 1.0.18
+
+### Patch Changes
+
+-   1160b12: using secret repo for rtc configuration
+
 ## 1.0.17
 
 ### Patch Changes

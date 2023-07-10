@@ -1,6 +1,6 @@
 {
     "name": "@iioi/server",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "description": "13 Game Server",
     "private": true,
     "type": "module",
