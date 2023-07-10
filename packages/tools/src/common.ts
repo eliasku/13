@@ -105,7 +105,8 @@ try {
     console.warn("Failed to get git commit hash (required for build meta)");
 }
 
-const buildHash = crypto.createHash("md5").update(version).update(new Uint8Array(gitCommitBytes)).digest("base64url");
+// const buildHash = crypto.createHash("md5").update(version).update(new Uint8Array(gitCommitBytes)).digest("base64url");
+const buildHash = crypto.createHash("md5").update(version).digest("base64url");
 console.info("build version: " + version);
 console.info("build commit: " + gitCommit);
 console.info("build hash: " + buildHash);

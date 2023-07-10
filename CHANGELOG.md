@@ -1,3 +1,11 @@
+## 1.0.23
+
+- Turn off git info hash from server version verify
+
+## 1.0.23
+
+- Re-enable TURN servers
+
 ## 1.0.22
 
 - Remove analytics from Poki build
