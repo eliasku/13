@@ -1,5 +1,11 @@
 # @iioi/tools
 
+## 1.0.19
+
+### Patch Changes
+
+-   384ae0a: remove git info hash from version hash
+
 ## 1.0.18
 
 ### Patch Changes
