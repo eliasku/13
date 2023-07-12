@@ -655,7 +655,7 @@ export const drawOverlay = () => {
     beginRenderToMain(0, 0, 0, 0, 0, scale);
 
     if (clientId) {
-        drawMiniMap(game._state, game._trees, gl.drawingBufferWidth / scale, 0);
+        drawMiniMap(game._state, game._trees, game._blocks, gl.drawingBufferWidth / scale, 0);
     }
 
     if (!gameMode._title) {
@@ -801,8 +801,11 @@ const drawTiles = (blocks: number[]) => {
                 const x = cx << TILE_SIZE_BITS;
                 const y = cy << TILE_SIZE_BITS;
                 setDrawZ(height);
+
                 drawMeshSprite(img[Img.box_lt], x, y, 0, sz, sz, 1, 0x444444, 0, 0);
-                drawMeshSpriteUp(img[Img.box_lt], x, y + sz, height, 0, sz, height, 1, 0x888888, 0, 0);
+                if (b === 3) {
+                    drawMeshSpriteUp(img[Img.box_lt], x, y + sz, height, 0, sz, height, 1, 0x888888, 0, 0);
+                }
             }
         }
     }
@@ -824,7 +827,7 @@ const drawTilesShadows = (blocks: number[]) => {
     for (let cy = b; cy >= t; --cy) {
         for (let cx = l; cx <= r; ++cx) {
             const b = blocks[cy * TILE_MAP_STRIDE + cx];
-            if (b) {
+            if (b === 3) {
                 const x = cx << TILE_SIZE_BITS;
                 const y = cy << TILE_SIZE_BITS;
                 drawMeshSprite(img[Img.box_lt], x, y + sz, 0, sz, 2, 0.4, 0, 0, 0);

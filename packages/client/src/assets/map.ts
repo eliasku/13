@@ -3,6 +3,7 @@ import {createTexture, initFramebuffer, uploadTexture} from "../graphics/draw2d.
 import {BOUNDS_SIZE} from "./params.js";
 import {PI2} from "../utils/math.js";
 import {createCanvas} from "../graphics/utils.js";
+import {TILE_MAP_STRIDE, TILE_SIZE} from "../game/tilemap.js";
 
 interface MapTheme {
     primaryColor: string;
@@ -44,14 +45,16 @@ export const mapTexture0 = createTexture(BOUNDS_SIZE);
 export const mapTexture = createTexture(BOUNDS_SIZE);
 initFramebuffer(mapTexture);
 
-export const generateMapBackground = (themeId: number): MapTheme => {
+export const generateMapBackground = (themeId: number, blocks: number[]): MapTheme => {
     const theme = themes[themeId];
     const size = BOUNDS_SIZE;
     const map = createCanvas(size);
     map.fillStyle = theme.primaryColor;
     map.fillRect(0, 0, size, size);
+
     const sc = 4;
     map.scale(1, 1 / sc);
+
     for (let i = 0; i++ < size; ) {
         map.fillStyle = theme.splatColors[rand(theme.splatColors.length)];
         map.beginPath();
@@ -62,6 +65,20 @@ export const generateMapBackground = (themeId: number): MapTheme => {
         const splatH = theme.rectH[0] + rand(theme.rectH[1] - theme.rectH[0]);
         map.fillRect(rand(size), rand(size) * sc, splatW, splatH);
     }
+    {
+        map.resetTransform();
+        map.fillStyle = theme.splatColors[0];
+        const pad = 4;
+        for (let cy = 0; cy < TILE_MAP_STRIDE; ++cy) {
+            for (let cx = 0; cx < TILE_MAP_STRIDE; ++cx) {
+                const t = blocks[cx + cy * TILE_MAP_STRIDE];
+                if (t) {
+                    map.fillRect(cx * TILE_SIZE - pad, cy * TILE_SIZE - pad, TILE_SIZE + 2 * pad, TILE_SIZE + 2 * pad);
+                }
+            }
+        }
+    }
+
     uploadTexture(mapTexture0, map.canvas);
     uploadTexture(mapTexture, map.canvas);
     return theme;

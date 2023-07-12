@@ -7,6 +7,7 @@ import {PI} from "../utils/math.js";
 import {GAME_CFG} from "./config.js";
 import {fnt} from "../graphics/font.js";
 import {Img} from "../assets/img.js";
+import {TILE_MAP_STRIDE} from "./tilemap.js";
 
 const getPlayerColor = (player: PlayerActor): number => {
     const config = GAME_CFG.minimap;
@@ -33,13 +34,26 @@ const drawMiniMapList = (x: number, y: number, actors: Actor[] | undefined, colo
     }
 };
 
-export const drawMiniMap = (state: StateData, staticTrees: Actor[], right: number, top: number) => {
+export const drawMiniMap = (state: StateData, staticTrees: Actor[], blocks: number[], right: number, top: number) => {
     const config = GAME_CFG.minimap;
     const size = config.size;
     const colors = config.colors;
     const x = right - size - 1;
     const y = top + 1;
     draw(img[Img.box_lt], x, y, 0, size, size, colors.backgroundAlpha, colors.background);
+    {
+        const sc = size / TILE_MAP_STRIDE;
+        for (let cy = 0; cy < TILE_MAP_STRIDE; ++cy) {
+            for (let cx = 0; cx < TILE_MAP_STRIDE; ++cx) {
+                const t = blocks[cx + cy * TILE_MAP_STRIDE];
+                if (t === 1) {
+                    draw(img[Img.box_lt], x + sc * cx, y + sc * cy, 0, sc, sc, 1, colors.tree);
+                } else if (t === 3) {
+                    draw(img[Img.box_lt], x + sc * cx, y + sc * cy, 0, sc, sc, 1, 0xffffff);
+                }
+            }
+        }
+    }
     drawMiniMapList(x, y, staticTrees, colors.tree, GAME_CFG.actors[ActorType.Tree].radius);
     drawMiniMapList(x, y, state._actors[ActorType.Barrel], colors.barrel, GAME_CFG.actors[ActorType.Barrel].radius);
     drawMiniMapList(x, y, state._actors[ActorType.Item], colors.item, GAME_CFG.actors[ActorType.Item].radius);

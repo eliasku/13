@@ -82,7 +82,6 @@ import {
     copyPosFromActorCenter,
     limitVelocity,
     reflectVelocity,
-    setRandomPosition,
     testIntersection,
     updateActorPhysics,
     updateAnim,
@@ -95,7 +94,6 @@ import {
     OBJECT_RADIUS,
     PLAYER_HANDS_Z,
     WORLD_BOUNDS_SIZE,
-    WORLD_BOUNDS_SIZE_PX,
     WORLD_SCALE,
 } from "../assets/params.js";
 import {
@@ -144,10 +142,11 @@ import {
 import {playAt} from "@iioi/client/game/gameAudio.js";
 import {addReplayTicEvents, beginRecording} from "@iioi/client/game/replay/recorder.js";
 import {runReplayTics} from "@iioi/client/game/replay/viewer.js";
-import {TILE_MAP_STRIDE, TILE_SIZE_BITS} from "./tilemap.js";
 import {fromByteArray, toByteArray} from "@iioi/shared/base64.js";
 import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
 import {BulletType} from "../data/config.js";
+import {generateBlocks, MapSlot} from "./mapgen/walls.js";
+import {TILE_SIZE} from "./tilemap.js";
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -203,30 +202,44 @@ export const resetGame = () => {
     gameMode._menu = GameMenuState.InGame;
 };
 
+let mapItemSlots: MapSlot[] = [];
+let mapTreeSlots: MapSlot[] = [];
+let mapSpawnSlots: MapSlot[] = [];
 const recreateMap = (themeIdx: number, seed: number) => {
     // generate map
     _SEEDS[0] = seed;
-    const theme = generateMapBackground(themeIdx);
 
-    game._blocks.length = 0;
-    for (let i = 0; i < GAME_CFG.walls.initCount; ++i) {
-        const x = rand(WORLD_BOUNDS_SIZE_PX);
-        const y = rand(WORLD_BOUNDS_SIZE_PX);
-        const ci = (x >> TILE_SIZE_BITS) + (y >> TILE_SIZE_BITS) * TILE_MAP_STRIDE;
-        game._blocks[ci] = 1;
-    }
+    const mapSlotsMap = new Map<number, MapSlot>();
+    generateBlocks(game._blocks, mapSlotsMap);
+    const mapSlots = [...mapSlotsMap.values()];
+    mapTreeSlots = mapSlots.filter(x => x._type === 0);
+    mapItemSlots = mapSlots.filter(x => x._type === 1);
+    mapSpawnSlots = mapSlots.filter(x => x._type === 2);
+
+    console.info("tree slots:", mapTreeSlots.length);
+    console.info("item slots:", mapItemSlots.length);
+    console.info("free slots:", mapSpawnSlots.length);
+
+    const theme = generateMapBackground(themeIdx, game._blocks);
 
     game._trees.length = 0;
     game._treesGrid.length = 0;
     const nextId = game._state._nextId;
-    for (let i = 0; i < GAME_CFG.trees.initCount; ++i) {
+    for (let i = 0; i < GAME_CFG.trees.initCount && mapTreeSlots.length; ++i) {
+        const sloti = rand(mapTreeSlots.length);
+        const slot = mapTreeSlots[sloti];
+        mapTreeSlots.splice(sloti, 1);
+
         const tree = newActor(ActorType.Tree);
         tree._subtype = theme.treeGfx[rand(theme.treeGfx.length)];
         tree._hp = 0;
-        setRandomPosition(tree);
+        // setRandomPosition(tree);
+        tree._x = (slot._x + 0.5) * TILE_SIZE * WORLD_SCALE;
+        tree._y = (slot._y + 0.5) * TILE_SIZE * WORLD_SCALE;
         game._trees.push(tree);
         addToGrid(game._treesGrid, tree);
     }
+
     _SEEDS[0] = game._state._seed;
     game._state._nextId = nextId;
 };
@@ -243,11 +256,19 @@ const pushActor = <T extends Actor>(a: T) => {
 const initBarrels = () => {
     const count = GAME_CFG.barrels.initCount;
     const hp = GAME_CFG.barrels.hp;
-    for (let i = 0; i < count; ++i) {
+
+    for (let i = 0; i < count && mapItemSlots.length; ++i) {
+        const sloti = rand(mapItemSlots.length);
+        const slot = mapItemSlots[sloti];
+        mapItemSlots.splice(sloti, 1);
+
         const barrel: BarrelActor = newActor(ActorType.Barrel);
         barrel._hp = hp[0] + rand(hp[1] - hp[0]);
         barrel._subtype = rand(2);
-        setRandomPosition(barrel);
+        //setRandomPosition(barrel);
+        barrel._x = slot._x * TILE_SIZE * WORLD_SCALE;
+        barrel._y = slot._y * TILE_SIZE * WORLD_SCALE;
+
         pushActor(barrel);
     }
 };
@@ -914,7 +935,9 @@ const simulateTic = (prediction = false) => {
                     const playerConfig = GAME_CFG.player;
                     const p = newPlayerActor();
                     p._client = cmd._client;
-                    setRandomPosition(p);
+                    const pos = mapSpawnSlots[rand(mapSpawnSlots.length)];
+                    p._x = pos._x * TILE_SIZE * WORLD_SCALE;
+                    p._y = pos._y * TILE_SIZE * WORLD_SCALE;
 
                     if (clientId == cmd._client) {
                         gameCamera._x = p._x / WORLD_SCALE;
@@ -1029,7 +1052,9 @@ const simulateTic = (prediction = false) => {
             // while (count < GAME_CFG.npc.max) {
             if (count < npcLevelConfig.max) {
                 const p = newPlayerActor();
-                setRandomPosition(p);
+                const pos = mapSpawnSlots[rand(mapSpawnSlots.length)];
+                p._x = pos._x * TILE_SIZE * WORLD_SCALE;
+                p._y = pos._y * TILE_SIZE * WORLD_SCALE;
                 p._hp = 10;
                 p._mags = 1;
                 setCurrentWeapon(p, rand(npcLevelConfig.initWeaponLen));

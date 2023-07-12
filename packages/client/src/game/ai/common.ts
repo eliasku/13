@@ -1,9 +1,12 @@
 import {Actor, PlayerActor, StateData} from "../types.js";
-import {WORLD_BOUNDS_SIZE} from "../../assets/params.js";
+import {WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../../assets/params.js";
 import {sqrDistXY} from "../phy.js";
 import {ClientID} from "@iioi/shared/types.js";
 import {writeState} from "../packets.js";
 import {GAME_CFG} from "../config.js";
+import {TRACE_HIT, traceRay} from "../../utils/collision/fastVoxelRaycast.js";
+import {game} from "../gameState.js";
+import {TILE_MAP_STRIDE, TILE_SIZE} from "../tilemap.js";
 
 let autoplayWorker: Worker | undefined;
 export let autoplayInput = 0;
@@ -53,9 +56,27 @@ export const findClosestActor = <T extends Actor>(
     for (const a of actors) {
         if (pred(a)) {
             const distSqr = sqrDistXY(player, a);
+
             if (distSqr < minDistSqr) {
-                minDistActor = a;
-                minDistSqr = distSqr;
+                // raycast
+                const dist = Math.sqrt(distSqr);
+                const maxDistance = WORLD_BOUNDS_SIZE * 2.5;
+                const dx = (a._x - player._x) / dist;
+                const dy = (a._y - player._y) / dist;
+                const d = traceRay(
+                    game._blocks,
+                    TILE_MAP_STRIDE,
+                    player._x / (TILE_SIZE * WORLD_SCALE),
+                    player._y / (TILE_SIZE * WORLD_SCALE),
+                    dx,
+                    dy,
+                    maxDistance / (TILE_SIZE * WORLD_SCALE),
+                    TRACE_HIT,
+                );
+                if (d * TILE_SIZE * WORLD_SCALE >= dist) {
+                    minDistActor = a;
+                    minDistSqr = distSqr;
+                }
             }
         }
     }

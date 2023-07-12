@@ -1,6 +1,7 @@
 ## 1.0.25
 
 - Add antialiasing option
+- Add map generation
 
 ## 1.0.24
 
