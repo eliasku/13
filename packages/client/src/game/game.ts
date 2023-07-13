@@ -13,7 +13,7 @@ import {speak} from "../audio/context.js";
 import {_SEEDS, fxRand, fxRandElement, rand, random, random1i} from "../utils/rnd.js";
 import {channels_sendObjectData} from "../net/channels_send.js";
 import {setPacketHandler} from "../net/channels.js";
-import {Const, GAME_CFG, setGameConfig} from "./config.js";
+import {Const, GAME_CFG} from "./config.js";
 import {generateMapBackground} from "../assets/map.js";
 import {
     Actor,
@@ -126,7 +126,6 @@ import {
 import {newSeedFromTime} from "@iioi/shared/seed.js";
 import {itemContainsAmmo, newActor, newBulletActor, newItemActor, newPlayerActor} from "./actors.js";
 import {poki} from "../poki.js";
-import {isAnyKeyDown} from "../utils/input.js";
 import {delay} from "../utils/delay.js";
 import {onGameMenu} from "./gameMenu.js";
 import {Img} from "../assets/img.js";
@@ -508,7 +507,7 @@ const checkPlayerInput = () => {
         game._joinState === JoinState.Joined &&
         game._allowedToRespawn
     ) {
-        if (isAnyKeyDown() || game._waitToAutoSpawn) {
+        if (/*isAnyKeyDown() || */ game._waitToAutoSpawn) {
             input |= ControlsFlag.Spawn;
             game._waitToSpawn = true;
             game._waitToAutoSpawn = false;
@@ -1160,12 +1159,14 @@ const kill = (actor: Actor) => {
                 delay(1000)
                     .then(poki._commercialBreak)
                     .then(() => {
+                        gameMode._menu = GameMenuState.Respawn;
+                        gameMode._respawnStartTic = game._gameTic;
                         game._allowedToRespawn = true;
-                        delay(3000).then(() => {
-                            if (game._allowedToRespawn) {
-                                game._waitToAutoSpawn = true;
-                            }
-                        });
+                        // delay(3000).then(() => {
+                        //     if (game._allowedToRespawn) {
+                        //         game._waitToAutoSpawn = true;
+                        //     }
+                        // });
                     });
             }
         }

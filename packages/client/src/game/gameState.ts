@@ -34,6 +34,7 @@ export const GameMenuState = {
     InGame: 0,
     Paused: 1,
     Settings: 2,
+    Respawn: 3,
 } as const;
 export type GameMenuState = (typeof GameMenuState)[keyof typeof GameMenuState];
 
@@ -47,6 +48,7 @@ export interface GameMode {
     _npcLevel: number;
     _replay?: ReplayFile;
     _menu: GameMenuState;
+    _respawnStartTic: number;
 }
 
 export const gameMode: GameMode = {
@@ -58,6 +60,7 @@ export const gameMode: GameMode = {
     _bloodRain: false,
     _npcLevel: 0,
     _menu: GameMenuState.InGame,
+    _respawnStartTic: 0,
 };
 
 export const JoinState = {

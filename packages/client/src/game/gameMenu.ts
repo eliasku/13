@@ -1,12 +1,14 @@
-import {button, ui_begin, ui_finish, uiState} from "../graphics/gui.js";
+import {button, label, ui_begin, ui_finish, uiState} from "../graphics/gui.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
 import {_room, disconnect} from "../net/messaging.js";
-import {GAME_CFG} from "./config.js";
+import {Const, GAME_CFG} from "./config.js";
 import {guiSettingsPanel} from "../screens/settingsPanel.js";
 import {saveReplay} from "./replay/recorder.js";
 import {poki} from "../poki.js";
-import {GameMenuState, gameMode} from "@iioi/client/game/gameState.js";
+import {game, GameMenuState, gameMode} from "@iioi/client/game/gameState.js";
 import {guiReplayViewer} from "./replay/viewer.js";
+
+let linkCopied = false;
 
 export const onGameMenu = (gameTic?: number): void => {
     ui_begin();
@@ -46,7 +48,6 @@ export const onGameMenu = (gameTic?: number): void => {
                         });
                 }
             }
-            y += 25;
 
             y = centerY + 40;
             if (button("settings", "⚙️ SETTINGS", centerX - 50, y, {w: 100, h: 20})) {
@@ -78,9 +79,27 @@ export const onGameMenu = (gameTic?: number): void => {
             ) {
                 gameMode._menu = GameMenuState.Paused;
             }
+        } else if (gameMode._menu === GameMenuState.Respawn) {
+            label(`☠️ YOU DIED ☠️`, 14, centerX, centerY - 100, 0.5);
+
+            let y = centerY + 30;
+
+            y += 25;
+            const cooldown = (gameTic - gameMode._respawnStartTic) / Const.NetFq;
+            if (game._allowedToRespawn && cooldown > 5) {
+                if (button("respawn", "♻️ RESPAWN", centerX - 50, y, {w: 100, h: 20}) || keyboardDown[KeyCode.Escape]) {
+                    gameMode._menu = GameMenuState.InGame;
+                    game._waitToAutoSpawn = true;
+                }
+            } else {
+                const v = ((cooldown / 5) * 100) | 0;
+                label(`♻️ REGENERATION: ${v}%`, 14, centerX - 80, centerY - 70, 0);
+            }
+            y += 40;
+            if (button("quit_room", "🏃 ESCAPE", centerX - 50, y, {w: 100, h: 20})) {
+                disconnect();
+            }
         }
     }
     ui_finish();
 };
-
-let linkCopied = false;
