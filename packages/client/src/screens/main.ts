@@ -6,6 +6,7 @@ import {BuildVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@iio
 import {guiSettingsPanel} from "./settingsPanel.js";
 import {guiDevModePanel} from "./devModePanel.js";
 import {parseRadix64String} from "@iioi/shared/radix64.js";
+import {logScreenView} from "../analytics.js";
 
 const Menu = {
     Main: 0,
@@ -88,6 +89,7 @@ export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefine
                 if (++devLock > 3) {
                     enableSettingsFlag(SettingFlag.DevMode);
                     menu = Menu.Dev;
+                    logScreenView("dev_screen");
                 }
             }
 
@@ -115,6 +117,7 @@ export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefine
             }
             if (button("settings", "⚙️", W - 40, 20, {w: 20, h: 20})) {
                 menu = Menu.Settings;
+                logScreenView("settings_screen");
             }
         } else if (menu === Menu.Settings) {
             label("⚙️ SETTINGS", 16, centerX, 30);

@@ -7,6 +7,7 @@ import {saveReplay} from "./replay/recorder.js";
 import {poki} from "../poki.js";
 import {game, GameMenuState, gameMode} from "@iioi/client/game/gameState.js";
 import {guiReplayViewer} from "./replay/viewer.js";
+import {logScreenView} from "../analytics.js";
 
 let linkCopied = false;
 
@@ -52,6 +53,7 @@ export const onGameMenu = (gameTic?: number): void => {
             y = centerY + 40;
             if (button("settings", "⚙️ SETTINGS", centerX - 50, y, {w: 100, h: 20})) {
                 gameMode._menu = GameMenuState.Settings;
+                logScreenView("settings_screen");
             }
             y += 25;
             if (button("quit_room", "🏃 QUIT", centerX - 50, y, {w: 100, h: 20})) {

@@ -147,6 +147,7 @@ import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
 import {BulletType, WeaponConfig} from "../data/config.js";
 import {generateBlocks, MapSlot} from "./mapgen/walls.js";
 import {TILE_SIZE} from "./tilemap.js";
+import {logScreenView} from "../analytics.js";
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -1162,11 +1163,7 @@ const kill = (actor: Actor) => {
                         gameMode._menu = GameMenuState.Respawn;
                         gameMode._respawnStartTic = game._gameTic;
                         game._allowedToRespawn = true;
-                        // delay(3000).then(() => {
-                        //     if (game._allowedToRespawn) {
-                        //         game._waitToAutoSpawn = true;
-                        //     }
-                        // });
+                        logScreenView("respawn_screen");
                     });
             }
         }
