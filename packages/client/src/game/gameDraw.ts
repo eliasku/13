@@ -198,15 +198,16 @@ const drawBullet = (bullet: BulletActor) => {
     const y = bullet._y / WORLD_SCALE;
     const z = bullet._z / WORLD_SCALE;
     const a = atan2(bullet._v, bullet._u);
-    const type = bullet._subtype as BulletType;
-    const bulletData = GAME_CFG.bullets[type];
+    const weapon = GAME_CFG.weapons[bullet._subtype];
+    const bulletType = weapon?.bulletType ?? 0;
+    const bulletData = GAME_CFG.bullets[bulletType];
     const color = fxRandElement(bulletData.color);
     let longing = bulletData.length;
     let longingH = bulletData.length / 2;
     let longing2 = bulletData.lightLength;
-    const fade = type === BulletType.Tracing ? bullet._lifetime / 16 : 1.0;
+    const fade = bulletType === BulletType.Tracing ? bullet._lifetime / 16 : 1.0;
     const sz = bulletData.size + (bulletData.pulse * sin(32 * lastFrameTs + bullet._anim0)) / 2;
-    if (bullet._subtype === BulletType.Ray || bullet._subtype === BulletType.Tracing) {
+    if (bulletType === BulletType.Ray || bulletType === BulletType.Tracing) {
         const dist = hypot(bullet._x1 - bullet._x, bullet._y1 - bullet._y) / WORLD_SCALE;
         longing = dist / sz;
         longingH = dist / sz;
@@ -507,6 +508,11 @@ export const drawObjects = (drawList: Actor[]) => {
 
 const drawList: Actor[] = [];
 
+const checkBulletIsRayVisible = (bullet: BulletActor) => {
+    const bulletType = GAME_CFG.weapons[bullet._subtype /* weaponID */].bulletType;
+    return bulletType === BulletType.Ray || bulletType === BulletType.Tracing;
+};
+
 const collectVisibleActors = (...lists: Actor[][]) => {
     drawList.length = 0;
     const pad = (2 * OBJECT_RADIUS) / WORLD_SCALE;
@@ -524,7 +530,7 @@ const collectVisibleActors = (...lists: Actor[][]) => {
             if (
                 (x > l && x < r && y > t && y < b) ||
                 // TODO: optimize with end line [x1, y1]
-                (a._type == ActorType.Bullet && (a._subtype == BulletType.Ray || a._subtype === BulletType.Tracing))
+                (a._type == ActorType.Bullet && checkBulletIsRayVisible(a as BulletActor))
             ) {
                 drawList.push(a);
             }

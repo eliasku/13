@@ -54,9 +54,8 @@ export const newItemActor = (subtype: number): ItemActor => {
 
 export const itemContainsAmmo = (item: ItemActor) => (item._subtype & ItemType.SubTypeMask) === ItemType.Ammo;
 
-export const newBulletActor = (ownerId: ClientID, subtype: number, damage: number): BulletActor =>
+export const newBulletActor = (ownerId: ClientID, weapon: number): BulletActor =>
     Object.assign(newActor(ActorType.Bullet), {
         _ownerId: ownerId,
-        _damage: damage,
-        _subtype: subtype,
+        _subtype: weapon,
     });

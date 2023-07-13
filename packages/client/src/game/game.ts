@@ -13,7 +13,7 @@ import {speak} from "../audio/context.js";
 import {_SEEDS, fxRand, fxRandElement, rand, random, random1i} from "../utils/rnd.js";
 import {channels_sendObjectData} from "../net/channels_send.js";
 import {setPacketHandler} from "../net/channels.js";
-import {Const, GAME_CFG} from "./config.js";
+import {Const, GAME_CFG, setGameConfig} from "./config.js";
 import {generateMapBackground} from "../assets/map.js";
 import {
     Actor,
@@ -57,6 +57,7 @@ import {
 import {Snd} from "../assets/sfx.js";
 import {
     addBoneParticles,
+    addDamageTextParticle,
     addFleshParticles,
     addImpactParticles,
     addLandParticles,
@@ -144,7 +145,7 @@ import {addReplayTicEvents, beginRecording} from "@iioi/client/game/replay/recor
 import {runReplayTics} from "@iioi/client/game/replay/viewer.js";
 import {fromByteArray, toByteArray} from "@iioi/shared/base64.js";
 import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
-import {BulletType} from "../data/config.js";
+import {BulletType, WeaponConfig} from "../data/config.js";
 import {generateBlocks, MapSlot} from "./mapgen/walls.js";
 import {TILE_SIZE} from "./tilemap.js";
 
@@ -907,7 +908,7 @@ const updateGameCamera = () => {
 const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
     if (
         bullet._hp &&
-        bullet._damage &&
+        bullet._subtype /* weaponID */ &&
         (bullet._ownerId > 0 ? bullet._ownerId - ((actor as PlayerActor)._client | 0) : -bullet._ownerId - actor._id) &&
         testIntersection(bullet, actor)
     ) {
@@ -993,16 +994,20 @@ const simulateTic = (prediction = false) => {
     }
 
     for (const bullet of game._state._actors[ActorType.Bullet]) {
-        if (bullet._subtype != BulletType.Ray) {
-            updateBody(bullet, 0, 0);
-            if (bullet._subtype != BulletType.Tracing) {
-                if (bullet._hp && (collideWithBoundsA(bullet) || checkTileCollisions(bullet, game._blocks))) {
-                    --bullet._hp;
-                    addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[bullet._subtype as BulletType].color);
+        const weapon = getBulletWeapon(bullet);
+        if (weapon) {
+            const bulletType = weapon.bulletType;
+            if (bulletType != BulletType.Ray) {
+                updateBody(bullet, 0, 0);
+                if (bulletType != BulletType.Tracing) {
+                    if (bullet._hp && (collideWithBoundsA(bullet) || checkTileCollisions(bullet, game._blocks))) {
+                        --bullet._hp;
+                        addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[bulletType].color);
+                    }
+                    queryGridCollisions(bullet, game._playersGrid, checkBulletCollision);
+                    queryGridCollisions(bullet, game._barrelsGrid, checkBulletCollision);
+                    queryGridCollisions(bullet, game._treesGrid, checkBulletCollision);
                 }
-                queryGridCollisions(bullet, game._playersGrid, checkBulletCollision);
-                queryGridCollisions(bullet, game._barrelsGrid, checkBulletCollision);
-                queryGridCollisions(bullet, game._treesGrid, checkBulletCollision);
             }
         }
         if (bullet._lifetime && !--bullet._lifetime) {
@@ -1169,16 +1174,27 @@ const kill = (actor: Actor) => {
     feedbackCameraExplosion(25, actor._x, actor._y);
 };
 
+const getBulletWeapon = (bullet: BulletActor): WeaponConfig | undefined => {
+    if (bullet._subtype) {
+        return GAME_CFG.weapons[bullet._subtype];
+    }
+};
+
 const hitWithBullet = (actor: Actor, bullet: BulletActor, bulletImpactParticles = true) => {
+    const weapon = getBulletWeapon(bullet);
     let absorbed = false;
     addVelFrom(actor, bullet, 0.1);
     actor._animHit = ANIM_HIT_MAX;
-    if (bulletImpactParticles) {
-        addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[bullet._subtype as BulletType].color);
+    if (weapon && bulletImpactParticles) {
+        addImpactParticles(8, bullet, bullet, GAME_CFG.bullets[weapon.bulletType].color);
     }
     playAt(actor, Snd.hit);
-    if (actor._hp) {
-        let damage = bullet._damage;
+    if (actor._hp && weapon) {
+        const critical = rand(100) < weapon.criticalHitChance;
+        let damage = weapon.bulletDamage * (critical ? 2 : 1);
+        if (actor._type === ActorType.Player) {
+            addDamageTextParticle(actor, "" + damage, critical);
+        }
         if (actor._sp > 0) {
             const q = clamp(damage, 0, actor._sp);
             if (q > 0) {
@@ -1221,7 +1237,12 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor, bulletImpactParticles 
                 const killerID = bullet._ownerId;
                 if (killerID > 0) {
                     const stat: PlayerStat = game._state._stats.get(killerID) ?? {_scores: 0, _frags: 0};
-                    stat._scores += player._client > 0 ? 5 : 1;
+                    const q = player._client > 0 ? 5 : 1;
+                    stat._scores += q;
+                    const killerPlayer = getPlayerByClient(killerID);
+                    if (killerPlayer) {
+                        addTextParticle(killerPlayer, `+${q} cr`);
+                    }
                     ++stat._frags;
                     game._state._stats.set(killerID, stat);
                     if (hasSettingsFlag(SettingFlag.Speech) && game._gameTic > game._lastAudioTic) {
@@ -1238,7 +1259,8 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor, bulletImpactParticles 
             }
         }
     }
-    if (bullet._hp && bullet._subtype != BulletType.Ray && bullet._subtype != BulletType.Tracing) {
+
+    if (bullet._hp && weapon && weapon.bulletType != BulletType.Ray && weapon.bulletType != BulletType.Tracing) {
         // bullet hit or bounced?
         if (absorbed) {
             bullet._hp = 0;
@@ -1412,11 +1434,7 @@ const updatePlayer = (player: PlayerActor) => {
                         const dx = cos(a);
                         const dy = sin(a);
                         const bulletVelocity = weapon.velocity + weapon.velocityVar * (random() - 0.5);
-                        const bullet = newBulletActor(
-                            player._client || -player._id,
-                            weapon.bulletType,
-                            weapon.bulletDamage,
-                        );
+                        const bullet = newBulletActor(player._client || -player._id, player._weapon);
                         bullet._hp = weapon.bulletHp;
                         bullet._lifetime = weapon.bulletLifetime;
                         copyPosFromActorCenter(bullet, player);
@@ -1440,8 +1458,8 @@ const updatePlayer = (player: PlayerActor) => {
                             );
                             for (const hit of hits._hits) {
                                 --penetrationsLeft;
-                                bullet._x1 = hits._x + hit._t * hits._dx;
-                                bullet._y1 = hits._y + hit._t * hits._dy;
+                                bullet._x1 = (hits._x + hit._t * hits._dx) | 0;
+                                bullet._y1 = (hits._y + hit._t * hits._dy) | 0;
                                 addImpactParticles(
                                     8,
                                     {
@@ -1451,7 +1469,7 @@ const updatePlayer = (player: PlayerActor) => {
                                         _type: bullet._type,
                                     },
                                     bullet,
-                                    GAME_CFG.bullets[bullet._subtype as BulletType].color,
+                                    GAME_CFG.bullets[weapon.bulletType].color,
                                 );
                                 if (hit._type === 2 && hit._actor) {
                                     hitWithBullet(hit._actor, bullet, weapon.bulletType === BulletType.Ray);
@@ -1462,10 +1480,10 @@ const updatePlayer = (player: PlayerActor) => {
                                     break;
                                 }
                             }
-                            bullet._damage = 0;
                         }
                     }
 
+                    // is not melee weapon
                     if (weapon.bulletType) {
                         addShellParticle(player, PLAYER_HANDS_Z, weapon.bulletShellColor);
                     }

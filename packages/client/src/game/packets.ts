@@ -14,6 +14,7 @@ import {
 import {ClientID} from "@iioi/shared/types.js";
 import {JoinState} from "./gameState.js";
 import {BulletType} from "../data/config.js";
+import {GAME_CFG} from "./config.js";
 
 const DEBUG_SIGN = 0xdeb51a1e | 0;
 
@@ -81,9 +82,7 @@ const readBulletActor = (list: BulletActor[], i32: Int32Array, ptr: number): num
     const p = newActorData<BulletActor>(ActorType.Bullet);
     ptr = readActor(p, i32, ptr);
     p._ownerId = i32[ptr++];
-    const data = i32[ptr++];
-    p._damage = data & 0b1111;
-    if (p._subtype === BulletType.Ray) {
+    if (GAME_CFG.weapons[p._subtype]?.bulletType === BulletType.Ray) {
         const xy1 = i32[ptr++];
         p._x1 = xy1 >>> 16;
         p._y1 = xy1 & 0xffff;
@@ -251,11 +250,10 @@ const writeBarrelActor = (p: BarrelActor, i32: Int32Array, ptr: number): number 
 const writeBulletActor = (p: BulletActor, i32: Int32Array, ptr: number): number => {
     ptr = writeActor(p, i32, ptr);
     if (process.env.NODE_ENV === "development") {
-        console.assert(p._damage >= 0 && p._damage < 2 ** 4);
+        // none
     }
     i32[ptr++] = p._ownerId;
-    i32[ptr++] = p._damage;
-    if (p._subtype === BulletType.Ray) {
+    if (GAME_CFG.weapons[p._subtype]?.bulletType === BulletType.Ray) {
         i32[ptr++] = (p._x1 << 16) | p._y1;
     }
     return ptr;

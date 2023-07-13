@@ -261,6 +261,7 @@ const gameConfig: GameConfig = {
         moveWeightK: 1.0,
         laserSightColor: 0,
         laserSightSize: 0,
+        criticalHitChance: 5,
     });
 
     const createArmWeapon = (): WeaponConfig => {

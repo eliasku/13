@@ -2,6 +2,8 @@
 
 - Add antialiasing option
 - Add map generation
+- Add damage labels on hit
+- Add critical hit chance
 
 ## 1.0.24
 

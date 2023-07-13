@@ -1,9 +1,9 @@
 import {img} from "../assets/gfx.js";
 import {beginRender, draw, drawMeshSprite, flush, gl, setDrawZ, setupProjection} from "../graphics/draw2d.js";
 import {Actor, ActorType, Pos, Vel} from "./types.js";
-import {addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy.js";
+import {addPos, addRadialVelocity, addVelFrom, collideWithBounds, copyPosFromActorCenter, updateBody} from "./phy.js";
 import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math.js";
-import {_SEEDS, random1, random1i, random1n} from "../utils/rnd.js";
+import {_SEEDS, fxRand, fxRandomNorm, random1, random1i, random1n} from "../utils/rnd.js";
 import {GL} from "../graphics/gl.js";
 import {mapTexture, mapTexture0} from "../assets/map.js";
 import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
@@ -46,6 +46,13 @@ export interface TextParticle extends Pos {
     _text: string;
     _lifetime: number;
     _time: number;
+    _gravity: number;
+    _u: number;
+    _v: number;
+    _w: number;
+    _cub: number;
+    _color: number;
+    _size: number;
 }
 
 export const newParticle = (): Particle => ({
@@ -382,15 +389,23 @@ export const newTextParticle = (source: Actor, text: string): TextParticle => ({
     _x: source._x,
     _y: source._y,
     _z: source._z,
+    _u: 0,
+    _v: 0,
+    _w: 0,
+    _gravity: 0,
     _text: text,
     _lifetime: 3 * 60,
     _time: 0,
+    _cub: 1,
+    _color: 0xffffff,
+    _size: 8,
 });
 
 const updateTextParticle = (p: TextParticle): boolean => {
     ++p._time;
-    const t = p._time / p._lifetime;
-    return t >= 1;
+    addPos(p, p._u, p._v, p._w);
+    p._w -= p._gravity * GAME_CFG.world.gravity;
+    return p._time >= p._lifetime;
 };
 
 const updateTextParticleList = (list: TextParticle[], i = 0) => {
@@ -405,15 +420,34 @@ export const addTextParticle = (source: Actor, text: string) => {
     textParticles.push(newTextParticle(source, text));
 };
 
+export const addDamageTextParticle = (source: Actor, text: string, critical: boolean) => {
+    const p = newTextParticle(source, text);
+    if (critical) {
+        p._text = "CRIT " + p._text;
+    }
+    p._gravity = 2.5;
+    p._u = fxRandomNorm(64);
+    p._w = 128 + 128 + 32;
+    p._cub = 0;
+    p._lifetime = 40;
+    p._color = 0xffcccc;
+    p._size = critical ? 16 : 10;
+    textParticles.push(p);
+};
+
 export const drawTextParticles = () => {
     for (const p of textParticles) {
         const t = p._time / p._lifetime;
-        if (t > 0.5 && sin(t * 64) > 0.5) {
+        if (p._cub > 0 && t > 0.5 && sin(t * 64) > 0.5) {
             continue;
         }
         const x = p._x / WORLD_SCALE;
-        const offZ = (cubicOut(t) * 60 * WORLD_SCALE) | 0;
+        const offZ = (p._cub * cubicOut(t) * 60 * WORLD_SCALE) | 0;
         const y = (p._y - p._z - offZ) / WORLD_SCALE;
-        drawTextAligned(fnt[0], p._text, 8, x, y);
+        let alpha = 1;
+        if (p._cub <= 0 && t > 0.5) {
+            alpha = cubicOut(1 - 2 * (t - 0.5));
+        }
+        drawTextAligned(fnt[0], p._text, alpha * p._size, x, y, p._color, 0.5, 1);
     }
 };

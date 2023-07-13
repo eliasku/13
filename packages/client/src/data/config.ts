@@ -154,6 +154,7 @@ export interface WeaponConfig {
     moveWeightK: number;
     laserSightColor: number;
     laserSightSize: number;
+    criticalHitChance: number;
 }
 
 export interface GameConfig {

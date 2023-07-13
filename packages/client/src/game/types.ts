@@ -51,7 +51,7 @@ export interface Actor extends Pos, Vel {
 
     // Item: ItemType subtype
     // Tree: GFX variation
-    // Bullet: BulletType subtype
+    // Bullet: source weapon ID
     _subtype: uint4;
 
     // Player: reload time
@@ -121,10 +121,6 @@ export type BarrelActor = Actor;
 export interface BulletActor extends Actor {
     // Bullet: owner ID
     _ownerId: ClientID;
-
-    // damage amount
-    // range: 0...15 currently
-    _damage: uint4;
 
     // end of ray projectile (just visuals)
     _x1?: number;

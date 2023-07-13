@@ -294,6 +294,7 @@ export const drawText = (
     lineHeight: number,
     lineSpacing: number,
     color = 0xffffff,
+    alpha = 1,
 ) => {
     const sc = size / font._size;
     const startX = x;
@@ -309,7 +310,7 @@ export const drawText = (
 
         const gdata = getCharacter(font, code);
         if (gdata._texture) {
-            draw(gdata._texture, cx + sc * gdata._x, cy + sc * gdata._y, 0, sc, sc, 1, color);
+            draw(gdata._texture, cx + sc * gdata._x, cy + sc * gdata._y, 0, sc, sc, alpha, color);
         }
         cx += sc * gdata._a; // advance
     }
@@ -342,9 +343,10 @@ export const drawTextAligned = (
     y: number,
     color = 0xffffff,
     alignX = 0.5,
+    alpha = 1,
 ) => {
     if (alignX !== 0.0) {
         x -= alignX * measureTextWidth(font, text, size);
     }
-    drawText(font, text, size, x, y, 0, 0, color);
+    drawText(font, text, size, x, y, 0, 0, color, alpha);
 };
