@@ -1,9 +1,10 @@
 ## 1.0.25
 
-- Add antialiasing option
-- Add map generation
-- Add damage labels on hit
-- Add critical hit chance
+- Antialiasing option
+- Map generation
+- Damage hit labels
+- Critical hit chance
+- Respawn screen
 
 ## 1.0.24
 
