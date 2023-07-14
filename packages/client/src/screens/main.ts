@@ -2,7 +2,7 @@ import {button, label, ui_begin, ui_finish, uiState} from "../graphics/gui.js";
 import {clientName, setUserName} from "../net/messaging.js";
 import {enableSettingsFlag, SettingFlag} from "../game/settings.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
-import {BuildClientVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@iioi/shared/types.js";
+import {BuildClientVersion, GameModeFlag, IsPokiBuild, NewGameParams, RoomsInfoResponse} from "@iioi/shared/types.js";
 import {guiSettingsPanel} from "./settingsPanel.js";
 import {guiDevModePanel} from "./devModePanel.js";
 import {parseRadix64String} from "@iioi/shared/radix64.js";
@@ -339,8 +339,12 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             }
         }
 
-        if (button("version_tag", " " + BuildClientVersion, 2, H - 16, {w: 48, h: 14, visible: true})) {
-            open("https://github.com/eliasku/13", "_blank");
+        if (IsPokiBuild) {
+            label("🏷 " + BuildClientVersion, 8, 2, H - 4, 0);
+        } else {
+            if (button("version_tag", " " + BuildClientVersion, 2, H - 16, {w: 48, h: 14, visible: true})) {
+                open("https://github.com/eliasku/13", "_blank");
+            }
         }
     }
     ui_finish();

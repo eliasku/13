@@ -133,7 +133,9 @@ export const keyboardUp: number[] = [];
             keyboardDown[_kode] = keyboardState[_kode] = 1;
         }
         // iframe parent received game key events #220
+        //if (_kode >= 37 && _kode <= 40) {
         return false;
+        //}
     };
     /*document.*/
     onkeyup = (e: KeyboardEvent, _kode = e.which) => {

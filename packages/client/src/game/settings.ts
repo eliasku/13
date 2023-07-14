@@ -1,3 +1,5 @@
+import {IsPokiBuild} from "@iioi/shared/types.js";
+
 const prefix = "iioi";
 
 export const BloodMode = {
@@ -52,7 +54,7 @@ export const settings: SettingsMap = {
         SettingFlag.DevShowFrameStats |
         SettingFlag.DevShowDebugInfo |
         SettingFlag.DevLogging,
-    [Setting.Blood]: BloodMode.Normal,
+    [Setting.Blood]: IsPokiBuild ? BloodMode.Paint : BloodMode.Normal,
     [Setting.Particles]: 1,
     [Setting.FrameRateCap]: DEFAULT_FRAMERATE_LIMIT,
 } as const;

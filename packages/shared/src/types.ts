@@ -13,6 +13,7 @@ declare let __BUILD_COMMIT__: string;
 declare let __BUILD_HASH__: string;
 declare let __SERVER_URL__: string;
 declare let __POKI_GAME_ID__: string;
+declare let __POKI_BUILD__: boolean;
 
 export const BuildClientVersion = __CLIENT_VERSION__;
 export const BuildServerVersion = __SERVER_VERSION__;
@@ -20,6 +21,7 @@ export const BuildHash = __BUILD_HASH__;
 export const BuildCommit = __BUILD_COMMIT__;
 export const ServerUrl = __SERVER_URL__;
 export const PokiGameId = __POKI_GAME_ID__;
+export const IsPokiBuild = __POKI_BUILD__;
 
 export const ServerEventName = {
     Close: 0,

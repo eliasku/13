@@ -11,7 +11,7 @@ await build({
     tsconfig: "packages/client/tsconfig.json",
     output: `${dist}/client.js`,
     serverUrl: "https://iioi.herokuapp.com/",
-    disableAnalytics: true,
+    pokiBuild: true,
 }).catch(e => {
     console.warn(e);
     exit(1);

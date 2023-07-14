@@ -114,13 +114,14 @@ console.info("build client version: " + clientVersion);
 console.info("build commit: " + gitCommit);
 console.info("build hash: " + buildHash);
 
-export const getCompileDefines = (debug?: boolean, serverUrl = "") => ({
+export const getCompileDefines = (debug?: boolean, serverUrl = "", pokiBuild = false) => ({
     __SERVER_URL__: `"${serverUrl}"`,
     __CLIENT_VERSION__: `"${clientVersion}"`,
     __SERVER_VERSION__: `"${serverVersion}"`,
     __BUILD_HASH__: `"${buildHash}"`,
     __BUILD_COMMIT__: `"${gitCommit}"`,
     __POKI_GAME_ID__: `"${pokiGameId}"`,
+    __POKI_BUILD__: `${pokiBuild}`,
     "process.env.NODE_ENV": debug ? `"development"` : `"production"`,
 });
 

@@ -30,7 +30,7 @@ interface BuildOptions {
     keepConsole?: boolean; // false
     keepProps?: boolean; // false (!debug also)
     skipTerser?: boolean;
-    disableAnalytics?: boolean;
+    pokiBuild?: boolean;
 
     serverUrl?: string;
 
@@ -40,7 +40,7 @@ interface BuildOptions {
 const esbuild_ = (options: BuildOptions) => {
     const config: Options = {
         minify: !options.debug,
-        define: getCompileDefines(options.debug ?? false, options.serverUrl ?? ""),
+        define: getCompileDefines(options.debug ?? false, options.serverUrl ?? "", options.pokiBuild),
         target: options.target ?? "es2020",
         platform: options.platform ?? "browser",
         format: "esm",
@@ -67,7 +67,7 @@ const getRollupInput = (options: BuildOptions): RollupOptions => {
                 tsConfigPath: "tsconfig.base.json",
                 preserveExtensions: true,
             }),
-            options.disableAnalytics ? alias({
+            options.pokiBuild ? alias({
                 entries: [{find: /^(.*)analytics\.js$/, replacement: '$1analytics-poki.js'}]
             }) : undefined,
             esbuild_(options),

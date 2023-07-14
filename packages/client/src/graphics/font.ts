@@ -1,6 +1,5 @@
 import {createTexture, draw, getSubTexture, Texture, uploadTexture} from "./draw2d.js";
 import {GL} from "./gl.js";
-import {createCanvas} from "./utils.js";
 
 const SPACE_CODE = " ".codePointAt(0);
 const DEFAULT_CHARACTERS = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,'-/`
