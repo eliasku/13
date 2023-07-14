@@ -30,6 +30,7 @@ export const onGameMenu = (gameTic?: number): void => {
                     }) ||
                     keyboardDown[KeyCode.Escape]
                 ) {
+                    poki._gameplayStop();
                     gameMode._menu = GameMenuState.Paused;
                 }
             }
@@ -67,6 +68,7 @@ export const onGameMenu = (gameTic?: number): void => {
                 }) ||
                 keyboardDown[KeyCode.Escape]
             ) {
+                poki._gameplayStart();
                 gameMode._menu = GameMenuState.InGame;
             }
         } else if (gameMode._menu === GameMenuState.Settings) {

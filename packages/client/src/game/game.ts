@@ -916,6 +916,7 @@ const checkBulletCollision = (bullet: BulletActor, actor: Actor) => {
 };
 
 const simulateTic = (prediction = false) => {
+    game._processingPrediction = prediction;
     const processTicCommands = (tic: number) => {
         const tickEvents: ClientEvent[] = game._localEvents.concat(game._receivedEvents).filter(v => v._tic == tic);
         tickEvents.sort((a, b) => a._client - b._client);
@@ -1081,9 +1082,12 @@ const simulateTic = (prediction = false) => {
     }
 
     // local updates
-    if (gameMode._bloodRain) {
+    if (gameMode._bloodRain && !prediction) {
         spawnBloodRainParticle();
     }
+
+    // reset prediction flag
+    game._processingPrediction = false;
 };
 
 const kill = (actor: Actor) => {
@@ -1143,7 +1147,7 @@ const kill = (actor: Actor) => {
         addFleshParticles(256, actor, 128, grave);
         addBoneParticles(32, actor, grave);
 
-        if (!gameMode._replay) {
+        if (!gameMode._replay && !game._processingPrediction) {
             if (player === getMyPlayer()) {
                 poki._gameplayStop();
                 delay(1000)

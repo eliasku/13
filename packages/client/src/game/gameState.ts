@@ -94,6 +94,8 @@ export interface Game {
     _lastState?: StateData;
 
     _blocks: number[];
+
+    _processingPrediction: boolean;
 }
 
 export const game: Game = {
@@ -115,6 +117,7 @@ export const game: Game = {
     _treesGrid: [],
     _state: newStateData(),
     _blocks: [],
+    _processingPrediction: false,
 };
 
 export const getMyPlayer = (): PlayerActor | undefined => (clientId ? getPlayerByClient(clientId) : undefined);

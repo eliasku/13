@@ -18,6 +18,7 @@ declare const PokiSDK:
 
 const sdk: typeof PokiSDK | undefined = (typeof PokiSDK !== "undefined" && process.env.NODE_ENV === "production") ? PokiSDK : undefined;
 let adblock = false;
+let gameplayActive = false;
 export const poki = {
     _init: async () => {
         console.log("poki init");
@@ -40,12 +41,24 @@ export const poki = {
         sdk?.gameLoadingFinished();
     },
     _gameplayStart: () => {
-        console.log("poki gameplay start");
-        sdk?.gameplayStart();
+        if (gameplayActive) {
+            console.warn("gameplay already started");
+        }
+        else {
+            console.log("poki gameplay start");
+            gameplayActive = true;
+            sdk?.gameplayStart();
+        }
     },
     _gameplayStop: () => {
-        console.log("poki gameplay stop");
-        sdk?.gameplayStop();
+        if (gameplayActive) {
+            console.log("poki gameplay stop");
+            gameplayActive = false;
+            sdk?.gameplayStop();
+        }
+        else {
+            console.warn("gameplay already stopped");
+        }
     },
     _commercialBreak: async () => {
         console.log("poki commercial break");
