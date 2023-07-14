@@ -1,6 +1,6 @@
 import {ClientEvent, newStateData, StateData} from "../types.js";
 import {readState} from "../packets.js";
-import {BuildCommit, BuildHash, BuildVersion, ClientID} from "@iioi/shared/types.js";
+import {BuildCommit, BuildHash, BuildClientVersion, ClientID} from "@iioi/shared/types.js";
 
 export interface ReplayMetaData {
     room?: {
@@ -76,7 +76,7 @@ export const validateReplayFile = (replay: ReplayFile): boolean => {
         if (build) {
             if (build.hash !== BuildHash) {
                 console.warn("Mismatch game build version to play the replay file");
-                if (build.version !== BuildVersion) console.info(build.version + " != " + BuildVersion);
+                if (build.version !== BuildClientVersion) console.info(build.version + " != " + BuildClientVersion);
                 if (build.commit !== BuildCommit) console.info(build.commit + " != " + BuildCommit);
                 return false;
             }

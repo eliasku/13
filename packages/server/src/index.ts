@@ -1,7 +1,6 @@
 import {createServer, IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {
-    BuildHash,
-    BuildVersion,
+    BuildServerVersion,
     ClientID,
     GameModeFlag,
     MessageField,
@@ -9,7 +8,7 @@ import {
     PokiGameId,
     Request,
     RoomsInfoResponse,
-    ServerEventName,
+    ServerEventName, ServerInfoResponse,
 } from "@iioi/shared/types.js";
 import {serveFile} from "./static.js";
 import {newSeedFromTime, rollSeed32, temper} from "@iioi/shared/seed.js";
@@ -43,14 +42,21 @@ interface RoomState extends NewGameParams {
     _clients: Map<ClientID, ClientState>;
 }
 
-let nextRoomId = 1;
-const rooms: Map<number, RoomState> = new Map();
+interface Instance {
+    _clientVersion: string;
+    _nextRoomId: number;
+    _rooms: Map<number, RoomState>;
+}
+
+const instances = new Map<string, Instance>();
 
 setInterval(() => {
-    for (const [, room] of rooms) {
-        for (const [, client] of room._clients) {
-            if (performance.now() - client._ts > 5000 || !sendServerEvent(client, ServerEventName.Ping, "")) {
-                removeClient(client);
+    for (const [, instance] of instances) {
+        for (const [, room] of instance._rooms) {
+            for (const [, client] of room._clients) {
+                if (performance.now() - client._ts > 5000 || !sendServerEvent(instance, client, ServerEventName.Ping, "")) {
+                    removeClient(instance, client);
+                }
             }
         }
     }
@@ -58,22 +64,22 @@ setInterval(() => {
 
 const constructMessage = (id: number, data: string) => `id:${id}\ndata:${data}\n\n`;
 
-const sendServerEvent = (client: ClientState, event: ServerEventName, data: string) =>
+const sendServerEvent = (instance: Instance, client: ClientState, event: ServerEventName, data: string) =>
     client._eventStream.write(
         constructMessage(client._nextEventId++, event + data),
         // REMOVE CLIENT IN CASE OF ANY ERRORS!
-        err => err && removeClient(client),
+        err => err && removeClient(instance, client),
     );
 
-const broadcastServerEvent = (room: RoomState, from: ClientID, event: ServerEventName, data: string) => {
+const broadcastServerEvent = (instance: Instance, room: RoomState, from: ClientID, event: ServerEventName, data: string) => {
     for (const [id, client] of room._clients) {
         if (id != from) {
-            sendServerEvent(client, event, data);
+            sendServerEvent(instance, client, event, data);
         }
     }
 };
 
-const removeClient = (client: ClientState) => {
+const removeClient = (instance: Instance, client: ClientState) => {
     try {
         //sendCloseServerEvent(client);
         client._eventStream.write(constructMessage(-1, ""));
@@ -84,50 +90,79 @@ const removeClient = (client: ClientState) => {
 
     const room = client._room;
     room._clients.delete(client._id);
-    broadcastServerEvent(client._room, client._id, ServerEventName.ClientListChange, `-${client._id}`);
+    broadcastServerEvent(instance, client._room, client._id, ServerEventName.ClientListChange, `-${client._id}`);
     console.info(`[room ${room._id}] broadcast client ${client._id} removed`);
 
     if (!room._clients.size) {
         console.info(`[room ${room._id}] is removed because last player leaved`);
-        rooms.delete(room._id);
+        instance._rooms.delete(room._id);
     }
 };
 
 const getRoomsInfo = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
-    res.writeHead(200, cors(req, {...HDR_JSON_NO_CACHE}));
-    const json: RoomsInfoResponse = {
-        rooms: [],
-        players: 0,
-    };
-    for (const [, room] of rooms) {
-        const players = room._clients.size;
-        if ((room._flags & GameModeFlag.Public) === GameModeFlag.Public) {
-            json.rooms.push({
-                code: room._code,
-                players,
-                max: room._playersLimit,
-            });
+    let list:Instance[]|undefined;
+    if(params.get("v")) {
+        const instance = getInstance(params, req, res);
+        if (instance) {
+            list = [instance];
+        } else {
+            return;
         }
-        json.players += players;
+    }
+    else {
+        list = [...instances.values()];
+    }
+    res.writeHead(200, cors(req, {...HDR_JSON_NO_CACHE}));
+    const json: ServerInfoResponse = {
+        i: [],
+    };
+    for(const instance of list) {
+        const roomsInfo:RoomsInfoResponse = {
+            v: instance._clientVersion,
+            rooms: [],
+            players: 0,
+        }
+        for (const [, room] of instance._rooms) {
+            const players = room._clients.size;
+            if ((room._flags & GameModeFlag.Public) === GameModeFlag.Public) {
+                roomsInfo.rooms.push({
+                    code: room._code,
+                    players,
+                    max: room._playersLimit,
+                });
+            }
+            roomsInfo.players += players;
+        }
+        json.i.push(roomsInfo);
     }
     res.write(JSON.stringify(json));
     res.end();
 };
 
-const validateRequestBuildVersion = (query: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
-    if (query.get("v") !== BuildHash) {
-        error(req, res, "Build version mismatch");
-        return false;
+const getInstance = (query: URLSearchParams, req: IncomingMessage, res: ServerResponse): Instance | undefined => {
+    const v = query.get("v");
+    if (v) {
+        let instance: Instance | undefined = instances.get(v);
+        if (!instance) {
+            instance = {
+                _clientVersion: v,
+                _rooms: new Map(),
+                _nextRoomId: 1,
+            };
+            instances.set(v, instance);
+        }
+        return instance;
+    } else {
+        error(req, res, "Invalid client version");
     }
-    return true;
 };
 
 interface CreateRoomOptions extends NewGameParams {
     _id?: number;
 }
 
-const createRoom = (options?: CreateRoomOptions): RoomState => {
-    const id = options?._id ?? nextRoomId++;
+const createRoom = (instance: Instance, options?: CreateRoomOptions): RoomState => {
+    const id = options?._id ?? instance._nextRoomId++;
     const flags = options?._flags ?? GameModeFlag.Public;
     const npcLevel = options?._npcLevel ?? 2;
     const playersLimit = options?._playersLimit ?? 8;
@@ -145,12 +180,12 @@ const createRoom = (options?: CreateRoomOptions): RoomState => {
         _clients: new Map(),
     };
     console.info(`[room ${room._id}] created`);
-    rooms.set(room._id, room);
+    instance._rooms.set(room._id, room);
     return room;
 };
 
-const findRoomByCode = (code: string): RoomState | undefined => {
-    for (const [, r] of rooms) {
+const findRoomByCode = (instance: Instance, code: string): RoomState | undefined => {
+    for (const [, r] of instance._rooms) {
         if (r._code === code) {
             return r;
         }
@@ -159,7 +194,8 @@ const findRoomByCode = (code: string): RoomState | undefined => {
 };
 
 const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res: ServerResponse) => {
-    if (!validateRequestBuildVersion(params, req, res)) {
+    const instance = getInstance(params, req, res);
+    if (!instance) {
         return;
     }
 
@@ -173,7 +209,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
             error(req, res, `error parse room #${R}`);
             return;
         }
-        room = findRoomByCode(R);
+        room = findRoomByCode(instance, R);
         if (!room) {
             error(req, res, `room #${R} not found`, 404);
             return;
@@ -190,7 +226,7 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
             const playersLimit = data[1] ?? 8;
             const npcLevel = data[2] ?? 2;
             const theme = data[3] ?? 0;
-            room = createRoom({
+            room = createRoom(instance, {
                 _flags: flags,
                 _playersLimit: playersLimit,
                 _npcLevel: npcLevel,
@@ -201,14 +237,14 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
             return;
         }
     } else {
-        for (const [, r] of rooms) {
+        for (const [, r] of instance._rooms) {
             if (r._flags & GameModeFlag.Public && r._clients.size < r._playersLimit) {
                 room = r;
                 break;
             }
         }
         if (!room) {
-            room = createRoom();
+            room = createRoom(instance);
         }
     }
     // create new client connection
@@ -225,17 +261,18 @@ const processServerEvents = (params: URLSearchParams, req: IncomingMessage, res:
     room._clients.set(id, client);
     ids.unshift(id);
 
-    req.on("close", () => removeClient(client));
+    req.on("close", () => removeClient(instance, client));
 
     console.info(`[room ${room._id}] init client ${client._id}`);
     sendServerEvent(
+        instance,
         client,
         ServerEventName.ClientInit,
         JSON.stringify([room._code, [room._flags, room._npcLevel, room._theme, room._mapSeed], ids]),
     );
 
     console.info(`[room ${room._id}] broadcast add client ${client._id}`);
-    broadcastServerEvent(room, id, ServerEventName.ClientListChange, "" + id);
+    broadcastServerEvent(instance, room, id, ServerEventName.ClientListChange, "" + id);
 };
 
 const readJSON = async (req: IncomingMessage): Promise<Request | undefined> => {
@@ -252,7 +289,8 @@ const processIncomeMessages = async (
     req: IncomingMessage,
     res: ServerResponse,
 ): Promise<void> => {
-    if (!validateRequestBuildVersion(params, req, res)) {
+    const instance = getInstance(params, req, res);
+    if (!instance) {
         return;
     }
     const roomCode = params.get("r");
@@ -260,7 +298,7 @@ const processIncomeMessages = async (
         error(req, res, `error parse room code #${params.get("r")}`);
         return;
     }
-    const room = findRoomByCode(roomCode);
+    const room = findRoomByCode(instance, roomCode);
     if (!room) {
         error(req, res, `room ${roomCode} not found`);
         return;
@@ -286,7 +324,7 @@ const processIncomeMessages = async (
             for (const msg of reqData[1]) {
                 const toClient = room._clients.get(msg[MessageField.Destination]);
                 if (toClient) {
-                    sendServerEvent(toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
+                    sendServerEvent(instance, toClient, ServerEventName.ClientUpdate, JSON.stringify(msg));
                 }
                 ++numProcessedMessages;
             }
@@ -373,4 +411,4 @@ createServer({keepAlive: true}, (req: IncomingMessage, res: ServerResponse) => {
 }).listen(+(process.env.PORT ?? 8080));
 
 // console will be dropped for prod build
-console.log(`Server ${BuildVersion} http://localhost:8080`);
+console.log(`Server ${BuildServerVersion} http://localhost:8080`);

@@ -74,25 +74,28 @@ export const copyPublicAssets = (publicDir = "public", debugAssets = true, index
     }
 };
 
-let version = "1.0.0";
-try {
-    const pkg = JSON.parse(readFileSync("packages/client/package.json", "utf-8")) as {
-        version: string;
-    };
-    version = pkg.version ?? "1.0.0";
-} catch {
-    // ignore
-}
+type Pkg = {
+    version?: string,
+    poki?: {
+        game_id?: string,
+    },
+};
 
-let pokiGameId = "";
-try {
-    const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as {
-        poki?: { game_id?: string };
-    };
-    pokiGameId = pkg.poki?.game_id ?? "";
-} catch {
-    // ignore
-}
+const readPkg = (filepath: string): Pkg => {
+    try {
+        return JSON.parse(readFileSync(filepath, "utf-8")) as Pkg;
+    } catch {
+        // ignore
+    }
+    return {};
+};
+
+const rootPkg = readPkg("package.json");
+const clientPkg = readPkg("packages/client/package.json");
+const serverPkg = readPkg("packages/server/package.json");
+const clientVersion = clientPkg.version ?? "0.0.1";
+const serverVersion = serverPkg.version ?? "0.0.1";
+const pokiGameId = rootPkg.poki?.game_id ?? "";
 
 let gitCommit = "";
 const gitCommitBytes: number[] = [];
@@ -106,14 +109,15 @@ try {
 }
 
 // const buildHash = crypto.createHash("md5").update(version).update(new Uint8Array(gitCommitBytes)).digest("base64url");
-const buildHash = crypto.createHash("md5").update(version).digest("base64url");
-console.info("build version: " + version);
+const buildHash = crypto.createHash("md5").update(clientVersion).digest("base64url");
+console.info("build client version: " + clientVersion);
 console.info("build commit: " + gitCommit);
 console.info("build hash: " + buildHash);
 
 export const getCompileDefines = (debug?: boolean, serverUrl = "") => ({
     __SERVER_URL__: `"${serverUrl}"`,
-    __VERSION__: `"${version}"`,
+    __CLIENT_VERSION__: `"${clientVersion}"`,
+    __SERVER_VERSION__: `"${serverVersion}"`,
     __BUILD_HASH__: `"${buildHash}"`,
     __BUILD_COMMIT__: `"${gitCommit}"`,
     __POKI_GAME_ID__: `"${pokiGameId}"`,

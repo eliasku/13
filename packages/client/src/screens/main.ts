@@ -2,7 +2,7 @@ import {button, label, ui_begin, ui_finish, uiState} from "../graphics/gui.js";
 import {clientName, setUserName} from "../net/messaging.js";
 import {enableSettingsFlag, SettingFlag} from "../game/settings.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
-import {BuildVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@iioi/shared/types.js";
+import {BuildClientVersion, GameModeFlag, NewGameParams, RoomsInfoResponse} from "@iioi/shared/types.js";
 import {guiSettingsPanel} from "./settingsPanel.js";
 import {guiDevModePanel} from "./devModePanel.js";
 import {parseRadix64String} from "@iioi/shared/radix64.js";
@@ -57,7 +57,7 @@ const newPracticeSettings: MenuResult = {
     },
 };
 
-export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefined => {
+export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined => {
     let result: MenuResult | undefined;
     ui_begin();
     {
@@ -68,7 +68,7 @@ export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefine
 
         if (menu === Menu.Main) {
             let totalJoinCap = 0;
-            for (const room of serverInfo.rooms) {
+            for (const room of roomsInfo.rooms) {
                 totalJoinCap += room.max - room.players;
             }
 
@@ -81,8 +81,8 @@ export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefine
                 result = {_command: MenuCommand.Replay};
             }
 
-            if (serverInfo.players) {
-                label(`${serverInfo.players} playing right now`, 7, centerX, centerY + 45);
+            if (roomsInfo.players) {
+                label(`${roomsInfo.players} playing right now`, 7, centerX, centerY + 45);
             }
 
             if (button("dev_mode", "", centerX - 40, centerY - 40, {w: 80, h: 80, visible: false})) {
@@ -150,7 +150,7 @@ export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefine
 
             let y = -70;
             let i = 0;
-            for (const room of serverInfo.rooms) {
+            for (const room of roomsInfo.rooms) {
                 if (
                     button(
                         "room" + room.code,
@@ -339,7 +339,7 @@ export const menuScreen = (serverInfo: RoomsInfoResponse): MenuResult | undefine
             }
         }
 
-        if (button("version_tag", " " + BuildVersion, 2, H - 16, {w: 48, h: 14, visible: true})) {
+        if (button("version_tag", " " + BuildClientVersion, 2, H - 16, {w: 48, h: 14, visible: true})) {
             open("https://github.com/eliasku/13", "_blank");
         }
     }

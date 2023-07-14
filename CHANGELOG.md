@@ -6,6 +6,7 @@
 - Critical hit chance
 - Respawn screen
 - High quality text rendering
+- Support multiple client versions on server
 
 ## 1.0.24
 

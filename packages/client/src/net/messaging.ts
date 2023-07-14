@@ -1,5 +1,5 @@
 import {
-    BuildHash,
+    BuildClientVersion,
     ClientID,
     GameModeFlag,
     Message,
@@ -9,6 +9,7 @@ import {
     NewGameParams,
     PostMessagesResponse,
     RoomsInfoResponse,
+    ServerInfoResponse,
     ServerUrl,
 } from "@iioi/shared/types.js";
 import {channels_processMessage} from "./channels.js";
@@ -29,9 +30,9 @@ export interface RemoteClient {
 }
 
 const getUrl = (url: string) => ServerUrl + url;
-const getPostUrl = () => getUrl(`_?v=${BuildHash}&r=${_room._code}`);
+const getPostUrl = () => getUrl(`_?v=${BuildClientVersion}&r=${_room._code}`);
 const getJoinUrl = (joinRoomCode?: string, newGameParams?: NewGameParams) => {
-    const args = [`v=${BuildHash}`];
+    const args = [`v=${BuildClientVersion}`];
     if (joinRoomCode) {
         args.push(`r=${joinRoomCode}`);
     }
@@ -72,14 +73,17 @@ let nextCallId = 1;
 let callbacks: ((msg: Message) => void)[] = [];
 
 export const loadRoomsInfo = async (): Promise<RoomsInfoResponse> => {
-    let result: RoomsInfoResponse = {rooms: [], players: 0};
+    let roomsInfo: RoomsInfoResponse = {v: BuildClientVersion, rooms: [], players: 0};
     try {
-        const response = await fetch(getUrl(`i`), {method: "POST"});
-        result = (await response.json()) as RoomsInfoResponse;
+        const response = await fetch(getUrl(`i?v=${BuildClientVersion}`), {method: "POST"});
+        const result = (await response.json()) as ServerInfoResponse;
+        if (result.i?.length) {
+            roomsInfo = result.i[0];
+        }
     } catch (e) {
         console.warn("Can't load rooms info", e);
     }
-    return result;
+    return roomsInfo;
 };
 
 export const setUserName = (name?: string) => {

@@ -1,7 +1,7 @@
 import {ClientEvent, StateData} from "../types.js";
 import {writeState} from "../packets.js";
 import {_room} from "../../net/messaging.js";
-import {BuildCommit, BuildHash, BuildVersion} from "@iioi/shared/types.js";
+import {BuildCommit, BuildHash, BuildClientVersion} from "@iioi/shared/types.js";
 import {getNameByClientId} from "../gameState.js";
 import {ReplayMetaData} from "./replayFile.js";
 
@@ -12,7 +12,7 @@ let replayStartState: Int32Array;
 const replayMetaData: ReplayMetaData = {
     clients: {},
     build: {
-        version: BuildVersion,
+        version: BuildClientVersion,
         commit: BuildCommit,
         hash: BuildHash,
     },

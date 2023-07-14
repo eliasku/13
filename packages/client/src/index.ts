@@ -8,7 +8,13 @@ import {updateStats} from "./utils/fpsMeter.js";
 import {updateSong} from "./audio/music.js";
 import {drawTextAligned, fnt, initFonts, updateFonts} from "./graphics/font.js";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d.js";
-import {BuildCommit, BuildHash, BuildVersion, GameModeFlag, RoomsInfoResponse} from "@iioi/shared/types.js";
+import {
+    BuildCommit,
+    BuildHash,
+    BuildClientVersion,
+    GameModeFlag,
+    RoomsInfoResponse,
+} from "@iioi/shared/types.js";
 import {sin} from "./utils/math.js";
 import {setupRAF} from "./utils/raf.js";
 import {gameMode} from "./game/gameState.js";
@@ -25,7 +31,7 @@ import {loadJSON} from "./utils/loaders.js";
 import {logScreenView, logUserEvent} from "./analytics.js";
 import {setRtcConfiguration} from "./net/iceServers.js";
 
-console.info(`13 game client ${BuildVersion} @${BuildCommit} ${BuildHash}`);
+console.info(`13 game client ${BuildClientVersion} @${BuildCommit} ${BuildHash}`);
 logScreenView("loading");
 
 const StartState = {
@@ -42,11 +48,11 @@ const start = async () => {
     await poki._init();
 
     let state: StartState = StartState.Loading;
-    let publicServerInfo: RoomsInfoResponse = {rooms: [], players: 0};
+    let publicRoomsInfo: RoomsInfoResponse = {v: BuildClientVersion, rooms: [], players: 0};
 
     const refreshRoomsInfo = async () => {
         if (state > StartState.Loaded && _sseState < 3) {
-            publicServerInfo = await loadRoomsInfo();
+            publicRoomsInfo = await loadRoomsInfo();
         }
         setTimeout(refreshRoomsInfo, 2000);
     };
@@ -98,7 +104,7 @@ const start = async () => {
         undefined,
         undefined,
         () => {
-            const result = menuScreen(publicServerInfo);
+            const result = menuScreen(publicRoomsInfo);
             if (result) {
                 if (result._command === MenuCommand.StartPractice) {
                     logUserEvent("start_practice");

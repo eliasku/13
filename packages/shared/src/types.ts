@@ -7,13 +7,15 @@ export type CallID = number;
 export type MessageData = unknown;
 export type MessageTypeID = number;
 
-declare let __VERSION__: string;
+declare let __CLIENT_VERSION__: string;
+declare let __SERVER_VERSION__: string;
 declare let __BUILD_COMMIT__: string;
 declare let __BUILD_HASH__: string;
 declare let __SERVER_URL__: string;
 declare let __POKI_GAME_ID__: string;
 
-export const BuildVersion = __VERSION__;
+export const BuildClientVersion = __CLIENT_VERSION__;
+export const BuildServerVersion = __SERVER_VERSION__;
 export const BuildHash = __BUILD_HASH__;
 export const BuildCommit = __BUILD_COMMIT__;
 export const ServerUrl = __SERVER_URL__;
@@ -80,8 +82,15 @@ export interface RoomInfo {
 
 /* DTO */
 export interface RoomsInfoResponse {
+    // client version
+    v: string;
     rooms: RoomInfo[];
     players: number;
+}
+
+export interface ServerInfoResponse {
+    // queried instances list
+    i: RoomsInfoResponse[];
 }
 
 export const GameModeFlag = {
