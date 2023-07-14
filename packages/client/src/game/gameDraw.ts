@@ -582,8 +582,18 @@ export const drawGame = () => {
     }
 
     {
-        const add = ((getHitColorOffset(getMyPlayer()?._animHit) & 0x990000) >>> 16) / 0xff;
-        ambientColor[0] = clamp(0x40 / 0xff + (0x20 / 0xff) * sin(lastFrameTs) + add, 0, 1);
+        let redAdd = 0;
+        let redPulse = 0;
+        const player = getMyPlayer();
+        if (player) {
+            redAdd = ((getHitColorOffset(player._animHit) & 0x990000) >>> 16) / 0xff;
+            const wounds = 1 - min(player._sp + player._hp, 10) / 10;
+            if (wounds > 0 && wounds < 1) {
+                redPulse += 0.3 * wounds * wounds;
+                redPulse *= 0.5 + 0.5 * sin(lastFrameTs * 6);
+            }
+        }
+        ambientColor[0] = clamp(0x33 / 0xff + (0x11 / 0xff) * sin(lastFrameTs) + redAdd + redPulse, 0, 1);
         ambientColor[1] = 0x11 / 0xff;
         ambientColor[2] = 0x33 / 0xff;
         ambientColor[3] = 0.8;
