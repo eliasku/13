@@ -7,6 +7,7 @@
 - Respawn screen
 - High quality text rendering
 - Support multiple client versions on server
+- Fix key controls bubble to iframe parent
 
 ## 1.0.24
 

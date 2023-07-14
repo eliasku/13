@@ -7,7 +7,21 @@ const DEFAULT_CHARACTERS = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
     .split("")
     .map(c => c.codePointAt(0));
 
-const gctx = createCanvas(128);
+const createCanvas_ = (size: number): CanvasRenderingContext2D => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+
+    // canvas.style.position = "absolute";
+    // canvas.style.top = "0px";
+    // canvas.style.left = "0px";
+    // document.body.appendChild(canvas);
+
+    return canvas.getContext("2d", {
+        willReadFrequently: c != null /* hack to enforce `true` against terser optimization */,
+    });
+};
+
+const gctx = createCanvas_(128);
 
 export interface CharacterData {
     // advance width
@@ -64,18 +78,8 @@ export interface FontAtlas {
 }
 
 export const makeFontAtlas = (family: string, size: number, scale: number, style: FontStyleDef): FontAtlas => {
-    const canvas = document.createElement("canvas");
     const canvasSize = 512;
-    canvas.width = canvas.height = canvasSize;
-
-    // canvas.style.position = "absolute";
-    // canvas.style.top = "0px";
-    // canvas.style.left = "0px";
-    // document.body.appendChild(canvas);
-
-    const ctx = canvas.getContext("2d", {
-        willReadFrequently: c != null /* hack to enforce `true` against terser optimization */,
-    });
+    const ctx = createCanvas_(canvasSize);
     const fallback =
         '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif';
     const texture = createTexture(canvasSize);

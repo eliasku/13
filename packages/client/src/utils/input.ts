@@ -132,6 +132,8 @@ export const keyboardUp: number[] = [];
         if (!keyboardState[_kode] && !e.repeat) {
             keyboardDown[_kode] = keyboardState[_kode] = 1;
         }
+        // iframe parent received game key events #220
+        return false;
     };
     /*document.*/
     onkeyup = (e: KeyboardEvent, _kode = e.which) => {
