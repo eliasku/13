@@ -5,6 +5,7 @@
 - Damage hit labels
 - Critical hit chance
 - Respawn screen
+- High quality text rendering
 
 ## 1.0.24
 

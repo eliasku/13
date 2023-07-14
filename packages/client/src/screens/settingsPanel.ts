@@ -12,7 +12,7 @@ import {
 
 export const guiSettingsPanel = (x: number, y: number) => {
     if (
-        button("sounds", hasSettingsFlag(SettingFlag.Sound) ? "🔊 SOUNDS: ON" : "🔇 SOUNDS: OFF", x - 50, y - 70, {
+        button("sounds", hasSettingsFlag(SettingFlag.Sound) ? "🔊 SOUNDS ✓" : "🔇 SOUNDS □", x - 50, y - 70, {
             w: 100,
             h: 20,
         })
@@ -20,7 +20,7 @@ export const guiSettingsPanel = (x: number, y: number) => {
         toggleSettingsFlag(SettingFlag.Sound);
     }
     if (
-        button("music", "🎵 MUSIC: " + (hasSettingsFlag(SettingFlag.Music) ? "ON" : "OFF"), x - 50, y - 40, {
+        button("music", "🎵 MUSIC " + (hasSettingsFlag(SettingFlag.Music) ? "✓" : "□"), x - 50, y - 40, {
             w: 100,
             h: 20,
         })
@@ -28,7 +28,7 @@ export const guiSettingsPanel = (x: number, y: number) => {
         toggleSettingsFlag(SettingFlag.Music);
     }
     if (
-        button("speech", "💬 SPEECH: " + (hasSettingsFlag(SettingFlag.Speech) ? "ON" : "OFF"), x - 50, y - 10, {
+        button("speech", "💬 SPEECH " + (hasSettingsFlag(SettingFlag.Speech) ? "✓" : "□"), x - 50, y - 10, {
             w: 100,
             h: 20,
         })
@@ -64,7 +64,7 @@ export const guiSettingsPanel = (x: number, y: number) => {
         setSetting(Setting.Particles, particlesMod);
     }
     if (
-        button("highDPI", "🖥️ HIGH-DPI: " + (hasSettingsFlag(SettingFlag.HighDPI) ? "ON" : "OFF"), x - 85, y + 50, {
+        button("highDPI", "🖥️ HIGH-DPI " + (hasSettingsFlag(SettingFlag.HighDPI) ? "✓" : "□"), x - 85, y + 50, {
             w: 80,
             h: 20,
         })
@@ -84,8 +84,8 @@ export const guiSettingsPanel = (x: number, y: number) => {
 
     const antialiasing = hasSettingsFlag(SettingFlag.Antialiasing);
     if (
-        button("antialiasing", "ANTIALIASING: " + (antialiasing ? "ON" : "OFF"), x - 40, y + 80, {
-            w: 80,
+        button("antialiasing", "𓊍 ANTIALIASING " + (antialiasing ? "✓" : "□"), x - 50, y + 80, {
+            w: 100,
             h: 20,
         })
     ) {

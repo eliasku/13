@@ -658,11 +658,16 @@ export const drawGame = () => {
     flush();
 
     setLightMapTexture(emptyTexture._texture);
-    gl.disable(GL.DEPTH_TEST);
+    gl.depthRange(0.2, 0.6);
+    gl.depthFunc(GL.LEQUAL);
+    gl.depthMask(false);
     setDrawZ(0);
     drawTextParticles();
     drawHotUsableHint(game._hotUsable);
     flush();
+
+    gl.disable(GL.DEPTH_TEST);
+    gl.depthRange(0, 1);
 };
 
 export const drawOverlay = () => {
@@ -761,8 +766,6 @@ const printStatus = () => {
                     termPrint(wpnInfo);
                 }
                 termPrint(`🧱${p0._mags}`);
-            } else {
-                termPrint("tap to respawn");
             }
         } else {
             termPrint("joining");

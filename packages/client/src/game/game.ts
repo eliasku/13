@@ -10,7 +10,7 @@ import {
     remoteClients,
 } from "../net/messaging.js";
 import {speak} from "../audio/context.js";
-import {_SEEDS, fxRand, fxRandElement, rand, random, random1i} from "../utils/rnd.js";
+import {_SEEDS, fxRandElement, rand, random, random1i} from "../utils/rnd.js";
 import {channels_sendObjectData} from "../net/channels_send.js";
 import {setPacketHandler} from "../net/channels.js";
 import {Const, GAME_CFG} from "./config.js";
@@ -67,7 +67,7 @@ import {
     resetParticles,
     restoreParticles,
     saveParticles,
-    spawnFleshParticles,
+    spawnBloodRainParticle,
     updateMapTexture,
     updateParticles,
 } from "./particles.js";
@@ -94,7 +94,6 @@ import {
     BULLET_RADIUS,
     OBJECT_RADIUS,
     PLAYER_HANDS_Z,
-    WORLD_BOUNDS_SIZE,
     WORLD_SCALE,
 } from "../assets/params.js";
 import {
@@ -1083,17 +1082,7 @@ const simulateTic = (prediction = false) => {
 
     // local updates
     if (gameMode._bloodRain) {
-        spawnFleshParticles(
-            {
-                _type: ActorType.Player,
-                _id: 0,
-                _x: fxRand(WORLD_BOUNDS_SIZE),
-                _y: fxRand(WORLD_BOUNDS_SIZE),
-                _z: fxRand(128) * WORLD_SCALE,
-            },
-            128,
-            1,
-        );
+        spawnBloodRainParticle();
     }
 };
 

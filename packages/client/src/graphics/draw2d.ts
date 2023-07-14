@@ -687,7 +687,7 @@ export const drawMeshSprite = (
     baseVertex += texture._vertexCount;
 };
 
-export const drawRing = (
+export const strokeCircle = (
     texture: Texture,
     x: number,
     y: number,
@@ -754,7 +754,7 @@ export const drawRing = (
     baseVertex += segments * 2;
 };
 
-export const drawCircle = (
+export const fillCircle = (
     texture: Texture,
     x: number,
     y: number,

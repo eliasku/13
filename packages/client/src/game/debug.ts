@@ -4,7 +4,7 @@ import {_room, clientId, clientName, disconnect, remoteClients} from "../net/mes
 import {getChannelPacketSize} from "../net/channels_send.js";
 import {termPrint} from "../graphics/gui.js";
 import {keyboardDown, KeyCode} from "../utils/input.js";
-import {draw, setDrawZ} from "../graphics/draw2d.js";
+import {draw, strokeCircle, setDrawZ} from "../graphics/draw2d.js";
 import {img} from "../assets/gfx.js";
 import {ClientID} from "@iioi/shared/types.js";
 import {min} from "../utils/math.js";
@@ -148,13 +148,13 @@ export const updateDebugInput = () => {
 
 const drawActorBoundingSphere = (p: Actor) => {
     const prop = GAME_CFG.actors[p._type];
-    const r = prop.radius;
+    const r = prop.radius / WORLD_SCALE;
     const h = prop.height;
     const x = p._x / WORLD_SCALE;
     const y = (p._y - p._z - h) / WORLD_SCALE;
-    const s = r / WORLD_SCALE / 16;
     draw(img[Img.box_t], x, y, 0, 1, (p._z + h) / WORLD_SCALE);
-    draw(img[Img.circle_16], x, y, 0, s, s, 0.5, 0xff0000);
+    strokeCircle(img[Img.box], x, y, r - 2, 1, 16, 1, 0.5, 1, 0xff0000);
+    strokeCircle(img[Img.box], x, y, r - 1, 1, 16, 1, 1, 1, 0xff0000);
 };
 
 export const drawCollisions = (list: Actor[]) => {

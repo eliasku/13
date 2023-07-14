@@ -1,9 +1,13 @@
 import {createTexture, draw, getSubTexture, Texture, uploadTexture} from "./draw2d.js";
+import {GL} from "./gl.js";
+import {createCanvas} from "./utils.js";
 
 const SPACE_CODE = " ".codePointAt(0);
 const DEFAULT_CHARACTERS = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,'-/`
     .split("")
     .map(c => c.codePointAt(0));
+
+const gctx = createCanvas(128);
 
 export interface CharacterData {
     // advance width
@@ -115,15 +119,17 @@ const enlargeFontTexture = (fa: FontAtlas) => {
     resetFontAtlas(fa, fa._characters);
 };
 
-const resetFontCanvas = (fa: FontAtlas) => {
+const setupFontRenderingContext = (context: CanvasRenderingContext2D, fa: FontAtlas) => {
     const fontSize = Math.ceil(fa._size * fa._scale);
-    fa._ctx.font = `${fontSize}px ${fa._family},${fa._fallback}`;
-    // "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"
     // setup context
-    fa._ctx.fillStyle = "rgb(255,255,255)";
-    fa._ctx.textBaseline = "alphabetic";
-    fa._ctx.textAlign = "left";
+    // "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"
+    context.font = `${fontSize}px ${fa._family},${fa._fallback}`;
+    context.fillStyle = "#fff";
+    context.textBaseline = "alphabetic";
+    context.textAlign = "left";
 };
+
+const resetFontCanvas = (fa: FontAtlas) => setupFontRenderingContext(fa._ctx, fa);
 
 const resetFontAtlas = (fa: FontAtlas, characters = DEFAULT_CHARACTERS) => {
     fa._ctx.clearRect(0, 0, fa._ctx.canvas.width, fa._ctx.canvas.height);
@@ -226,28 +232,45 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
 
     fa._characterMap.set(codepoint, data);
     fa._characters.push(codepoint);
-    const px = x + bb._left + padding;
-    const py = y + bb._ascent + padding;
-    if (fa._strokeWidth > 0) {
-        ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        ctx.lineWidth = 2 * fa._strokeWidth * fa._scale;
-        ctx.lineJoin = "round";
-        ctx.strokeText(character, px, py);
-        ctx.strokeText(character, px, py + 1);
-    }
-    // ctx.fillStyle = "#000";
-    // ctx.fillText(character, px, py + 3);
-    ctx.fillStyle = "#fff";
-    ctx.fillText(character, px, py);
+    const ox = bb._left + padding;
+    const oy = bb._ascent + padding;
 
-    //
     {
-        const imageData = ctx.getImageData(x, y, w, h);
-        const imagePixels = imageData.data;
-        for (let i = 3; i < imagePixels.length; i += 4) {
-            imagePixels[i] = imagePixels[i] < 0x80 ? 0 : 0xff;
+        gctx.canvas.width = w;
+        gctx.canvas.height = h;
+        setupFontRenderingContext(gctx, fa);
+
+        gctx.shadowOffsetX = 0;
+        gctx.shadowOffsetY = 0;
+        gctx.shadowBlur = 4;
+        gctx.shadowColor = "#000";
+        gctx.fillStyle = "#000";
+        gctx.fillText(character, ox, oy);
+        {
+            const imageData = gctx.getImageData(0, 0, w, h);
+            const imagePixels = imageData.data;
+            for (let i = 0; i < imagePixels.length; ) {
+                imagePixels[i++] = 0;
+                imagePixels[i++] = 0;
+                imagePixels[i++] = 0;
+                const a = imagePixels[i] * 16;
+                imagePixels[i++] = a > 0xff ? 0xff : a | 0;
+            }
+            gctx.putImageData(imageData, 0, 0);
         }
-        ctx.putImageData(imageData, x, y);
+        gctx.shadowOffsetX = 0;
+        gctx.shadowOffsetY = 0;
+        gctx.shadowBlur = 0;
+        gctx.shadowColor = "transparent";
+
+        gctx.globalAlpha = 0.5;
+        gctx.drawImage(gctx.canvas, 0, 4);
+
+        gctx.globalAlpha = 1;
+        gctx.fillStyle = "#fff";
+        gctx.fillText(character, ox, oy);
+
+        ctx.putImageData(gctx.getImageData(0, 0, w, h), x, y);
     }
     // if (DEBUG_SHOW_BOUNDS) {
     // ctx.lineWidth = 1;
@@ -266,7 +289,7 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
 
 const updateTexture = (fa: FontAtlas) => {
     if (fa._dirty) {
-        uploadTexture(fa._texture, fa._ctx.canvas);
+        uploadTexture(fa._texture, fa._ctx.canvas, GL.LINEAR);
         fa._dirty = false;
     }
 };
@@ -275,7 +298,7 @@ const updateTexture = (fa: FontAtlas) => {
 export const fnt: FontAtlas[] = [];
 
 export const initFonts = () => {
-    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 26, 1, {_strokeWidth: 3});
+    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 64, 1, {_strokeWidth: 4});
 };
 
 export const updateFonts = () => fnt.forEach(updateTexture);

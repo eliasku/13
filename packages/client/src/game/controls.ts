@@ -1,5 +1,5 @@
 import {inputPointers, keyboardState, KeyCode, mousePointer, Pointer} from "../utils/input.js";
-import {drawCircle, drawRing, gl} from "../graphics/draw2d.js";
+import {fillCircle, strokeCircle, gl} from "../graphics/draw2d.js";
 import {PlayerActor} from "./types.js";
 import {
     PAD_FIRE_RADIUS_0,
@@ -207,15 +207,15 @@ export const drawVirtualPad = () => {
             if (!control._isButton && pp) {
                 cx = pp._startX * k;
                 cy = pp._startY * k;
-                drawCircle(boxTexture, pp._x * k, pp._y * k, 16, segments1, 1, 1, 0.5);
+                fillCircle(boxTexture, pp._x * k, pp._y * k, 16, segments1, 1, 1, 0.5);
             }
             if (control._r1 !== undefined) {
                 drawTextAligned(fnt[0], control._text1, 8, cx, cy - control._r1 - 4, pp ? 0xffffff : 0x777777);
-                drawRing(boxTexture, cx, cy, control._r1 - 2, 4, segments1, 1, 1, 0.5, pp ? 0xffffff : 0);
+                strokeCircle(boxTexture, cx, cy, control._r1 - 2, 4, segments1, 1, 1, 0.5, pp ? 0xffffff : 0);
             }
             if (control._r2 !== undefined) {
                 drawTextAligned(fnt[0], control._text2, 8, cx, cy - control._r2 - 4, pp ? 0xffffff : 0x777777);
-                drawRing(boxTexture, cx, cy, control._r2 - 2, 4, segments2, 1, 1, 0.5, pp ? 0xffffff : 0);
+                strokeCircle(boxTexture, cx, cy, control._r2 - 2, 4, segments2, 1, 1, 0.5, pp ? 0xffffff : 0);
             }
         }
     }

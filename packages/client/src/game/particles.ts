@@ -6,7 +6,7 @@ import {atan2, cos, hypot, max, min, PI, sin, sqrt} from "../utils/math.js";
 import {_SEEDS, fxRand, fxRandomNorm, random1, random1i, random1n} from "../utils/rnd.js";
 import {GL} from "../graphics/gl.js";
 import {mapTexture, mapTexture0} from "../assets/map.js";
-import {BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
+import {BOUNDS_SIZE, WORLD_BOUNDS_SIZE, WORLD_SCALE} from "../assets/params.js";
 import {getLumaColor32, parseRGB, rgb_scale} from "../utils/utils.js";
 import {cubicOut} from "../utils/easing.js";
 import {drawTextAligned, fnt} from "../graphics/font.js";
@@ -266,6 +266,19 @@ export const spawnFleshParticles = (
 ) => {
     addFleshParticles(amount, actor, expl, vel);
 };
+
+export const spawnBloodRainParticle = () =>
+    spawnFleshParticles(
+        {
+            _type: ActorType.Player,
+            _id: 0,
+            _x: fxRand(WORLD_BOUNDS_SIZE),
+            _y: fxRand(WORLD_BOUNDS_SIZE),
+            _z: fxRand(128) * WORLD_SCALE,
+        },
+        128,
+        1,
+    );
 
 export const addBoneParticles = (amount: number, actor: Actor, vel: Vel) => {
     amount = (amount * settings[Setting.Particles]) | 0;
