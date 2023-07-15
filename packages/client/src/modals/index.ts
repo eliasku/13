@@ -1,9 +1,11 @@
 export let isModalPopupActive = false;
 
 const closeModalPopup = (accepted?: boolean) => {
+    // restore focus to canvas
+    c.focus();
+
     isModalPopupActive = false;
     const popup = document.getElementById("popup");
-
     const value = (document.getElementById("popupInput") as HTMLInputElement).value;
     const resolve = popupResolve;
     const reject = popupReject;
@@ -19,6 +21,7 @@ const closeModalPopup = (accepted?: boolean) => {
         }
     }
     if (popup) {
+        popup.style.pointerEvents = "none";
         popup.style.opacity = "0";
         setTimeout(() => {
             popup.style.visibility = "hidden";
@@ -53,6 +56,7 @@ const openModalPopup = () => {
     isModalPopupActive = true;
     const popup = document.getElementById("popup");
     if (popup) {
+        popup.style.pointerEvents = "auto";
         popup.style.visibility = "visible";
         popup.style.opacity = "1";
         const popupFrame = document.getElementById("popupFrame");
@@ -91,6 +95,7 @@ export const initModals = () => {
     backdrop.style.width = "100%";
     backdrop.style.height = "100%";
     backdrop.style.backgroundColor = "rgba(0,0,0,0.5)";
+    backdrop.style.pointerEvents = "none";
     //backdrop.style.backdropFilter = "blur(8px)";
     backdrop.style.transition = "visibility 0s, opacity 0.2s 0.1s ease-in";
     backdrop.onclick = onBackdropClicked;
