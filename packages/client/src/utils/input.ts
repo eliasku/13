@@ -1,7 +1,7 @@
 import {audioContext} from "../audio/context.js";
 import {getOrCreate} from "./utils.js";
 import {getDPR} from "../graphics/draw2d.js";
-import {isModalPopupActive} from "../modals/index.js";
+import {handleModalKeyEvent, isModalPopupActive} from "../modals/index.js";
 
 export interface Pointer {
     _id: number;
@@ -130,7 +130,9 @@ export const keyboardUp: number[] = [];
     /*document.*/
     onkeydown = (e: KeyboardEvent, _kode = e.which) => {
         unlockAudio();
-        if (!isModalPopupActive) {
+        if (isModalPopupActive) {
+            return handleModalKeyEvent(e);
+        } else {
             if (!keyboardState[_kode] && !e.repeat) {
                 keyboardDown[_kode] = keyboardState[_kode] = 1;
             }

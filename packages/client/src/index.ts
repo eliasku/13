@@ -148,7 +148,9 @@ const start = async () => {
                             } else {
                                 console.warn("bad game code");
                             }
-                        }).catch();
+                        }).catch(() => {
+                            //
+                        });
                     }
                 } else if (result._command === MenuCommand.CreateGame) {
                     logUserEvent("create_new_game");

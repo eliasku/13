@@ -1,12 +1,19 @@
 export let isModalPopupActive = false;
 
+let popupResolve: undefined | ((v: string) => void);
+let popupReject: undefined | ((err: string) => void);
+
 const closeModalPopup = (accepted?: boolean) => {
+    isModalPopupActive = false;
+    const popup = document.getElementById("popup");
+    const input = document.getElementById("popupInput") as HTMLInputElement;
+    const value = input.value;
+    if (input.type !== "hidden") {
+        input.blur();
+    }
     // restore focus to canvas
     c.focus();
 
-    isModalPopupActive = false;
-    const popup = document.getElementById("popup");
-    const value = (document.getElementById("popupInput") as HTMLInputElement).value;
     const resolve = popupResolve;
     const reject = popupReject;
     popupResolve = undefined;
@@ -21,10 +28,11 @@ const closeModalPopup = (accepted?: boolean) => {
         }
     }
     if (popup) {
-        popup.style.pointerEvents = "none";
         popup.style.opacity = "0";
+        popup.style.pointerEvents = "none";
         setTimeout(() => {
             popup.style.visibility = "hidden";
+            input.type = "hidden";
         }, 300);
         const popupFrame = document.getElementById("popupFrame");
         if (popupFrame) {
@@ -33,8 +41,16 @@ const closeModalPopup = (accepted?: boolean) => {
     }
 };
 
-let popupResolve: undefined | ((v: string) => void);
-let popupReject: undefined | ((err: string) => void);
+export const handleModalKeyEvent = (e: KeyboardEvent): boolean | undefined => {
+    if (e.key === "Enter") {
+        closeModalPopup(true);
+        return false;
+    } else if (e.key === "Escape") {
+        closeModalPopup(false);
+        return false;
+    }
+};
+
 export const modalPopup = (options: {title: string; desc: string; value?: string}): Promise<string> => {
     document.getElementById("popupTitle").innerText = options.title;
     document.getElementById("popupDesc").innerText = options.desc;
@@ -59,10 +75,12 @@ const openModalPopup = (inputValue?: string) => {
         }
         const input = document.getElementById("popupInput") as HTMLInputElement;
         if (inputValue != null) {
+            input.type = "text";
             input.value = inputValue;
             input.style.visibility = "visible";
             input.focus();
         } else {
+            input.type = "hidden";
             input.style.visibility = "hidden";
         }
     }
@@ -95,10 +113,10 @@ export const initModals = () => {
     backdrop.style.left = "0px";
     backdrop.style.width = "100%";
     backdrop.style.height = "100%";
-    backdrop.style.backgroundColor = "rgba(0,0,0,0.5)";
+    backdrop.style.backgroundColor = "rgba(0,0,0,0.7)";
     backdrop.style.pointerEvents = "none";
     //backdrop.style.backdropFilter = "blur(8px)";
-    backdrop.style.transition = "visibility 0s, opacity 0.2s 0.1s ease-in";
+    backdrop.style.transition = "visibility 0s, opacity 0.15s 0.05s ease-in";
     backdrop.onclick = onBackdropClicked;
     d.body.appendChild(backdrop);
 
@@ -109,10 +127,9 @@ export const initModals = () => {
     layer.style.left = "50%";
     layer.style.top = "50%";
     layer.style.width = "50%";
-    //layer.style.minHeight = "50%";
     layer.style.transform = "translate(-50%,-100%)";
     layer.style.backgroundColor = "#111";
-    layer.style.boxShadow = "0px 4px 8px rgba(0,0,0,0.2)";
+    layer.style.boxShadow = "0px 4px 8px rgba(0,0,0,1)";
     layer.style.borderRadius = "16px";
     layer.style.textAlign = "center";
     layer.style.fontFamily = "monospace";
@@ -120,7 +137,7 @@ export const initModals = () => {
     layer.style.border = "solid";
     layer.style.borderColor = "#ccc";
     layer.style.borderWidth = "1pt";
-    layer.style.transition = "transform 0.3s ease-in";
+    layer.style.transition = "transform 0.2s ease-in-out";
 
     const title = d.createElement("h1");
     title.id = "popupTitle";
@@ -129,15 +146,23 @@ export const initModals = () => {
     title.style.margin = "0";
     layer.appendChild(title);
 
-    const desc = d.createElement("h3");
+    const desc = d.createElement("p");
     desc.id = "popupDesc";
     desc.innerText = "Long long description";
     desc.style.color = "lightcyan";
     layer.appendChild(desc);
+    const form = d.createElement("form");
+    form.style.minWidth = "90%";
+    form.style.width = "90%";
+    layer.appendChild(form);
+    form.onsubmit = onAcceptClicked;
+    form.oncancel = () => {
+        console.log("cancel");
+    };
 
     const input = d.createElement("input");
     input.id = "popupInput";
-    input.type = "text";
+    input.type = "hidden";
     input.style.minWidth = "90%";
     input.style.width = "90%";
     input.style.padding = "8px 16px";
@@ -148,21 +173,14 @@ export const initModals = () => {
     input.style.outline = "inherit";
     input.style.borderColor = "#fff";
     input.style.borderWidth = "2pt";
-    input.onkeydown = e => {
-        if (e.key === "Enter") {
-            closeModalPopup(true);
-        } else if (e.key === "Escape") {
-            closeModalPopup(false);
-        }
-    };
-    layer.appendChild(input);
+    form.appendChild(input);
 
     const buttonsLine = d.createElement("p");
     buttonsLine.style.width = "100%";
     layer.appendChild(buttonsLine);
 
     const accept = d.createElement("button");
-    accept.innerText = "Accept";
+    accept.innerText = "OK";
     accept.style.float = "right";
     accept.style.padding = "8px 16px";
     accept.style.marginLeft = "8px";
@@ -177,7 +195,7 @@ export const initModals = () => {
     buttonsLine.appendChild(accept);
 
     const cancel = d.createElement("button");
-    cancel.innerText = "Discard";
+    cancel.innerText = "Cancel";
     cancel.style.float = "right";
     cancel.style.padding = "8px 16px";
     cancel.style.marginLeft = "8px";

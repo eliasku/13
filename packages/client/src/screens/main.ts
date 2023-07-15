@@ -82,7 +82,9 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                     .then(v => {
                         setUserName(v);
                     })
-                    .catch();
+                    .catch(() => {
+                        //
+                    });
             }
 
             if (button("replay", "📂 OPEN REPLAY", centerX - 80 / 2, centerY - 80, {w: 80})) {

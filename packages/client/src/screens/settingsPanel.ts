@@ -98,6 +98,8 @@ export const guiSettingsPanel = (x: number, y: number) => {
                 toggleSettingsFlag(SettingFlag.Antialiasing);
                 location.reload();
             })
-            .catch();
+            .catch(() => {
+                //
+            });
     }
 };
