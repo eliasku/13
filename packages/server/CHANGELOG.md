@@ -1,5 +1,14 @@
 # @iioi/server
 
+## 1.0.20
+
+### Patch Changes
+
+-   31ed014: simple support for multiple client versions on single signalling server #218
+-   Updated dependencies [31ed014]
+-   Updated dependencies [a52058d]
+    -   @iioi/shared@1.0.17
+
 ## 1.0.19
 
 ### Patch Changes

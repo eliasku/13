@@ -1,6 +1,6 @@
 {
     "name": "@iioi/server",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "description": "13 Game Server",
     "private": true,
     "type": "module",
@@ -25,6 +25,6 @@
     "author": "eliasku",
     "license": "ISC",
     "dependencies": {
-        "@iioi/shared": "1.0.16"
+        "@iioi/shared": "1.0.17"
     }
 }

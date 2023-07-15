@@ -1,12 +1,12 @@
 {
     "name": "@iioi/tools",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "private": true,
     "description": "Helpers to build iioi game",
     "type": "module",
     "author": "eliasku",
     "license": "ISC",
     "devDependencies": {
-        "@iioi/client": "1.0.24"
+        "@iioi/client": "1.0.25"
     }
 }

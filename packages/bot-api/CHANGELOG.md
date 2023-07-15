@@ -1,5 +1,11 @@
 # @iioi/bot-api
 
+## 1.0.25
+
+### Patch Changes
+
+-   97dcc0a: set global game config for packets reader
+
 ## 1.0.24
 
 ## 1.0.23

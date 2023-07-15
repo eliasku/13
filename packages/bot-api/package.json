@@ -1,6 +1,6 @@
 {
     "name": "@iioi/bot-api",
-    "version": "1.0.24",
+    "version": "1.0.25",
     "description": "API to control your Player in Game 13 project",
     "type": "module",
     "types": "./dist/index.d.ts",
@@ -9,7 +9,7 @@
         "access": "public"
     },
     "devDependencies": {
-        "@iioi/client": "1.0.24"
+        "@iioi/client": "1.0.25"
     },
     "files": [
         "dist"

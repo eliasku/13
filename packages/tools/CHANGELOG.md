@@ -1,5 +1,14 @@
 # @iioi/tools
 
+## 1.0.20
+
+### Patch Changes
+
+-   97dcc0a: increase NPC spawn rate
+-   31ed014: simple support for multiple client versions on single signalling server #218
+-   793b300: critical hit chance
+-   a52058d: poki version build mode
+
 ## 1.0.19
 
 ### Patch Changes
