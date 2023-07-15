@@ -9,6 +9,7 @@ import {
     settings,
     toggleSettingsFlag,
 } from "../game/settings.js";
+import {modalPopup} from "../modals/index.js";
 
 export const guiSettingsPanel = (x: number, y: number) => {
     if (
@@ -89,8 +90,14 @@ export const guiSettingsPanel = (x: number, y: number) => {
             h: 20,
         })
     ) {
-        toggleSettingsFlag(SettingFlag.Antialiasing);
-        alert("iioi game will be reloaded to apply antialiasing settings");
-        location.reload();
+        modalPopup({
+            title: "Antialiasing",
+            desc: "Game will be reloaded to apply new antialiasing settings",
+        })
+            .then(() => {
+                toggleSettingsFlag(SettingFlag.Antialiasing);
+                location.reload();
+            })
+            .catch();
     }
 };

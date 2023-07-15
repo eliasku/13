@@ -32,10 +32,16 @@ const closeModalPopup = (accepted?: boolean) => {
 
 let popupResolve: undefined | ((v: string) => void);
 let popupReject: undefined | ((err: string) => void);
-export const modalPopup = (options: {title: string; desc: string; value: string}): Promise<string> => {
+export const modalPopup = (options: {title: string; desc: string; value?: string}): Promise<string> => {
     document.getElementById("popupTitle").innerText = options.title;
     document.getElementById("popupDesc").innerText = options.desc;
-    (document.getElementById("popupInput") as HTMLInputElement).value = options.value;
+    const input = document.getElementById("popupInput") as HTMLInputElement;
+    if (options.value != null) {
+        input.value = options.value;
+        input.style.visibility = "visible";
+    } else {
+        input.style.visibility = "hidden";
+    }
     return new Promise((resolve, reject) => {
         popupResolve = resolve;
         popupReject = reject;
