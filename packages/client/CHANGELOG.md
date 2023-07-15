@@ -1,5 +1,29 @@
 # @iioi/client
 
+## 1.0.25
+
+### Patch Changes
+
+-   a52058d: add gameplay events for paused screen
+-   a52058d: paint particles for poki build
+-   d561efb: add antialiasing option
+-   16d3404: pulse fog on low hp #212
+-   a52058d: iframe parent received game key events #220
+-   97dcc0a: increase NPC spawn rate
+-   6821a25: add respawn screen #215
+-   7bc9e7e: high quality text rendering
+-   793b300: damage labels on hit #214
+-   a52058d: remove github link from poki build
+-   31ed014: simple support for multiple client versions on single signalling server #218
+-   a52058d: fix gameplay events while prediction processing
+-   8c758b8: simple overlay modal popups instead of prompts
+-   793b300: critical hit chance
+-   c1cd6f0: map generator #40
+-   a52058d: poki version build mode
+-   Updated dependencies [31ed014]
+-   Updated dependencies [a52058d]
+    -   @iioi/shared@1.0.17
+
 ## 1.0.24
 
 ### Patch Changes

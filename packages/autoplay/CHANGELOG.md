@@ -1,5 +1,12 @@
 # @iioi/autoplay
 
+## 1.0.25
+
+### Patch Changes
+
+-   Updated dependencies [97dcc0a]
+    -   @iioi/bot-api@1.0.25
+
 ## 1.0.24
 
 ### Patch Changes
