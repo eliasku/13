@@ -8,7 +8,8 @@
 - High quality text rendering
 - Support multiple client versions on server
 - Fix key controls bubble to iframe parent
-
+- Simple modal popups instead of browser's prompts
+- 
 ## 1.0.24
 
 - Turn off git info hash from server version verify

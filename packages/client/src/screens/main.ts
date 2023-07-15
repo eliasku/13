@@ -5,8 +5,8 @@ import {keyboardDown, KeyCode} from "../utils/input.js";
 import {BuildClientVersion, GameModeFlag, IsPokiBuild, NewGameParams, RoomsInfoResponse} from "@iioi/shared/types.js";
 import {guiSettingsPanel} from "./settingsPanel.js";
 import {guiDevModePanel} from "./devModePanel.js";
-import {parseRadix64String} from "@iioi/shared/radix64.js";
 import {logScreenView} from "../analytics.js";
+import {modalPopup} from "../modals/index.js";
 
 const Menu = {
     Main: 0,
@@ -74,7 +74,15 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
 
             label("Welcome back,", 7, centerX, 14);
             if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
-                setUserName(prompt("your name", clientName));
+                modalPopup({
+                    title: "Your Name",
+                    desc: "The name will be visible to everyone in the game room",
+                    value: clientName,
+                })
+                    .then(v => {
+                        setUserName(v);
+                    })
+                    .catch();
             }
 
             if (button("replay", "📂 OPEN REPLAY", centerX - 80 / 2, centerY - 80, {w: 80})) {
@@ -181,15 +189,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                     h: 20,
                 })
             ) {
-                const code = prompt("Enter Game Code", "") ?? "";
-                const v = parseRadix64String(code);
-                if (v) {
-                    result = {_command: MenuCommand.JoinGame, _joinByCode: code};
-                } else {
-                    console.warn("bad game code");
-                    ui_finish();
-                    return;
-                }
+                result = {_command: MenuCommand.JoinGame};
             }
             y += 30;
 

@@ -30,6 +30,8 @@ import {GameConfig} from "./data/config.js";
 import {loadJSON} from "./utils/loaders.js";
 import {logScreenView, logUserEvent} from "./analytics.js";
 import {setRtcConfiguration} from "./net/iceServers.js";
+import {initModals, modalPopup} from "./modals/index.js";
+import {parseRadix64String} from "@iioi/shared/radix64.js";
 
 console.info(`13 game client ${BuildClientVersion} @${BuildCommit} ${BuildHash}`);
 logScreenView("loading");
@@ -46,6 +48,8 @@ type StateFunc = (ts?: number) => void | undefined;
 
 const start = async () => {
     await poki._init();
+
+    initModals();
 
     let state: StartState = StartState.Loading;
     let publicRoomsInfo: RoomsInfoResponse = {v: BuildClientVersion, rooms: [], players: 0};
@@ -121,13 +125,31 @@ const start = async () => {
                     gameMode._bloodRain = true;
                     connect();
                 } else if (result._command === MenuCommand.JoinGame) {
-                    logUserEvent("join_game_by_code");
-                    state = StartState.Connecting;
-                    resetGame();
-                    gameMode._title = true;
-                    gameMode._tiltCamera = 0.05;
-                    gameMode._bloodRain = true;
-                    connect(undefined, result._joinByCode);
+                    const joinRoomByCode = (code: string) => {
+                        logUserEvent("join_game_by_code");
+                        state = StartState.Connecting;
+                        resetGame();
+                        gameMode._title = true;
+                        gameMode._tiltCamera = 0.05;
+                        gameMode._bloodRain = true;
+                        connect(undefined, code);
+                    };
+                    if (result._joinByCode) {
+                        joinRoomByCode(result._joinByCode)
+                    } else {
+                        modalPopup({title: "Join Game", desc: "Enter Game Code", value: ""}).then((code) => {
+                            const ri = code.lastIndexOf("r=");
+                            if (ri) {
+                                code = code.substring(ri + 2);
+                            }
+                            const v = parseRadix64String(code);
+                            if (v) {
+                                joinRoomByCode(code);
+                            } else {
+                                console.warn("bad game code");
+                            }
+                        }).catch();
+                    }
                 } else if (result._command === MenuCommand.CreateGame) {
                     logUserEvent("create_new_game");
                     state = StartState.Connecting;
