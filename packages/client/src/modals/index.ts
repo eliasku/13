@@ -38,21 +38,15 @@ let popupReject: undefined | ((err: string) => void);
 export const modalPopup = (options: {title: string; desc: string; value?: string}): Promise<string> => {
     document.getElementById("popupTitle").innerText = options.title;
     document.getElementById("popupDesc").innerText = options.desc;
-    const input = document.getElementById("popupInput") as HTMLInputElement;
-    if (options.value != null) {
-        input.value = options.value;
-        input.style.visibility = "visible";
-    } else {
-        input.style.visibility = "hidden";
-    }
+
     return new Promise((resolve, reject) => {
         popupResolve = resolve;
         popupReject = reject;
-        openModalPopup();
+        openModalPopup(options.value);
     });
 };
 
-const openModalPopup = () => {
+const openModalPopup = (inputValue?: string) => {
     isModalPopupActive = true;
     const popup = document.getElementById("popup");
     if (popup) {
@@ -63,7 +57,14 @@ const openModalPopup = () => {
         if (popupFrame) {
             popupFrame.style.transform = "translate(-50%,-50%)";
         }
-        document.getElementById("popupInput").focus();
+        const input = document.getElementById("popupInput") as HTMLInputElement;
+        if (inputValue != null) {
+            input.value = inputValue;
+            input.style.visibility = "visible";
+            input.focus();
+        } else {
+            input.style.visibility = "hidden";
+        }
     }
 };
 
