@@ -14,12 +14,12 @@ const gameConfig: GameConfig = {
         },
         {
             initWeaponLen: 3,
-            period: 11,
+            period: 10,
             max: 4,
         },
         {
             initWeaponLen: 4,
-            period: 10,
+            period: 8,
             max: 8,
         },
         {

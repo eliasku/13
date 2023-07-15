@@ -1,6 +1,7 @@
 import {ActorType, newStateData, PlayerActor, StateData} from "@iioi/client/game/types.js";
 import {readState} from "@iioi/client/game/packets.js";
 import {GameConfig} from "@iioi/client/data/config.js";
+import {setGameConfig} from "@iioi/client/game/config.js";
 
 export interface PlayerBot {
     config?: GameConfig;
@@ -25,6 +26,7 @@ onmessage = e => {
         postMessage([input, stateBuffer], {transfer: [stateBuffer.buffer]});
     } else {
         playerBot.config = e.data as GameConfig;
+        setGameConfig(playerBot.config);
         postMessage(1);
     }
 };
