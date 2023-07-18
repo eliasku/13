@@ -1,3 +1,9 @@
+## 1.0.26
+
+- Fix arrow keys scrolls parent document
+- Add language selection
+- Change `sp`/`hp`/`cr`/`mags` to icons
+
 ## 1.0.25
 
 - Antialiasing option
@@ -9,7 +15,7 @@
 - Support multiple client versions on server
 - Fix key controls bubble to iframe parent
 - Simple modal popups instead of browser's prompts
-- 
+
 ## 1.0.24
 
 - Turn off git info hash from server version verify

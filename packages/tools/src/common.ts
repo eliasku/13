@@ -61,6 +61,25 @@ export const copyPublicAssets = (publicDir = "public", debugAssets = true, index
     copyFileSync("packages/client/assets/main.png", `${publicDir}/main.png`);
     copyFileSync("packages/client/assets/main.dat", `${publicDir}/main.dat`);
     copyFileSync("packages/client/assets/config.json", `${publicDir}/config.json`);
+
+    // copy translations
+    ensureDir(`${publicDir}/translations`);
+    for (const lang of [
+        "de",
+        "en",
+        "es",
+        "fr",
+        "it",
+        "ja",
+        "ko",
+        "pt-BR",
+        "ru",
+        "tr",
+        "zh-Hans",
+    ]) {
+        copyFileSync(`packages/client/assets/translations/${lang}.json`, `${publicDir}/translations/${lang}.json`);
+    }
+
     try {
         copyFileSync("13-keys/ice.json", `${publicDir}/ice.json`);
     }

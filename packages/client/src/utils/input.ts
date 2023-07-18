@@ -138,6 +138,7 @@ export const keyboardUp: number[] = [];
             }
             // iframe parent received game key events #220
             //if (_kode >= 37 && _kode <= 40) {
+            e.preventDefault();
             return false;
             //}
         }

@@ -60,6 +60,7 @@ import {ClientID} from "@iioi/shared/types.js";
 import {TILE_MAP_STRIDE, TILE_SIZE, TILE_SIZE_BITS} from "./tilemap.js";
 import {RAYCAST_HITS, raycastWorld} from "./gamePhy.js";
 import {TRACE_HIT, traceRay} from "../utils/collision/fastVoxelRaycast.js";
+import {L} from "../assets/text.js";
 
 export const drawShadows = (drawList: Actor[]) => {
     for (const actor of drawList) {
@@ -226,14 +227,14 @@ export const drawHotUsableHint = (hotUsable?: ItemActor) => {
         if (hotUsable._subtype & ItemType.Weapon) {
             const weapons = GAME_CFG.weapons;
             const weapon = weapons[hotUsable._itemWeapon];
-            let text = weapon.name + " " + EMOJI[Img.weapon0 + hotUsable._itemWeapon];
+            let text = L(weapon.name) + " " + EMOJI[Img.weapon0 + hotUsable._itemWeapon];
             if (weapon.clipSize) {
                 text += hotUsable._itemWeaponAmmo;
             }
             const x = hotUsable._x / WORLD_SCALE;
             const y = hotUsable._y / WORLD_SCALE + drawZ;
             drawTextAligned(fnt[0], text, 7, x, y - 28);
-            drawTextAligned(fnt[0], "Pick [E]", 7, x, y - 20);
+            drawTextAligned(fnt[0], L("pick_item") + " [E]", 7, x, y - 20);
         }
     }
 };

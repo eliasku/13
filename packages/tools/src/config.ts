@@ -326,7 +326,7 @@ const gameConfig: GameConfig = {
     let i = 1;
 
 // 🔪
-    weapons[i].name = "Knife";
+    weapons[i].name = "knife";
     weapons[i].reloadTime = 10;
     weapons[i].launchTime = 5;
     weapons[i].bulletDamage = 2;
@@ -334,7 +334,7 @@ const gameConfig: GameConfig = {
 
 // AXE
     ++i;
-    weapons[i].name = "Axe";
+    weapons[i].name = "axe";
     weapons[i].reloadTime = 30;
     weapons[i].launchTime = 15;
     weapons[i].bulletDamage = 8;
@@ -343,7 +343,7 @@ const gameConfig: GameConfig = {
 
 // 🔫
     ++i;
-    weapons[i].name = "Pistol";
+    weapons[i].name = "pistol";
     weapons[i].bulletDamage = 3;
     weapons[i].angleSpread = 0.1;
     weapons[i].velocity /= 2;
@@ -355,7 +355,7 @@ const gameConfig: GameConfig = {
 
 // 🖊 light auto gun
     ++i;
-    weapons[i].name = "Automatic Gun";
+    weapons[i].name = "automatic_gun";
     weapons[i].reloadTime = 5;
     weapons[i].angleSpread = 0.25;
     weapons[i].kickBack = 20;
@@ -364,7 +364,7 @@ const gameConfig: GameConfig = {
 
 // ✏️ hard machine-gun?
     ++i;
-    weapons[i].name = "Machine Gun";
+    weapons[i].name = "machine_gun";
     weapons[i].reloadTime = 8;
     weapons[i].angleSpread = 0.25;
     weapons[i].kickBack = 20;
@@ -376,7 +376,7 @@ const gameConfig: GameConfig = {
 
 // 🪥 SHOT GUN
     ++i;
-    weapons[i].name = "Shotgun";
+    weapons[i].name = "shotgun";
     weapons[i].spawnCount = 5;
     weapons[i].angleSpread = 0.5;
     weapons[i].detuneSpeed = 32;
@@ -393,7 +393,7 @@ const gameConfig: GameConfig = {
 
 // CROSS BOW ⛏
     ++i;
-    weapons[i].name = "Crossbow";
+    weapons[i].name = "crossbow";
     weapons[i].detuneSpeed = 1;
     weapons[i].cameraFeedback = 0.2;
     weapons[i].cameraLookForward = 0.4;
@@ -423,7 +423,7 @@ const gameConfig: GameConfig = {
 
 // 🧵 RAIL GUN
     ++i;
-    weapons[i].name = "Railgun";
+    weapons[i].name = "railgun";
     weapons[i].reloadTime = 120;
     weapons[i].cameraShake = 25;
     // weapons[i].velocity = 1000;
@@ -440,7 +440,7 @@ const gameConfig: GameConfig = {
 
     // uzi: 🧣
     ++i;
-    weapons[i].name = "Uzi";
+    weapons[i].name = "uzi";
     weapons[i].reloadTime = 4;
     weapons[i].angleSpread = 0.1;
     weapons[i].kickBack = 20;

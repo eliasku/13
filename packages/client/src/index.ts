@@ -8,13 +8,7 @@ import {updateStats} from "./utils/fpsMeter.js";
 import {updateSong} from "./audio/music.js";
 import {drawTextAligned, fnt, initFonts, updateFonts} from "./graphics/font.js";
 import {beginRenderToMain, completeFrame, flush, gl} from "./graphics/draw2d.js";
-import {
-    BuildCommit,
-    BuildHash,
-    BuildClientVersion,
-    GameModeFlag,
-    RoomsInfoResponse,
-} from "@iioi/shared/types.js";
+import {BuildClientVersion, BuildCommit, BuildHash, GameModeFlag, RoomsInfoResponse,} from "@iioi/shared/types.js";
 import {sin} from "./utils/math.js";
 import {setupRAF} from "./utils/raf.js";
 import {gameMode} from "./game/gameState.js";
@@ -32,6 +26,7 @@ import {logScreenView, logUserEvent} from "./analytics.js";
 import {setRtcConfiguration} from "./net/iceServers.js";
 import {initModals, modalPopup} from "./modals/index.js";
 import {parseRadix64String} from "@iioi/shared/radix64.js";
+import {L, loadInitialTranslations} from "./assets/text.js";
 
 console.info(`13 game client ${BuildClientVersion} @${BuildCommit} ${BuildHash}`);
 logScreenView("loading");
@@ -82,7 +77,8 @@ const start = async () => {
     };
     const addLoadItem = <T>(task: Promise<T>): number => itemsToLoad.push(task.then(() => updateProgress(++loaded)));
     addLoadItem(loadJSON<GameConfig>("config.json").then(gameConfig => setGameConfig(gameConfig)));
-    addLoadItem(loadJSON<GameConfig>("ice.json").then(config => setRtcConfiguration(config as RTCConfiguration)));
+    addLoadItem(loadJSON<RTCConfiguration>("ice.json").then(config => setRtcConfiguration(config)));
+    addLoadItem(loadInitialTranslations());
     addLoadItem(new FontFace("m", "url(m.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("e", "url(e.ttf)").load().then(font => document.fonts.add(font)));
     addLoadItem(new FontFace("fa-brands-400", "url(fa-brands-400.ttf)").load().then(font => document.fonts.add(font)));
@@ -137,7 +133,11 @@ const start = async () => {
                     if (result._joinByCode) {
                         joinRoomByCode(result._joinByCode)
                     } else {
-                        modalPopup({title: "Join Game", desc: "Enter Game Code", value: ""}).then((code) => {
+                        modalPopup({
+                            title: L("popup_join_title"),
+                            desc: L("popup_join_desc"),
+                            value: ""
+                        }).then((code) => {
                             const ri = code.lastIndexOf("r=");
                             if (ri) {
                                 code = code.substring(ri + 2);
@@ -201,7 +201,7 @@ const start = async () => {
             beginRenderToMain(0, 0, 0, 0, 0, scale);
             const fontSize = 14 + 0.5 * Math.sin(8 * ts);
             if (sin(ts * 8) <= 0) {
-                drawTextAligned(fnt[0], "PRESS ANY KEY", fontSize, centerX, centerY + 50, 0xd9ff66);
+                drawTextAligned(fnt[0], L("press_any_key"), fontSize, centerX, centerY + 50, 0xd9ff66);
             }
             flush();
             if (isAnyKeyDown()) {
@@ -234,7 +234,7 @@ const start = async () => {
             const centerY = H >> 1;
             beginRenderToMain(0, 0, 0, 0, 0, getScreenScale());
             const fontSize = 10 + 0.5 * Math.sin(4 * ts);
-            drawTextAligned(fnt[0], "CONNECTING", fontSize, centerX, centerY + 40, 0xd9ff66);
+            drawTextAligned(fnt[0], L("connecting"), fontSize, centerX, centerY + 40, 0xd9ff66);
             drawTextAligned(fnt[0], ".".repeat((ts * 7) & 7), fontSize, centerX, centerY + 50, 0xdddddd);
             flush();
             if (_sseState == 3) {

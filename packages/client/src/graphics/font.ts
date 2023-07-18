@@ -13,6 +13,7 @@ const createCanvas_ = (size: number): CanvasRenderingContext2D => {
     // canvas.style.position = "absolute";
     // canvas.style.top = "0px";
     // canvas.style.left = "0px";
+    // canvas.style.pointerEvents = "none";
     // document.body.appendChild(canvas);
 
     return canvas.getContext("2d", {
@@ -277,10 +278,10 @@ const getCharacter = (fa: FontAtlas, codepoint: number): CharacterData => {
     }
     // if (DEBUG_SHOW_BOUNDS) {
     // ctx.lineWidth = 1;
-    // ctx.strokeStyle = 'rgb(255,0,0)';
-    // ctx.strokeRect(x, y + padding, w / 2, bb.ascent);
-    // ctx.strokeStyle = 'rgb(0,255,0)';
-    // ctx.strokeRect(x + w / 2, y + padding + bb.ascent, w / 2, bb.descent);
+    // ctx.strokeStyle = "rgb(255,0,0)";
+    // ctx.strokeRect(x, y + padding, w / 2, bb._ascent);
+    // ctx.strokeStyle = "rgb(0,255,0)";
+    // ctx.strokeRect(x + w / 2, y + padding + bb._ascent, w / 2, bb._descent);
     // }
     x += w;
     fa._nextSheetX = x;
@@ -301,7 +302,7 @@ const updateTexture = (fa: FontAtlas) => {
 export const fnt: FontAtlas[] = [];
 
 export const initFonts = () => {
-    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 64, 1, {_strokeWidth: 4});
+    fnt[0] = makeFontAtlas(`m,e,fa-brands-400`, 48, 1, {_strokeWidth: 4});
 };
 
 export const updateFonts = () => fnt.forEach(updateTexture);

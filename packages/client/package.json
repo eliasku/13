@@ -18,9 +18,9 @@
     "author": "eliasku",
     "license": "ISC",
     "dependencies": {
-        "@iioi/shared": "1.0.17",
-        "firebase": "^10.0.0",
+        "@firebase/analytics": "^0.10.0",
         "@firebase/app": "^0.9.14",
-        "@firebase/analytics": "^0.10.0"
+        "@iioi/shared": "1.0.17",
+        "firebase": "^10.0.0"
     }
 }

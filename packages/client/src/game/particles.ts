@@ -225,7 +225,7 @@ const MATURE_BLOOD_COLORS = [parseRGB("#FF0000")];
 
 export const addFleshParticles = (
     amount: number,
-    actor: Pos & {_id: number; _type: ActorType},
+    actor: Pos & {_id?: number; _type: ActorType},
     explVel: number,
     vel?: Vel,
 ) => {
@@ -259,7 +259,7 @@ export const addFleshParticles = (
 };
 
 export const spawnFleshParticles = (
-    actor: Pos & {_id: number; _type: ActorType},
+    actor: Pos & {_id?: number; _type: ActorType},
     expl: number,
     amount: number,
     vel?: Vel,
@@ -271,7 +271,7 @@ export const spawnBloodRainParticle = () =>
     spawnFleshParticles(
         {
             _type: ActorType.Player,
-            _id: 0,
+            //_id: 0,
             _x: fxRand(WORLD_BOUNDS_SIZE),
             _y: fxRand(WORLD_BOUNDS_SIZE),
             _z: fxRand(128) * WORLD_SCALE,

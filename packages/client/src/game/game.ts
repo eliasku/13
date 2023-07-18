@@ -147,6 +147,7 @@ import {BulletType, WeaponConfig} from "../data/config.js";
 import {generateBlocks, MapSlot} from "./mapgen/walls.js";
 import {TILE_SIZE} from "./tilemap.js";
 import {logScreenView} from "../analytics.js";
+import {L} from "../assets/text.js";
 
 const createItemActor = (subtype: number): ItemActor => {
     const item = newItemActor(subtype);
@@ -817,7 +818,7 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
 
                 playAt(player, Snd.pick);
                 if (withMyPlayer) {
-                    addTextParticle(item, `+${qty} mags`);
+                    addTextParticle(item, `+${qty} 🧱`);
                 }
             }
             updateWeaponPickup(item, player);
@@ -829,7 +830,7 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
                     item._hp = item._subtype = 0;
                     playAt(player, Snd.heal);
                     if (withMyPlayer) {
-                        addTextParticle(item, `+${qty} hp`);
+                        addTextParticle(item, `+${qty} ♡`);
                     }
                 }
             } else if (item._subtype === ItemType.Credit || item._subtype === ItemType.Credit2) {
@@ -840,7 +841,7 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
                     item._hp = item._subtype = 0;
                     playAt(player, Snd.pick);
                     if (withMyPlayer) {
-                        addTextParticle(item, `+${qty} cr`);
+                        addTextParticle(item, `+${qty} 💰`);
                     }
                 }
             } else if (item._subtype === ItemType.Ammo) {
@@ -850,7 +851,7 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
                     item._hp = item._subtype = 0;
                     playAt(player, Snd.pick);
                     if (withMyPlayer) {
-                        addTextParticle(item, `+${qty} mags`);
+                        addTextParticle(item, `+${qty} 🧱`);
                     }
                 }
             } else if (item._subtype === ItemType.Shield) {
@@ -860,7 +861,7 @@ const pickItem = (item: ItemActor, player: PlayerActor) => {
                     item._hp = item._subtype = 0;
                     playAt(player, Snd.med);
                     if (withMyPlayer) {
-                        addTextParticle(item, `+${qty} sp`);
+                        addTextParticle(item, `+${qty} ⛊`);
                     }
                 }
             }
@@ -1232,7 +1233,7 @@ const hitWithBullet = (actor: Actor, bullet: BulletActor, bulletImpactParticles 
                     stat._scores += q;
                     const killerPlayer = getPlayerByClient(killerID);
                     if (killerPlayer) {
-                        addTextParticle(killerPlayer, `+${q} cr`);
+                        addTextParticle(killerPlayer, `+${q} 💰`);
                     }
                     ++stat._frags;
                     game._state._stats.set(killerID, stat);
@@ -1298,7 +1299,7 @@ const needReloadWeaponIfOutOfAmmo = (player: PlayerActor) => {
                     swapWeaponSlot(player);
                 }
                 if (isMyPlayer(player) && !(player._trig & ControlsFlag.DownEvent_Fire)) {
-                    addTextParticle(player, "EMPTY!");
+                    addTextParticle(player, L("weapon_empty"));
                 }
                 player._lifetime = weapon.reloadTime;
             }
@@ -1380,7 +1381,7 @@ const updatePlayer = (player: PlayerActor) => {
                     player._clipReload = weapon.clipReload;
                 } else {
                     if (isMyPlayer(player) && !(player._trig & ControlsFlag.DownEvent_Reload)) {
-                        addTextParticle(player, "NO MAGS!");
+                        addTextParticle(player, L("weapon_no_mags"));
                     }
                 }
             }

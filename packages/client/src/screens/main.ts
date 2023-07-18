@@ -7,6 +7,8 @@ import {guiSettingsPanel} from "./settingsPanel.js";
 import {guiDevModePanel} from "./devModePanel.js";
 import {logScreenView} from "../analytics.js";
 import {modalPopup} from "../modals/index.js";
+import {L} from "../assets/text.js";
+import {guiLanguagesPanel} from "./languages.js";
 
 const Menu = {
     Main: 0,
@@ -15,6 +17,7 @@ const Menu = {
     Games: 3,
     Practice: 4,
     CreateGame: 5,
+    Language: 6,
 } as const;
 type Menu = (typeof Menu)[keyof typeof Menu];
 
@@ -32,6 +35,8 @@ export interface MenuResult {
     _newGame?: NewGameParams;
     _joinByCode?: string;
 }
+
+const NPC_LEVELS = ["npc_none", "npc_rare", "npc_normal", "npc_crowd"];
 
 let menu: Menu = Menu.Main;
 let devLock = 0;
@@ -72,11 +77,11 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 totalJoinCap += room.max - room.players;
             }
 
-            label("Welcome back,", 7, centerX, 14);
+            label(L("welcome_back"), 7, centerX, 14);
             if (button("change_name", clientName + " ✏️", centerX - 64 / 2, 20)) {
                 modalPopup({
-                    title: "Your Name",
-                    desc: "The name will be visible to everyone in the game room",
+                    title: L("your_name"),
+                    desc: L("change_name_desc"),
                     value: clientName,
                 })
                     .then(v => {
@@ -87,12 +92,12 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                     });
             }
 
-            if (button("replay", "📂 OPEN REPLAY", centerX - 80 / 2, centerY - 80, {w: 80})) {
+            if (button("replay", "📂 " + L("open_replay"), centerX - 80 / 2, centerY - 80, {w: 80})) {
                 result = {_command: MenuCommand.Replay};
             }
 
             if (roomsInfo.players) {
-                label(`${roomsInfo.players} playing right now`, 7, centerX, centerY + 45);
+                label(`${roomsInfo.players} ${L("playing_right_now")}`, 7, centerX, centerY + 45);
             }
 
             if (button("dev_mode", "", centerX - 40, centerY - 40, {w: 80, h: 80, visible: false})) {
@@ -104,10 +109,16 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             }
 
             if (
-                button("start", totalJoinCap ? "⚔ FIGHT" : "⚔ CREATE GAME", centerX - 50, centerY + 50, {
-                    w: 100,
-                    h: 20,
-                })
+                button(
+                    "start",
+                    "⚔ " + (totalJoinCap ? L("start_fight") : L("start_create_game")),
+                    centerX - 50,
+                    centerY + 50,
+                    {
+                        w: 100,
+                        h: 20,
+                    },
+                )
             ) {
                 result = {_command: MenuCommand.QuickStart};
             }
@@ -121,19 +132,34 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 menu = Menu.Games;
             }
 
-            if (button("practice", "🏹 PRACTICE", centerX - 50, centerY + 75, {w: 100, h: 20})) {
-                // result = {_command: MenuCommand.StartPractice};
+            if (button("practice", "🏹 " + L("start_practice"), centerX - 50, centerY + 75, {w: 100, h: 20})) {
                 menu = Menu.Practice;
             }
-            if (button("settings", "⚙️", W - 40, 20, {w: 20, h: 20})) {
+            if (button("settings", "⚙️", W - 30, 10, {w: 20, h: 20})) {
                 menu = Menu.Settings;
                 logScreenView("settings_screen");
             }
+            if (button("language", "🈂", W - 30, 35, {w: 20, h: 20})) {
+                menu = Menu.Language;
+                logScreenView("language_screen");
+            }
         } else if (menu === Menu.Settings) {
-            label("⚙️ SETTINGS", 16, centerX, 30);
+            label("⚙️ " + L("settings_title"), 10, centerX, 30);
             guiSettingsPanel(centerX, centerY - 20);
             if (
-                button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+                button("back", "⬅ " + L("back"), centerX - 50, centerY + 90, {
+                    w: 100,
+                    h: 20,
+                }) ||
+                keyboardDown[KeyCode.Escape]
+            ) {
+                menu = Menu.Main;
+            }
+        } else if (menu === Menu.Language) {
+            label("🈂 " + L("language_title"), 10, centerX, 30);
+            guiLanguagesPanel(centerX, centerY - 20);
+            if (
+                button("back", "⬅ " + L("back"), centerX - 50, centerY + 90, {
                     w: 100,
                     h: 20,
                 }) ||
@@ -142,12 +168,12 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 menu = Menu.Main;
             }
         } else if (menu === Menu.Dev) {
-            label("⚙️ DEVELOPER", 20, centerX, 30);
+            label("⚙️ " + L("developer_title"), 10, centerX, 30);
             if (guiDevModePanel(centerX, centerY)) {
                 menu = Menu.Main;
             }
             if (
-                button("back", "⬅ BACK", centerX - 50, centerY + 90, {
+                button("back", "⬅ " + L("back"), centerX - 50, centerY + 90, {
                     w: 100,
                     h: 20,
                 }) ||
@@ -156,7 +182,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 menu = Menu.Main;
             }
         } else if (menu === Menu.Games) {
-            label("⚙️ GAMES", 20, centerX, 30);
+            label("⚙️ " + L("games_title"), 10, centerX, 30);
 
             let y = -70;
             let i = 0;
@@ -164,7 +190,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 if (
                     button(
                         "room" + room.code,
-                        `GAME #${room.code} (${room.players}/${room.max})`,
+                        `${L("game_room")} #${room.code} (${room.players}/${room.max})`,
                         centerX - 50,
                         centerY + y,
                         {
@@ -186,7 +212,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
 
             y = centerY + 30;
             if (
-                button("join_code", "JOIN BY CODE", centerX - 50, y, {
+                button("join_code", L("join_by_code"), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
@@ -196,7 +222,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             y += 30;
 
             if (
-                button("create", "CREATE MY GAME", centerX - 50, y, {
+                button("create", L("create_my_game"), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
@@ -205,7 +231,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             }
             y += 30;
             if (
-                button("back", "⬅ BACK", centerX - 50, y, {
+                button("back", "⬅ " + L("back"), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 }) ||
@@ -214,13 +240,12 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 menu = Menu.Main;
             }
         } else if (menu === Menu.Practice) {
-            label("🏹 PRACTICE", 20, centerX, 30);
+            label("🏹 " + L("title_practice"), 10, centerX, 30);
 
             let y = centerY - 70;
             y += 25;
-            const NPC_LEVELS = ["NONE", "RARE", "NORMAL", "CROWD"];
             if (
-                button("npc_level", "NPC: " + NPC_LEVELS[newPracticeSettings._newGame._npcLevel], centerX - 50, y, {
+                button("npc_level", "NPC: " + L(NPC_LEVELS[newPracticeSettings._newGame._npcLevel]), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
@@ -231,12 +256,23 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 }
             }
             y += 25;
-            const THEME_NAMES = ["? RANDOM", "🌲 FOREST", "🌵 DESERT", "❄ SNOW"];
+            const THEME_NAMES = [
+                "? " + L("map_random"),
+                "🌲 " + L("map_forest"),
+                "🌵 " + L("map_desert"),
+                "❄ " + L("map_snow"),
+            ];
             if (
-                button("map_theme", "MAP: " + THEME_NAMES[newPracticeSettings._newGame._theme], centerX - 50, y, {
-                    w: 100,
-                    h: 20,
-                })
+                button(
+                    "map_theme",
+                    L("create_game_map") + ": " + THEME_NAMES[newPracticeSettings._newGame._theme],
+                    centerX - 50,
+                    y,
+                    {
+                        w: 100,
+                        h: 20,
+                    },
+                )
             ) {
                 ++newPracticeSettings._newGame._theme;
                 if (newPracticeSettings._newGame._theme > 3) {
@@ -246,7 +282,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             y += 25;
             y += 25;
             if (
-                button("create", "⚔ START GAME", centerX - 50, y, {
+                button("create", "⚔ " + L("practice_start_game"), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
@@ -255,7 +291,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             }
             y += 25;
             if (
-                button("back", "⬅ BACK", centerX - 50, y, {
+                button("back", "⬅ " + L("back"), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 }) ||
@@ -264,12 +300,16 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 menu = Menu.Main;
             }
         } else if (menu === Menu.CreateGame) {
-            label("⚙️ CREATE GAME ROOM", 20, centerX, 30);
+            label("⚙️ " + L("create_game_title"), 10, centerX, 30);
             let y = centerY - 70;
             if (
                 button(
                     "visibility",
-                    "ACCESS: " + (newGameSettings._newGame._flags & GameModeFlag.Public ? "👁️ PUBLIC" : "🕵️ PRIVATE"),
+                    L("create_game_access") +
+                        ": " +
+                        (newGameSettings._newGame._flags & GameModeFlag.Public
+                            ? "👁️ " + L("create_game_public")
+                            : "🕵️ " + L("create_game_private")),
                     centerX - 50,
                     y,
                     {
@@ -282,10 +322,16 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             }
             y += 25;
             if (
-                button("players_limit", "MAX PLAYERS: " + newGameSettings._newGame._playersLimit, centerX - 50, y, {
-                    w: 100,
-                    h: 20,
-                })
+                button(
+                    "players_limit",
+                    L("create_game_max_players") + ": " + newGameSettings._newGame._playersLimit,
+                    centerX - 50,
+                    y,
+                    {
+                        w: 100,
+                        h: 20,
+                    },
+                )
             ) {
                 const MAX_PLAYERS = 8;
                 ++newGameSettings._newGame._playersLimit;
@@ -294,9 +340,8 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 }
             }
             y += 25;
-            const NPC_LEVELS = ["NONE", "RARE", "NORMAL", "CROWD"];
             if (
-                button("npc_level", "NPC: " + NPC_LEVELS[newGameSettings._newGame._npcLevel], centerX - 50, y, {
+                button("npc_level", "NPC: " + L(NPC_LEVELS[newGameSettings._newGame._npcLevel]), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
@@ -307,12 +352,24 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
                 }
             }
             y += 25;
-            const THEME_NAMES = ["? RANDOM", "🌲 FOREST", "🌵 DESERT", "❄ SNOW"];
+
+            const THEME_NAMES = [
+                "? " + L("map_random"),
+                "🌲 " + L("map_forest"),
+                "🌵 " + L("map_desert"),
+                "❄ " + L("map_snow"),
+            ];
             if (
-                button("map_theme", "MAP: " + THEME_NAMES[newGameSettings._newGame._theme], centerX - 50, y, {
-                    w: 100,
-                    h: 20,
-                })
+                button(
+                    "map_theme",
+                    L("create_game_map") + ": " + THEME_NAMES[newGameSettings._newGame._theme],
+                    centerX - 50,
+                    y,
+                    {
+                        w: 100,
+                        h: 20,
+                    },
+                )
             ) {
                 ++newGameSettings._newGame._theme;
                 if (newGameSettings._newGame._theme > 3) {
@@ -322,7 +379,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             y += 25;
             y += 25;
             if (
-                button("create", "⚔ START GAME", centerX - 50, y, {
+                button("create", "⚔ " + L("create_game_start_game"), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 })
@@ -331,7 +388,7 @@ export const menuScreen = (roomsInfo: RoomsInfoResponse): MenuResult | undefined
             }
             y += 25;
             if (
-                button("back", "⬅ BACK", centerX - 50, y, {
+                button("back", "⬅ " + L("back"), centerX - 50, y, {
                     w: 100,
                     h: 20,
                 }) ||
