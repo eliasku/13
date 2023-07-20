@@ -19,7 +19,7 @@
     "license": "ISC",
     "dependencies": {
         "@firebase/analytics": "^0.10.0",
-        "@firebase/app": "^0.9.14",
+        "@firebase/app": "^0.9.15",
         "@iioi/shared": "1.0.17",
         "firebase": "^10.0.0"
     }
