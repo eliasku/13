@@ -47,7 +47,7 @@
     "@types/node": "^20.4.2",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
-    "esbuild": "^0.18.14",
+    "esbuild": "^0.18.15",
     "eslint": "^8.45.0",
     "eslint-config-prettier": "^8.8.0",
     "html-minifier": "^4.0.0",
