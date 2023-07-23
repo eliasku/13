@@ -1,5 +1,11 @@
 # @iioi/tools
 
+## 1.0.21
+
+### Patch Changes
+
+-   22e20c6: add localization
+
 ## 1.0.20
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @iioi/client
 
+## 1.0.26
+
+### Patch Changes
+
+-   22e20c6: add localization
+-   22e20c6: fix keydown scrolls parent iframe
+
 ## 1.0.25
 
 ### Patch Changes
