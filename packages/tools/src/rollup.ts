@@ -67,9 +67,6 @@ const getRollupInput = (options: BuildOptions): RollupOptions => {
                 tsConfigPath: "tsconfig.base.json",
                 preserveExtensions: true,
             }),
-            options.pokiBuild ? alias({
-                entries: [{find: /^(.*)analytics\.js$/, replacement: '$1analytics-poki.js'}]
-            }) : undefined,
             esbuild_(options),
             options.debug || options.skipTerser
                 ? undefined

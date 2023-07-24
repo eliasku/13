@@ -79,13 +79,7 @@ export const copyPublicAssets = (publicDir = "public", debugAssets = true, index
     ]) {
         copyFileSync(`packages/client/assets/translations/${lang}.json`, `${publicDir}/translations/${lang}.json`);
     }
-
-    try {
-        copyFileSync("13-keys/ice.json", `${publicDir}/ice.json`);
-    }
-    catch {
-        copyFileSync("ice.default.json", `${publicDir}/ice.json`);
-    }
+    copyFileSync("ice.default.json", `${publicDir}/ice.json`);
     if (debugAssets) {
         copyFileSync("packages/client/assets/debug.html", `${publicDir}/debug.html`);
         copyFileSync("packages/client/assets/index4.html", `${publicDir}/index4.html`);

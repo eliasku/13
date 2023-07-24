@@ -5,8 +5,6 @@ on:
     # auto-update branches checked by created PR
     branches-ignore:
       - 'update/*'
-    paths-ignore:
-      - '.changeset/**'
 
   # only test check PR to master
   pull_request:
@@ -36,36 +34,3 @@ jobs:
 
       - name: build
         run: npm run build
-        env:
-          KEYS_GH_TOKEN: ${{ secrets.KEYS_GH_TOKEN }}
-
-  release:
-    if: ${{ github.ref == 'refs/heads/master' }}
-    name: Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: node18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: install
-        run: npm ci
-
-      - name: Create Release Pull Request or Publish to NPM
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          # this step should build library with new version
-          publish: npm run release
-          version: npm run version
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

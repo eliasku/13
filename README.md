@@ -7,6 +7,8 @@
 
 Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https://js13kgames.com/)
 
+[🚪PLAY NOW](https://next13.herokuapp.com/)
+
 <p align="center">
 <img src="13.gif">
 </p>
@@ -19,11 +21,10 @@ Fast-paced multiplayer top-down shooting game for [js13k 2022 competition](https
 
 ## 📖 How to play
 
-Select game server, share the link and wait friends to play:
+Start game, share the link and wait friends to play:
 
 - The latest release is available on [🚪iioi](https://iioi.herokuapp.com/) server
-- Unreleased `master` changes is always deployed to [🚪grtc](https://grtc.herokuapp.com/) or [🚪next13](https://next13.herokuapp.com/) servers
-- [Check servers for online players](https://eliasku-games.web.app/13/servers.html)
+- [Online Players stats](https://eliasku-games.web.app/13/servers.html)
 
 ### 🎮 Controls
 

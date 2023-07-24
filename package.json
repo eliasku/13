@@ -9,16 +9,10 @@
     "build": "ts-node packages/tools/src/build.ts",
     "clean": "ts-node packages/tools/src/clean.ts",
     "config": "ts-node packages/tools/src/config.ts",
-    "poki-build": "ts-node packages/tools/src/poki-build.ts",
-    "poki-upload": "ts-node packages/tools/src/poki-upload.ts",
     "typecheck": "tsc -b --clean && tsc -b -v --diagnostics",
     "update-lock": "rm -r node_modules && rm package-lock.json && npm i && git add package-lock.json",
-    "release": "npm run build && changeset publish",
-    "version": "changeset version && npm run update-lock",
     "lint": "eslint packages/*/src/ --ext .ts",
-    "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\"",
-    "upload-translations": "npx @localazy/cli upload --config 13-keys/localazy.json",
-    "download-translations": "npx @localazy/cli download --config 13-keys/localazy.json"
+    "prettier": "prettier --write \"packages/*/{src/**/*.ts,*.json}\""
   },
   "author": "Ilya Kuzmichev <eliasku.games@gmail.com> (https://eliasku-games.web.app)",
   "license": "ISC",
@@ -38,7 +32,6 @@
     "build_dir": "build/poki"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.26.2",
     "@poki/cli": "^0.1.13",
     "@rollup/plugin-alias": "^5.0.0",
     "@rollup/plugin-node-resolve": "^15.1.0",
