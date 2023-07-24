@@ -1,7 +1,6 @@
 [![Build](https://github.com/eliasku/13/actions/workflows/build.yml/badge.svg)](https://github.com/eliasku/13/actions/workflows/build.yml)
 [![Twitter](https://img.shields.io/twitter/follow/eliaskuvoice.svg?style=flat&label=Follow&logoColor=white&color=1da1f2&logo=twitter)](https://twitter.com/eliaskuvoice)
-[![Play Release](https://img.shields.io/badge/Play%20Release-online-pink.svg)](https://iioi.herokuapp.com/)
-[![Play Latest](https://img.shields.io/badge/Play%20Latest-online-olive.svg)](https://next13.herokuapp.com/)
+[![Play Now](https://img.shields.io/badge/Play-online-pink.svg)](https://iioi.herokuapp.com/)
 
 # ☠️ 13 ☠️
 
