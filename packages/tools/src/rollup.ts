@@ -3,7 +3,6 @@ import sourcemaps from "rollup-plugin-sourcemaps";
 import terser from "@rollup/plugin-terser";
 import {Options} from "rollup-plugin-esbuild";
 import esbuild from "rollup-plugin-esbuild";
-import alias from "@rollup/plugin-alias";
 import dts from "rollup-plugin-dts";
 import {typescriptPaths} from "rollup-plugin-typescript-paths";
 import {
